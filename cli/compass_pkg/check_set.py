@@ -18,9 +18,9 @@ digest: `compass-checks@9.0.0` and the digest `sha256` gives.
 `optional` run only when a project turns them on with a tighten-only setting
 of `compass.yml`.
 
-Nothing reads this module yet. `effective.resolve_live` still resolves the
-default preset; `tests/test_check_set.py` checks that the two give the same
-configuration.
+`effective.resolve_live` reads it for every project but one that runs its own
+copy of the governance files. While the default preset exists,
+`tests/test_check_set.py` checks that the two give the same configuration.
 """
 # DEPENDENCY: standard library (copy, hashlib, os); compass_pkg.atomic_io
 # (load_yaml_strict), core (CompassError, FRAMEWORK_ROOT).

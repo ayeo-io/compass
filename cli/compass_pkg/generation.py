@@ -51,7 +51,10 @@ from compass_pkg.core import (CompassError, manifest_path,
 FIX_ZERO = "compass approach evaluate --write"
 FIX_MAJOR = "compass issue migrate --config"
 SCHEMA = 1
-RESOLVER_VERSION = "1.0.0"
+# 1.1.0 (9.0.0): the resolver reads the fixed check set, not the preset chain
+# (ADR-094). The stored shape does not change, so the major stays 1: a new major
+# would refuse every open issue whose generation names 1.x.
+RESOLVER_VERSION = "1.1.0"
 
 FILES = ("resolved.yml", "provenance.yml", "versions.yml", "records.yml")
 MARKER = "complete"
@@ -182,6 +185,20 @@ def _read_whole(task_dir, n):
     except (StrictYamlError, AttributeError, TypeError) as exc:
         return None, f"it cannot be read: {exc}"
     return documents, ""
+
+
+def marker_digests(task_dir, n):
+    """`{file name: digest}` from generation n's `complete` marker, or None when
+    it has no marker that reads. The manifest's `policy:` block copies the
+    digest of `resolved.yml` from here (ADR-094)."""
+    marker = os.path.join(gen_dir(task_dir, n), MARKER)
+    if not os.path.isfile(marker):
+        return None
+    try:
+        files = load_yaml_strict(marker).get("files")
+    except (StrictYamlError, AttributeError):
+        return None
+    return dict(files) if isinstance(files, dict) else None
 
 
 def is_whole(task_dir, n):

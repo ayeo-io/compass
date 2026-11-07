@@ -37,8 +37,8 @@ A waiver an issue layer holds in `config:` (ADR-039) is not read here: the
 issue layer and `compass_pkg.waivers` keep reading it until the layer goes.
 """
 # DEPENDENCY: standard library (os, re); compass_pkg.approval_records, check_set, core
-# (CompassError, now_iso). compass_pkg.layers is imported inside `approvers` to read
-# the project file, and compass_pkg.effective inside `policy_checks`.
+# (CompassError, now_iso). compass_pkg.project_settings is imported inside `approvers` to
+# read the project file, and compass_pkg.effective inside `policy_checks`.
 from __future__ import annotations
 
 import os
@@ -114,16 +114,16 @@ def approvers(task_dir):
     """`(names, owner, fault)`: who may approve a waiver on this issue. `names`
     may hold `owner`, which `approval_records.approver_listed` reads as the
     project's owner. `fault` names why nobody may, or is None."""
-    from compass_pkg import layers
+    from compass_pkg import project_settings
     owner = approval_records.project_owner(task_dir)
     if not owner:
         return [], None, (f"{NO_OWNER}: no owner is declared in compass.yml, so nobody may "
                           f"approve a waiver")
     try:
-        loaded = layers.load_project_layer(layers.find_project_root(task_dir))
+        loaded = project_settings.project_file(project_settings.find_project_root(task_dir))
     except Exception:                                      # noqa: BLE001
         loaded = None
-    held = (loaded[0].doc.get("approvers") if loaded else None) or {}
+    held = (loaded.get("approvers") if loaded else None) or {}
     names = held.get(KIND) if isinstance(held, dict) else None
     if names is None and isinstance(held, dict):
         names = held.get(OLD_KIND)

@@ -20,8 +20,8 @@ only add to it, and `compass_pkg.tighten` applies them. This module:
   that are not layer keys; `catalogue_check.schema()` adds them to
   `schemas/compass.schema.json`.
 
-Nothing calls `lint` yet: `compass policy lint` still runs `policy_lint`
-until the resolver reads the check set (#357, step 7).
+`compass policy lint` runs `lint` on `compass.yml`, and `effective.resolve_live`
+runs it first and resolves nothing when it finds an error.
 """
 # DEPENDENCY: standard library (dataclasses, re, types); compass_pkg.catalogue_check
 # (imported inside `lint`, which imports this module inside its own functions),
@@ -311,6 +311,15 @@ def _git_parent(extends):
     return isinstance(ref, str) and ref.startswith(removed_parts.GIT_PARENT_SCHEME)
 
 
+def _pinned_below(extends):
+    """True when `extends:` pins the shipped default below the first major that
+    carries the acceptance strategy (`acceptance_strategy.pinned_below`)."""
+    from compass_pkg import acceptance_strategy
+    ref = extends.get("from") if isinstance(extends, dict) else extends
+    found = re.fullmatch(r"compass:default@(\d+)", ref) if isinstance(ref, str) else None
+    return bool(found) and int(found.group(1)) < acceptance_strategy.FIRST_MAJOR
+
+
 def _removed_findings(doc):
     out = []
     for key, what in REMOVED.items():
@@ -324,7 +333,18 @@ def _removed_findings(doc):
             out.append(_error("L-PARENT-REMOVED", key,
                               f"a git parent was removed in {removed_parts.RELEASE} ({ADR}): "
                               f"{REASON}; a team parent can hold checks this file does not "
-                              f"show, so nothing is resolved until it is deleted"))
+                              f"show, so nothing is resolved until it is deleted. "
+                              f"{removed_parts.GIT_PARENT_FIX}"))
+            continue
+        if key == "extends" and _pinned_below(held):
+            # ADR-094 open question 7: the pin keeps the owner decision of
+            # 2026-10-30 until #359 writes `acceptance_strategy: off` in its place.
+            out.append(_warning(
+                "L-SETTING-REMOVED", key,
+                f"'{key}' ({what}) was removed in {removed_parts.RELEASE} ({ADR}): {REASON}; "
+                f"the check set is read whatever it names, and only its pin below @8 is "
+                f"read, to keep the acceptance strategy `S17` off until the 9.0.0 upgrade "
+                f"command (#359) writes acceptance_strategy: off in its place"))
             continue
         out.append(_warning("L-SETTING-REMOVED", key,
                             f"'{key}' ({what}) was removed in {removed_parts.RELEASE} ({ADR}): "

@@ -17,7 +17,7 @@ writes for a path issue in place of the devlog. The owning doc is
 `governance/routing-policy.md` ("The path writer").
 """
 # DEPENDENCY: standard library (os, re); compass_pkg.stable_ids; and inside
-# functions acceptance_strategy, evidence_required, layers, routing and
+# functions acceptance_strategy, evidence_required, project_settings, routing and
 # section_checks, because `routing` imports this module and `evidence_required`
 # imports `routing`.
 from __future__ import annotations
@@ -77,7 +77,7 @@ def live_resolved(task, task_dir):
     a preview that read only the governance files would owe less than the write
     stores."""
     from compass_pkg import effective
-    from compass_pkg.layers import find_project_root
+    from compass_pkg.project_settings import find_project_root
     slug = os.path.basename(os.path.normpath(task_dir)) if task_dir else None
     return effective.resolve_live(find_project_root(task_dir or os.getcwd()),
                                   task, slug, task_dir).resolved
@@ -92,7 +92,7 @@ def strategy_inputs(task, task_dir, resolved, expected):
     With no manifest (an assessment given on the command line) it is what a new
     issue in the working directory's project would get."""
     from compass_pkg import acceptance_strategy
-    from compass_pkg.layers import find_project_root
+    from compass_pkg.project_settings import find_project_root
     task = task or {}
     held = acceptance_strategy.stored(task)
     before = bool(task.get("delivery_approach")) or bool(task.get("evaluated_assessment"))

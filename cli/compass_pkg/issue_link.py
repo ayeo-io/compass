@@ -11,7 +11,7 @@ with an argument list and no shell, with the person's own credentials. Compass
 stores and reads no token.
 """
 # DEPENDENCY: standard library (os, re, subprocess) and compass_pkg.core,
-# compass_pkg.layers and compass_pkg.terminal. Imported by the entry point (the
+# compass_pkg.project_settings and compass_pkg.terminal. Imported by the entry point (the
 # `link set` parser) and by pull_request_link, which uses the `gh` runner and the
 # target patterns.
 from __future__ import annotations
@@ -75,8 +75,8 @@ def link_of(task):
 
 
 def _project_root(task_dir):
-    from compass_pkg import layers
-    return layers.find_project_root(task_dir)
+    from compass_pkg import project_settings
+    return project_settings.find_project_root(task_dir)
 
 
 def cmd_issue_link(args):

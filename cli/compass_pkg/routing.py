@@ -650,14 +650,8 @@ def cmd_approach_summary(args):
     print(path_writer.evidence_line(task) if is_path_issue(task)
           else "Gates: " + (", ".join(gates) if gates else "none"))
     print(f"Writes: .compass/work/{slug}/ and {docs_dir(task_dir)}/")
-    # The three lines stay three for a project that departs from nothing. One
-    # that unlocks a framework entry is reported on every run (ADR-039).
-    # A git parent adds one line with its state, read from the cache alone.
-    from compass_pkg import locks, parent_states
-    from compass_pkg.layers import find_project_root
-    project = find_project_root(task_dir)
-    for line in locks.conformance_lines(project) + parent_states.summary_lines(project):
-        print(line)
+    # No conformance or parent line: no lock exists to unlock and a git parent
+    # is refused (ADR-094).
     return 0
 
 
@@ -682,7 +676,7 @@ def _acceptance_block(task, task_dir, resolution, result, args, evaluated_before
     leave the manifest as it is, as `cmd_route_evaluate` explains where it
     stores it. With no `resolution` (no --write) it previews from `resolved`."""
     from compass_pkg import acceptance_strategy
-    from compass_pkg.layers import find_project_root
+    from compass_pkg.project_settings import find_project_root
     held = acceptance_strategy.stored(task)
     if evaluated_before and held is None:
         return None
@@ -704,9 +698,6 @@ def cmd_route_evaluate(args):
     task_path = None
     resolution = None
     task_dir = None
-    if getattr(args, "offline", False):
-        # Every resolution in this run reads `parents.offline()`.
-        os.environ["COMPASS_OFFLINE"] = "1"
     if args.reading and getattr(args, "write", False):
         # Refused before anything prints: a refusal that follows a printed
         # result reads as a result that was written.
@@ -740,7 +731,7 @@ def cmd_route_evaluate(args):
         # An unreadable strategy setting is refused before anything prints, with
         # a message that names the key, the file and the accepted values.
         from compass_pkg import acceptance_strategy
-        from compass_pkg.layers import find_project_root
+        from compass_pkg.project_settings import find_project_root
         acceptance_strategy.setting(find_project_root(task_dir))
         # The configuration a write commits is resolved, and what its commit
         # would refuse is refused, before anything prints, so a refusal never

@@ -32,7 +32,7 @@ rejection withdraws an approval. An approver's name is not authenticated, the
 same limit as every `human-approval` record. `compass evidence approve`
 writes a record; anyone who can write `manifest.yml` can also add one.
 """
-# DEPENDENCY: standard library (dataclasses, os);compass_pkg.layers (the project's owner);
+# DEPENDENCY: standard library (dataclasses, os); compass_pkg.project_settings (the project's owner);
 # compass_pkg.stable_ids (the id of guardrail `G5`).
 # It imports no command module, so the stage-list evaluator and the
 # `compass evidence approve` command can both use it.
@@ -206,18 +206,18 @@ def owner_and_cause(task_dir):
     wins: the loader fails, the owner is text, the owner is not text, the owner
     is only in `.compass/config.yml`, the file is above the project folder, the
     file is missing, else the file names no owner."""
-    from compass_pkg import layers
-    root = layers.find_project_root(task_dir)
+    from compass_pkg import project_settings
+    root = project_settings.find_project_root(task_dir)
     path = os.path.join(root, "compass.yml")
     exists = os.path.isfile(path)
     loaded = None
     if exists:
         try:
-            loaded = layers.load_project_layer(root)
+            loaded = project_settings.project_file(root)
         except Exception as exc:                       # noqa: BLE001
             detail = shown_text(str(exc).replace(path + ": ", "").replace(path, ""))
             return OwnerLookup(None, CAUSE_UNREADABLE, detail, root)
-    value = loaded[0].doc.get("owner") if loaded else None
+    value = loaded.get("owner") if loaded else None
     if _text(value):
         return OwnerLookup(_text(value), None, root=root)
     if value is not None and not isinstance(value, str):

@@ -373,15 +373,15 @@ def _approvers_in(node, found):
 def project_approvers(task_dir):
     """`(listed, owner)`: every name in any `approvers:` list of the project
     file, and its `owner`. Both are empty when there is no project file."""
-    from compass_pkg import approval_records, layers
+    from compass_pkg import approval_records, project_settings
     owner = approval_records.project_owner(task_dir)
     listed = []
     try:
-        loaded = layers.load_project_layer(layers.find_project_root(task_dir))
+        loaded = project_settings.project_file(project_settings.find_project_root(task_dir))
     except Exception:                                      # noqa: BLE001
         loaded = None
     if loaded:
-        _approvers_in(loaded[0].doc, listed)
+        _approvers_in(loaded, listed)
     return listed, owner
 
 

@@ -9,16 +9,15 @@ last write evaluated (`evaluated_assessment`). A value that is unchanged keeps
 its recorded justification, or none on an issue that predates the key, so a
 repeated write records no new judgement and owes no new reason.
 """
-# DEPENDENCY: standard library; compass_pkg.core (FRAMEWORK_ROOT, load_yaml, CompassError),
-# compass_pkg.retired (the retired dimension and its notice).
+# DEPENDENCY: standard library; compass_pkg.core (CompassError), compass_pkg.retired (the
+# retired dimension and its notice), and inside `_dimensions` compass_pkg.check_set.
 # It is a leaf: it imports no command module.
 from __future__ import annotations
 
-import os
 import sys
 
 from compass_pkg import retired
-from compass_pkg.core import FRAMEWORK_ROOT, CompassError, load_yaml
+from compass_pkg.core import CompassError
 
 #: The dimension types a justification is owed for. A `set` (labels) needs none.
 JUSTIFIED_TYPES = ("enum", "ordered-enum")
@@ -40,8 +39,8 @@ def _dimensions(view):
     config = getattr(view, "config", None) if view is not None else None
     declared = config.get("dimensions") if isinstance(config, dict) else None
     if not isinstance(declared, dict):
-        path = os.path.join(FRAMEWORK_ROOT, "governance", "presets", "default", "dimensions.yml")
-        declared = (load_yaml(path) or {}).get("dimensions") or {}
+        from compass_pkg import check_set
+        declared = check_set.load().get("dimensions") or {}
     return declared
 
 

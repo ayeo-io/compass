@@ -516,8 +516,8 @@ def cmd_bdd_extract(args):
     out_path = _bdd_out_path(args, task_dir, slug)
     # Named from the project root, so the feature names the file it was lifted
     # from wherever the spec is: registered, at its fixed path, or flat.
-    from compass_pkg import layers
-    spec_rel = os.path.relpath(spec_file, layers.find_project_root(task_dir)).replace(os.sep, "/")
+    from compass_pkg import project_settings
+    spec_rel = os.path.relpath(spec_file, project_settings.find_project_root(task_dir)).replace(os.sep, "/")
     atomic_write(out_path, render_feature(slug, scenarios, spec_rel))
     # Print a sentence around the path: a bare string suits a shell pipeline,
     # not a person. --json carries the path alone, under a key.

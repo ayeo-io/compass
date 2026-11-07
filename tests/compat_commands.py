@@ -213,9 +213,15 @@ def _outside_git(root: Path, env: dict) -> None:
     _must(root, env, "init")
 
 
+#: A `compass.yml` Compass refuses. 9.0.0 reads a catalogue key such as `stages:`
+#: as a removed setting and does not check its value (ADR-094), so the fault is
+#: in a setting it reads.
+BROKEN_COMPASS_YML = "schema: 1\nautonomy: sometimes\n"
+
+
 def _regular_issue_broken_compass_yml(root: Path, env: dict) -> None:
     _regular_issue(root, env)
-    (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
+    (root / "compass.yml").write_text(BROKEN_COMPASS_YML, encoding="utf-8")
 
 
 JUDGED_COMPASS_YML = """schema: 1
@@ -318,7 +324,7 @@ def _with_looser_compass_yml(root: Path, env: dict) -> None:
 
 def _with_broken_compass_yml(root: Path, env: dict) -> None:
     _initialised(root, env)
-    (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
+    (root / "compass.yml").write_text(BROKEN_COMPASS_YML, encoding="utf-8")
 
 
 def _with_git_parent_no_sha(root: Path, env: dict) -> None:
@@ -528,6 +534,8 @@ REMOVED_IN_9_0_0 = {
     **{entry_id: "'compass policy migrate' was removed in 9.0.0 (ADR-094)"
        for entry_id in ("policy-migrate-copied", "policy-migrate-nothing",
                         "policy-migrate-refused")},
+    **{entry_id: "'compass policy lint --offline' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-lint-offline", "policy-lint-git-parent-uncached-offline")},
 }
 
 
@@ -545,9 +553,15 @@ PHRASE_REMOVED_IN_9_0_0 = {
 #: assessment is on the four-stage path (ADR-092), which has no approaches, so
 #: `quick-fix start` no longer refuses work heavier than a quick fix: it starts the
 #: change and records the evidence it owes.
+#:
+#: `evidence-review-recorded` exits 2, not 0. Its state adds the judged check
+#: `design-review` through a `checks:` block in `compass.yml`, which 9.0.0 reads as a
+#: removed setting (ADR-094), so no judged check of that name exists to record a
+#: review against. The owner looks at this entry (ADR-094 open question 19).
 EXIT_CHANGED_IN_9_0_0 = {"next-regular-without-approach-record": 0,
                          "quick-fix-start-heavier": 0,
-                         "quick-fix-start-auth-label": 0}
+                         "quick-fix-start-auth-label": 0,
+                         "evidence-review-recorded": 2}
 
 
 #: Entries whose phrase 9.0.0 changed on purpose, each with `(recorded, now)`. The exit
@@ -569,6 +583,11 @@ PHRASE_CHANGED_IN_9_0_0 = {
     "quick-fix-start-advisory": ("recorded as quick fix", "recorded as delivery"),
     "quick-fix-start-heavier": ("computes to regular", "recorded as delivery"),
     "quick-fix-start-auth-label": ("computes to full", "recorded as delivery"),
+    # One check set ships, named by its id and version, not a preset (ADR-094). A
+    # 9.0.0 major may move this entry (decision 2026-10-30).
+    "policy-effective-shipped": ("default@8.0.0", "compass-checks@9.0.0"),
+    # A git parent is refused as a removed setting, so its lint code is the removal's.
+    "policy-lint-git-parent-no-sha": ("L-PARENT-NO-SHA", "L-PARENT-REMOVED"),
 }
 
 
@@ -601,6 +620,10 @@ def _as_recorded(entry, outcome, expected=None, changed=(None, None)):
     if outcome.exit != expected:
         found.append(f"exit {outcome.exit}, recorded {entry['exit']}")
     phrase = entry.get("stdout_contains")
+    if entry["exit"] == 0 and expected != 0:
+        # An entry that succeeded and now fails on purpose (`EXIT_CHANGED_IN_9_0_0`):
+        # its recorded phrase is the success's output, which a failure cannot print.
+        phrase = None
     recorded, now = changed
     if phrase and phrase == recorded:
         phrase = now

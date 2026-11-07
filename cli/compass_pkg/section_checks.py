@@ -27,7 +27,7 @@ comment is never read as part of a section.
 """
 # DEPENDENCY: standard library (os, re); compass_pkg.check_results,
 # compass_pkg.stable_ids, compass_pkg.status_words, and, inside the functions,
-# compass_pkg.effective, artifact_kinds, core, doc_sections, layers, rendered_blocks and
+# compass_pkg.effective, artifact_kinds, core, doc_sections, project_settings, rendered_blocks and
 # spec_location.
 # It imports no command module, and nothing that imports one, so the check
 # registry can import it.
@@ -111,11 +111,11 @@ def _fixed_spec(task, task_dir):
     lightweight. Both depths hold the section."""
     if _registered(task, NFR_KIND) is not None:
         return None
-    from compass_pkg import layers
+    from compass_pkg import project_settings
     from compass_pkg.core import docs_dir
     from compass_pkg.spec_location import spec_path
     rel = docs_dir(task_dir).rstrip("/") + "/acceptance-criteria.md"
-    fixed = os.path.join(layers.find_project_root(task_dir), *rel.split("/"))
+    fixed = os.path.join(project_settings.find_project_root(task_dir), *rel.split("/"))
     found = os.path.normpath(spec_path(task_dir)) == os.path.normpath(fixed)
     if not found and str(task.get("created") or "") < FIXED_PATH_FROM:
         return None
@@ -143,8 +143,8 @@ def declines(task, task_dir, kind, heading):
     if entry is None:
         return "no %s is registered with a path" % kind
     if entry.get("fixed"):
-        from compass_pkg import layers
-        full = os.path.join(layers.find_project_root(task_dir), *entry["path"].split("/"))
+        from compass_pkg import project_settings
+        full = os.path.join(project_settings.find_project_root(task_dir), *entry["path"].split("/"))
         if not os.path.isfile(full):
             return "%s is not written yet" % entry["path"]
         return None
@@ -159,10 +159,10 @@ def declines(task, task_dir, kind, heading):
 
 def _read(task_dir, entry):
     """`(text, None)` of the registered document, or `(None, detail)`."""
-    from compass_pkg import layers
+    from compass_pkg import project_settings
 
     path = str(entry.get("path"))
-    full = os.path.join(layers.find_project_root(task_dir), *path.split("/"))
+    full = os.path.join(project_settings.find_project_root(task_dir), *path.split("/"))
     try:
         with open(full, encoding="utf-8") as handle:
             return handle.read(), None

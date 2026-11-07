@@ -481,11 +481,22 @@ and one digest, such as `compass-checks@9.0.0`.
   change and the pin does not. The change that edits the file pins the new
   digest.
 
-No command reads the set yet: `compass check` and assess still read the default
-preset. `tests/test_check_set.py` checks that the set resolves to the same
-configuration as the default preset does for a project with no `compass.yml`,
-less the `locked:` fields. It compares the guardrails, the checks, the evidence
-types and the evidence each point of the contract 1 grid owes.
+The resolver reads the set (`effective.resolve_live`), with the tighten-only
+settings of `compass.yml` applied, for every project but one with its own copy
+of the governance files and no `compass.yml`. That is every new generation and
+every issue with no `generation:` key, the framework's own repository included.
+`compass check` prints `Policy: compass-checks@9.0.0 (sha256 <hex>)` on every
+run, and each generation commit writes the manifest's `policy:` block
+(`docs/generation-store.md`). While `governance/presets/default/` exists,
+`tests/test_check_set.py` checks that the set resolves to the same
+configuration as the 8.x resolver gave the default preset for a project with
+no `compass.yml`, less the `locked:` fields. It compares the guardrails, the
+checks, the evidence types and the evidence each point of the contract 1 grid
+owes.
+
+`acceptance_strategy.pinned_below` still reads `extends: compass:default@6` or
+`@7`, which is otherwise a removed setting: such a pin keeps `S17` off until
+#359 writes `acceptance_strategy: off` in its place (ADR-094 open question 7).
 
 ## Locks and conformance
 
@@ -563,14 +574,10 @@ decides the rules. `compass policy lint` reports a refused change as
   that gives a reason and is approved by the project's `owner`. An issue, a
   parent or a preset that carries `unlock:` is refused. An unlocked entry is no
   longer enforced for the project or the issue below it.
-- **Conformance.** A project that unlocks a framework entry is non-conformant.
-  `compass check` and `compass approach show` print
-  `Conformance: non-conformant - this project unlocks framework entries: ...` on
-  every run. An unlock of a hard-locked entry, or of an entry the shipped
-  default does not lock, is refused, and the commands print `Unlock refused for
-  <entry>: <reason>` instead. A project with no `compass.yml`, one that is not
-  Compass's (no `schema:`), or one that unlocks nothing sees no new line. A
-  `compass.yml` that cannot be read prints `Conformance: not checked`.
+- **Conformance.** In 8.x a project that unlocked a framework entry was
+  non-conformant, and `compass check` and `compass approach show` said so on
+  every run. Since 9.0.0 the resolver reads the check set, where no lock
+  exists, so neither command prints a conformance line (ADR-094).
 
 The report reads `compass.yml` and the shipped default's lock summary. The
 waiver's date and covered revision are checked by the waiver module when it

@@ -218,14 +218,11 @@ Compass works on your machine and in your repository. It reaches the network
 only in the cases below, and each one starts only when you ask for it. The
 full account is in [docs/security.md](docs/security.md).
 
-- **Fetches** a git parent when the project's `extends:` names one. It runs
-  `git` for the one pinned commit and reads its `compass.yml` as data.
-  Only `compass policy lint`, `compass policy show` and `compass approach
-  evaluate --write` fetch, and only a commit that is not cached yet; never
-  `compass check`.
-  `--offline` or `COMPASS_OFFLINE=1` stops them fetching;
-  `COMPASS_PARENT_REMOTE_BASE` names a mirror in place of `https://github.com`
-  ([docs/git-parents.md](docs/git-parents.md)).
+- **Fetches nothing for a configuration.** Compass runs one fixed check set
+  (ADR-094). An `extends:` that names a git parent is refused with
+  `L-PARENT-REMOVED`, and no command runs `git` to fetch one: not `compass
+  policy lint`, `compass policy show`, `compass approach evaluate --write` or
+  `compass check` ([docs/git-parents.md](docs/git-parents.md) describes 8.x).
 - **Sends** your delivery record to a git repository you configure, with
   `compass record sync`, which `compass ship-commit` also runs. It happens
   only when `compass.yml` names a `record:` remote, and it redacts

@@ -573,15 +573,13 @@ EMPTY_OVERLAY = "schema: 1\nextends: compass:default@6\n"
 # configuration has something to see:
 #   routing: a valid configuration that routes differently from 5.6.0;
 #   broken:  a configuration Compass cannot read.
-# A project file cannot change the approaches since 9.0.0 (ADR-092): the merge leaves
-# the key out. So the planted routing fault is a floor that adds a gate to every
-# assessment, and the broken file is a `gates:` that is not a mapping.
+# A project file holds settings only since 9.0.0 (ADR-094): a catalogue key is a
+# removed setting, read as if absent. So the planted routing fault is the
+# tighten-only setting that adds the architecture evidence to every assessment,
+# and the broken file holds a setting with a value no reader accepts.
 PLANTED_OVERLAY = EMPTY_OVERLAY + (
-    "rules:\n  planted:\n    kind: floors\n    hit: {add_gate: collect}\n"
-    "    rules:\n      RP-PLANTED-001:\n        order: 1\n        when: {}\n"
-    "        then: {add_gate: verify.architecture}\n"
-    "        rationale: A planted fault for the compatibility contracts.\n")
-BROKEN_OVERLAY = EMPTY_OVERLAY + "gates: oops\n"
+    "require_evidence:\n  - when: {}\n    add: [architecture]\n")
+BROKEN_OVERLAY = EMPTY_OVERLAY + "autonomy: sometimes\n"
 
 
 def add_governance_copy(root, fault=None, source=GOVERNANCE_5_6_0):
@@ -632,19 +630,17 @@ def policy_under(kind, scratch, fault=None, governance=None):
     root = Path(scratch) / "project"
     (root / ".compass" / "work").mkdir(parents=True)
     if governance is not None:
-        # A project with a `compass.yml` resolves the live preset, never its copy,
-        # so the overlay is merged on the copy's catalogue form here.
-        from compass_pkg import layers, merge
+        # A project with a `compass.yml` resolves the check set, never its copy, so
+        # the overlay's settings are applied to the copy's resolved form here. The
+        # overlay holds no catalogue, so nothing merges (ADR-094).
+        from compass_pkg import tighten
         add_governance_copy(root, source=governance)
-        parent = effective._legacy_parent(str(root))[0]
+        resolved = effective.legacy_resolved(str(root))
         build_configuration(kind, root, fault)
         doc = load_yaml(str(root / "compass.yml"))
-        if not isinstance(doc, dict) or not isinstance(doc.get("gates", {}), dict):
+        if not isinstance(doc, dict):
             raise CompassError("the overlay of configuration B cannot be read")
-        doc = {k: v for k, v in doc.items() if k != "extends"}
-        project = layers.Layer("project", "project", doc, layers.layer_digest(doc, "project"))
-        resolved = merge.resolve([parent, project])[0]
-        resolved["capabilities"] = dict(parent.doc.get("capabilities") or {})
+        resolved = tighten.apply(resolved, tighten.settings_of(doc))
         return effective.EffectiveView("live", None, None, resolved, {}).evaluator_policy()
     build_configuration(kind, root, fault)
     resolution = effective.resolve_live(str(root))

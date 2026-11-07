@@ -165,7 +165,9 @@ record in [Item records](#item-records) meets it.
 
 Who is listed. `owner` names the project's owner (the `owner:` of
 `compass.yml`, the same name waivers use), and names nobody when the project
-declares none. Any other entry is read as a person id, a role included, until
+declares none. Both are read from `compass.yml` as settings
+(`project_settings.project_file`): a catalog key in the same file is a removed
+setting and does not stop them being read (ADR-094). Any other entry is read as a person id, a role included, until
 roles are resolved. The approver `agent` never matches.
 
 What is not protected. An approver's name is not authenticated, the same limit

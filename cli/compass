@@ -135,9 +135,6 @@ def build_parser():
                           "recorded under the manifest's justifications key "
                           "(repeatable). A new or changed value of risk, "
                           "familiarity, size, goal, role or urgency needs one.")
-    pre.add_argument("--offline", action="store_true",
-                     help="read git parents from the cache only and fetch "
-                          "nothing; also set by COMPASS_OFFLINE=1")
     pre.add_argument("--reason",
                      help="when --write detects a re-assessment, record this as "
                           "the reason in the reassessments: log. A "

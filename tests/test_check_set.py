@@ -5,8 +5,8 @@ runs (ADR-094). `cli/compass_pkg/check_set.py` reads it and returns it in the
 shape `generations/<n>/resolved.yml` holds.
 
 While `governance/presets/default/` exists, the tests here compare the two
-sources. The check set resolves to the configuration the live default resolves
-to now for a project with no `compass.yml`, with one difference: the set holds
+sources. The check set resolves to the configuration the 8.x resolver gave the
+default preset for a project with no `compass.yml`, with one difference: the set holds
 no `locked:` field, because no layer sits above it. Every accessor of
 `EffectiveView` that `compass check` and assess read gives the same answer on
 both, and so does `evidence_required.evaluate` on every point of the contract 1
@@ -65,12 +65,36 @@ def _view(resolved):
     return effective.EffectiveView("live", None, None, resolved, {}, {})
 
 
+def _preset_resolved():
+    """The default preset resolved alone, as 8.x `resolve_live` gave it for a
+    project with no `compass.yml` and no copy of the governance files: the
+    preset's catalogues merged as one parent layer, its capabilities, and its
+    evidence types. Since #357 step 7 the resolver reads the check set, so the
+    preset is resolved here, through the 8.x merge, for as long as it exists."""
+    from compass_pkg import catalogue_spec, layers, merge, policy_lint
+    parent, _ = policy_lint.load_parent()
+    config = merge.resolve(layers.build_chain(parent))[0]
+    evidence = yaml.safe_load((PRESET / "evidence-types.yml").read_text(encoding="utf-8"))
+    return {
+        "capabilities": dict(parent.doc.get("capabilities") or {}),
+        "approach": None,
+        "autonomy": "balanced",
+        "conformance": {"status": "conformant", "unlocked": []},
+        **{name: config[name] for name in catalogue_spec.CATALOGUES if name in config},
+        "evidence_types": evidence["evidence_types"],
+    }
+
+
 @pytest.fixture(scope="module")
-def live(tmp_path_factory):
-    """The live default as `resolve_live` gives it now, for a project with no
+def live():
+    """The default preset as the 8.x resolver gave it for a project with no
     `compass.yml` and no copy of the governance files."""
-    root = tmp_path_factory.mktemp("no-compass-yml")
-    return effective.resolve_live(str(root)).resolved
+    return _preset_resolved()
+
+
+def test_the_resolver_reads_the_check_set(tmp_path):
+    """A project with no `compass.yml` resolves to the check set itself."""
+    assert effective.resolve_live(str(tmp_path)).resolved == check_set.resolved()
 
 
 @pytest.fixture(scope="module")

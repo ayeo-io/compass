@@ -73,6 +73,23 @@ def conflict_body(shown):
 
 
 COMPASS_YML = "compass.yml"
+#: What marks a project's root folder. `core` imports it from here.
+BOUNDARY_MARKERS = (".compass", ".git")
+
+
+def find_project_root(start):
+    """The first folder at or above `start` holding `.compass` or `.git`,
+    or `start` itself when none does. The project file is looked for there
+    only: one in any other folder is ignored."""
+    here = os.path.abspath(os.fspath(start))
+    node = here
+    while True:
+        if any(os.path.exists(os.path.join(node, m)) for m in BOUNDARY_MARKERS):
+            return node
+        up = os.path.dirname(node)
+        if up == node:
+            return here
+        node = up
 OLD_CONFIG = os.path.join(".compass", "config.yml")
 STATE_YML = os.path.join(".compass", "state.yml")
 
@@ -138,6 +155,20 @@ def compass_yml_counts(project_root):
     """Public name of the test above, for a command that must read the same
     file the settings reader reads (`compass policy lint` and `effective`)."""
     return _compass_yml_counts(project_root)
+
+
+def project_file(project_root):
+    """The parsed `compass.yml` at the project root, whether or not it is the
+    settings file read, or None when there is none. Raises `CompassError` when
+    it cannot be read or is not a mapping. The owner and approver readers use
+    it: an `owner` is read from `compass.yml` alone."""
+    path = os.path.join(project_root, COMPASS_YML)
+    if not os.path.isfile(path):
+        return None
+    data, error = _compass_yml(path)
+    if error is not None:
+        raise CompassError(error)
+    return copy.deepcopy(data)
 
 
 def lenient(project_root):

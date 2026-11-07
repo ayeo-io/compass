@@ -22,14 +22,15 @@ delivery-approach record shows, the advisory check
 
 Compass reads records here, never project code.
 """
-# DEPENDENCY: standard library (json, os); compass_pkg.check_results,
-# core, project_settings and red_first, and inside functions compass_pkg.layers, parents,
+# DEPENDENCY: standard library (json, os, re); compass_pkg.check_results,
+# core, project_settings and red_first, and inside functions
 # next_cmd and next_step. It imports no command
 # module and no check module at load time, so a check module can import it.
 from __future__ import annotations
 
 import json
 import os
+import re
 
 from compass_pkg import project_settings
 from compass_pkg.check_results import NOTHING_TO_CHECK
@@ -143,25 +144,33 @@ def approach_routing(resolved, approach):
 
 #: The first major of the shipped default that carries the strategy.
 FIRST_MAJOR = 8
+#: `extends: compass:<name>@<major>`. 9.0.0 reads `extends:` as a removed setting
+#: (ADR-094), but the pin still keeps a project on @6 or @7 out of the strategy
+#: until the 9.0.0 upgrade command (#359) writes `acceptance_strategy: off` in its place
+#: (ADR-094 open question 7).
+_SHIPPED_PIN = re.compile(r"^compass:([a-z][a-z0-9-]*)@(\d+)$")
 
 
 def pinned_below(project_root):
     """The `extends:` value when the project's `compass.yml` pins the shipped
     default at a major before `FIRST_MAJOR`, else None. Resolution always reads
-    the live preset, whatever major `extends:` names, so the pin is what keeps
+    the check set, whatever major `extends:` names, so the pin is what keeps
     a project on @6 or @7 out of the strategy (decided by jed72, 2026-10-30). A
     project with no `compass.yml`, no `extends:` or a git parent names no
-    shipped major and runs on the live default, so it is not pinned below."""
-    from compass_pkg import layers, parents
+    shipped major, so it is not pinned below."""
     if not project_settings.compass_yml_counts(project_root):
         return None
     try:
-        doc = load_yaml(os.path.join(project_root, layers.PROJECT_FILE))
-        value = parents.extends_value((doc or {}).get("extends"))
-        name, major = layers.parse_extends(value)
+        doc = load_yaml(os.path.join(project_root, project_settings.COMPASS_YML))
     except (CompassError, AttributeError, TypeError, ValueError):
         return None
-    return value if name == "default" and major < FIRST_MAJOR else None
+    value = (doc or {}).get("extends") if isinstance(doc, dict) else None
+    if isinstance(value, dict):
+        value = value.get("from")
+    found = _SHIPPED_PIN.match(value) if isinstance(value, str) else None
+    if not found:
+        return None
+    return value if found.group(1) == "default" and int(found.group(2)) < FIRST_MAJOR else None
 
 
 def suspended_findings(resolved):
@@ -354,7 +363,7 @@ def in_scope(task, task_dir):
 
 
 def _project_root(task_dir):
-    from compass_pkg.layers import find_project_root
+    from compass_pkg.project_settings import find_project_root
     return find_project_root(os.path.dirname(os.path.dirname(os.path.normpath(task_dir))))
 
 

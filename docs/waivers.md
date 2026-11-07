@@ -68,7 +68,7 @@ The approval is one `human-approval` record:
 
 The record names a subject, so it never clears guardrail `G5`.
 
-Who may approve: the names in `approvers.waiver` of `compass.yml`, else in `approvers.issue-waiver`, else the project's `owner`. A project with no `owner` has nobody who may approve a waiver.
+Who may approve: the names in `approvers.waiver` of `compass.yml`, else in `approvers.issue-waiver`, else the project's `owner`. A project with no `owner` has nobody who may approve a waiver. Both are read from `compass.yml` as settings (`project_settings.project_file`), so a removed catalog key in the same file does not stop them being read.
 
 ## What `compass check` shows
 

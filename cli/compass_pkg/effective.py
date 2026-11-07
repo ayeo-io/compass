@@ -10,33 +10,42 @@
 - `generation: 0` is refused, naming the command that commits the first one;
 - no issue (`task_dir=None`) gets the live configuration of the project.
 
-"Live" means the shipped default, then the project's own layer, resolved now.
-An issue's own `config:` is not read: 9.0.0 has no issue layer (ADR-094). An
-8.x issue keeps the layer its stored generation was committed with.
+"Live" means the fixed check set (`check_set`), with the tighten-only
+settings of the project's `compass.yml` applied (`tighten`), resolved now
+(ADR-094). Nothing merges: a catalogue key in `compass.yml` is a removed
+setting and is not read, and an `extends:` that names a git parent is refused.
+An issue's own `config:` is not read: 9.0.0 has no issue layer. An 8.x issue
+keeps the layer its stored generation was committed with.
 A project with no `compass.yml` and its own copies of the two governance files
-has those files read through the legacy adapter in place of the shipped
-default, so what an issue is stored against is what ran before.
+has those files read through the legacy adapter in place of the check set, so
+what an issue is stored against is what ran before (until #359).
+
+Each generation commit also writes the manifest's `policy:` block: the check
+set's id, version and sha256, the sha256 of `compass.yml`, the tightenings and
+the digest of the stored `resolved.yml` (`policy_block`).
 
 This module also builds the `generation.Resolution` a commit stores, and is
 the one place the existing modules reach the store through
 (`commit_generation`, `record_check_results`, `generation_report`).
 """
-# DEPENDENCY: standard library (dataclasses, datetime, os, re, subprocess);
-# compass_pkg.atomic_io, chain_class, check_registry, core, generation, layers,
-# legacy_adapter, locks, merge, obligations, parents, policy_lint, project_settings, waivers.
+# DEPENDENCY: standard library (dataclasses, datetime, hashlib, os, re, subprocess);
+# compass_pkg.atomic_io, catalogue_check, check_registry, check_set, core, generation,
+# layers (the 8.x issue layer of `pending_config` only), legacy_adapter, merge (the
+# legacy copy only), obligations, project_settings, removed_parts, tighten, word_map.
 from __future__ import annotations
 
 import datetime
+import hashlib
 import os
 import re
 import subprocess
 from dataclasses import dataclass, field
 
-from compass_pkg import (chain_class, generation, layers, legacy_adapter, locks, merge, parents,
-                         policy_lint, project_settings, waivers)
+from compass_pkg import (catalogue_check, check_set, generation, layers, legacy_adapter, merge,
+                         project_settings, removed_parts, tighten, word_map)
 from compass_pkg import obligations, status_words
 from compass_pkg import catalogue_spec as spec
-from compass_pkg.atomic_io import digest, load_yaml_strict
+from compass_pkg.atomic_io import digest
 from compass_pkg.check_registry import REGISTRY
 from compass_pkg.core import (AUTONOMY_VALUES, COMPASS_VERSION, FRAMEWORK_ROOT,
                               GOVERNANCE_FILES, CompassError, load_manifest,
@@ -80,6 +89,10 @@ class EffectiveView:
         the resolved configuration. `effective` is, with `classify`, one of the
         two modules that may import `obligations` (ADR-037); readers call this."""
         policy = obligations.policy_adapter(self.config)
+        # The tighten-only settings the evidence evaluator reads: the labels that
+        # owe what a `G5` label owes, and the evidence a project adds (ADR-094).
+        # A configuration that holds neither adds nothing.
+        policy = tighten.with_settings(policy, self.resolved)
         # The kinds every approach carries, with the stage whose depth each takes. The
         # classifier prepares its policy from `policy_adapter` and does not see this key,
         # so a stored generation owes nothing new (I-7).
@@ -228,28 +241,68 @@ class EffectiveView:
 
 # --- live resolution ----------------------------------------------------------------
 
-def _legacy_parent(root):
-    """`(Layer, meta)` for a project that keeps its own copies of the two
-    governance files, or None when it has none (or is the framework's own
-    repository, whose files are views of the shipped default)."""
+def _holds_copy(root):
+    """True when the project keeps its own copies of the two governance files.
+    The framework's own repository does not: its files are frozen copies of
+    the 8.x default. Nothing is parsed."""
     folder = os.path.join(root, "governance")
     if os.path.realpath(folder) == os.path.realpath(os.path.join(FRAMEWORK_ROOT, "governance")):
+        return False
+    return all(os.path.isfile(os.path.join(folder, name)) for name in GOVERNANCE_FILES)
+
+
+def _legacy_parent(root):
+    """`(doc, meta)` for a project that keeps its own copies of the two
+    governance files (`_holds_copy`), or None. `doc` is the copy in catalogue
+    form (`legacy_adapter.adapt`), with the check set's capabilities."""
+    if not _holds_copy(root):
         return None
-    if not all(os.path.isfile(os.path.join(folder, name)) for name in GOVERNANCE_FILES):
-        return None
+    folder = os.path.join(root, "governance")
     policy = load_yaml(os.path.join(folder, "routing-policy.yml"))
     guardrails = load_yaml(os.path.join(folder, "guardrails.yml"))
-    shipped, _ = policy_lint.load_parent()
     doc = legacy_adapter.adapt(policy, guardrails)
-    doc["capabilities"] = dict(shipped.doc.get("capabilities") or {})
-    layer = layers.Layer("legacy", "parent", doc, layers.layer_digest(doc, "parent"))
-    return layer, {"id": "legacy", "version": str(policy.get("version", "")),
-                   "source": "legacy", "guardrails": guardrails}
+    doc["capabilities"] = dict(check_set.load()["capabilities"])
+    return doc, {"id": "legacy", "version": str(policy.get("version", "")),
+                 "source": "legacy", "guardrails": guardrails}
+
+
+def _legacy_config(doc):
+    """`(config, provenance)` of an adapted copy. The copy is the whole
+    configuration: it is read as one layer through the 8.x merge, which maps
+    a gate at a legacy stage to the path stage that shows it (L-STAGE-MAPPED).
+    #359 deletes this with the adapter."""
+    mapped, _ = word_map.map_layer(doc)
+    for key in mapped:
+        if key in spec.SETTINGS_KEYS:
+            raise CompassError(f"legacy: {key} is a settings key and belongs in the "
+                               f"project's own compass.yml, never in a parent (ADR-043)")
+    layers.refuse_non_text_keys(mapped, "legacy")
+    errors = catalogue_check.check_layer(mapped, "parent", name="legacy")
+    if errors:
+        raise CompassError("legacy: " + "; ".join(errors))
+    return merge.apply({}, mapped, "parent", "legacy")
+
+
+def _legacy_digest(doc):
+    """The digest of an adapted copy's catalogue keys, as 8.x stored it."""
+    return digest({k: v for k, v in doc.items() if k in spec.LAYER_KEYS})
+
+
+def legacy_resolved(root):
+    """The resolved mapping of the project's own copy of the governance files,
+    whatever its `compass.yml` says. The compatibility contracts read it."""
+    legacy = _legacy_parent(os.path.abspath(root))
+    if legacy is None:
+        raise CompassError(f"{root} holds no copy of the governance files")
+    doc, meta = legacy
+    config, _ = _legacy_config(doc)
+    return _resolved(config, dict(doc.get("capabilities") or {}), "balanced",
+                     legacy_adapter.adapt_evidence_types(meta["guardrails"])["evidence_types"])
 
 
 GOVERNANCE_COPY_NOTICE = (
     "  This unmigrated 5.x project has no compass.yml and runs on its own copy of "
-    "governance/. The rows below are the shipped default, not what compass approach "
+    "governance/. The rows below are the check set, not what compass approach "
     "evaluate reads. Run compass policy migrate on 8.x to convert the copy; the "
     "upgrade guide names the 9.0.0 settings.")
 
@@ -257,14 +310,7 @@ GOVERNANCE_COPY_NOTICE = (
 def has_governance_copy(root):
     """True when the project keeps its own copy of the two governance files
     and has no `compass.yml` Compass reads, so `resolve_live` runs on the copy."""
-    return not project_settings.compass_yml_counts(root) and _legacy_parent(root) is not None
-
-
-def _evidence_types(root, legacy):
-    if legacy:
-        return legacy_adapter.adapt_evidence_types(legacy[1]["guardrails"])["evidence_types"]
-    path = os.path.join(FRAMEWORK_ROOT, policy_lint.PRESET_DIR, "evidence-types.yml")
-    return (load_yaml_strict(path).get("evidence_types") or {}) if os.path.isfile(path) else {}
+    return not project_settings.compass_yml_counts(root) and _holds_copy(root)
 
 
 def _autonomy(root):
@@ -286,206 +332,165 @@ def _git_blob(path):
     return out.stdout.strip() or None if out.returncode == 0 else None
 
 
-def _rules(config):
-    """`{(rule set, rule id): rule}` for every rule of a configuration."""
-    out = {}
-    for set_id, rule_set in (config.get("rules") or {}).items():
-        members = rule_set.get("rules") if isinstance(rule_set, dict) else None
-        for rule_id, rule in (members.items() if isinstance(members, dict) else ()):
-            out[(set_id, rule_id)] = rule
-    return out
+def git_parent_of(doc):
+    """The `extends:` text of a `compass.yml` mapping when it names a git
+    parent, else None."""
+    extends = (doc or {}).get("extends") if isinstance(doc, dict) else None
+    ref = extends.get("from") if isinstance(extends, dict) else extends
+    return ref if isinstance(ref, str) and ref.startswith(removed_parts.GIT_PARENT_SCHEME) \
+        else None
 
 
-def _rule_steps(history, before, after, layer):
-    """Add to `history` one step for each rule `layer` added, changed or removed.
-    The merge records a rule set as one field, so without these steps a rule a
-    project adds to a set cannot be told from the rule the default holds."""
-    old, new = _rules(before), _rules(after)
-    for key in list(old) + [key for key in new if key not in old]:
-        if key not in new:
-            op = "remove"
-        elif key not in old:
-            op = "add"
-        elif old[key] != new[key]:
-            op = "set"
-        else:
-            continue
-        history.setdefault("rules.%s.rules.%s" % key, {"steps": []})["steps"].append(
-            {"layer": layer.name, "op": op})
+def refuse_git_parent(doc, where=layers.PROJECT_FILE):
+    """Raise `CompassError` when `doc` extends a git parent (L-PARENT-REMOVED)."""
+    ref = git_parent_of(doc)
+    if ref:
+        raise CompassError(
+            f"nothing can be resolved: {where} extends the git parent {ref}, and git "
+            f"parents were removed in {removed_parts.RELEASE} (ADR-094, L-PARENT-REMOVED). "
+            f"{removed_parts.GIT_PARENT_FIX}.")
 
 
-def _steps(chain):
-    """`({path: {steps: [{layer, op}]}}, config, per-layer configs)` from applying
-    the chain one layer at a time, so a field keeps every layer that wrote it.
-    Each rule of a rule set has a path of its own, `rules.<set>.rules.<id>`."""
-    config, prov, history, configs = {}, {}, {}, []
-    for layer in chain:
-        before, earlier = dict(prov), config
-        config, prov = merge.apply(config, layer.doc, layer.kind, layer.name, prov)
-        for path, step in prov.items():
-            if before.get(path) != step:
-                history.setdefault(path, {"steps": []})["steps"].append(
-                    {"layer": step["layer"], "op": step["operation"]})
-        _rule_steps(history, earlier, config, layer)
-        configs.append(config)
-    return history, config, configs
+def project_doc(root):
+    """The parsed `compass.yml` of the project at `root` when Compass reads it,
+    else None. Raises `CompassError` when it cannot be read or is not a
+    mapping."""
+    if not project_settings.compass_yml_counts(root):
+        return None
+    doc = project_settings.settings(root)
+    if not isinstance(doc, dict):
+        raise CompassError(f"{os.path.join(root, layers.PROJECT_FILE)}: expected a mapping")
+    return doc
 
 
-def _waiver_records(chain, configs, project_digest, project_doc):
-    out = {}
-    for index, layer in enumerate(chain):
-        if layer.kind == "parent":
-            continue
-        scope = "issue" if layer.kind == "issue" else "project"
-        found, _ = waivers.find(layer.doc, scope)
-        covered = (waivers.covered_revision("project", extends=(project_doc or {}).get("extends"))
-                   if scope == "project" else
-                   waivers.covered_revision("issue", versions={"project": {"digest": project_digest}}))
-        for waiver in found:
-            record = waivers.describe(waiver, configs[index - 1], configs[index], covered)
-            record["status"] = "valid"
-            out[waiver.id] = record
-    return out
-
-
-def _approval_records(manifest, root, task_dir, waiver_records):
-    """One record per waiver, and one per evidence entry an issue waiver
-    names as its approval, with the digest of the file it read."""
-    out = [{"id": f"waiver:{wid}", "kind": "waiver", "status": "valid"}
-           for wid in sorted(waiver_records)]
-    registry = {e.get("id"): e for e in manifest.get("evidence") or () if isinstance(e, dict)}
-    for wid, record in sorted(waiver_records.items()):
-        entry = registry.get(record.get("approved_by")) if record["scope"] == "issue" else None
-        if not entry:
-            continue
-        item = {"id": entry["id"], "kind": "approval", "status": "valid"}
-        if entry.get("path"):
-            item["path"] = entry["path"]
-            full = os.path.join(task_dir, entry["path"]) if task_dir else None
-            if full and os.path.isfile(full):
-                with open(full, "rb") as fh:
-                    item["input_digest"] = digest(fh.read().decode("utf-8", "replace"))
-        out.append(item)
-    return out
-
-
-def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, fetch=False):
-    """The `generation.Resolution` of the project's chain now: the shipped
-    default (or the project's legacy copies) and the project's `compass.yml`.
-    An issue's `config:` is not read (ADR-094); `manifest` gives the evidence
-    registry and the assessment only. The result carries `validate`, which
-    raises `CompassError` when the layered lint refuses the chain; `commit`
-    calls it before it writes, so a generation never stores such a chain. With
-    `validate=True` it is called here too. A chain that does not load or merge
-    raises `CompassError` at once. A git parent in the project's `extends:` is
-    read from the cache; only `fetch=True` fetches an uncached pin. The
-    result's `finish` adds, to each git parent's entry in `versions`, the
-    classification of the chain through it against the shipped default, before
-    any waiver. That is a scan of the grid for each parent, so only a commit that
-    writes a new generation calls it."""
-    root = os.path.abspath(root)
-    counts = project_settings.compass_yml_counts(root)
-    loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts, fetch=fetch,
-                                     task_dir=task_dir, read_issue=False)
-    if loaded.findings:
-        first = loaded.findings[0]
-        raise CompassError(f"nothing can be resolved: {first.code} [{first.layer}] "
-                           f"{first.path}: {first.message}")
-    legacy = None if counts else _legacy_parent(root)
-    parent, meta = legacy if legacy else (loaded.parent, loaded.meta)
-    if legacy:
-        loaded.parent = parent
-    # Each layer is checked alone before anything merges. The full lint, which
-    # includes the classifier and is slow on a project layer, runs only when a
-    # write follows: `generation.commit` calls `validate` then.
-    chain = layers.build_chain(parent, loaded.project, loaded.issue,
-                               extra_parents=[p.layer for p in loaded.git_parents])
-
-    def check_chain():
-        report = policy_lint.lint_loaded(loaded)
-        if not report.ok:
-            first = report.errors[0]
-            where = {"project": layers.PROJECT_FILE, "issue": "the config: of manifest.yml"
-                     }.get(first.layer, f"the {first.layer} configuration")
-            raise CompassError(
-                f"nothing was written: {where} does not pass the lint. First error: "
-                f"{first.code} {first.path}: {first.message} ({len(report.errors)} error(s) "
-                f"in all; run `compass policy lint"
-                + (f" --issue {slug}" if slug else "") + "` to see them)")
-
-    if validate:
-        check_chain()
-    history, config, configs = _steps(chain)
-    project_doc = loaded.project.doc if loaded.project else None
-    project_digest = loaded.project.digest if loaded.project else None
-    capabilities = {}
-    for layer in chain:
-        capabilities.update(layer.doc.get("capabilities") or {})
-    project_path = os.path.join(root, layers.PROJECT_FILE)
-    conformance = (locks.conformance(loaded.project, locks.shipped_locks())
-                   if loaded.project else locks.Conformance("conformant", (), ()))
-    waiver_records = _waiver_records(chain, configs, project_digest, project_doc)
-    classification = {
-        layer.name: {"result": "accepted",
-                     "waivers": sorted(w for w, r in waiver_records.items()
-                                       if r["scope"] == ("issue" if layer.kind == "issue"
-                                                         else "project"))}
-        for layer in chain if layer.kind != "parent"}
-    resolved = {
+def _resolved(config, capabilities, autonomy, evidence_types):
+    """The mapping a generation's `resolved.yml` holds, from resolved catalogues."""
+    return {
         "capabilities": capabilities,
         # An 8.x issue layer could pick an approach and set ceilings, and its
         # stored generation keeps them. With no issue layer the key is always
         # empty; it stays so that a generation committed without a layer keeps
         # the same resolved document, and a reassess commits no new one for it.
         "approach": None,
-        "autonomy": _autonomy(root),
-        "conformance": {"status": conformance.status, "unlocked": list(conformance.unlocked)},
+        "autonomy": autonomy,
+        # No lock exists to unlock (ADR-094); the key keeps the stored shape.
+        "conformance": {"status": "conformant", "unlocked": []},
         **{name: config[name] for name in spec.CATALOGUES if name in config},
-        "evidence_types": _evidence_types(root, legacy),
+        "evidence_types": evidence_types,
     }
-    major = str(meta.get("version", "")).split(".")[0]
-    root_ref = f"compass:{meta['id']}@{major}" if not legacy else "legacy"
-    git_layers = [p.layer for p in loaded.git_parents]
 
-    def finish(stored):
-        held = chain_class.classify_chain(parent, git_layers, root_ref)
-        for entry, block in zip(stored["parents"][1:], held):
-            entry["classification"] = block
 
+def _implementations(checks):
+    return {check["impl"]: REGISTRY[check["impl"]].version
+            for check in (checks or {}).values()
+            if isinstance(check, dict) and check.get("impl") in REGISTRY}
+
+
+def _refuse_lint_errors(doc, base):
+    """Raise `CompassError` when the settings lint finds an error in
+    `compass.yml`. Nothing is resolved from such a file, so no command reads,
+    and no generation stores, a configuration the lint refuses; 8.x refused a
+    project layer that did not pass its check the same way."""
+    from compass_pkg import settings_lint
+    errors = [f for f in settings_lint.lint(doc, base) if f.level == "error"]
+    if errors:
+        first = errors[0]
+        raise CompassError(
+            f"nothing can be resolved: {layers.PROJECT_FILE} does not pass the lint. First "
+            f"error: {first.code} {first.path}: {first.message} ({len(errors)} "
+            f"error(s) in all; run `compass policy lint` to see them)")
+
+
+def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, fetch=False):
+    """The `generation.Resolution` of the project now: the check set with the
+    tighten-only settings of `compass.yml` applied, or, for a project with no
+    `compass.yml` and its own copy of the governance files, that copy. An
+    issue's `config:` is not read (ADR-094); `manifest` and `task_dir` are
+    accepted for the callers and not read. A file that cannot be read, a
+    `compass.yml` the settings lint refuses and a git parent in `extends:`
+    raise `CompassError` at once, so the result's `validate` is None.
+    `validate` and `fetch` are accepted and not read: the lint always runs,
+    and nothing is fetched."""
+    root = os.path.abspath(root)
+    doc = project_doc(root)
+    refuse_git_parent(doc)
+    autonomy = _autonomy(root)
+    legacy = None if doc is not None else _legacy_parent(root)
+    if legacy:
+        legacy_doc, meta = legacy
+        config, prov = _legacy_config(legacy_doc)
+        resolved = _resolved(
+            config, dict(legacy_doc.get("capabilities") or {}), autonomy,
+            legacy_adapter.adapt_evidence_types(meta["guardrails"])["evidence_types"])
+        history = {path: {"steps": [{"layer": step["layer"], "op": step["operation"]}]}
+                   for path, step in prov.items()}
+        parent = {"ref": "legacy", "version": meta["version"],
+                  "digest": _legacy_digest(legacy_doc), "source": "legacy"}
+        tightened = {}
+    else:
+        loaded = check_set.load()
+        base = check_set.resolved(loaded, autonomy=autonomy)
+        if doc is not None:
+            _refuse_lint_errors(doc, base)
+        tightened = tighten.settings_of(doc)
+        resolved = tighten.apply(base, tightened, loaded)
+        history = {}
+        parent = {"ref": f"compass:checks@{loaded['version'].split('.')[0]}",
+                  "version": loaded["version"], "digest": digest(loaded),
+                  "sha256": check_set.sha256(), "source": "shipped"}
+    project_path = os.path.join(root, layers.PROJECT_FILE)
     versions = {
         "resolver": generation.RESOLVER_VERSION,
         "cli": COMPASS_VERSION,
-        "parents": [{"ref": root_ref,
-                     "version": meta.get("version", ""), "digest": parent.digest,
-                     "source": "legacy" if legacy else "shipped"}]
-                   + [{"ref": p.ref, "sha": p.sha, "version": p.version, "digest": p.digest,
-                       "source": "git"} for p in loaded.git_parents],
-        "project": ({"path": layers.PROJECT_FILE, "digest": project_digest,
-                     "git_blob": _git_blob(project_path)} if loaded.project else None),
+        "parents": [parent],
+        "project": ({"path": layers.PROJECT_FILE, "digest": digest(tightened),
+                     "git_blob": _git_blob(project_path)} if doc is not None else None),
         "issue_overlay_digest": None,
-        "implementations": {check["impl"]: REGISTRY[check["impl"]].version
-                            for check in (config.get("checks") or {}).values()
-                            if isinstance(check, dict) and check.get("impl") in REGISTRY},
+        "implementations": _implementations(resolved.get("checks")),
     }
     return generation.Resolution(
         resolved=resolved,
-        provenance={"fields": history, "waivers": waiver_records,
-                    "classification": classification},
+        provenance={"fields": history, "waivers": {}, "classification": {}},
         versions=versions,
-        records=_approval_records(manifest or {}, root, task_dir, waiver_records),
-        validate=check_chain, finish=finish if git_layers else None,
-        details={"loaded": loaded, "chain": chain, "configs": configs})
+        records=[],
+        validate=None,
+        details={"tightened": tightened, "legacy": bool(legacy)})
 
 
-def _live_view(task_dir, manifest, slug, start=None, fetch=False):
+def file_sha256(path):
+    with open(path, "rb") as fh:
+        return hashlib.sha256(fh.read()).hexdigest()
+
+
+def policy_block(root, resolution, resolved_digest):
+    """The manifest's `policy:` block for a generation committed from
+    `resolution` (ADR-094): the check set and its sha256, the sha256 of
+    `compass.yml` (None without one), the tighten-only settings applied as
+    written, and the digest of the generation's `resolved.yml`. A project that
+    runs its own copy of the governance files names `legacy` and no check set
+    digest."""
+    details = resolution.details or {}
+    legacy = details.get("legacy")
+    settings_path = os.path.join(root, layers.PROJECT_FILE)
+    return {
+        "check_set": "legacy" if legacy else check_set.ref(),
+        "check_set_sha256": None if legacy else check_set.sha256(),
+        "settings_sha256": (file_sha256(settings_path)
+                            if project_settings.compass_yml_counts(root) else None),
+        "tightened": dict(details.get("tightened") or {}),
+        "resolved": resolved_digest,
+    }
+
+
+def _live_view(task_dir, manifest, slug, start=None):
     start = task_dir or start or os.getcwd()
-    root = layers.find_project_root(start)
+    root = project_settings.find_project_root(start)
     try:
-        resolution = resolve_live(root, manifest, slug, task_dir, fetch=fetch)
+        resolution = resolve_live(root, manifest, slug, task_dir)
     except merge.MergeError as exc:
         # A command that only reads the configuration gives the way to see the rest.
-        raise CompassError(f"{exc}. Run `compass policy lint"
-                           + (f" --issue {slug}" if slug else "") + "` to see the cause.")
+        # Only a project's own copy of the governance files merges.
+        raise CompassError(f"{exc}. Run `compass policy lint` to see the cause.")
     return EffectiveView("live", slug, None, resolution.resolved, resolution.versions,
                          resolution.provenance)
 
@@ -514,21 +519,19 @@ def effective_for(task_dir=None, manifest=None):
 
 
 def _layered(root):
-    """Whether the project holds a `compass.yml` Compass reads. The framework's
-    own repository does not, until its governance files are views of the
-    preset."""
-    if os.path.realpath(root) == os.path.realpath(FRAMEWORK_ROOT):
-        return False
-    return bool(project_settings.compass_yml_counts(root))
+    """Whether a project reads the check set: every project but one with its
+    own copy of the governance files and no `compass.yml` Compass reads
+    (ADR-094). The framework's own repository reads the check set too."""
+    return not has_governance_copy(root)
 
 
 def view_or_legacy(task_dir=None, live=False, start=None, manifest=None):
     """The view a reader module reads, or None when it must read the governance
     files as 5.6.0 did. That is the case only for an issue with no
-    `generation:` key (or no issue) in a project with no `compass.yml`.
-    Otherwise it is `effective_for`: the stored generation, a live view of a
-    project that has a `compass.yml`, or a refusal for generation 0 or a
-    generation that is not whole. With `live`, a stored generation is not
+    `generation:` key (or no issue) in a project that keeps its own copy of
+    the governance files and has no `compass.yml`. Otherwise it is
+    `effective_for`: the stored generation, a live view of the check set, or a
+    refusal for generation 0 or a generation that is not whole. With `live`, a stored generation is not
     read: the command is about to commit the configuration as it is now. With
     no issue, `start` is the directory whose project is meant (else the
     working directory). `manifest` is the issue's manifest when the caller
@@ -540,13 +543,10 @@ def view_or_legacy(task_dir=None, live=False, start=None, manifest=None):
             manifest, _ = load_manifest(task_dir)
         if generation.number(manifest) is not None and not live:
             return effective_for(task_dir, manifest)
-    if not _layered(layers.find_project_root(task_dir or start or os.getcwd())):
+    if not _layered(project_settings.find_project_root(task_dir or start or os.getcwd())):
         return None
     if live and task_dir is not None:
-        # The command is about to commit the configuration, so it may fetch a
-        # git parent that is not cached yet.
-        return _live_view(task_dir, manifest, os.path.basename(os.path.normpath(task_dir)),
-                          fetch=not parents.offline())
+        return _live_view(task_dir, manifest, os.path.basename(os.path.normpath(task_dir)))
     if task_dir is None:
         return _live_view(None, None, None, start)
     return effective_for(task_dir, manifest)
@@ -562,12 +562,22 @@ def commit_generation(task_dir, manifest, invalidated=None, render=None, *, stam
 
     `resolution` is a resolution already made (`reassess_resolution` makes it
     before anything prints); otherwise it is made here. `stamp` is that of
-    `generation.commit`."""
+    `generation.commit`; after it, the manifest's `policy:` block is written
+    for the generation in force (`policy_block`), whether or not a new one was
+    committed."""
     task_dir = os.path.abspath(os.fspath(task_dir))
     slug = os.path.basename(task_dir)
+    root = project_settings.find_project_root(task_dir)
     if resolution is None:
-        resolution = resolve_live(layers.find_project_root(task_dir), manifest, slug,
-                                  task_dir, fetch=not parents.offline())
+        resolution = resolve_live(root, manifest, slug, task_dir)
+    caller_stamp = stamp
+
+    def stamp_policy(mapping, old, new):
+        if caller_stamp is not None:
+            caller_stamp(mapping, old, new)
+        marker = generation.marker_digests(task_dir, new) if new else None
+        if marker and marker.get("resolved.yml"):
+            mapping["policy"] = policy_block(root, resolution, marker["resolved.yml"])
     wrapped = None
     if render is not None:
         # `render(text, gate_requirements)` sees the types the generation being
@@ -577,7 +587,7 @@ def commit_generation(task_dir, manifest, invalidated=None, render=None, *, stam
                         if isinstance(gate, dict) and isinstance(gate.get("accepts"), list)}
         wrapped = lambda text: render(text, requirements)  # noqa: E731
     return generation.commit(task_dir, resolution, manifest, invalidated, wrapped,
-                             stamp=stamp)
+                             stamp=stamp_policy)
 
 
 def reassess_resolution(task_dir, manifest):
@@ -587,9 +597,8 @@ def reassess_resolution(task_dir, manifest):
     the lint refuses) is refused here, so a refusal never follows a printed
     result (`generation.preflight`)."""
     task_dir = os.fspath(task_dir)
-    resolution = resolve_live(layers.find_project_root(task_dir), manifest,
-                              os.path.basename(os.path.normpath(task_dir)), task_dir,
-                              fetch=not parents.offline())
+    resolution = resolve_live(project_settings.find_project_root(task_dir), manifest,
+                              os.path.basename(os.path.normpath(task_dir)), task_dir)
     generation.preflight(task_dir, resolution, manifest)
     return resolution
 
@@ -718,12 +727,11 @@ _MOVED_WITH_THE_MAJOR = {"dod-evidence-typed": ("on_skipped",)}
 
 
 def _moved_check_fields(resolved):
-    """`resolved` with the fields of `_MOVED_WITH_THE_MAJOR` taken from the shipped checks."""
+    """`resolved` with the fields of `_MOVED_WITH_THE_MAJOR` taken from the check set."""
     checks = resolved.get("checks")
     if not isinstance(checks, dict):
         return resolved
-    shipped = load_yaml(os.path.join(FRAMEWORK_ROOT, "governance", "presets", "default",
-                                     "checks.yml")).get("checks") or {}
+    shipped = check_set.load().get("checks") or {}
     checks = dict(checks)
     for check_id, fields in _MOVED_WITH_THE_MAJOR.items():
         if isinstance(checks.get(check_id), dict) and isinstance(shipped.get(check_id), dict):
@@ -797,8 +805,8 @@ def migrate_generation(task_dir, *, closed_ok=False):
         invalidated = {f"result:{name}": f"recorded under the versions of generation {held}"
                        for name in sorted(runs)}
     else:
-        resolution = resolve_live(layers.find_project_root(task_dir), manifest, slug,
-                                  task_dir)
+        resolution = resolve_live(project_settings.find_project_root(task_dir), manifest,
+                                  slug, task_dir)
         resolution.provenance["adopted"] = "adopted from live governance"
     committed = generation.commit(task_dir, resolution, manifest, invalidated,
                                   render=_set_generation_line(path, (held or 0) + 1),

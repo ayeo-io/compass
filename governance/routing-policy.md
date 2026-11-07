@@ -536,10 +536,13 @@ It writes no `stages:`, `subtask_ceiling:`, `max_worktrees:` or
   writes the path keys, removes `stages:` and logs the move in
   `reassessments` (`from_route: regular`, `to_route: delivery`).
 - `compass approach show` prints the evidence line (`Evidence: ...`) in place
-  of the gate line on a path issue.
+  of the gate line on a path issue. It prints no conformance or parent line:
+  the resolver reads the one check set, where no lock exists, and a git
+  parent is refused (ADR-094).
 - **Without `--write`** the command shows what the write would store. A
-  project with no `compass.yml` reads the governance files, which do not
-  declare `S17`, but a write commits the live configuration, which does. So
+  project with its own copy of the governance files and no `compass.yml` reads
+  that copy, which does not declare `S17`, but a write commits the live
+  configuration, which does. So
   the preview reads the live configuration for the strategy, and owes the
   same `S17` tokens the write stores. An assessment given on the command line
   (`--assessment`) is evaluated on the path too, as a new issue in the

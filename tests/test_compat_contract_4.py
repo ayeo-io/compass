@@ -120,19 +120,36 @@ def test_contract_4_next_shows_the_path_stage():
     assert cc.PHRASE_CHANGED_IN_9_0_0["next-quick-fix"] == ("Implement", "Build")
 
 
+def test_contract_4_a_judged_check_from_compass_yml_is_not_read():
+    """`evidence-review-recorded` adds the judged check `design-review` through a
+    `checks:` block in `compass.yml`. 9.0.0 reads that block as a removed setting
+    (ADR-094), so no such check exists and the review is refused with exit 2. The
+    recorded success phrase is not compared; exit 0 still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "evidence-review-recorded")
+    assert entry["exit"] == 0 and entry["stdout_contains"]
+    assert cc.differences(entry, cc.Outcome(2, "", "no judged check design-review")) == []
+    assert cc.differences(entry, cc.Outcome(0, entry["stdout_contains"], ""))
+    assert cc.differences(entry, cc.Outcome(1, "", ""))
+
+
 def test_contract_4_the_intended_9_0_0_changes_are_the_listed_ones():
     """Each entry 9.0.0 changes on purpose is named here, so a new one is a decision
     made in this file and not a drift the tables absorb."""
     # `issue-configure-refused-proposal-exits-1` was here until 9.0.0 removed `compass
     # issue configure` with the issue layer (ADR-094); it is in `REMOVED_IN_9_0_0` now.
+    # `evidence-review-recorded` exits 2 since 9.0.0 reads compass.yml as settings only
+    # (ADR-094 open question 19); `policy-effective-shipped` names the check set, and
+    # `policy-lint-git-parent-no-sha` the git parent's removal.
     assert cc.EXIT_CHANGED_IN_9_0_0 == {"next-regular-without-approach-record": 0,
                                         "quick-fix-start-heavier": 0,
-                                        "quick-fix-start-auth-label": 0}
+                                        "quick-fix-start-auth-label": 0,
+                                        "evidence-review-recorded": 2}
     assert set(cc.PHRASE_CHANGED_IN_9_0_0) == {
         "next-quick-fix", "approach-evaluate-quick-fix", "approach-evaluate-no-compass-folder",
         "approach-evaluate-copied-governance", "approach-evaluate-controlled-autonomy",
         "approach-summary-regular", "quick-fix-start-valid", "quick-fix-start-advisory",
-        "quick-fix-start-heavier", "quick-fix-start-auth-label"}
+        "quick-fix-start-heavier", "quick-fix-start-auth-label", "policy-effective-shipped",
+        "policy-lint-git-parent-no-sha"}
     for entry_id, (recorded, _) in cc.PHRASE_CHANGED_IN_9_0_0.items():
         entry = next(e for e in ENTRIES if e["id"] == entry_id)
         assert entry["stdout_contains"] == recorded, entry_id

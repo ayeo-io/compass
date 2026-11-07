@@ -64,15 +64,12 @@ relying on this document.
 Compass works on your machine and in your repository. It reaches the network
 only in the cases below, and each one starts only when you ask for it.
 
-- **Fetches** a git parent when the project's `extends:` names one
-  (`github:<owner>/<repo>@<ref>#<sha>`). It runs `git` for the one pinned
-  commit, reads its `compass.yml` as data, and caches it under
-  `.compass/cache/parents/`. Only `compass policy lint`, `compass policy show`
-  and `compass approach evaluate --write` fetch, and only a commit that is not
-  cached yet; never `compass check`. `--offline` or `COMPASS_OFFLINE=1` stops them
-  fetching. `COMPASS_PARENT_REMOTE_BASE`
-  names a mirror in place of `https://github.com`. Git runs with your own git
-  configuration, so your credential helper runs
+- **Fetches nothing for a configuration.** Since 9.0.0 Compass runs one fixed
+  check set (ADR-094). An `extends:` that names a git parent
+  (`github:<owner>/<repo>@<ref>#<sha>`) is refused with `L-PARENT-REMOVED`, and
+  no command runs `git` to fetch one: not `compass policy lint`, `compass
+  policy show`, `compass approach evaluate --write` or `compass check`. In 8.x
+  the first three fetched a pinned commit that was not cached
   ([git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md)).
 - **Sends** your delivery record to a git repository you configure, with
   `compass record sync`, which `compass ship-commit` also runs. It happens

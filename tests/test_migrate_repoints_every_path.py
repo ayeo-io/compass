@@ -432,6 +432,9 @@ EXCLUDED = {
                             "file outside the project; no migration moves it",
     "intent_source.scheme": "the scheme of the source, such as https or file",
     "intent_source.sha256": "a digest of the source, not a path",
+    "policy.check_set": "the check set's id and version, such as compass-checks@9.0.0, "
+                        "not a path",
+    "policy.check_set_sha256": "a digest of the check set file, not a path",
     "intent_source.snapshot": "a bare file name in the issue's own folder under "
                               "`.compass/work`, resolved against that folder when "
                               "read; it has no folder part to repoint",

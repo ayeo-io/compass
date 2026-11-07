@@ -20,8 +20,10 @@ configuration (`routing`, `check_cmd`, `checks`, `manifest`,
 `calibration`, `flow`, `quick_fix_cmd`, `loop_ceilings`, `lessons`,
 `review_rules` and `approach_diagram`) ask `effective.view_or_legacy` first.
 An issue with a generation is judged by that generation, whatever the project's
-`compass.yml` or governance files now say. See "Reading" for the one case that
-reads the governance files.
+`compass.yml` or governance files now say. A new generation is resolved from
+the one fixed check set (`governance/check-set.yml`, ADR-094) with the
+tighten-only settings of `compass.yml` applied. See "Reading" for the one case
+that reads the governance files.
 
 ## The manifest keys
 
@@ -30,6 +32,7 @@ reads the governance files.
 | `generation: n` | The generation the issue runs against. The manifest names it, and it is the authority. |
 | `generation: 0` | The issue was assessed under 6.x and has no generation yet. A command that needs its configuration refuses and names `compass approach evaluate --write`. |
 | no `generation` key | The issue predates 6.0.0. It reads live governance as 5.6.0 did, and `compass approach evaluate --write` gives it generation 1. |
+| `policy:` | The policy the generation in force was committed under (ADR-094): `check_set` (`compass-checks@9.0.0`), `check_set_sha256` and `settings_sha256` (the sha256 of the check set file and of `compass.yml`, lowercase hex as `sha256sum` prints it; `settings_sha256` is null without a `compass.yml`), `tightened` (the tighten-only settings applied, as written) and `resolved` (the digest the generation's `complete` marker holds for `resolved.yml`). Each generation commit writes it, and a reassess that commits nothing writes it for the generation in force. A project that runs its own copy of the governance files names `check_set: legacy` with a null `check_set_sha256`. A manifest written before 9.0.0 has none and stays valid. #356 keeps the generation folders out of the commit, so this block is the copy a reviewer reads. |
 | `config:` | The issue's own configuration layer in 8.x. It stays valid in the schema and is not written or read since 9.0.0 (ADR-094): a generation committed with it keeps its effect, and a new or changed `config:` changes nothing. `compass check` names one the generation in force was not committed with, and `compass issue lint` warns about it. |
 
 `templates/manifest.yml` ships `generation: 0`.
@@ -40,9 +43,9 @@ reads the governance files.
 
 | File | Holds | Written |
 |---|---|---|
-| `resolved.yml` | The configuration after every layer is merged: the nine catalogues, the evidence types, the capability switches, the approach and the ceilings an 8.x issue's overlay named (`approach` is empty since 9.0.0), the autonomy value, and the conformance status. | At commit, then fixed. |
+| `resolved.yml` | The resolved configuration: since 9.0.0 the check set with the tighten-only settings applied, before it the result of merging every layer. It holds the catalogues, the evidence types, the capability switches, the approach and the ceilings an 8.x issue's overlay named (`approach` is empty since 9.0.0), the autonomy value, and the conformance status. | At commit, then fixed. |
 | `provenance.yml` | `fields`: for each field, the layers that wrote it and the operation of each. Each rule has a path of its own, `rules.<set>.rules.<id>`, with a step for the layer that added, changed or removed it, because the rule set is one field and would not show which layer a rule came from. A generation stored before this has no such paths, and a reader must not guess a rule's layer from the rule set. `waivers`: each waiver with the parent value it saw. `classification`: for the project and issue layers, that the lint raised no error (`result: accepted`) and which waivers the layer holds. It holds no classifier points: a generation stored by this version has no `points` key, and a reader must treat absent points as "not recorded", never as zero. | At commit, then fixed. |
-| `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source; a git parent adds `sha`, with `source: git`, and the `classification` of the chain through it against the shipped default, see [git-parents.md](git-parents.md)), `project` (path, digest, git blob), `issue_overlay_digest` (empty since 9.0.0), and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
+| `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source; since 9.0.0 the one parent is the check set, `{ref: compass:checks@9, version, digest, sha256, source: shipped}`, or `legacy` for a project's own copy; an 8.x git parent added `sha`, with `source: git`, and the `classification` of the chain through it), `project` (path, digest, git blob), `issue_overlay_digest` (empty since 9.0.0), and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
 | `records.yml` | The status of each approval, waiver and check result at commit: `valid`, `superseded` or `invalidated`, with a reason. | At commit, then fixed. |
 | `complete` | A marker holding a digest of each of the four files above. | Last of the four-file commit. |
 | `results.yml` | The latest `compass check` verdict for each check: `verdict` (`pass`, `fail`, `advisory` or `nothing-to-check`), `at`, the implementation id and version, a digest of the check's definition, and `status`. | After each `compass check`, replacing the file. The marker does not cover it. |
@@ -256,12 +259,21 @@ generation is in force and the next one says "no change".
 | Issue | `source` | What it reads |
 |---|---|---|
 | `generation: n`, n at least 1 | `generation` | `generations/<n>/`, checked against its marker, and nothing else |
-| no `generation:` key | `live` | the shipped default or the project's copies of the two governance files, then `compass.yml`, resolved now; the issue's `config:` is not read (ADR-094) |
+| no `generation:` key | `live` | the check set with the tighten-only settings of `compass.yml` applied, or the project's copies of the two governance files, resolved now; the issue's `config:` is not read (ADR-094) |
 | `generation: 0` | none | refuses and names the fix |
-| no issue (`task_dir=None`) | `live` | the project layers, resolved now |
+| no issue (`task_dir=None`) | `live` | the same, resolved now |
+
+`effective.resolve_live` reads the check set (`check_set.resolved`) and applies
+the tighten-only settings (`tighten.apply`). Nothing merges: a catalogue key in
+`compass.yml` is a removed setting and is not read, and an `extends:` that
+names a git parent is refused with exit 2 (`L-PARENT-REMOVED`). The resolver
+version is `1.1.0`: the stored shape did not change, so a generation that names
+`1.0.0` still loads. Every resolution runs the settings lint first: a
+`compass.yml` with a lint error resolves nothing, so no command reads it and no
+commit stores it (exit 2).
 
 A project with no `compass.yml` and its own `governance/` copies is resolved
-through the legacy adapter in place of the shipped default. The adapter also
+through the legacy adapter in place of the check set, until #359. The adapter also
 converts the `project:` guardrails of such a copy: each becomes a guardrail gate
 with its own checks and its stage from `checked_at`, and a `command-passes`
 check becomes a check named for the guardrail id and name (`PG-E-command-and-suite`)
@@ -271,15 +283,18 @@ framework ships is still reported as absent by `compass check` and
 
 `EffectiveView.evaluator_policy()` returns the routing policy in the shape
 `evaluate_route` takes, built by `obligations.policy_adapter` from the resolved
-configuration. `effective` and `classify` are the only modules that may import
-`obligations` (ADR-037); readers call the view.
+configuration, with the two tighten-only settings the evidence evaluator reads,
+`signoff_labels` and `require_evidence` (`tighten.with_settings`). `effective`
+and `classify` are the only modules that may import `obligations` (ADR-037);
+readers call the view.
 
 ### What a reader calls
 
 A reader module calls `effective.view_or_legacy(task_dir)`. It returns a view,
 or None when the module must read the governance files as before. That is only
-an issue with no `generation:` key (or no issue) in a project with no
-`compass.yml`. A generation of 0, or one that is not whole, raises.
+an issue with no `generation:` key (or no issue) in a project with its own copy
+of the governance files and no `compass.yml`. Every other project, the
+framework's own repository included, reads the check set. A generation of 0, or one that is not whole, raises.
 
 | Call on the view | Returns | Used by |
 |---|---|---|
@@ -300,15 +315,22 @@ A check that a project adds under its own id (for example `arch-rule` with
 check's id.
 
 `compass approach evaluate --write` computes the outcome from the project's
-live configuration when the project has a `compass.yml`, because the commit
-stores that configuration. Without `--write` it reads the generation.
+live configuration, because the commit stores that configuration. Without `--write` it reads the generation.
 
 The quarantine registry (`governance/quarantine.yml`) is a project file, not
 catalogue data, and stays where it is.
 
 ## The `compass check` header
 
-An issue with a generation gets a line `generation <n> (parent <version>)`
+Every run names the policy it judges by, ahead of the other notices: `Policy:
+compass-checks@9.0.0 (sha256 <hex>)`, and `Tightened:` with the names of the
+tighten-only settings applied when there are any. An issue with a generation
+takes the line from its manifest's `policy:` block, and one committed before
+9.0.0 has no such block and gets no line. An issue read from a project's own
+copy of the governance files gets none either. No conformance line is printed:
+no lock exists to unlock (ADR-094).
+
+An issue with a generation also gets a line `generation <n> (parent <version>)`
 ahead of the other notices, and in the `--json` document as `generation` and
 `parent_version`. When the manifest's `config:` is not the overlay the
 generation was committed with, a second line says `config: differs from the
@@ -370,7 +392,7 @@ only when `failed` is above zero.
 
 ## Limits
 
-- `policy show --issue` still resolves the live files and does not read
-  the generation.
+- `policy show --issue` prints the issue's `policy:` block and its waivers; it
+  does not read the generation folder.
 - The leftover-generation states are reported by `compass ci`, not by
   `compass check`.

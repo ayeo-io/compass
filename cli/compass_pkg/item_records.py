@@ -103,13 +103,10 @@ def lists_of(task):
 
 
 def _shipped_default():
-    """The `stages` and `checks` catalogues of the shipped default preset."""
-    import os
-
-    from compass_pkg.core import FRAMEWORK_ROOT, load_yaml
-    folder = os.path.join(FRAMEWORK_ROOT, "governance", "presets", "default")
-    return {"stages": (load_yaml(os.path.join(folder, "stages.yml")) or {}).get("stages"),
-            "checks": (load_yaml(os.path.join(folder, "checks.yml")) or {}).get("checks")}
+    """The `stages` and `checks` catalogues of the check set (ADR-094)."""
+    from compass_pkg import check_set
+    loaded = check_set.load()
+    return {"stages": loaded.get("stages"), "checks": loaded.get("checks")}
 
 
 def _dicts(value):

@@ -1201,6 +1201,19 @@
       "minimum": 0,
       "description": "Optional. The stored generation of the issue's configuration it runs against (ADR-036). `0` means the issue was assessed under 6.x and has no generation yet; absent means the issue predates 6.0.0 and reads live governance. Written by `compass approach evaluate --write`; never edit it by hand."
     },
+    "policy": {
+      "type": "object",
+      "description": "Optional. The policy the issue's stored generation was committed under (ADR-094), so a reviewer can name the rules of the change without the generation folder. Written at each generation commit, by assess and `compass approach evaluate --write`; never edit it by hand. A manifest written before 9.0.0 has none.",
+      "required": ["check_set", "check_set_sha256", "settings_sha256", "tightened", "resolved"],
+      "additionalProperties": false,
+      "properties": {
+        "check_set": {"type": "string", "minLength": 1, "description": "The check set the generation was resolved from, `<id>@<version>` such as `compass-checks@9.0.0`, or `legacy` for a project that runs its own copy of the governance files."},
+        "check_set_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "The sha256 of the check set file, lowercase hex as `sha256sum` prints it; null for `legacy`."},
+        "settings_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "The sha256 of `compass.yml` at the commit, lowercase hex as `sha256sum` prints it; null when the project has none that Compass reads."},
+        "tightened": {"type": "object", "description": "The tighten-only settings of `compass.yml` that were applied, as written: `signoff_labels`, `require_evidence`, `agent_review`, `project_checks` and `capabilities`."},
+        "resolved": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "The digest of the generation's `resolved.yml`, equal to the one its `complete` marker holds."}
+      }
+    },
     "config": {
       "type": "object",
       "description": "Optional. The issue's own configuration layer of 8.x (ADR-036, ADR-043). It stays valid so an archived manifest still passes the schema, and is not written or read since 9.0.0 (ADR-094): a generation committed with it keeps its effect, and `compass issue lint` warns about any other. Its keys are checked by `compass policy lint --issue`.",

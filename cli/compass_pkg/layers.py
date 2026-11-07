@@ -22,9 +22,9 @@ import os
 import re
 from collections import namedtuple
 
-from compass_pkg import catalogue_check, catalogue_spec as spec, word_map
+from compass_pkg import catalogue_check, catalogue_spec as spec, project_settings, word_map
 from compass_pkg.atomic_io import StrictYamlError, digest, load_yaml_strict
-from compass_pkg.core import BOUNDARY_MARKERS, CompassError
+from compass_pkg.core import CompassError
 
 PROJECT_FILE = "compass.yml"
 
@@ -72,19 +72,10 @@ def default_extends(major):
     return f"compass:default@{int(major)}"
 
 
-def find_project_root(start):
-    """The first folder at or above `start` holding `.compass` or `.git`,
-    or `start` itself when none does. The project file is looked for there
-    only: one in any other folder is ignored."""
-    here = os.path.abspath(os.fspath(start))
-    node = here
-    while True:
-        if any(os.path.exists(os.path.join(node, m)) for m in BOUNDARY_MARKERS):
-            return node
-        up = os.path.dirname(node)
-        if up == node:
-            return here
-        node = up
+# `find_project_root` moved to `project_settings` (ADR-094); the name stays here
+# until this module goes (#357 step 8).
+find_project_root = project_settings.find_project_root
+BOUNDARY_MARKERS = project_settings.BOUNDARY_MARKERS
 
 
 def split_project_file(doc):

@@ -44,6 +44,13 @@ RELEASE = "9.0.0"
 #: The start of a git parent's layer name, `github:<owner>/<repo>@<ref>#<sha>`
 #: (`parents.ref_label` writes it). The shipped preset is named `default`.
 GIT_PARENT_SCHEME = "github:"
+#: What a project that extends a git parent does now. A team parent can hold
+#: checks its projects owe, so dropping it would lower what each project owes
+#: without its own file showing it (ADR-094, open question 6).
+GIT_PARENT_FIX = ("Move the checks the team parent adds into the tighten-only settings of "
+                  "compass.yml (signoff_labels, require_evidence, agent_review, "
+                  "project_checks, capabilities) and delete extends:, or stay on Compass "
+                  "8.x until the 9.0.0 upgrade command (#359) rewrites the file")
 
 
 def drops_removed(kind, name):
@@ -148,6 +155,16 @@ COMMANDS = (
     (("policy", "migrate"), "compass policy migrate",
      "run compass policy migrate on 8.x; the upgrade guide names the 9.0.0 settings",
      "ADR-094"),
+    (("approach", "evaluate", "--offline"), "compass approach evaluate --offline",
+     "git parents were removed; nothing is fetched", "ADR-094"),
+    (("policy", "lint", "--offline"), "compass policy lint --offline",
+     "git parents were removed; nothing is fetched", "ADR-094"),
+    (("policy", "show", "--offline"), "compass policy show --offline",
+     "git parents were removed; nothing is fetched", "ADR-094"),
+    (("policy", "lint", "--issue"), "compass policy lint --issue",
+     "an issue has no config layer; the classifier was removed", "ADR-094"),
+    (("policy", "lint", "--exhaustive"), "compass policy lint --exhaustive",
+     "an issue has no config layer; the classifier was removed", "ADR-094"),
 )
 
 #: The ten agent names 9.0.0 removed with the `agents/` folder. The shipped

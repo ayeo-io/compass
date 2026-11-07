@@ -18,7 +18,7 @@ behavior.
 """
 # DEPENDENCY: standard library (os); compass_pkg.acceptance_strategy,
 # catalogue_spec, check_results, core and project_settings, and inside functions
-# compass_pkg.layers and outer_loop. It imports no command module, so the check registry can
+# compass_pkg.project_settings and outer_loop. It imports no command module, so the check registry can
 # import it.
 from __future__ import annotations
 
@@ -114,7 +114,7 @@ def _check_acceptance_support_present(task, task_dir):
     if not green_records(task, task_dir):
         return NOTHING_TO_CHECK, ("not yet judged: no green is on record, so the issue "
                                   "claims nothing the claim limit could limit")
-    from compass_pkg.layers import find_project_root
+    from compass_pkg.project_settings import find_project_root
     root = find_project_root(os.path.dirname(os.path.dirname(os.path.normpath(task_dir))))
     gone = [p for p in pieces(root) if p["result"] == "missing"]
     if not gone:

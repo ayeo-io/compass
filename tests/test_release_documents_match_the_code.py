@@ -15,16 +15,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Every command that can reach the network through a git parent, as a reader
-# types it after `compass`.
+# The commands that reached the network through a git parent in 8.x, as a reader
+# types it after `compass`. 9.0.0 refuses a git parent (ADR-094), so none of them
+# fetches, and the documents must say so.
 FETCHING = ("policy lint", "policy show", "approach evaluate --write")
 
 # The modules that pass a fetch decision to the code that resolves a git
-# parent, and the commands each one serves.
-FETCH_MODULES = {
-    "effective.py": "approach evaluate --write (the generation it commits)",
-    "policy_cmd.py": "policy lint, policy show",
-}
+# parent, and the commands each one serves. None since 9.0.0 (ADR-094).
+FETCH_MODULES: dict = {}
 
 
 def _text(*parts: str) -> str:
@@ -77,13 +75,16 @@ def test_the_source_scan_finds_the_modules_that_fetch_a_git_parent():
         "Name the command in README.md, docs/security.md and docs/git-parents.md.")
 
 
-def test_the_fetch_list_names_every_command_that_fetches():
-    readme = _paragraph(_text("README.md"), "Only `compass")
-    security = _paragraph(_text("docs", "security.md"), "Only `compass")
+def test_the_documents_say_no_command_fetches_a_git_parent():
+    readme = _paragraph(_text("README.md"), "**Fetches nothing for a configuration.**")
+    security = _paragraph(_text("docs", "security.md"),
+                          "**Fetches nothing for a configuration.**")
     for name, text in (("README.md", readme), ("docs/security.md", security)):
+        assert "L-PARENT-REMOVED" in text and "no command runs git" in text, (name, text)
         for command in FETCHING:
             assert command in text, f"{name} does not list `compass {command}`: {text}"
         assert "compass check" in text, name
+        assert "--offline" not in text and "COMPASS_PARENT_REMOTE_BASE" not in text, name
     # `issue configure` went with the issue layer, and the verbs that compared,
     # moved and tested configurations went with the layers (ADR-094).
     for removed in ("issue configure", "policy diff", "policy update", "preset test"):

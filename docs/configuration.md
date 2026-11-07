@@ -3,17 +3,22 @@
 A project's settings: what each one does, its values, its default and which
 file holds it. The Python reader is `cli/compass_pkg/project_settings.py`
 (ADR-043). The pre-tool hook calls it too, so every reader of a setting
-follows the same file.
+follows the same file. It also finds the project root
+(`project_settings.find_project_root`: the first folder at or above the start
+that holds `.compass` or `.git`), and reads the `owner` and `approvers` of
+`compass.yml` for the approval rules (`project_settings.project_file`).
 
 ## Where the settings live
 
 - **`compass.yml` at the project root** holds the settings, and from 6.0.0 it
   is the one file a person edits. The CLI reads it when it is Compass's file,
   and refuses a key that appears twice. It is Compass's file when it has a
-  top-level `schema:` key, or when it is the only settings file. The same file
-  can also hold the project's edits to the shipped governance (see
-  `docs/policy-lint.md`; for waivers, locks and approvers see
-  [waivers-and-locks.md](waivers-and-locks.md)). `/compass:init` writes a minimal one for a new
+  top-level `schema:` key, or when it is the only settings file. It holds
+  settings only: Compass runs one fixed check set (ADR-094), and the
+  tighten-only settings below are the one way to change what an issue owes.
+  A catalog key or `extends:` is a removed setting (see `docs/policy-lint.md`;
+  for waivers and approvers see [waivers.md](waivers.md) and, for the 8.x
+  locks, [waivers-and-locks.md](waivers-and-locks.md)). `/compass:init` writes a minimal one for a new
   project. `compass policy migrate` on 8.x wrote one for an existing project;
   9.0.0 removed that command (ADR-094).
 - **`.compass/config.yml`** holds the same settings for a project from 5.x that
@@ -262,8 +267,8 @@ Three more rules keep an older file or issue working:
 
 - An issue's `config:` that sets a legacy stage or a Definition of Ready
   check, or picks an 8.x approach (`approach:`), that its configuration does
-  not hold is merged without it and named with `L-SETTING-REMOVED` on the
-  issue layer by `compass policy lint --issue`. Over a stored generation that
+  not hold was merged without it in 8.x, and named with `L-SETTING-REMOVED` on
+  the issue layer by `compass policy lint --issue`, which 9.0.0 removed. Over a stored generation that
   holds it, it is kept. 9.0.0 reads no new issue layer (ADR-094): the manifest's
   `config:` is not read, and `compass issue lint` warns about one that the
   issue's stored generation was not committed with.
@@ -391,10 +396,10 @@ Compass runs one fixed set of checks (ADR-094). Five settings of
 more. No value removes a check, lowers a severity or narrows when a check
 applies. Only the project's own `compass.yml` can hold them; a parent cannot.
 
-They are not read yet. `compass_pkg.tighten` applies them and
-`compass_pkg.settings_lint` checks them, but no command calls either until the
-resolver reads the check set. Until then the layer check of `compass
-policy lint` checks their shape, and they change nothing.
+The resolver (`effective.resolve_live`) applies them to the check set with
+`compass_pkg.tighten`, and `compass policy lint` and every generation commit
+check them with `compass_pkg.settings_lint`. Each issue's `policy:` block
+records the ones applied, as written (see `docs/generation-store.md`).
 
 | Setting | What it adds | Values | Default |
 |---|---|---|---|
@@ -482,7 +487,7 @@ It gives each finding a code:
 | `L-SETTING-UNKNOWN` | error | a key `compass.yml` cannot hold |
 | `L-SETTING-INVALID` | error | a malformed value, or a tighten-only value that would not only add, such as a token outside the closed set, an extra field such as `remove:` or `severity:`, a project check that reuses a shipped id, or an assessment value the check set does not declare |
 | `L-SETTING-REMOVED` | warning | a key 9.0.0 removed, read as if absent: the catalogs (`dimensions`, `stages`, `rules`, `checks`, `gates`, `vocabulary`, and the earlier `approaches`, `artifacts`, `readiness`), `extends: compass:...`, `preset`, `preset_index`, `approvers.project-waiver` and the removed settings above |
-| `L-PARENT-REMOVED` | error | `extends:` names a git parent, which could hold checks this file does not show |
+| `L-PARENT-REMOVED` | error | `extends:` names a git parent, which could hold checks this file does not show. Every command that resolves a policy refuses with exit 2 and says what to do: move the team's checks into the five settings above, or stay on 8.x until the 9.0.0 upgrade command (#359) |
 | `L-IMPL-UNKNOWN` | error | the integrity rule: a check, after the settings apply, names an implementation the CLI does not hold |
 
 The JSON Schema in `schemas/compass.schema.json` describes the same shapes.

@@ -21,8 +21,8 @@ setting whose value is not one of these shapes is refused with
 
 `evaluator_settings(resolved)` gives the two keys the evidence evaluator reads
 from a resolved configuration, and `with_settings(policy, resolved)` adds them
-to an evaluator policy. Nothing calls this module yet: the resolver reads it
-once it reads the check set (#357, step 7).
+to an evaluator policy. `effective.resolve_live` applies the settings, and
+`EffectiveView.evaluator_policy` adds the two keys.
 """
 # DEPENDENCY: standard library (copy); compass_pkg.catalogue_spec, compass_pkg.check_set,
 # compass_pkg.core (CompassError), compass_pkg.evidence_required (G5_LABELS),

@@ -84,7 +84,7 @@ GOVERNANCE_FILES = ("routing-policy.yml", "guardrails.yml")
 #: Markers of the project's own boundary. The upward walk does not go above the
 #: first directory holding one of these, so a stray `governance/` in an outer
 #: repository or a home directory cannot stop work inside a project.
-BOUNDARY_MARKERS = (".compass", ".git")
+BOUNDARY_MARKERS = project_settings.BOUNDARY_MARKERS
 
 
 def _governance_refusal(gov_dir, present, missing):

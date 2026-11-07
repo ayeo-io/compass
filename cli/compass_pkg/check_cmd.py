@@ -253,6 +253,8 @@ class _CheckRun:
 
     def __init__(self, task_dir, task, mode, view=None):
         self.view = view if view is not None and view.source == "generation" else None
+        # Any view, live or stored, for the `Policy:` line (ADR-094).
+        self.policy_view = view
         self.task_dir = task_dir
         self.task = task
         self.slug = os.path.basename(task_dir)
@@ -480,6 +482,38 @@ def _verdicts(results):
     return verdicts
 
 
+def _policy_lines(run):
+    """`Policy: compass-checks@9.0.0 (sha256 <hex>)` and the tighten-only
+    settings applied (ADR-094). An issue with a stored generation names the
+    `policy:` block of its manifest; one committed before 9.0.0 has none and
+    gets no line. An issue read from a project's own copy of the governance
+    files gets none either."""
+    view = getattr(run, "policy_view", None)
+    if view is None:
+        return []
+    if view.source == "generation":
+        block = run.task.get("policy")
+        if not isinstance(block, dict):
+            return []
+        ref, sha = block.get("check_set"), block.get("check_set_sha256")
+        tightened = block.get("tightened") or {}
+    elif view.from_governance_copy():
+        return []
+    else:
+        from compass_pkg import check_set, effective, tighten
+        from compass_pkg.core import CompassError
+        from compass_pkg.project_settings import find_project_root
+        ref, sha = check_set.ref(), check_set.sha256()
+        try:
+            tightened = tighten.settings_of(effective.project_doc(find_project_root(run.task_dir)))
+        except CompassError:
+            tightened = {}
+    lines = [f"Policy: {ref}" + (f" (sha256 {sha})" if sha else "")]
+    if tightened:
+        lines.append("Tightened: " + ", ".join(sorted(tightened)))
+    return lines
+
+
 def _generation_lines(run):
     """The notices that name the generation an issue was judged by, and a
     `config:` the generation was not committed with. None for an issue with no
@@ -504,16 +538,12 @@ def _emit_check(run, args):
     the failures, not the exit. A `compass ci` sweep passes `no_count`: it
     checks issues nobody is working on, so its failures are not
     interruptions."""
-    from compass_pkg import locks
     from compass_pkg.interruptions import record
-    from compass_pkg.layers import find_project_root
     from compass_pkg.terminal import mark_handled, resolve_mode
 
-    # Conformance is reported on every run, ahead of the other notices so the
-    # summary view, which shows only a few, always shows it. A project with no
-    # `compass.yml` adds nothing.
-    run.rows[0:0] = [("line", "  " + line) for line in locks.conformance_lines(
-        find_project_root(run.task_dir), width=10 ** 6)]
+    # The policy the issue is judged by is named on every run, ahead of the other
+    # notices so the summary view, which shows only a few, always shows it.
+    run.rows[0:0] = [("line", "  " + line) for line in _policy_lines(run)]
     # An issue with a generation says which one it was judged by, ahead of the
     # other notices, and reports a `config:` the generation does not hold yet.
     # `config:` is an input: the line is a notice and never fails the run.
@@ -760,7 +790,7 @@ def cmd_check(args):
     # An unreadable strategy setting is refused before any check runs, as
     # `approach evaluate` refuses it: a typo must not change what is checked.
     from compass_pkg import acceptance_strategy
-    from compass_pkg.layers import find_project_root
+    from compass_pkg.project_settings import find_project_root
     acceptance_strategy.setting(find_project_root(task_dir))
     # A generation that is not whole is the authority being unreadable, so the
     # check refuses (ADR-036). An issue with no generation is not asked.

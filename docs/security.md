@@ -125,7 +125,7 @@ test tools from `.github/requirements/`, which lists each package at an exact
 version; the cucumber-js adapter installs from its lockfile with `npm ci`. The
 workflows in `ci/` that you copy pin their actions the same way.
 
-## Project checks are executable code
+## Project governance is executable code
 
 A project check (`project_checks` in `compass.yml`, see
 `docs/configuration.md`) uses `command-passes` - a shipped check **whose

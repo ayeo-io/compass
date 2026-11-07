@@ -128,9 +128,15 @@ Measured on the `358-paths` branch by `tests/test_resident_text.py` (run with `-
 | Resident words, as `test_resident_text` counts them | - | 553: contract 342, skill descriptions 134, command descriptions 57, names 20 |
 | Token estimate at 1.35 tokens per word | 949 | 747 |
 | `compass-contract.md` | 64 lines, longest 78 columns, 2,691 characters | 40 lines, longest 79 columns, 2,191 characters |
-| Rendered refusal words, 30 codes | - | 23 to 59, mean 42.7; the cap is under 60 |
+| Rendered refusal words, 30 codes | - | 23 to 59, mean 42.8; the cap is under 60 |
 
-The longest refusals are `no-red-on-record` and `delegation-caller-mismatch` at 59 words and `definition-of-done-open` at 58.
+The longest refusals are `no-red-on-record` and `delegation-caller-mismatch` at 59 words and `definition-of-done-open` at 58. They are one word under the cap or two, so a longer Why line in any of the three fails `tests/test_refusal_registry.py`.
+
+The refusal fix lines, as built (commits 1608539a and 3556530d):
+
+- Ten codes name a new command, as decision 5 lists. Twelve codes name no command, and the `NO_COMMAND` table of `tests/test_refusal_fix_commands.py` gives the reason for each: `bad-session-issue-restart`, `bash-command-too-complex`, `bash-command-too-long`, `config-invalid`, `delegation-protected`, `pr-review-protected`, `python-missing`, `reader-failed`, `settings-conflict`, `transcript-protected`, `tree-not-tied` and `working-directory-gone`.
+- `config-invalid` keeps its fix line, "fix {file} and retry." (VD-036). The plan named `compass policy lint` in it, but the lint passes a `compass.yml` whose `enforcement.code_globs` is a string, which the hook's reader refuses with `config-invalid`. Its Why line already names the fault the reader found.
+- The `no-acceptance-criteria` fix names the file and the command: "add the first scenario to acceptance-criteria.md with compass scenario add TRC-001 ...". The first rewrite named only the command, and two hook tests pin that the refusal names `acceptance-criteria.md`, where the scenarios go. The rendered refusal is 47 words.
 
 ## Alternatives considered
 

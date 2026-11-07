@@ -223,16 +223,16 @@ Fix the misspelled invalid-token message
  .compass/.gitignore                                |   9 ++
  .compass/work/.gitignore                           |   9 ++
  .../work/fix-token-message/evidence/SHA256SUMS     |   4 +
- .../fix-token-message/evidence/check-output.txt    |  51 ++++++++++
+ .../fix-token-message/evidence/check-output.txt    |  52 ++++++++++
  .../evidence/green-TRC-001.outer.json              |  39 ++++++++
  .../evidence/green-TRC-001.outer.log               |   2 +
  .../evidence/red-TRC-001.outer.json                |  33 +++++++
  .../evidence/red-TRC-001.outer.log                 |  17 ++++
- .compass/work/fix-token-message/manifest.yml       | 107 +++++++++++++++++++++
+ .compass/work/fix-token-message/manifest.yml       | 108 +++++++++++++++++++++
  .compass/work/fix-token-message/trail.md           |  72 ++++++++++++++
  app/auth.py                                        |   2 +-
  .../acceptance-criteria.md                         |  32 ++++++
- 12 files changed, 376 insertions(+), 1 deletion(-)
+ 12 files changed, 378 insertions(+), 1 deletion(-)
 ```
 
 Your normal CI is still responsible for tests, linting, security scanning,

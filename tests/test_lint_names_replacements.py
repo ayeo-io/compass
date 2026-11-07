@@ -203,7 +203,7 @@ TABLE_END = "<!-- /compass:replacements-table -->"
 
 def _family(key):
     """`(catalog, id)` for a key that is one entry of a catalog, such as
-    `stages.verify`, else None."""
+    `stages.design`, else None."""
     head, _, rest = key.partition(".")
     return (head, rest) if rest and "." not in rest and "*" not in rest else None
 

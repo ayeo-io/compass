@@ -146,6 +146,9 @@ Stop only where a `next:` line says to wait for a person.
 Leave out `--no-commit` only when the user asked for a commit: it
 commits through `compass ship-commit`. With `--no-commit`, say the change
 is checked, not committed, and give the commit command it prints.
+The landing writes `trail.md`; `compass trail --check` says if it is up
+to date. After the merge, a record committed with the code takes the
+merge fields in a second commit: `compass record commit --issue <slug>`.
 
 It lists the files it commits. It refuses a file that was already changed
 or untracked when `start` ran, or that sits in a directory with no tracked

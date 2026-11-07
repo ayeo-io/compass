@@ -130,9 +130,12 @@ COMMON = {"-h", "--help", "--quiet", "--summary", "--verbose", "--json",
           "--evidence-out"}
 
 # Every option each verb accepted before the trim; none may be lost.
+# quick-fix start lost --role in 9.0.0 on purpose (#359 step 9, commit
+# 41ee4476): role is not an assessment dimension since ADR-070, and argparse
+# now refuses the flag. The trim must still keep every other option.
 OPTIONS = {
     ("quick-fix", "start"): {"--risk", "--familiarity", "--size", "--goal",
-                             "--role", "--intent", "--scenario",
+                             "--intent", "--scenario",
                              "--scenario-id", "--test", "--labels",
                              "--request", "--requester"} | COMMON,
     ("quick-fix", "finish"): {"-m", "--message", "--no-commit", "--issue",

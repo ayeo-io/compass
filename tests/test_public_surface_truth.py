@@ -835,6 +835,11 @@ def test_d2_repairs_change_only_retired_names():
     26 -> 28): the `sha256sum -c -` command a reviewer runs over `trail.md`
     is a fenced block, because a path named inline must exist in the tree.
 
+    #359 step 5 (the deleted-check refusal, commit 11a3cf96) re-baselined
+    `governance/guardrails.md` (one `##` heading more, list_items 89 -> 92):
+    it gained the section "A deleted check", with the three settings and
+    waivers that make `compass check` refuse.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

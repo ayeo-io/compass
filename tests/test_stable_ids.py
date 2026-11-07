@@ -313,6 +313,7 @@ STAGE_LEDGER = {
     "core.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),
     "lessons.py": (2, 'a lesson source named "verify" is not a pipeline stage'),
     "migrate.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),
+    "migrate_settings.py": (2, 'the "ship" key of the 8.x stages: block that docs/judged-checks.md gave for the agent review, which compass migrate reads to write agent_review: on (#359)'),
     "pytest_report.py": (1, 'the "build" folder a test run skips is not a pipeline stage'),
     "removed_parts.py": (1, 'the removed verb "compass plan lint" is a command word, not a stage'),
     "word_map.py": (1, 'the retired run stage "build" in the fallback word table is a v1 name'),

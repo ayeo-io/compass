@@ -1,8 +1,8 @@
-"""The CLI prints US English: its help, its messages and its old-name notice.
+"""The CLI prints US English: its help, its messages and its refusal of an old name.
 
 The scenarios of the issue `language-key-and-us-english`: the help of every
-verb (`TRC-040`), the printed messages (`TRC-041`) and the notice for an old
-name (`TRC-042`).
+verb (`TRC-040`), the printed messages (`TRC-041`) and the old name
+(`TRC-042`), which printed a notice until 9.0.0 and is refused since.
 """
 from __future__ import annotations
 
@@ -106,7 +106,9 @@ def test_trc_041():
 
 
 def test_trc_042():
-    notice = f"compass: kind {OLD_KIND} is now {NEW_KIND}; the old word is read until 9.0.0."
+    """The old kind word is no longer read (#359 step 9, ADR-098), so no
+    old-name notice is printed. The refusal is in US English: apart from the
+    word the person typed, it names only the US choices."""
     outcomes = {}
     for word in (OLD_KIND, NEW_KIND):
         with tempfile.TemporaryDirectory() as raw:
@@ -114,8 +116,10 @@ def test_trc_042():
             renamed._assessed_then_moved(project)
             code, out, err = renamed._reassess(project, "--kind", word)
             outcomes[word] = (code, out.replace(raw, "<project>"), err)
-    assert outcomes[OLD_KIND][0] == outcomes[NEW_KIND][0] == 0
-    assert outcomes[OLD_KIND][1] == outcomes[NEW_KIND][1]
-    assert outcomes[OLD_KIND][2].count(notice) == 1
-    assert [ln for ln in outcomes[OLD_KIND][2].splitlines() if "old word" in ln] == [notice]
-    assert "old word" not in outcomes[NEW_KIND][2]
+    assert outcomes[NEW_KIND][0] == 0, outcomes[NEW_KIND]
+    assert outcomes[OLD_KIND][0] == 2, outcomes[OLD_KIND]
+    for word, (_code, out, err) in outcomes.items():
+        assert "old word" not in out + err, (word, err)
+        typed = (out + err).replace(f"'{OLD_KIND}'", "").replace(OLD_KIND, "")
+        assert _words_in(typed) == [], (word, typed)
+    assert NEW_KIND in outcomes[OLD_KIND][2], outcomes[OLD_KIND][2]

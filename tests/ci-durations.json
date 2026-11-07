@@ -170,7 +170,7 @@
   "tests/test_docs_gaps_after_6_0_0.py": 8.65,
   "tests/test_docs_prose.py": 0.17,
   "tests/test_docs_site.py": 0.07,
-  "tests/test_docs_transcripts_are_real.py": 0.88,
+  "tests/test_docs_transcripts_are_real.py": 1.94,
   "tests/test_document_set_diagram.py": 0.1,
   "tests/test_document_set_sections.py": 1390.96,
   "tests/test_documented_commands_exist.py": 0.47,

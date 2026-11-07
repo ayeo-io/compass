@@ -808,7 +808,10 @@ def test_d2_repairs_change_only_retired_names():
 
     One more was re-baselined by #355, step 2 (the ship approval):
     `governance/guardrails.md` (list_items 79 -> 83) gained the bullet on the
-    check `ship-approval-present` and its three sub-bullets.
+    check `ship-approval-present` and its three sub-bullets. #355 step 5
+    re-baselined `docs/safety-contract.md` (list_items 125 -> 130): the rule
+    that the hook refuses an agent's approving review of a pull request, and
+    its limits.
 
     A NEW structural change to any of the 26 still fails.
     """

@@ -319,24 +319,26 @@ def test_dcj_32_the_stage_lists_read_records(tmp_path):
 # --- DCJ-33 -----------------------------------------------------------------
 
 def test_dcj_33_the_check_lists_the_configured_items(tmp_path):
-    # The Definition of Done is the build exit list (ADR-092 decision 6). The stage `build`
-    # is locked, so removing an item needs a waiver on the entry. A git parent's waiver
-    # stands in for the issue layer: the issue layer's waiver needs an approval record that
-    # names it, and the check reads the same resolved list either way. The git parent names
-    # the owner who may approve the waiver.
-    parent = {"schema": 1, "owner": "jed72",
-              "checks": {"dod-perf-budget": {"statement": "Performance stays within budget.",
-                                             "kind": "human", "severity": "blocking",
-                                             "on_skipped": "not-applicable"}},
-              "stages": {"build": {
-                  "set": {"exit": {"add": ["dod-perf-budget"],
-                                   "remove": ["dod-coverage-floor"]}},
-                  "waiver": {"reason": "Coverage is judged elsewhere in this project.",
-                             "approved_by": "jed72", "approved_on": "2026-10-09"}}}}
+    # The Definition of Done is the build exit list (ADR-092 decision 6). Since 9.0.0
+    # compass.yml cannot change that list (ADR-094), so a list that adds one item and
+    # drops another reaches an issue only through its stored generation, as an 8.x
+    # project layer could have filled it. The check reads the generation's list.
+    import stored_generation
+
+    def configure(resolved):
+        resolved["checks"]["dod-perf-budget"] = {
+            "statement": "Performance stays within budget.", "kind": "human",
+            "severity": "blocking", "on_skipped": "not-applicable"}
+        build = resolved["stages"]["build"]
+        assert "dod-coverage-floor" in build["exit"], build
+        build["exit"] = [i for i in build["exit"] if i != "dod-coverage-floor"] + [
+            "dod-perf-budget"]
+
     for capability in (True, False):
         folder = tmp_path / ("on" if capability else "off")
         root = _issue(folder, layer={**LAYER, "capabilities": {"entry-exit-evaluation": capability}},
-                      gates_passed=True, parent=parent)
+                      gates_passed=True)
+        stored_generation.commit(root, Path(root) / WORK, configure, slug=SLUG)
         _, report = _report(root)
         detail = _row(report, "dod-evidence-typed")["detail"]
         listed = [i for i in ITEMS + ["dod-perf-budget"] if f"{i} is open" in detail]

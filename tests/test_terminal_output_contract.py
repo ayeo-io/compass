@@ -995,6 +995,8 @@ _TAIL_EXEMPT = {
     "issue blocked remove": "needs an issue that is blocked, which the fixture does not build; test_workflow_states.py runs it, without measuring its output against this contract",
     "record sync": "needs a record repository to push to; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "record restore": "needs a record repository to read; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
+    # #356, ADR-096: the follow-up commit of a record committed with the code.
+    "record commit": "writes a git commit, and needs a git repository whose landed record is committed with the code, which this fixture is not; test_record_commit.py runs it, without measuring its output against this contract",
     "issue use": "writes the pointer and the session record of an existing issue; test_current_task_lease.py runs it, without measuring its output against this contract",
     "issue decision add": "writes one manifest key and needs an issue with a requirements review or full flags; test_decisions_taken.py runs it, without measuring its output against this contract",
     "issue decision set": "needs a terminal on standard input and an existing decision; test_decisions_taken.py runs it under a pseudo-terminal",
@@ -1065,6 +1067,9 @@ _TAIL_ARGV = {
     # A path issue's follow-up must link to a GitHub issue (ADR-093).
     "follow-up add": ["follow-up", "add", "FU-9", "--github", "ayeo-io/compass#9",
                       "--summary", "settle this at ship"],
+    # #356, ADR-096: writes the fixture issue's trail.md, outside git, so the
+    # sum paths start at the project root.
+    "trail": ["trail"],
 }
 
 

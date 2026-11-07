@@ -7,7 +7,9 @@ on the default branch, so the record names a commit a reader cannot find
 there. `compass issue link set --pr <n>` asks `gh pr view` for the pull
 request and writes it to the manifest as `pull_request: {repo, number}`. When
 the pull request is merged and the issue has landed, it also writes the merge
-commit GitHub reports to `land_commit`. Run it when the pull request opens to
+commit GitHub reports to `land_commit`, unless the record landed with the code
+(`landed_with_record`): then `landing.land_commit` reads the land commit from
+git, and nothing is stored (#356). Run it when the pull request opens to
 record the link, and again after the merge.
 
 After the merge it also reads the pull request's reviews (`gh api --paginate
@@ -236,6 +238,13 @@ def apply(task, slug, pr):
     if not status_words.is_completed(task):
         lines.append("The issue has not landed, so land_commit is left to "
                      "`compass ship-commit`.")
+    elif task.get("landed_with_record") is True and not task.get("land_commit"):
+        # The record landed in the same commit as the code (#356, ADR-096), so
+        # `landing.land_commit` reads the land commit from git, and on the
+        # default branch that is the merge commit. A stored value would win
+        # over it, and could disagree with it.
+        lines.append("The record landed with the code, so land_commit is not written; "
+                     "git gives the land commit.")
     else:
         before = task.get("land_commit")
         task["land_commit"] = oid

@@ -824,6 +824,13 @@ def test_d2_repairs_change_only_retired_names():
     `governance/guardrails.md` (list_items 88 -> 89): it gained the bullet on
     `held`, which finds a check set by its `<id>@<version>` and sha256.
 
+    #356 step 6 (the record committed with the code, ADR-096) re-baselined
+    `docs/safety-contract.md` (list_items 130 -> 133): the three limits of a
+    committed landing (a hand edit of the trail's prose, a hook that rewrites
+    a record file, a shallow clone). #356 step 7 re-baselined
+    `docs/quickstart.md` (table_rows 26 -> 27): the `next:` table gained the
+    row that names `compass record commit` after the merge.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

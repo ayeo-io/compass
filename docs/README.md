@@ -91,7 +91,7 @@ same commit.
 | `cli/compass_pkg/tdd.py`, `cli/compass_pkg/scenario_freeze.py`, `cli/compass_pkg/tdd_green.py`, `cli/compass_pkg/green_attempts.py`, `cli/compass_pkg/evidence_identity.py`, `cli/compass_pkg/evidence_sums.py` | `skills/evidence-gates/SKILL.md` |
 | `cli/compass_pkg/loop_ceilings.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/evidence_required.py`, `cli/compass_pkg/path_writer.py`, `tests/fixtures/compat/v8.0.4-governance.tgz`, `tests/test_path_writer.py`, `tests/test_quick_fix_path.py` | `governance/routing-policy.md` |
-| `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/record_mode.py`, `cli/compass_pkg/trail.py`, `cli/compass_pkg/committed_landing.py`, `tests/test_record_mode.py`, `tests/test_ship_commit_commits_the_record.py` | `docs/delivery-record.md` |
+| `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/record_mode.py`, `cli/compass_pkg/trail.py`, `cli/compass_pkg/committed_landing.py`, `tests/test_record_mode.py`, `tests/test_ship_commit_commits_the_record.py`, `tests/test_record_commit.py` | `docs/delivery-record.md` |
 | `cli/compass_pkg/checkpoint_outcomes.py` | `docs/checkpoints.md` |
 | `cli/compass_pkg/issue_link.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `cli/compass_pkg/landing.py`, `tests/fake_gh.py` | `docs/github-links.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |

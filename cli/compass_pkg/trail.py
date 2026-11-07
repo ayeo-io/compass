@@ -33,8 +33,9 @@ says how to find it in git, the way `landing.land_commit` does, instead of
 naming a commit id that changes when the record is committed.
 
 This module only reads records. It writes no approval and no other file.
-`compass trail` writes the file; `compass check` prints one line when the
-file exists. Nothing calls it from `compass ship-commit` yet.
+`compass trail`, `compass ship-commit`, `compass issue link set --pr` and
+`compass record commit` write the file; `compass check` prints one line when
+the file exists.
 """
 # DEPENDENCY: standard library (os, subprocess, hashlib); compass_pkg.approval_records
 # (shown_text, provenance words), atomic_io, core, evidence_sums (the sum line),
@@ -302,7 +303,23 @@ def _green(w):
     w.say(f"The files as the newest green tested them ({name}). These lines hold at the "
           f"land commit; a later change to the same file makes its line fail at a later "
           f"commit.")
+    merged = _merge_commit(w.task)
+    if merged:
+        # A trail written after the merge is committed later, where other pull
+        # requests may have changed these files; the merge commit is where
+        # they hold (#356, plan section 4.4).
+        w.say(f"Check these at the merge commit {merged}: `git checkout {merged}`.")
     w.sums(files)
+
+
+def _merge_commit(task):
+    """The merge commit `compass issue link set --pr` recorded, or None. Read
+    from the manifest, never from git, so the same record gives the same bytes."""
+    pr = task.get("pull_request")
+    oid = pr.get("merge_commit") if isinstance(pr, dict) and pr.get("merged_at") else None
+    if isinstance(oid, str) and len(oid) in (40, 64) and all(c in "0123456789abcdef" for c in oid):
+        return oid
+    return None
 
 
 def _registry(task):

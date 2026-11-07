@@ -42,7 +42,8 @@ The check `request-recorded` fails until both parts are recorded, and `compass n
 `compass issue link set --pr <n>` records the pull request that carries the issue, as `pull_request: {repo, number}` in the manifest. `<n>` is `owner/repo#number`, the pull request's URL on github.com, or a bare number in the repository of the project's `origin`. The command reads the pull request with `gh pr view <number> --repo <repo> --json number,state,mergeCommit,mergedAt,author,headRefOid,url`:
 
 - When the pull request is merged, `pull_request` also gets `merged_at`, `merge_commit` and `author`, and the command reads the ship approval (next section).
-- When the pull request is merged and the issue has landed, it writes the merge commit to `land_commit` and prints the old and new ids.
+- When the pull request is merged and the issue has landed, it writes the merge commit to `land_commit` and prints the old and new ids. An issue whose record landed with the code (`landed_with_record: true`, no stored `land_commit`) is the exception: nothing is written, because `landing.land_commit` gives the land commit from git and a stored value would win over it.
+- With `--pr` it writes `trail.md` again after the save (`docs/delivery-record.md`). In committed mode, when the pull request is merged and the issue has landed, it ends with `next: compass record commit --issue <slug>`, the command that commits the merge fields (`--json` gives it as `next`).
 - When the pull request is not merged, or the issue has not landed, it records the link only and leaves `land_commit` as it is. `compass ship-commit` writes `land_commit` when the issue lands.
 - When `gh` cannot read the pull request or its reviews, or the value names no pull request, it exits non-zero and writes nothing, the `--github` link included.
 
@@ -103,8 +104,8 @@ A second run replaces the record of the same review in place, and writes nothing
 | The repository is not on GitHub | A bare number refuses (origin names no repository on github.com); not run | As above |
 | `gh` is not logged in, GitHub is down, the call times out, or HTTP 404 | Refuses; nothing written, the `--github` link included | Unchanged |
 | The pull request is not merged | Writes the link only; says the approval is read after the merge | Nothing to check |
-| Merged, with a counting approval | Writes the link, the merge keys, the records and `land_commit` | Pass, naming the reviewer and the record |
-| Merged, with no approving review | Writes the link, the merge keys and `land_commit`; says no person other than the author approved | Fail, until a typed approval (`compass evidence request --ship`, then `/compass:approve`) is on record |
+| Merged, with a counting approval | Writes the link, the merge keys, the records and `land_commit` (not for a record that landed with the code) | Pass, naming the reviewer and the record |
+| Merged, with no approving review | Writes the link, the merge keys and `land_commit` (as above); says no person other than the author approved | Fail, until a typed approval (`compass evidence request --ship`, then `/compass:approve`) is on record |
 | The only approval is by the author, by a bot, or after the merge | Sets it aside with the reason | As with no approving review |
 | The reviews call or `gh api user` fails after `gh pr view` succeeded | Refuses; nothing written | Unchanged |
 

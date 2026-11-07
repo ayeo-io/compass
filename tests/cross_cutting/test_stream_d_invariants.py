@@ -113,7 +113,7 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # each step already used. A GROUP, so a
                                   # later quick-fix verb has a home.
     "lesson",                     # project-lessons (ADR-029)
-    "record",                     # delivery-record (ADR-031)
+    "record",                     # delivery-record (ADR-031); `record commit`, #356 (ADR-096)
     "release",                    # intent-and-release-line (ADR-065): `compass
                                   # release notes --since <ref>`, read-only. A
                                   # GROUP, so a later release verb has a home.
@@ -129,6 +129,11 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # record verb has a home.
     "waiver",                     # #357 (ADR-094): `compass waiver add|withdraw`,
                                   # one check waived on one issue. A GROUP.
+    "trail",                      # #356 (ADR-096 decision 19): `compass trail
+                                  # [--check]` writes the issue's trail.md. A
+                                  # verb, not a group: it is a noun that is its
+                                  # own command. `compass record commit` (#356)
+                                  # is under the `record` group, not top level.
 }
 
 

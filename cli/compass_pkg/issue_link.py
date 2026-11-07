@@ -5,7 +5,10 @@
 `github: {repo, number}` field. `--request` and `--requester` record who asked
 for the issue and where (`request_link`, #356); neither calls `gh`. `--pr`
 records the pull request that carries the issue, and after the merge the
-approving reviews that are the ship approval (`pull_request_link`). Linking
+approving reviews that are the ship approval (`pull_request_link`). `--pr`
+then writes `trail.md` again; in committed mode, after the merge of a landed
+issue, it prints `next: compass record commit --issue <slug>`, because the
+merge fields are not in the commit that holds the record (#356). Linking
 writes nothing to GitHub.
 
 A target is checked against a strict pattern before it is stored, so nothing
@@ -14,9 +17,10 @@ with an argument list and no shell, with the person's own credentials. Compass
 stores and reads no token.
 """
 # DEPENDENCY: standard library (os, re, subprocess) and compass_pkg.core,
-# compass_pkg.project_settings, compass_pkg.request_link and compass_pkg.terminal. Imported by the entry point (the
-# `link set` parser) and by pull_request_link, which uses the `gh` runner and the
-# target patterns.
+# compass_pkg.project_settings, compass_pkg.request_link and compass_pkg.terminal;
+# for `--pr`, committed_landing (the trail), record_mode and status_words.
+# Imported by the entry point (the `link set` parser) and by pull_request_link,
+# which uses the `gh` runner and the target patterns.
 from __future__ import annotations
 
 import os
@@ -132,7 +136,38 @@ def cmd_issue_link(args):
         lines += pull_request_link.apply(task, task.get("issue"), pr)
         fields.update(pull_request=task["pull_request"], land_commit=landing.land_commit(task, task_dir))
     save_manifest(task, path)
-    return say(args, f"{verb}: {lines[0]}", detail=lines[1:] or None, **fields)
+    follow_up = None
+    if pr is not None:
+        follow_up = _after_pr(task, task_dir, pr, lines)
+        fields.update(next=follow_up)
+    code = say(args, f"{verb}: {lines[0]}", detail=lines[1:] or None, **fields)
+    if follow_up:
+        from compass_pkg.terminal import resolve_mode
+        if resolve_mode(args) in ("summary", "verbose"):
+            print(f"next: {follow_up}")
+    return code
+
+
+def _after_pr(task, task_dir, pr, lines):
+    """Write `trail.md` again after the pull request fields are saved, so the
+    trail names them (#356, ADR-096). In committed mode, once the pull request
+    is merged on a landed issue, return the command that commits the record:
+    the merge fields came after the commit that holds the record, so they are
+    not in it yet. Otherwise None."""
+    from compass_pkg import committed_landing, record_mode, status_words
+    if committed_landing.write_trail(task_dir):
+        lines.append("trail.md written again.")
+    if pr.merge_commit is None or not status_words.is_completed(task):
+        return None
+    root = _project_root(task_dir)
+    try:
+        committed = record_mode.mode(root, task_dir).mode == record_mode.COMMITTED
+    except CompassError:
+        committed = False
+    if not committed:
+        return None
+    slug = os.path.basename(os.path.normpath(task_dir))
+    return f"compass record commit --issue {slug}"
 
 
 def _request_line(issue, held):
@@ -204,7 +239,8 @@ def register(pts, issue_arg):
                              "its URL, or a number in origin's repository. Once it is "
                              "merged, its approving reviews are recorded as the ship "
                              "approval, and once the issue has also landed, land_commit "
-                             "moves to its merge commit")
+                             "moves to its merge commit, unless the record landed with "
+                             "the code")
     linker.add_argument("--request", metavar="URL",
                         help="the request this issue answers: an https:// URL, or "
                              "owner/repo#number, which also links the GitHub issue")

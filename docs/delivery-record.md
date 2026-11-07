@@ -50,6 +50,22 @@ In committed mode the scope of a ship commit holds the issue folder, the documen
 
 When git ignores the issue folder and no setting chose the mode, ship prints one line that names the ignore rule. `record.commit: false` keeps the record out without the line.
 
+## After the merge
+
+The ship approval, the merge time and the merge commit come after the merge, so the merged commit cannot hold them (ADR-096). Until they are committed, the merged `trail.md` says the ship approval is read from the pull request after the merge.
+
+1. `compass issue link set --pr <n> --issue <slug>` writes the merge fields and the `pr-approval` records (`docs/github-links.md`), then writes `trail.md` again, in both modes. In committed mode it writes no `land_commit`: git gives the land commit. Section 4 of the trail then names the merge commit as the commit to check the code lines at.
+2. In committed mode, on a landed issue, it ends with `next: compass record commit --issue <slug>`. `compass next` names the same command while the issue folder holds a change git has not committed.
+3. `compass record commit --issue <slug> [-m <message>]` writes `trail.md`, stages the issue folder, its documents folder and `.compass/work/.gitignore` (git skips the files that ignore file names), and commits them with the message "Record the merge of <slug>", or the `-m` message. Git's own hooks run; Compass runs no check of its own and calls no network. The person pushes the commit, in a pull request or not.
+
+`compass record commit` refuses, and commits nothing, when:
+
+- the record is kept out. It names the reason and says that `compass record sync` copies the record instead;
+- a path outside the record is staged. It names the paths and writes and stages nothing;
+- the record has no change.
+
+In kept-out mode `issue link set --pr` moves `land_commit` to the merge commit as before, and `compass record sync` carries the merge fields.
+
 ## The trail
 
 `compass trail --issue <slug>` writes `.compass/work/<slug>/trail.md`, one file a reviewer checks with `sha256sum -c` and without Compass (#356, ADR-096). It has six sections, in this order:
@@ -75,7 +91,7 @@ The `-` makes the macOS `sha256sum` read the standard input; `shasum -a 256 -c` 
 - `compass trail --check` writes nothing. It exits 1 and names the first line that differs when the file is missing or out of date, and 0 when it matches. A command that writes the manifest after `trail.md` makes it out of date. `compass check` prints `Trail: up to date`, or that it is out of date, on an issue that has the file.
 - A spike ships no code, so `compass trail` refuses it and writes nothing.
 - The trail only reads records. It writes no approval, and the requester is never shown as one.
-- `compass ship-commit` writes the trail at each landing, before the commit in committed mode and after the `land_commit` write in kept-out mode.
+- `compass ship-commit` writes the trail at each landing, before the commit in committed mode and after the `land_commit` write in kept-out mode. `compass issue link set --pr` and `compass record commit` write it again (see "After the merge").
 
 ## Setting it up
 
@@ -128,7 +144,7 @@ One record repository serves one project. The clone lives in the user's cache fo
 
 | File | Role |
 |---|---|
-| `cli/compass_pkg/record.py` | `sync`, `restore`, and the settings. |
+| `cli/compass_pkg/record.py` | `sync`, `restore`, `commit`, and the settings. |
 | `cli/compass_pkg/record_mode.py` | The record mode, the ignore lines and the helper that appends them. |
 | `cli/compass_pkg/trail.py` | `compass trail`: writes and checks `trail.md`. |
 | `cli/compass_pkg/init_cmd.py` | `compass init` writes the ignore files. |

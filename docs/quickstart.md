@@ -443,6 +443,7 @@ matches (`cli/compass_pkg/next_step.py`):
 | a path issue with only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>` |
 | every gate passes | `compass check`, then `git add -- <the traced files>`, then `compass ship-commit -m "<message>"` |
 | landed, `ship-approval` owed, none on record | `compass issue link set --pr <n> --issue <slug>` after the merge, or `compass evidence request --ship`, then stop for `/compass:approve`; only the second once the merge is recorded |
+| landed with its record committed with the code, and the issue folder holds a change git has not committed (the merge fields `compass issue link set --pr` wrote) | `compass record commit --issue <slug>` |
 
 What a path issue owes comes from its `evidence_required` list. The request
 comes first, so assess records who asked and the link to the request

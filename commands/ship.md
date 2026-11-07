@@ -256,7 +256,10 @@ first. Nothing writes `target_task` since 9.0.0.
   commit `gh pr view` reports. After the merge it also reads the pull
   request's reviews and records the ship approval (below). `compass check`
   reports, as advice, a `land_commit` that origin's default branch does not
-  reach.
+  reach. When the record is committed with the code, `land_commit` is not
+  written (git gives it), and the merge fields are not in the merged
+  commit: run the `next:` command it prints, `compass record commit --issue
+  <slug>`, which commits the issue record alone, and push that commit.
 
 ## The ship approval
 

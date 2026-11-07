@@ -151,7 +151,7 @@ EXPECTED_SUBCOMMANDS = {
     # decisions-ledger (ADR-027): a group, record|list|show|check.
     "decision",
     "lesson",  # project-lessons (ADR-029)
-    "record",  # delivery-record (ADR-031)
+    "record",  # delivery-record (ADR-031); `record commit` added by #356 (ADR-096)
     # "readiness" (ADR-061): ADR-093 removed the readiness measure.
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
     # isolation-and-layering (#328, ADR-086): `isolation record` and `layering
@@ -161,6 +161,11 @@ EXPECTED_SUBCOMMANDS = {
     # one-check waivers (#357, ADR-094 decision 8): `waiver add` and
     # `waiver withdraw`, the one route by which an issue owes less.
     "waiver",
+    # the trail (#356, ADR-096 decision 19): `compass trail [--check]` writes
+    # the issue's trail.md, a file a reviewer checks with sha256sum. It adds
+    # no guardrail or gate. `compass record commit` (#356) is a sub-verb of
+    # the existing `record` group, so it adds no top-level verb.
+    "trail",
 }
 # Role left the assessment at 7.0.0 (ADR-070); nothing took its place.
 EXPECTED_READING_KEYS = {

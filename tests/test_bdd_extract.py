@@ -316,7 +316,7 @@ EXPECTED_SUBCOMMANDS = {
     "acceptance",                 # the acceptance verb group
     "quick-fix",                  # start|finish - the quick-fix verb group
     "lesson",                     # add|list|remove|propose|accept - project lessons (ADR-029)
-    "record",                     # sync|restore - the delivery record (ADR-031)
+    "record",                     # sync|restore|commit - the delivery record (ADR-031; commit #356)
     "decision",                   # record|list|show|check - the ledger (ADR-027)
     # "board" (render|refresh, ADR-046): ADR-093 removed the delivery board page.
     # "readiness" (ADR-061): ADR-093 removed the readiness measure.
@@ -324,6 +324,8 @@ EXPECTED_SUBCOMMANDS = {
     "isolation",                  # record - the isolation proof (#328, ADR-086)
     "layering",                   # record - the layering record (#328, ADR-086)
     "waiver",                     # add|withdraw - one-check waivers (#357, ADR-094 decision 8)
+    "trail",                      # write or --check the issue's trail.md (#356, ADR-096);
+                                  # `record commit` (#356) is a sub-verb of `record`
 }
 
 

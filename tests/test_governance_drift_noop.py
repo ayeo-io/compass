@@ -321,7 +321,7 @@ EXPECTED_SUBCOMMANDS = {
     # runs inside the existing `compass ci`.
     "decision",
     "lesson",  # project-lessons (ADR-029)
-    "record",  # delivery-record (ADR-031)
+    "record",  # delivery-record (ADR-031); `record commit` added by #356 (ADR-096)
     # "board" (compass-board, ADR-046): ADR-093 removed the delivery board page.
     # "readiness" (ADR-061): ADR-093 removed the readiness measure.
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
@@ -332,6 +332,11 @@ EXPECTED_SUBCOMMANDS = {
     # one-check waivers (#357, ADR-094 decision 8): `waiver add` and
     # `waiver withdraw`, the one route by which an issue owes less.
     "waiver",
+    # the trail (#356, ADR-096 decision 19): `compass trail [--check]` writes
+    # the issue's trail.md, a file a reviewer checks with sha256sum. It adds
+    # no guardrail or gate. `compass record commit` (#356) is a sub-verb of
+    # the existing `record` group, so it adds no top-level verb.
+    "trail",
 }
 
 

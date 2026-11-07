@@ -10,6 +10,7 @@ bottom, and the first that matches gives the command:
 |---|---|
 | no manifest | `/compass:go "<what you want>"` |
 | landed, `ship-approval` owed, none on record | `compass issue link set --pr <n> --issue <slug>` after the merge, or `compass evidence request --ship` (only the second once the merge is recorded) |
+| landed with its record (`landed_with_record`), the issue folder holds a change git has not committed | `compass record commit --issue <slug>` |
 | closed | none |
 | a spike with no conclusion | `compass evidence add EV-SPIKE --type spike-conclusion ...` |
 | `request` owed, the link or the requester not recorded, no waiver in force | `compass issue link set --issue <slug> --request <url> --requester <name>` |
@@ -90,7 +91,8 @@ def next_command(task, task_dir, done=None):
         return GO
     if status_words.is_closed(task):
         try:
-            return ship_approval_command(task, task_dir)
+            return (ship_approval_command(task, task_dir)
+                    or record_commit_command(task, task_dir))
         except Exception:  # noqa: BLE001 - a closed issue's line must still print
             return None
     try:
@@ -152,6 +154,29 @@ def ship_approval_command(task, task_dir):
     slug = os.path.basename(os.path.normpath(task_dir))
     return (f"compass issue link set --pr {number} --issue {slug} after the merge, "
             f"or {typed}")
+
+
+def record_commit_command(task, task_dir):
+    """On an issue whose record landed with the code, `compass record commit`
+    when its folder holds a change git has not committed; else None (#356).
+
+    `compass issue link set --pr` writes the merge fields after the commit
+    that holds the record, so they reach the record by a second commit. This
+    reads `git status` of the issue folder and writes nothing; git leaves out
+    the files `.compass/work/.gitignore` names."""
+    from compass_pkg import record_mode
+    from compass_pkg.core import find_upwards
+    if (not task_dir or task.get("landed_with_record") is not True
+            or not status_words.is_completed(task)):
+        return None
+    root = find_upwards(task_dir, ".compass")
+    if not root or record_mode.mode(root, task_dir).mode != record_mode.COMMITTED:
+        return None
+    found = record_mode._git(["--literal-pathspecs", "status", "--porcelain",
+                              "--untracked-files=all", "--", str(task_dir)], root)
+    if found is None or found.returncode != 0 or not found.stdout.strip():
+        return None
+    return f"compass record commit --issue {os.path.basename(os.path.normpath(task_dir))}"
 
 
 def _finish(task_dir):

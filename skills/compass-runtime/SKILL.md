@@ -27,7 +27,7 @@ command runs the path, and the `next:` line names each step.
 | Assess | `compass quick-fix start`, or `/compass:assess` for the full procedure, `--reassess` and the spike | the assessment, `evidence_required`, the pending gates, the `S17` block and the checkpoints |
 | Specify | the `next:` line: `compass scenario add`, `compass scenario tests set` | the scenarios in `acceptance-criteria.md`, the test each one declares, and the `specify` checkpoint's outcome where `scenario-approval` is owed |
 | Build | the `next:` line: `compass tdd-red`, then the code, then `compass tdd-green` | the red and green records (named by binding), and the outer-loop, isolation and layering records where `S17` applies |
-| Ship | the `next:` line: `compass evidence add`, `compass gate pass`, `compass check`; `/compass:ship` or `compass quick-fix finish` for the commit | the gate evidence and the Definition of Done items as records, the sign-offs, and the commit |
+| Ship | the `next:` line: `compass evidence add`, `compass gate pass`, `compass check`; `/compass:ship` or `compass quick-fix finish` for the commit | the gate evidence and the Definition of Done items as records, the sign-offs, the commit, and after the merge the ship approval: `compass issue link set --pr <n>` reads the pull request's approving review, else `compass evidence request --ship` and stop |
 
 - `/compass:go` runs the whole path in one session: it assesses with
   `compass quick-fix start`, shows `compass approach show`, then follows
@@ -149,8 +149,8 @@ the issue without one (`docs/release-line.md`).
 
 The first `compass tdd-red` of a delivery issue writes the manifest's
 `scenario_freeze` (the spec's path and digest and the scenario ids); where
-the issue owes `scenario-approval`, it waits for a person's answer at specify
-(`docs/checkpoints.md`). An approval under a delegation copies that
+the issue owes `scenario-approval`, it refuses until a person answers at
+specify (`docs/checkpoints.md`). An approval under a delegation copies that
 delegation into the manifest's `delegations_used:` in the same save.
 
 A waiver excuses one check on one issue (the manifest's `waivers:`). Write it

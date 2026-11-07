@@ -288,7 +288,7 @@ The one fixed set of checks, gates and evidence types that every project runs si
 
 ### checkpoint-outcome
 
-What happened at one checkpoint stage hand-off, recorded in the manifest's `checkpoint_outcomes` as the stage, the outcome, who and when. The outcome is `waited` when a person answered the hand-off with `compass evidence approve --checkpoint`, which also writes a `checkpoint-approval` record holding their answer, or `skipped` when an agent went on because the autonomy setting passed the hand-off, recorded with `compass issue checkpoint add`. A `checkpoint-approval` record clears no gate and no human check. `compass ship-commit` refuses a judged issue that lists a checkpoint with no outcome, and `compass issue diagnose` shows the outcomes of one issue.
+What happened at one checkpoint stage hand-off, recorded in the manifest's `checkpoint_outcomes` as the stage, the outcome, who and when. The outcome is `waited` when a person answered the hand-off with `compass evidence approve --checkpoint`, which also writes a `checkpoint-approval` record holding their answer, or `skipped` when an agent went on because the autonomy setting passed the hand-off, recorded with `compass issue checkpoint add`. A `checkpoint-approval` record clears no gate and no human check. `compass ship-commit` refuses a judged issue that lists a checkpoint with no outcome, and `compass issue diagnose` shows the outcomes of one issue. On an issue that owes `scenario-approval`, `compass tdd-red` refuses until the `specify` checkpoint has a `waited` outcome, and that answer holds the spec's digest.
 
 **Related:** `decision-taken`, `evidence`, `issue`
 
@@ -331,6 +331,12 @@ The gate between requirements and plan/implementation: acceptance criteria exist
 **Also:** DoR
 
 **Related:** `quality-gate`, `workflow-state`
+
+### delegation-copy
+
+A copy of a delegation in the manifest's `delegations_used:`, written in the same save as the approval the delegation let an agent record (ADR-095). It keeps who delegated, to whom, until when, for which issues and forms, and a `sha256` of those fields, and leaves out the nonce, the use count and the session ids. A copy whose fields changed since an earlier copy is kept under a suffix, such as `DL-1@2`.
+
+**Related:** `ship-approval`, `evidence`
 
 ### delivery-approach
 
@@ -624,6 +630,12 @@ The unit of landing code. Small, trunk-based PRs preferred.
 
 **Related:** `issue`, `ship`
 
+### pr-approval
+
+The evidence type of an approving review of the merged pull request, by a person who is not its author. `compass issue link set --pr <n>` reads the reviews with `gh` after the merge and writes one record for each reviewer whose latest review before the merge approved, from a `User` account. The record holds the review id and URL, so a reader can check it on GitHub. `compass evidence add` refuses the type.
+
+**Related:** `ship-approval`, `pr`, `evidence`
+
 ### preset
 
 A named, versioned parent layer. Until 9.0.0 Compass shipped one, `default`, which a project named with `extends:`. 9.0.0 removed the live preset (ADR-094): the check set replaces it, and `extends:` is a removed setting. The frozen `default@6` and `default@7` stay as data that old issues read.
@@ -744,6 +756,12 @@ The atomic unit of acceptance: one behavior, one Given/When/Then, one executable
 
 **Related:** `feature-file`, `step`, `acceptance-criteria`
 
+### scenario-freeze
+
+The manifest's `scenario_freeze` block, written by the first `compass tdd-red` of a path delivery issue and never rewritten: the time, the red record, the spec's path, the `sha256sum` digest of the spec and the scenario ids (ADR-095). Each red record also holds the spec digest. `compass check` prints a line, not a row, when the spec has changed since.
+
+**Related:** `scenario`, `acceptance-criteria`, `evidence`
+
 ### sections
 
 The headings of an artifact's document, in order, for each depth the document can be written at (`lightweight` and `thorough`). It is a field of the artifact's catalog entry. A document that is one rendered block has an empty list. The acceptance criteria are read through the last shipped catalog when the configuration declares none. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
@@ -758,9 +776,15 @@ A top-level key of `compass.yml`. Most configure the CLI and leave the check set
 
 ### ship
 
-Merging and releasing the change: the PR lands, follow-ups are recorded and the issue is marked done.
+Merging and releasing the change: the PR lands, follow-ups are recorded and the issue is marked done. A path delivery issue also owes a person's ship approval.
 
-**Related:** `pr`, `rollout-plan`
+**Related:** `pr`, `rollout-plan`, `ship-approval`
+
+### ship-approval
+
+One person's approval of a change at ship, owed by every path delivery issue whose `evidence_required` lists `ship-approval` (ADR-095). It is a `pr-approval` record copied from the merged pull request's review, or a typed approval: a `human-approval` record with `ship:`, given with `/compass:approve` after `compass evidence request --ship`. The check `ship-approval-present` fails only when the pull request merged with neither. A `G5` sign-off does not count, and no landing waits for it.
+
+**Related:** `pr-approval`, `ship`, `evidence-required`, `delegation-copy`
 
 ### sli
 

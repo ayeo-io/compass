@@ -77,10 +77,10 @@ them - the evidence the change owes and the gates - is computed. The
   assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "atomic", "goal": "delivery"}
   evidence row    : RP-EVID-LIGHT
   FINAL APPROACH  : delivery
-  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability
+  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
   policy rules fired:
     A small change with low risk owes the evidence every change owes (RP-EVID-LIGHT, evidence)
-        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability
+        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
   gate set        : verify.correctness, verify.governance, verify.traceability
 ```
 
@@ -102,7 +102,7 @@ the evidence the change owes, and where the issue's files go.
 
 ```text
 Approach: delivery (risk contained, familiarity brownfield-mapped, size atomic) - does not stop to wait for you
-Evidence: scenarios, red-before-green, suite-green, correctness, governance, traceability, outer-loop
+Evidence: scenarios, red-before-green, suite-green, correctness, governance, traceability, outer-loop, ship-approval
 Writes: .compass/work/fix-token-message/ and docs/compass/2026-11-06-fix-token-message/
 ```
 
@@ -176,6 +176,13 @@ compass quick-fix finish: 'fix-token-message' checked, not committed.
 When you ask for a commit, `compass ship-commit` commits the files the issue
 recorded as changed, and nothing else. Your normal CI is still responsible for tests, linting,
 security scanning, builds and deployment checks.
+
+`ship-approval` is one person's approval of the change. After the merge,
+`compass issue link set --pr <n>` reads it from the pull request: a review
+that approves it, by a person who is not its author. With no such review, a
+person types `/compass:approve` after `compass evidence request --ship`.
+`compass next` names the step while the approval is owed. No landing waits
+for it.
 
 ## What you should now have
 

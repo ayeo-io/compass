@@ -61,6 +61,8 @@ from compass_pkg.core import (CompassError, artifact_path, canonical_shape, mani
 # (`stable_ids.LEGACY_TO_PATH`). <command> comes from `next_step`.
 # When the issue has landed:
 #   "all phases complete"
+# When it has landed and still owes the ship approval (ADR-095):
+#   "all phases complete | next: <command>"
 # When the manifest records no delivery approach:
 #   exit non-zero with a message naming assess
 # When manifest.yml is missing (assess has not run):
@@ -424,8 +426,12 @@ def cmd_next(args):
     # issue is ship's record.
     gates = task.get("gates") or []
     if status_words.is_closed(task):
-        if not _json_document(args, ["all phases complete\n"], None):
-            _emit(args, task, task_dir, "all phases complete\n", None, True)
+        # A landed issue can still owe the ship approval, which is read after
+        # the merge (ADR-095); `next_step` names the command that records it.
+        command = next_step.next_command(task, task_dir)
+        line = "all phases complete" + (f" | next: {command}" if command else "") + "\n"
+        if not _json_document(args, [line], command):
+            _emit(args, task, task_dir, line, None, True)
         return 0
 
     # --- determine next stage and collapsed siblings ---

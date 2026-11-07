@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre27
+version: 2.0.0-pre28
 
 terms:
 
@@ -486,6 +486,25 @@ terms:
       the product.
     related: [requirements-review, evidence]
 
+  scenario-freeze:
+    means: >
+      The manifest's `scenario_freeze` block, written by the first
+      `compass tdd-red` of a path delivery issue and never rewritten: the
+      time, the red record, the spec's path, the `sha256sum` digest of the
+      spec and the scenario ids (ADR-095). Each red record also holds the
+      spec digest. `compass check` prints a line, not a row, when the spec
+      has changed since.
+    related: [scenario, acceptance-criteria, evidence]
+  delegation-copy:
+    means: >
+      A copy of a delegation in the manifest's `delegations_used:`, written
+      in the same save as the approval the delegation let an agent record
+      (ADR-095). It keeps who delegated, to whom, until when, for which
+      issues and forms, and a `sha256` of those fields, and leaves out the
+      nonce, the use count and the session ids. A copy whose
+      fields changed since an earlier copy is kept under a suffix, such as
+      `DL-1@2`.
+    related: [ship-approval, evidence]
   checkpoint-outcome:
     means: >
       What happened at one checkpoint stage hand-off, recorded in the
@@ -497,7 +516,10 @@ terms:
       with `compass issue checkpoint add`. A `checkpoint-approval` record
       clears no gate and no human check. `compass ship-commit` refuses a
       judged issue that lists a checkpoint with no outcome, and
-      `compass issue diagnose` shows the outcomes of one issue.
+      `compass issue diagnose` shows the outcomes of one issue. On an issue
+      that owes `scenario-approval`, `compass tdd-red` refuses until the
+      `specify` checkpoint has a `waited` outcome, and that answer holds the
+      spec's digest.
     related: [decision-taken, evidence, issue]
 
   receipt:
@@ -620,8 +642,29 @@ terms:
   ship:
     means: >
       Merging and releasing the change: the PR lands, follow-ups are
-      recorded and the issue is marked done.
-    related: [pr, rollout-plan]
+      recorded and the issue is marked done. A path delivery issue also
+      owes a person's ship approval.
+    related: [pr, rollout-plan, ship-approval]
+  ship-approval:
+    means: >
+      One person's approval of a change at ship, owed by every path delivery
+      issue whose `evidence_required` lists `ship-approval` (ADR-095). It is
+      a `pr-approval` record copied from the merged pull request's review,
+      or a typed approval: a `human-approval` record with `ship:`, given
+      with `/compass:approve` after `compass evidence request --ship`. The
+      check `ship-approval-present` fails only when the pull request merged
+      with neither. A `G5` sign-off does not count, and no landing waits
+      for it.
+    related: [pr-approval, ship, evidence-required, delegation-copy]
+  pr-approval:
+    means: >
+      The evidence type of an approving review of the merged pull request,
+      by a person who is not its author. `compass issue link set --pr <n>`
+      reads the reviews with `gh` after the merge and writes one record for
+      each reviewer whose latest review before the merge approved, from a
+      `User` account. The record holds the review id and URL, so a reader
+      can check it on GitHub. `compass evidence add` refuses the type.
+    related: [ship-approval, pr, evidence]
   rollout-plan:
     means: >
       How the change reaches users safely: feature flags, canary or

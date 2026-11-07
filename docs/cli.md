@@ -43,7 +43,7 @@ compass issue blocked set  flag an in-progress or in-review issue as blocked, wi
 compass issue blocked remove  clear the blocked flag
 compass issue depends add  record an issue this one waits for, with --reason and --until; build is blocked until it is met
 compass issue depends remove  stop waiting for an issue
-compass issue link set     link an issue to its GitHub issue (--github) or to its pull request (--pr), whose merge commit becomes land_commit
+compass issue link set     link an issue to its GitHub issue (--github) or to its pull request (--pr), whose merge commit becomes land_commit and whose approving reviews become the ship approval
 compass acceptance start   open an honest record where there is no natural red
 compass acceptance record  close it with what was observed
 compass adr new            create the next numbered decision record
@@ -60,7 +60,7 @@ compass scenario tests set replace the tests a scenario declares
 compass changed-file add   trace a changed file to the scenario that asked for it
 compass evidence add       append a typed evidence record; with --type spike-conclusion, --decision and --next-issue record how a spike closes
 compass evidence request   ask a person for an approval; the request names the form, the approver and the scope
-compass evidence approve   record a person's approval of a human check, the sign-off on an irreversible change (--guardrail), the decisions agents took (--decisions) or a checkpoint hand-off (--checkpoint)
+compass evidence approve   record a person's approval of a human check, the sign-off on an irreversible change (--guardrail), the decisions agents took (--decisions), a checkpoint hand-off (--checkpoint) or the change at ship (--ship)
 compass evidence review    record a judgment against a judged check
 compass terminology        what a term means here, from the frozen vocabulary
 compass quick-fix start    assess and record a change of any size, with its first scenario, in one call

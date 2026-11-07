@@ -87,7 +87,7 @@ The kit picks one evidence row, first match wins, then adds evidence on top
 
 | Row | When | What it owes |
 |---|---|---|
-| Light | Atomic or small, trivial or contained risk, no hotfix setting, no `G5` label | Scenarios, a red before each green, a green suite, and the correctness, governance and traceability reviews. |
+| Light | Atomic or small, trivial or contained risk, no hotfix setting, no `G5` label | Scenarios, a red before each green, a green suite, the correctness, governance and traceability reviews, and a person's approval at ship. |
 | Defect | Atomic or small, under the hotfix setting, not critical, no `G5` label | The light row, plus the regression and security reviews and the Definition of Done. |
 | Standard | Every other delivery assessment | The light row, plus the regression, security and clarity reviews and the Definition of Done. |
 
@@ -95,7 +95,8 @@ On top of the row:
 
 - cross-cutting or critical risk, or a `G5` label, adds the architecture
   review;
-- a `G5` label or critical risk adds a person's approval of the scenarios;
+- a `G5` label or critical risk adds a person's approval of the scenarios,
+  which the first red waits for;
 - a `G5` label adds a person's sign-off before the change ships;
 - the hotfix setting, `urgency: live-defect`, adds a reproduction first; and
 - the four-layer acceptance strategy (`S17`) adds its outer-loop, isolation
@@ -103,6 +104,16 @@ On top of the row:
 
 A spike (`goal: exploration`) is not on the path. It explores, concludes,
 and ships nothing.
+
+The approval at ship (`ship-approval`, ADR-095) is read from the merged pull
+request: a review that approves it, by a person who is not its author. With
+no such review, a person gives it by typing `/compass:approve`. It never
+holds up a landing, and a `G5` sign-off does not count for it, because that
+sign-off is given before the code exists.
+
+The first red on a path issue also freezes the scenarios: the manifest
+records the spec's digest and the scenario ids, and `compass check` says when
+the spec changed since.
 
 Risk and size remain independent. Policy can raise the evidence a small auth
 or migration change owes above what its size alone would ask.
@@ -173,7 +184,8 @@ The main file in `.compass/work/<issue>/` is `manifest.yml`: the assessment,
 the evidence the change owes, the gates, the scenarios, the follow-ups, the
 reassessments and the evidence registry. `compass next` names the next
 action. From 9.0.0 Compass writes no `devlog.md`; an archived issue keeps
-its own.
+its own. An approval an agent records under a delegation copies the
+delegation into the manifest's `delegations_used:`.
 
 The one document Compass needs and checks is `acceptance-criteria.md`, written
 to `docs/compass/<created>-<issue>/` (ADR-091). Its Summary and Intent links

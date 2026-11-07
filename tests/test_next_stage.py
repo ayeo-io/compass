@@ -164,12 +164,15 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
 
 
 def _next(root: Path) -> str:
-    """The stage `compass next` names, or "done" for all phases complete."""
+    """The stage `compass next` names, or "done" for all phases complete. A
+    landed issue that owes the ship approval adds `| next: <command>` to that
+    line (ADR-095); it is still done."""
     r = subprocess.run([sys.executable, str(CLI), "next"], cwd=root,
                        capture_output=True, text=True, env=_env())
     out = r.stdout.strip()
     assert r.returncode == 0, out + r.stderr
-    return "done" if out == "all phases complete" else out.split()[0].split("[")[0]
+    done = out == "all phases complete" or out.startswith("all phases complete | next: ")
+    return "done" if done else out.split()[0].split("[")[0]
 
 
 def _resolved(root: Path) -> str:

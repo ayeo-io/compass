@@ -188,7 +188,7 @@ you the three lines of `compass approach show` before it edits any file:
 
 ```text
 Approach: delivery (risk cross-cutting, familiarity brownfield-mapped, size medium) - does not stop to wait for you
-Evidence: scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, outer-loop, isolation, layering, definition-of-done
+Evidence: scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, outer-loop, isolation, layering, definition-of-done, ship-approval
 Writes: .compass/work/add-rate-limiting/ and docs/compass/2026-11-06-add-rate-limiting/
 ```
 
@@ -204,7 +204,8 @@ The session waits for you only at the checkpoints the project's `autonomy`
 setting lists, and the first line of `compass approach show` says whether it
 does. The default is `balanced`: under `balanced` a delivery issue goes on
 and does not wait, unless its scenarios owe a person's approval (a `G5` label,
-such as `payments`, or critical risk), and then it waits at specify. The same
+such as `payments`, or critical risk), and then it waits at specify:
+`compass tdd-red` refuses until a person answers. The same
 holds under `autonomous`. A stricter project can set `controlled`: under
 `controlled` it waits at assess and specify, and also at build and ship where
 the four-layer acceptance strategy applies. Read the three lines. If an
@@ -306,6 +307,17 @@ The session commits only when you ask. Until then it passes `--no-commit`,
 and the last line names the traced files to stage. Then
 `compass ship-commit --issue add-rate-limiting -m "<message>" --release-note "<release line>"`
 commits on the current branch and closes the issue.
+
+Every delivery issue also owes `ship-approval`: one person's approval of the
+change at ship (ADR-095). It does not hold up the commit. After the pull
+request merges, `compass issue link set --pr <n> --issue add-rate-limiting`
+reads its reviews with `gh` and records a review that approves it, by a
+person who is not its author, as a `pr-approval` record. With no such review,
+or no GitHub, the session asks with `compass evidence request --ship` and
+stops, and you type `/compass:approve`. `compass check` fails the
+`ship-approval-present` row only when the pull request merged with neither.
+An agent cannot approve the pull request for you: the pre-tool hook refuses
+`gh pr review --approve`.
 
 That is the whole path, from start to end. The manifest, the evidence and
 `acceptance-criteria.md` are on disk, readable by anyone who picks the issue
@@ -429,6 +441,7 @@ matches (`cli/compass_pkg/next_step.py`):
 | a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>`, then stop for `/compass:approve` |
 | a path issue with only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>` |
 | every gate passes | `compass check`, then `git add -- <the traced files>`, then `compass ship-commit -m "<message>"` |
+| landed, `ship-approval` owed, none on record | `compass issue link set --pr <n> --issue <slug>` after the merge, or `compass evidence request --ship`, then stop for `/compass:approve`; only the second once the merge is recorded |
 
 What a path issue owes comes from its `evidence_required` list. The
 requirement rows and the layering test come before the red because the spec
@@ -440,7 +453,9 @@ assessed before the path owes the `S17` records its `acceptance_strategy` block
 names, and the Definition of Done when its verify stage is `thorough`. A spike
 first names `compass evidence add EV-SPIKE --type spike-conclusion`, then
 `compass gate pass spike.conclude`. `compass next --json` gives the same
-command in a `next` field, and `null` on a closed issue.
+command in a `next` field, and `null` on a closed issue that owes nothing
+more. A landed issue that owes the ship approval prints
+`all phases complete | next: <command>`.
 
 On a path issue, each verb that writes a record of the issue ends its text
 output with the same line, `next: <command>`: `compass scenario add`,

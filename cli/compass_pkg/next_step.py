@@ -9,6 +9,7 @@ bottom, and the first that matches gives the command:
 | Records show | `next:` |
 |---|---|
 | no manifest | `/compass:go "<what you want>"` |
+| landed, `ship-approval` owed, none on record | `compass issue link set --pr <n> --issue <slug>` after the merge, or `compass evidence request --ship` (only the second once the merge is recorded) |
 | closed | none |
 | a spike with no conclusion | `compass evidence add EV-SPIKE --type spike-conclusion ...` |
 | assessed, no scenario | `compass scenario add TRC-001 ...` |
@@ -42,8 +43,8 @@ quick-fix finish` refuses on while it is owed.
 """
 # DEPENDENCY: standard library (os, shlex); compass_pkg.next_line, path_stages, red_first,
 # stable_ids and status_words, and inside functions the readers of
-# acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status, tdd, tdd_green and
-# item_records, and core, next_cmd and terminal for `announce`. It must not
+# acceptance_strategy, checkpoint_outcomes, checks, effective, gate_status, ship_approval, tdd,
+# tdd_green and item_records, and core, next_cmd and terminal for `announce`. It must not
 # import next_cmd at load time: next_cmd imports it.
 from __future__ import annotations
 
@@ -87,7 +88,10 @@ def next_command(task, task_dir, done=None):
     if not isinstance(task, dict):
         return GO
     if status_words.is_closed(task):
-        return None
+        try:
+            return ship_approval_command(task, task_dir)
+        except Exception:  # noqa: BLE001 - a closed issue's line must still print
+            return None
     try:
         return _first_match(task, task_dir, done)
     except Exception:  # noqa: BLE001 - the stage line must still print
@@ -118,6 +122,30 @@ def _first_match(task, task_dir, done):
     if on_path and _pending_gate(task):
         return _finish(task_dir)
     return _ship_commit(task)
+
+
+def ship_approval_command(task, task_dir):
+    """On a landed issue that owes `ship-approval` and has none on record, the
+    command that records it; else None (#355, ADR-095).
+
+    The approval comes after the landing: `ship-commit` closes the issue before
+    the pull request merges, and `compass issue link set --pr` reads the review
+    after the merge. Once the merge is recorded the reviews have been read, so
+    only the typed approval is left. An issue closed for another reason owes
+    nothing more."""
+    from compass_pkg import ship_approval
+    if not status_words.is_completed(task) or not ship_approval.owed(task) or not task_dir:
+        return None
+    if ship_approval._check_ship_approval_present(task, task_dir)[0] is True:
+        return None
+    typed = "compass evidence request --ship, then stop for /compass:approve"
+    pr = task.get("pull_request") if isinstance(task.get("pull_request"), dict) else {}
+    if pr.get("merged_at"):
+        return typed
+    number = pr.get("number") if pr.get("number") is not None else "<n>"
+    slug = os.path.basename(os.path.normpath(task_dir))
+    return (f"compass issue link set --pr {number} --issue {slug} after the merge, "
+            f"or {typed}")
 
 
 def _finish(task_dir):

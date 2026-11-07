@@ -59,8 +59,9 @@ Every issue, every time, assess runs the same four steps:
 
 The `G5` labels are `auth`, `payments`, `personal-data` and `migrations`,
 and any label a project adds with `signoff_labels`.
-The every-issue evidence is `scenarios`, `red-before-green`, `suite-green`
-and three review gates. The immovable gates (`verify.correctness`,
+The every-issue evidence is `scenarios`, `red-before-green`, `suite-green`,
+three review gates and `ship-approval`, a person's approval of the change at
+ship (ADR-095). The immovable gates (`verify.correctness`,
 `verify.governance`, `verify.traceability`) are those three: no
 configuration removes them. Each review token is met by a
 gate of the same name; the gate ids keep their `verify.` prefix and are
@@ -113,10 +114,10 @@ The `auth` label fires three additions:
   assessment      : {"risk": "trivial", "familiarity": "brownfield-mapped", "size": "atomic", "goal": "delivery", "labels": ["auth"]}
   evidence row    : RP-EVID-STANDARD
   FINAL APPROACH  : delivery
-  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, definition-of-done, scenario-approval, human-approval
+  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, definition-of-done, scenario-approval, human-approval, ship-approval
   policy rules fired:
     A change that is not small, or not low risk, owes the regression, security and clarity reviews and the Definition of Done (RP-EVID-STANDARD, evidence)
-        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, definition-of-done
+        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval, regression, security, clarity, definition-of-done
     A change to a `G5` surface owes the architecture review (RP-REQUIRE-004, evidence)
         - evidence owed: architecture
     A change to a `G5` surface, or with critical risk, owes a person's approval of its scenarios (RP-EVID-SIGNOFF, evidence)
@@ -174,10 +175,10 @@ and there is no `G5` label.
   assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium", "goal": "delivery"}
   evidence row    : RP-EVID-STANDARD
   FINAL APPROACH  : delivery
-  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, definition-of-done
+  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, definition-of-done, ship-approval
   policy rules fired:
     A change that is not small, or not low risk, owes the regression, security and clarity reviews and the Definition of Done (RP-EVID-STANDARD, evidence)
-        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, definition-of-done
+        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval, regression, security, clarity, definition-of-done
   gate set        : verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security, verify.clarity
 ```
 
@@ -228,10 +229,10 @@ order:
   assessment      : {"risk": "critical", "familiarity": "brownfield-mapped", "size": "small", "goal": "delivery", "urgency": "none", "labels": ["payments", "migrations"]}
   evidence row    : RP-EVID-STANDARD
   FINAL APPROACH  : delivery
-  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, definition-of-done, scenario-approval, human-approval
+  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, definition-of-done, scenario-approval, human-approval, ship-approval
   policy rules fired:
     A change that is not small, or not low risk, owes the regression, security and clarity reviews and the Definition of Done (RP-EVID-STANDARD, evidence)
-        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, definition-of-done
+        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval, regression, security, clarity, definition-of-done
     Cross-cutting or critical risk owes the architecture review (RP-REQUIRE-003, evidence)
         - evidence owed: architecture
     A change to a `G5` surface owes the architecture review (RP-REQUIRE-004, evidence)
@@ -302,10 +303,10 @@ no sign-off.
   assessment      : {"risk": "cross-cutting", "familiarity": "greenfield", "size": "product", "goal": "delivery"}
   evidence row    : RP-EVID-STANDARD
   FINAL APPROACH  : delivery
-  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, definition-of-done
+  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, definition-of-done, ship-approval
   policy rules fired:
     A change that is not small, or not low risk, owes the regression, security and clarity reviews and the Definition of Done (RP-EVID-STANDARD, evidence)
-        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, definition-of-done
+        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval, regression, security, clarity, definition-of-done
     Cross-cutting or critical risk owes the architecture review (RP-REQUIRE-003, evidence)
         - evidence owed: architecture
   gate set        : verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security, verify.clarity, verify.architecture
@@ -359,10 +360,10 @@ cross-cutting risk, and `RP-EVID-REPRODUCE` on the urgency.
   assessment      : {"risk": "cross-cutting", "familiarity": "brownfield-mapped", "size": "small", "goal": "delivery", "urgency": "live-defect"}
   evidence row    : RP-EVID-DEFECT
   FINAL APPROACH  : delivery
-  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, architecture, definition-of-done, reproduce-first
+  evidence owed   : scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, architecture, definition-of-done, reproduce-first, ship-approval
   policy rules fired:
     A small fix to a live defect owes the regression and security reviews and the Definition of Done (RP-EVID-DEFECT, evidence)
-        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, definition-of-done
+        - evidence owed: scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval, regression, security, definition-of-done
     Cross-cutting or critical risk owes the architecture review (RP-REQUIRE-003, evidence)
         - evidence owed: architecture
     A live defect is reproduced by a red before anything else (RP-EVID-REPRODUCE, evidence)

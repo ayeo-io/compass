@@ -191,6 +191,54 @@ def test_a_closed_issue_has_no_next_command(tmp_path):
     assert _next(tmp_path) == "all phases complete\n"
 
 
+# --- a landed issue that owes the ship approval (#355, ADR-095) ---------------------------
+
+LANDED = {"status": "done", "close_reason": "completed", "land_commit": "abc123"}
+TYPED_SHIP = "compass evidence request --ship, then stop for /compass:approve"
+
+
+def _landed(root, **raw):
+    return _path_issue(root, evidence=LIGHT + ["ship-approval"], scenarios=[SCENARIO],
+                       reds=["TRC-001"], greens=["TRC-001"], gates_pass=True,
+                       raw=dict(LANDED, **raw))
+
+
+def test_a_landed_issue_with_no_pull_request_names_both_ways_to_approve(tmp_path):
+    task = _landed(tmp_path)
+    command = (f"compass issue link set --pr <n> --issue {SLUG} after the merge, "
+               f"or {TYPED_SHIP}")
+    assert next_step.next_command(_load(task), str(task)) == command
+    assert _next(tmp_path) == f"all phases complete | next: {command}\n"
+    doc = json.loads(_next(tmp_path, "--json"))
+    assert doc["next"] == command, doc
+
+
+def test_a_linked_unmerged_pull_request_is_named_by_its_number(tmp_path):
+    task = _landed(tmp_path, pull_request={"repo": "acme/widgets", "number": 42})
+    assert next_step.next_command(_load(task), str(task)) == (
+        f"compass issue link set --pr 42 --issue {SLUG} after the merge, or {TYPED_SHIP}")
+
+
+def test_a_merge_with_no_approval_leaves_the_typed_approval(tmp_path):
+    task = _landed(tmp_path, pull_request={"repo": "acme/widgets", "number": 42,
+                                           "merged_at": "2026-11-07T10:00:00Z"})
+    assert next_step.next_command(_load(task), str(task)) == TYPED_SHIP
+
+
+def test_a_landed_issue_with_its_ship_approval_has_no_next_command(tmp_path):
+    approval = {"id": "EV-SHIP-1", "type": "human-approval", "ship": SLUG, "issue": SLUG,
+                "approver": "owner", "decision": "approved",
+                "timestamp": "2026-11-07T10:00:00Z"}
+    task = _landed(tmp_path, evidence=[approval])
+    assert next_step.next_command(_load(task), str(task)) is None
+    assert _next(tmp_path) == "all phases complete\n"
+
+
+def test_an_issue_closed_as_not_planned_owes_no_ship_approval(tmp_path):
+    task = _landed(tmp_path, close_reason="not-planned")
+    assert next_step.next_command(_load(task), str(task)) is None
+
+
 def test_a_narrative_scenario_needs_no_test_and_no_red(tmp_path):
     task = _path_issue(tmp_path, scenarios=[dict(SCENARIO, tests=[], verifiable="narrative")])
     assert next_step.next_command(_load(task), str(task)) == next_step.FINISH

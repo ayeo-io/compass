@@ -118,9 +118,12 @@ def test_garbage_on_stdin_prints_nothing(tmp_path):
 
 
 def _next_stage(root):
+    """The stage `compass next` names, or "done". A landed issue that owes the
+    ship approval adds `| next: <command>` to "all phases complete" (ADR-095)."""
     out = subprocess.run([sys.executable, str(CLI), "next"], cwd=root,
                          capture_output=True, text=True).stdout.strip()
-    return "done" if out == "all phases complete" else out.split()[0].split("[")[0]
+    done = out == "all phases complete" or out.startswith("all phases complete | next: ")
+    return "done" if done else out.split()[0].split("[")[0]
 
 
 @pytest.mark.parametrize("change", [

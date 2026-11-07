@@ -106,14 +106,15 @@ security scanning, builds or deployment checks.
 
 Compass chooses the evidence each change owes from its assessment of risk,
 familiarity and size. Every change owes scenarios, a failing test before each
-passing one, a green suite and three reviews. The rest depends on the work:
+passing one, a green suite, three reviews and one person's approval at ship.
+The rest depends on the work:
 
 | Work | Evidence Compass adds |
 |---|---|
 | **Small, low risk** | Nothing more. One clear scenario, a focused change and evidence that it works. |
 | **Larger or riskier** | The regression, security and clarity reviews and the Definition of Done. Cross-cutting or critical risk adds the architecture review. |
 | **Live defect** | The setting `urgency: live-defect`: reproduce first, fix safely, then do the follow-up work skipped for speed. |
-| **`auth`, `payments`, `personal-data` or `migrations`** | A person approves the scenarios before the code, and signs off before the change ships. |
+| **`auth`, `payments`, `personal-data` or `migrations`** | A person approves the scenarios before the code: the first failing test waits for it. A person also signs off before the change ships. |
 | **Spike** | Time-boxed exploration, off the path. Record the learning; ship nothing directly. |
 
 A one-file authentication change can owe more than a large throwaway
@@ -147,6 +148,13 @@ work that ships code
   An agent records one only under a delegation you made, and a program
   running as your own user account is not stopped
   ([safety contract](docs/safety-contract.md#5-irreversible-work-needs-recorded-human-approval)).
+- **A person approves each change at ship.** Compass reads the approval from
+  the merged pull request: a review that approves it, by a person who is not
+  its author, read by `compass issue link set --pr <n>` after the merge.
+  Without one, you type `/compass:approve` after `compass evidence request
+  --ship`. The pre-tool hook refuses an agent's `gh pr review --approve`, and
+  no landing waits for the approval
+  ([docs/github-links.md](docs/github-links.md)).
 - **You set the bounds of a delegation.** A bare `/compass:delegate` lets the
   agents of this session approve for you on every issue, until
   `/compass:revoke` ends it. Flags set its bounds: `--agent` names one agent,
@@ -154,8 +162,8 @@ work that ships code
   g5`, which covers irreversible work, `--for waivers` and `--for ship`,
   which covers the ship approval of a change, each need a code that you
   type back. Compass lists each delegation with no end time at each new
-  session start. Every delegated approval is on record, and you can overrule
-  one; overruling a guardrail 5 sign-off does not undo work already landed.
+  session start. Every delegated approval is on record, with a copy of the
+  delegation in the issue's manifest, and you can overrule one; overruling a guardrail 5 sign-off does not undo work already landed.
 - **Autonomy is a setting, not a promise.** `autonomy: controlled | balanced
   | autonomous` in `compass.yml` says how often a session stops for a person.
   It changes no gate, check or hook.

@@ -245,15 +245,26 @@ first. Nothing writes `target_task` since 9.0.0.
   `compass issue link set --pr <n>` to record it on the issue. Run it again
   after the merge: a squash merge leaves the commit `ship-commit` made off
   the default branch, and the command moves `land_commit` to the merge
-  commit `gh pr view` reports. `compass check` reports, as advice, a
-  `land_commit` that origin's default branch does not reach.
+  commit `gh pr view` reports. After the merge it also reads the pull
+  request's reviews and records the ship approval (below). `compass check`
+  reports, as advice, a `land_commit` that origin's default branch does not
+  reach.
 
 ## The ship approval
 
 An issue whose `evidence_required` lists `ship-approval` needs one person's
 approval of the change at ship. A review approval of the merged pull request
-by a person other than its author gives it. Where there is none (no GitHub,
-or the author is the only person), ask for the typed ship approval:
+by a person other than its author gives it. `compass issue link set --pr <n>`,
+run after the merge, reads the reviews and writes each one that counts as a
+`pr-approval` record: the reviewer's latest review before the merge approves,
+from a `User` account that is not the pull request's author. It prints each
+review it sets aside, with the reason. Never approve a pull request yourself:
+the pre-tool hook refuses `gh pr review --approve` and a `gh api` write to a
+pull request's reviews.
+
+`compass next` names the step while the approval is owed, after the landing.
+Where there is no approving review (no GitHub, or the author is the only
+person), ask for the typed ship approval:
 
 ```
 compass evidence request --ship
@@ -263,7 +274,9 @@ Then stop. The person types `/compass:approve`, or runs `compass evidence
 approve --ship --approver <name> --role <role>` at a terminal. An agent
 records it only under a delegation the person typed with `--for ship` and
 confirmed with its code. A `G5` sign-off is not a ship approval. The check
-never refuses `ship-commit`.
+`ship-approval-present` never refuses `ship-commit`: it reports nothing to
+check until the record says the pull request merged, and fails only after a
+merge with no approval on record.
 
 ## Project lessons
 

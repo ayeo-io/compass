@@ -36,7 +36,10 @@ Each stage is done when its records show it:
   the `specify` checkpoint has an outcome where it is listed.
 - Build, when each scenario that is not `verifiable: narrative` has a red,
   then a green.
-- Ship, when the issue is closed.
+- Ship, when the issue is closed. The ship approval comes after the
+  landing: `compass issue link set --pr <n>` reads it from the merged pull
+  request's review, or a person types it after `compass evidence request
+  --ship`. `compass next` names the step while it is owed.
 
 ## The evidence rows
 
@@ -46,9 +49,10 @@ wins, and the additions apply on top of it:
 
 - **The light row** (`RP-EVID-LIGHT`): an atomic or small change with
   trivial or contained risk, no hotfix setting and no `G5` label. It owes the evidence every delivery issue owes: scenarios,
-  a red before each green, a green suite, and the three gates that no
+  a red before each green, a green suite, the three gates that no
   configuration removes (`verify.correctness`, `verify.governance`,
-  `verify.traceability`).
+  `verify.traceability`), and `ship-approval`, a person's approval of the
+  change at ship (ADR-095).
 - **The defect row** (`RP-EVID-DEFECT`): an atomic or small fix under the
   hotfix setting, with risk that is not critical and no `G5` label. It adds `regression`, `security` and the Definition of Done.
 - **The standard row** (`RP-EVID-STANDARD`): every other delivery

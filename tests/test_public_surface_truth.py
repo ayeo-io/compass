@@ -811,7 +811,9 @@ def test_d2_repairs_change_only_retired_names():
     check `ship-approval-present` and its three sub-bullets. #355 step 5
     re-baselined `docs/safety-contract.md` (list_items 125 -> 130): the rule
     that the hook refuses an agent's approving review of a pull request, and
-    its limits.
+    its limits. #355 step 8 re-baselined `docs/quickstart.md` (table_rows
+    24 -> 25): the `next:` table gained the row of a landed issue that owes
+    the ship approval.
 
     A NEW structural change to any of the 26 still fails.
     """

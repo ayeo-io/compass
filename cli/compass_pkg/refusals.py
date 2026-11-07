@@ -140,9 +140,9 @@ REFUSALS: dict[str, dict[str, str]] = {
         "what": "edit to {target} (tool: {tool})",
         "why": "the acceptance-before-code guardrail blocks this: define: "
                "thorough is set but manifest.yml has no scenarios.",
-        "fix": "add the first scenario with compass scenario add TRC-001 --issue "
-               "{slug} --intent \"<one sentence>\", or run /compass:assess "
-               "--reassess if this is exploratory.",
+        "fix": "add the first scenario to acceptance-criteria.md with compass "
+               "scenario add TRC-001 --issue {slug} --intent \"<one sentence>\", "
+               "or run /compass:assess --reassess if this is exploratory.",
     },
     # The same guardrail on a path issue (ADR-092), which has no stage modes, so
     # the reason cannot name `define: thorough`.

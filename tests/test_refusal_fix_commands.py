@@ -1,8 +1,8 @@
 """Each refusal's fix line names a command a session can run as written.
 
-#358: the fix line of `no-scenario` named `compass scenario add <slug> --id
-TRC-001`, which the CLI refuses ("unrecognized arguments: --id TRC-001"), and
-two landing refusals told an agent to run `compass evidence approve`, which
+#358: the fix line of `no-scenario` passed the scenario id as a flag,
+`compass scenario add <slug> --id <scenario id>`, which the CLI refuses with
+"unrecognized arguments", and two landing refusals told an agent to run `compass evidence approve`, which
 an agent may run only under a delegation. This test parses every `compass`
 command a fix line names with the CLI's own parser, built in this process,
 with each placeholder filled with a sample value. ADR-097 holds the rule.

@@ -112,7 +112,7 @@ reason code and are not in the generated list.
 
 **Blocked:** edit to {target} (tool: {tool})
 **Why:** the acceptance-before-code guardrail blocks this: define: thorough is set but manifest.yml has no scenarios.
-**Fix:** add the first scenario with compass scenario add TRC-001 --issue {slug} --intent "<one sentence>", or run /compass:assess --reassess if this is exploratory.
+**Fix:** add the first scenario to acceptance-criteria.md with compass scenario add TRC-001 --issue {slug} --intent "<one sentence>", or run /compass:assess --reassess if this is exploratory.
 
 ### `no-delivery-approach`
 

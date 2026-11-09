@@ -26,8 +26,8 @@ no stage weights. It computes the `evidence_required` list:
   immovable gate and project guardrail, and the skill a floor asks for.
 
 `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`, "The evidence rows", holds the exact
-conditions and tokens (an unmigrated 5.x project runs on its own copied
-`governance/`). Each gate is a review dimension; which ones a row
+conditions and tokens (an unmigrated 5.x project is refused until it
+migrates). Each gate is a review dimension; which ones a row
 owes is in "The review dimensions by row" in
 `approaches/composition-reference.md`.
 
@@ -68,7 +68,7 @@ What is different about a spike:
 
 The configuration in force (explained in
 `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`; an unmigrated 5.x
-project runs on its own copied `governance/`) can add evidence, never remove
+project is refused until it migrates) can add evidence, never remove
 it. The evaluator records every rule that fires *with its rationale* in the
 manifest's `policy_rules_fired:`. Never apply a constraint silently - a
 reader of `compass approach evaluate --verbose` must see which rules were

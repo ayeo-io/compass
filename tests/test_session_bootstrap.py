@@ -243,11 +243,10 @@ def test_sb_c2_a_pin_to_the_plugin_root_says_where_a_project_changes_it():
     rules in its `compass.yml`, and `compass policy show` prints what is in
     force. So an instruction can read the shipped prose from
     `${CLAUDE_PLUGIN_ROOT}/governance/`. The trap is a file that pins the
-    prose and says nothing else, which ignores both the project's
-    `compass.yml` and a 5.x project's own copy of `governance/` (which
-    `find_governance()` still resolves project-local first, and `compass
-    policy show` does not read that copy). Within eight lines of each pin the
-    text must say that an unmigrated 5.x project runs on its own copy.
+    prose and says nothing else, which leaves a reader of a 5.x project with
+    its own copy of `governance/` believing the pin applies to it. 9.0.0
+    refuses such a project (`governance-copy-removed`, ADR-098). Within eight
+    lines of each pin the text must name the unmigrated 5.x project.
     """
     unexplained = []
     for path in _pin_scan_files():

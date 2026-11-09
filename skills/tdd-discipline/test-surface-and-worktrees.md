@@ -18,8 +18,8 @@ adversarial inputs - not "tests at all," which is constant.
   project coverage or security guardrail floor requires.
 
 No issue may go *below* a project coverage-floor guardrail in
-the rules in force (`compass policy show`; an unmigrated 5.x project runs on
-its own copied `governance/` until `compass policy migrate` on 8.x). It can need *more* for higher risk, and must
+the rules in force (`compass policy show`; an unmigrated 5.x project is
+refused until `compass policy migrate` on 8.x). It can need *more* for higher risk, and must
 never need less.
 
 ## Working through several units

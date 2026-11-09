@@ -167,8 +167,8 @@ a person, or an agent under a delegation typed `--for waivers`, approves it
 A new project has no `governance/` directory: the fixed check set
 (`governance/check-set.yml` in the plugin) is in force, and `compass.yml`
 holds the project's settings, which can only add to it. An unmigrated 5.x
-project runs on its own copied `governance/` until `compass policy migrate` on
-8.x converts it. `compass policy show` prints the check set, its digest and
+project with a copied `governance/` is refused until `compass policy migrate`
+on 8.x converts it. `compass policy show` prints the check set, its digest and
 the settings applied, but it does not read that copy.
 
 ## Project lessons

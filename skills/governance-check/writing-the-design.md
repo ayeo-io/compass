@@ -35,7 +35,7 @@ How many to use scales with the evidence the issue owes:
   touches and what the design does about each: that is the well-architected
   alignment strategy, `S15`, and the pillars come from
   `${CLAUDE_PLUGIN_ROOT}/governance/architecture-sources.yml` (an
-  unmigrated 5.x project runs on its own copied `governance/`). It is advice
+  unmigrated 5.x project is refused until it migrates). It is advice
   for the reviewer, not a gate.
 
 **Delete the sections you do not use.** An empty optional heading reads as

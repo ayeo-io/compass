@@ -21,7 +21,7 @@ spike, `urgency: live-defect` is the hotfix setting, and a domain label adds
 gates and sign-offs. The configuration in force can add evidence, never
 remove it. Its prose is in
 `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md` (an unmigrated 5.x
-project runs on its own copied `governance/`).
+project is refused until it migrates).
 
 ## The shipped defaults are enough - you work with them
 
@@ -29,8 +29,8 @@ project runs on its own copied `governance/`).
 default guardrails, default strategies, and a default routing policy, and the
 plugin holds their prose in `${CLAUDE_PLUGIN_ROOT}/governance/`. A project can
 only add to it, with the tighten-only settings of its `compass.yml`;
-`compass policy show` prints what is in force, except that an unmigrated 5.x project runs on its own copied
-`governance/` until `compass policy migrate` on 8.x. If a project has no `compass.yml` and no project-specific additions,
+`compass policy show` prints what is in force. An unmigrated 5.x project with a copied
+`governance/` is refused until `compass policy migrate` on 8.x. If a project has no `compass.yml` and no project-specific additions,
 that is a valid, complete governance state - you route against the shipped defaults <!-- vocabulary-scan: allow - route is a verb here -->
 exactly as you would route against an extended set. <!-- vocabulary-scan: allow - route is a verb here -->
 "assess and go on day one"

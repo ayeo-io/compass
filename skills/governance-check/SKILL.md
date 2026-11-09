@@ -10,8 +10,8 @@ moment they are applied to a design, spec, or change. It is not one pass/fail
 against one document - it is three distinct walks against three
 distinct sources, and each has its own standard of proof. The prose is in
 `${CLAUDE_PLUGIN_ROOT}/governance/`; the rules in force are what
-`compass policy show` prints. An unmigrated 5.x project runs on its own copied
-`governance/` until `compass policy migrate` on 8.x.
+`compass policy show` prints. An unmigrated 5.x project with a copied
+`governance/` is refused until `compass policy migrate` on 8.x.
 
 - `guardrails.md` - **hard, checkable, blocking.** A guardrail is cleared with
   evidence; a failed guardrail stops the work. A guardrail beats a strategy.
@@ -28,17 +28,17 @@ read is not the current file.
 **Record which governance you read.** Write the `Policy:` line that
 `compass policy show` prints (for example `compass-checks@9.0.0` and its
 sha256) and the issue's `generation:` from `manifest.yml` into the check. An
-unmigrated 5.x project has no `Policy:` line: record the `version:` of its
-copied `guardrails.yml` and `routing-policy.yml` instead. A check that names
-nothing cannot be told apart from one run against wording that has since
-changed, and the prose files carry no version of their own to compare.
+unmigrated 5.x project is refused, so it has no `Policy:` line until it
+migrates. A check that names nothing cannot be told apart from one run
+against wording that has since changed, and the prose files carry no version
+of their own to compare.
 
 ## Before you start
 
 Run `compass policy show` to see the rules in force, then read the reasons in
 `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md`, `strategies.md` and
 `routing-policy.md`. A new project has no `governance/` directory (an
-unmigrated 5.x project keeps its copied one): the fixed check set is in force, and `compass.yml` holds the
+unmigrated 5.x project with a copied one is refused): the fixed check set is in force, and `compass.yml` holds the
 project's settings, which can only add to it. The check set alone is a complete governance state: "the shipped default
 guardrails, the shipped default strategies, and zero project additions" is a
 fully legitimate thing to check against. Do not treat an un-extended project
@@ -111,7 +111,7 @@ The standard here is different and you must keep it different. A strategy is
 
 Confirm the design is consistent with the issue's `evidence_required` list
 (`compass approach show`) and `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`
-(an unmigrated 5.x project runs on its own copied `governance/`):
+(an unmigrated 5.x project is refused until it migrates):
 
 - **The configuration's rules** - did every floor that should have fired,
   fire? Are the `immovable_gates` in the manifest's gates? A design that
@@ -124,8 +124,8 @@ Confirm the design is consistent with the issue's `evidence_required` list
 ## How to run the check (at specify)
 
 1. Run `compass policy show` and read the prose in
-   `${CLAUDE_PLUGIN_ROOT}/governance/` (or the project's own copy in an
-   unmigrated 5.x project).
+   `${CLAUDE_PLUGIN_ROOT}/governance/` (an unmigrated 5.x project is
+   refused until it migrates).
 2. Walk 1 - guardrails - against the design and the spec it builds on. Record
    per guardrail: **clears** (with evidence or the design element that produces
    it) or **fails** (with the specific guardrail).

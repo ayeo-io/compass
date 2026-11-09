@@ -27,7 +27,7 @@ distinct *is* the check:
   note, not an automatic gate failure. On a sweep, rename, or cleanup that
   touches many files, this includes whether verification came from a fresh
   agent rather than the implementer - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
-  (an unmigrated 5.x project runs on its own copied `governance/`) `S9` names
+  (an unmigrated 5.x project is refused until it migrates) `S9` names
   the practice. A new or changed guard is accepted on a demonstrated
   failure, not a passing test (`S10`).
 
@@ -54,7 +54,7 @@ artifact communicate a decision, or does it narrate the pipeline? Run
 `scripts/voice-tells.py` over the issue's artifacts for the three tells a fixed string can find; a hit is a note and a conversation, never an automatic gate failure.
 This check applies to every issue - the calibration sample it is read
 against is named in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` (`S8`; an
-unmigrated 5.x project runs on its own copied `governance/`).
+unmigrated 5.x project is refused until it migrates).
 
 **claims** - When the manifest lists claims: does every
 public claim trace to a *passing* scenario? Evidence is the manifest's

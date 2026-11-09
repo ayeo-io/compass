@@ -309,7 +309,7 @@ directory of ADR-042, and the two views generated from it,
 `routing-policy.yml` and `guardrails.yml`, which 9.0.0
 deleted with the reader of a copy of them (ADR-098). The 8.x reader of a copy
 is now the test helper `tests/legacy_copy.py`: compatibility contracts 1 and 2
-and the route tests that compare with 8.0.4 read the packed 5.6.0 and 8.0.4
+and the routing tests that compare with 8.0.4 read the packed 5.6.0 and 8.0.4
 copies through it, and no CLI module imports it.
 
 Each artifact of the 8.x catalogue (`governance/artifacts-8.0.4.yml`) names the stage that owns it with `stage:`

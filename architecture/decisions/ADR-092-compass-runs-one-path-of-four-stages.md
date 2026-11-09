@@ -111,7 +111,7 @@ Questions 1 to 16 are answered as #351 built them. Question 17 is still open.
 14. **How does a person turn on the hotfix setting?** Built: `--urgency "live-defect - <reason>"` on `compass quick-fix start`, and the existing `--assessment urgency=live-defect` on `compass approach evaluate`.
 15. **Does a re-assess move an old issue onto the path?** Built: yes, and the re-assessment log records the old approach.
 16. **What do `depends_on` `until` values accept?** Built: the path stages and the legacy names, each judged through the stage mapping.
-17. **Does `compass issue configure` refuse a proposal whose only change is a dropped key?** Built: no. It is accepted with `L-SETTING-REMOVED` and changes nothing, and contract 4 lists `issue-configure-refused-proposal-exits-1` as an intended change. Open: the owner reviews this entry, because it changes the outcome of a contract entry. The other answer refuses such a proposal with exit 1 and a new reason, and removes the entry from `EXIT_CHANGED_IN_9_0_0`.
+17. **Does `compass issue configure` refuse a proposal whose only change is a dropped key?** Decided: refuse (owner, 9 Nov 2026). Not built: ADR-094 removed `compass issue configure` with the issue layer, so no proposal reaches it. The command exits 2 and names its removal, and contract 4 lists `issue-configure-refused-proposal-exits-1` in `REMOVED_IN_9_0_0` (`tests/compat_commands.py`), not in `EXIT_CHANGED_IN_9_0_0`.
 
 ## References
 

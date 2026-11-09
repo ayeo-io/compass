@@ -848,6 +848,10 @@ def test_d2_repairs_change_only_retired_names():
     the deleted views went) and `governance/routing-policy.md` (list_items
     50 -> 49: the bullet that said never to edit the deleted views went).
 
+    #359 (the deletion of `acceptance_strategy.pinned_below`, ADR-098 open
+    question 6) re-baselined `governance/guardrails.md` (list_items 92 -> 91):
+    the bullet on an issue in a project pinned at major 6 or 7 went.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

@@ -576,12 +576,87 @@ def _vocabulary(approaches, stages, checks, gates):
     return out
 
 
+# --- the old words of a copied policy ----------------------------------------------
+#
+# A policy copied before the depth words and the size were renamed (the 5.6.0
+# copy of configuration C) holds `full`, `light` and `standard`. 9.0.0 reads no
+# copy, so the CLI keeps no reader for those words in a policy; this helper
+# reads them through the CLI's retired-word tables, so the copy converts as it
+# did (ADR-098, #359 step 9).
+
+def _stale_shape(shape, modes, depths):
+    if not isinstance(shape, dict):
+        return False
+    stages, artifacts = shape.get("stages"), shape.get("artifacts")
+    return (isinstance(stages, dict) and any(m in modes for m in stages.values())
+            or isinstance(artifacts, dict) and any(d in depths for d in artifacts.values()))
+
+
+def map_policy(policy, rows=None):
+    """A copied 8.x `routing-policy.yml` read through the tables: its stage
+    weights, artifact depths, size vocabulary and the size tests of its rules
+    in the new words. A policy with no old word comes back as itself."""
+    rows = word_map.tables() if rows is None else rows
+    modes, depths = rows.get("stage_mode") or {}, rows.get("artifact_depth") or {}
+    sizes = rows.get("size") or {}
+    if not isinstance(policy, dict) or not (modes or depths or sizes):
+        return policy
+    vocabulary = policy.get("assessment_vocabulary") or {}
+    old_size = isinstance(vocabulary, dict) and any(
+        isinstance(w, str) and w in sizes for w in vocabulary.get("size") or ())
+    shapes = policy.get("route_shapes") or {}
+    ranks = policy.get("stage_mode_ranks")
+    old_ranks = isinstance(ranks, dict) and any(
+        isinstance(row, dict) and any(m in modes for m in row) for row in ranks.values())
+    old_shape = isinstance(shapes, dict) and any(
+        _stale_shape(shape, modes, depths) for shape in shapes.values())
+    if not (old_size or old_ranks or old_shape):
+        return policy
+    out, changes = copy.deepcopy(policy), []
+    if old_size:
+        out["assessment_vocabulary"]["size"] = [
+            word_map._map_word(w, sizes, "assessment_vocabulary.size", changes)
+            for w in out["assessment_vocabulary"]["size"]]
+        word_map._walk_predicates(out, "", rows, changes)
+    for name, shape in (out.get("route_shapes") or {}).items():
+        if isinstance(shape, dict):
+            where = f"route_shapes.{name}"
+            if isinstance(shape.get("stages"), dict):
+                shape["stages"] = {k: word_map._map_word(v, modes, f"{where}.stages.{k}", changes)
+                                   for k, v in shape["stages"].items()}
+            if isinstance(shape.get("artifacts"), dict):
+                shape["artifacts"] = {k: word_map._map_word(v, depths, f"{where}.artifacts.{k}",
+                                                            changes)
+                                      for k, v in shape["artifacts"].items()}
+    if old_ranks:
+        out["stage_mode_ranks"] = {
+            stage: {modes.get(m, m): rank for m, rank in row.items()}
+            for stage, row in out["stage_mode_ranks"].items()}
+    return out
+
+
+def one_check_conflicts(doc):
+    """`(code, path, message)` for each check that a copied layer sets under
+    both its old id and its new id with different bodies. `word_map.map_layer`
+    leaves the two keys as they are, so the copy reader refuses them, as the
+    8.x merge did."""
+    from compass_pkg import old_names
+    checks = doc.get("checks") if isinstance(doc, dict) else None
+    ids = {r["old"]: r["new"] for r in old_names.rows("check_id")}
+    if not isinstance(checks, dict):
+        return []
+    return [("M-ONE-CHECK", f"checks.{old}",
+             f"{old} and {new} are one check ({new} is the current name), and "
+             f"this layer sets them to different values; keep one of them")
+            for old, new in ids.items() if old in checks and new in checks]
+
+
 # --- the public surface -----------------------------------------------------------
 
 def _convert(policy, guardrails):
     # A policy copied before the depth words and the size were renamed is
     # converted as the new words.
-    policy, _renamed = canonical_routes(word_map.map_policy(policy or {}))
+    policy, _renamed = canonical_routes(map_policy(policy or {}))
     guardrails = copy.deepcopy(guardrails or {})
     notes = _Notes()
     approaches = _approaches(policy)
@@ -812,7 +887,7 @@ def _legacy_config(doc):
         raise core.CompassError("legacy: " + "; ".join(problems))
     # Two spellings of one check that disagree are refused, as the merge refused them.
     errors = [f"{code} {path}: {message}"
-              for code, path, message in word_map.one_check_conflicts(mapped)]
+              for code, path, message in one_check_conflicts(mapped)]
     mapped = removed_parts.with_mapped_stages(mapped, {})
     config, prov = {}, {}
     for catalogue in spec.CATALOGUES:

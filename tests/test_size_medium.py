@@ -3,7 +3,9 @@ group B).
 
 `standard` retires as a size only. It is still the retired name of the
 `regular` delivery approach (`delivery_approach: standard`), and that row is
-not a size. Every writer emits `medium`; the readers accept both.
+not a size. Every writer emits `medium`. A stored manifest or generation is
+read in either word; a size typed on the command line takes `medium` only
+(ADR-098, VD-043 decision 9).
 """
 from __future__ import annotations
 
@@ -88,12 +90,14 @@ def _evaluate(run_cli, size):
                    "--json", timeout=60)
 
 
-def test_vr_b4_size_standard_on_the_command_line_equals_medium_and_says_so(run_cli):
+def test_vr_b4_size_standard_on_the_command_line_fails_as_an_unknown_value(run_cli):
+    """9.0.0 reads no old word typed on the command line: `size=standard` is
+    refused as any value outside the vocabulary is, with no notice."""
     medium = _evaluate(run_cli, "medium")
     assert medium.returncode == 0, medium
-    standard = _evaluate(run_cli, "standard")
-    assert standard.returncode == 0, standard
-    assert json.loads(standard.stdout) == json.loads(medium.stdout)
-    assert "size standard is now medium" in standard.stderr, standard.stderr
     assert medium.stderr == "", "the new word needs no notice"
-    assert "is now medium" not in standard.stdout, "the notice is on standard error only"
+    standard = _evaluate(run_cli, "standard")
+    unknown = _evaluate(run_cli, "enormous")
+    assert standard.returncode == unknown.returncode == 2, (standard, unknown)
+    assert "reading size='standard' is not in the vocabulary" in standard.stderr, standard.stderr
+    assert "is now medium" not in standard.stdout + standard.stderr

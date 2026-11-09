@@ -28,7 +28,7 @@ GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
 QUICK_FIX = {"risk": "trivial", "familiarity": "brownfield-mapped",
              "size": "atomic", "intent": "delivery"}
 FEATURE = {"risk": "contained", "familiarity": "brownfield-mapped",
-           "size": "standard", "intent": "delivery"}
+           "size": "medium", "intent": "delivery"}
 INITIATIVE = {"risk": "contained", "familiarity": "brownfield-mapped",
               "size": "large", "intent": "delivery"}
 
@@ -83,7 +83,7 @@ def test_au_1_balanced_is_the_default(project):
     _set_autonomy(project, "controlled")
     assert _evaluate(project, FEATURE)["checkpoints"] == ["assess", "specify", "build", "ship"]
     _set_autonomy(project, "balanced")
-    _start(project, "bigger", "contained", "standard")
+    _start(project, "bigger", "contained", "medium")
     manifest = yaml.safe_load(
         (project / ".compass" / "work" / "bigger" / "manifest.yml").read_text())
     # On the four-stage path balanced autonomy lists no checkpoint for a change
@@ -127,7 +127,7 @@ def test_au_4_the_summary_stays_three_lines_and_names_the_checkpoints(project):
     # issue is assessed under controlled autonomy, which lists every stage where
     # `S17` applies (ADR-092 open question 7).
     _set_autonomy(project, "controlled")
-    assert _start(project, "bigger", "contained", "standard").returncode == 0
+    assert _start(project, "bigger", "contained", "medium").returncode == 0
     small = _run(project, "approach", "show", "--issue", "greeting")
     big = _run(project, "approach", "show", "--issue", "bigger")
     for view in (small, big):

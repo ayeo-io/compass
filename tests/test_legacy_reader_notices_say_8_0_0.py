@@ -2,6 +2,8 @@
 (issue `release-7-0-0-prep`).
 
 Scenario ids: `TRC-015` to `TRC-018` in release-7-0-0-prep/acceptance-criteria.md.
+`TRC-016`, the notice of a typed old size, went with that reader in 9.0.0
+(ADR-098); `tests/test_size_medium.py` checks that the old size is refused.
 
 The scan reads tracked files only. A line that promises an old form until 7.0.0
 carries the allow marker `legacy-date-scan: allow - <reason>` when the promise
@@ -10,16 +12,12 @@ table. The marker covers the line it is on and nothing else.
 """
 from __future__ import annotations
 
-import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CLI = ROOT / "cli" / "compass"
 
-SIZE_NOTICE = "compass: size standard is now medium; the old word is read until 9.0.0."
 
 SCANNED_ROOTS = ("cli/", "docs/", "governance/", "skills/", "commands/", "agents/")
 SKIPPED = ("governance/decisions/", "architecture/decisions/", "docs/system-spec.md", "tests/")
@@ -83,24 +81,6 @@ def live_files():
             if (ROOT / rel).is_file():
                 chosen.append(ROOT / rel)
     return chosen
-
-
-def _cli(root, *args):
-    env = dict(os.environ)
-    env.pop("COMPASS_ISSUE", None)
-    env["GIT_CEILING_DIRECTORIES"] = str(Path(root).parent)
-    env["COMPASS_OFFLINE"] = "1"
-    return subprocess.run([sys.executable, str(CLI), *args], cwd=str(root),
-                          capture_output=True, text=True, env=env, timeout=120)
-
-
-def test_the_size_notice_says_8_0_0():
-    """Scenario id: `TRC-016` in release-7-0-0-prep/acceptance-criteria.md."""
-    result = _cli(ROOT, "approach", "evaluate", "--assessment", "risk=contained",
-                  "--assessment", "familiarity=brownfield-mapped",
-                  "--assessment", "size=standard", "--json")
-    assert result.returncode == 0, result.stderr
-    assert SIZE_NOTICE in result.stderr.splitlines(), result.stderr
 
 
 def test_no_live_file_promises_an_old_form_until_7_0_0():

@@ -52,7 +52,7 @@ from compass_pkg.manifest import (
     cmd_changed_file_add, cmd_evidence_add, cmd_gate_pass, cmd_land_commit,
     cmd_scenario_add,
 )
-from compass_pkg.routing import cmd_route_evaluate, evaluate_route, read_size
+from compass_pkg.routing import cmd_route_evaluate, evaluate_route
 from compass_pkg.start_state import (  # noqa: F401
     _GENERATED_DIRS, _STATE_PATHS, _git_changed_paths, _is_generated,
     _is_issue_state, _record_path, _tracked_paths, changed_since_start)
@@ -233,7 +233,6 @@ def cmd_quick_fix_start(args):
     risk_v, risk_r = _split_required(args.risk, "risk")
     fam_v, fam_r = _split_required(args.familiarity, "familiarity")
     size_v, size_r = _split_required(args.size, "size")
-    size_v = read_size("size", size_v)      # the retired `standard` reads as `medium`
     goal_v, goal_r = _split_optional(args.goal, "goal")
     urgency_v, urgency_r = _split_optional(getattr(args, "urgency", None), "urgency")
 

@@ -310,7 +310,10 @@ directory of ADR-042, and the two views generated from it,
 deleted with the reader of a copy of them (ADR-098). The 8.x reader of a copy
 is now the test helper `tests/legacy_copy.py`: compatibility contracts 1 and 2
 and the routing tests that compare with 8.0.4 read the packed 5.6.0 and 8.0.4
-copies through it, and no CLI module imports it.
+copies through it, and no CLI module imports it. The old depth and size
+words of the 5.6.0 copy (`full`, `light`, `standard`) are read by that helper
+too (`legacy_copy.map_policy`), because 9.0.0 builds its policy from the check
+set or a stored generation, which hold none of them.
 
 Each artifact of the 8.x catalogue (`governance/artifacts-8.0.4.yml`) names the stage that owns it with `stage:`
 (`architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md`).
@@ -520,7 +523,10 @@ the assessment the issue already holds.
 - **Without `--write`** the command shows what the write would store, and
   owes the same `S17` tokens the write stores. An assessment given on the command line
   (`--assessment`) is evaluated on the path too, as a new issue in the
-  project would be.
+  project would be. A value typed there, or given to `quick-fix start`, takes
+  the 9.0.0 word only: the old size `standard` is refused as any value outside
+  the vocabulary is (ADR-098). A stored manifest or generation that holds
+  `standard` still reads it as `medium`.
 - The output of a path issue, in text and in `--json`, has none of the 8.x
   evaluator's routing fields: no candidate approach (`candidate_route`,
   `candidate_via`), no blocked stage (`blocked_phases`, "ship is blocked

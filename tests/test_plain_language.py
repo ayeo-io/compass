@@ -556,7 +556,7 @@ def test_pl_c15_evaluator_puts_meaning_before_the_code():
         [_sys.executable, str(REPO_ROOT / "cli" / "compass"), "approach", "evaluate",
          "--assessment", "risk=contained",
          "--assessment", "familiarity=brownfield-unmapped",
-         "--assessment", "size=standard", "--assessment", "goal=delivery",
+         "--assessment", "size=medium", "--assessment", "goal=delivery",
          "--assessment", "role=engineer"],
         cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=60).stdout
 

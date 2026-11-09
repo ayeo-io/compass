@@ -146,8 +146,12 @@ ASSESSMENTS = [
 
 
 def test_rn_1_an_old_keyed_policy_computes_the_same_approach_and_names_the_old_keys():
+    import legacy_copy
     from compass_pkg.routing import evaluate_route
-    old = yaml.safe_load(OLD_POLICY.read_text(encoding="utf-8"))
+    # The copy also holds the old depth words (`full`, `light`). 9.0.0 reads no
+    # copy, so the 8.x copy reader the tests keep reads those words (ADR-098);
+    # the evaluator still reads the old route names.
+    old = legacy_copy.map_policy(yaml.safe_load(OLD_POLICY.read_text(encoding="utf-8")))
     for autonomy in ("controlled", "balanced", "autonomous"):
         for readings in ASSESSMENTS:
             # The old-keyed copy is an 8.x policy, so it routes as the 8.0.4 copy.

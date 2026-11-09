@@ -26,7 +26,7 @@ CLI = ROOT / "cli" / "compass"
 GOVERNANCE = ROOT / "governance"
 
 READINGS = ["--assessment", "risk=cross-cutting", "--assessment",
-            "familiarity=brownfield-mapped", "--assessment", "size=standard",
+            "familiarity=brownfield-mapped", "--assessment", "size=medium",
             "--assessment", "intent=delivery", "--assessment", "role=engineer"]
 
 

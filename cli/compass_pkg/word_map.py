@@ -9,11 +9,14 @@ different row. Each field has its own table in `cli/migrate-map.yml` (under
 checkout with no framework install. A test keeps the copy equal to the file,
 and keeps `retired_values:` in `governance/terminology.yml` equal to both.
 
-There are two entry points, and one mapping behind each:
+Only a stored file is read through these tables: 616 archived 8.x manifests
+and 73 stored generations hold the old words (VD-043). A word typed on the
+command line is not, and an old one fails as any unknown value does
+(ADR-098). There are two entry points, and one mapping behind each:
 
 - a manifest, as `core.normalize_spine` loads it (`map_manifest`);
-- a configuration layer, before `layers` checks it and again where `merge`
-  applies it (`map_layer`). The paths come from
+- the resolved configuration of a stored generation, as `generation.load`
+  reads it (`map_layer`). The paths come from
   `catalogue_spec.VALUE_DOMAINS`, so the mapping and the field catalogue
   cannot disagree about where a word sits.
 
@@ -77,8 +80,8 @@ FALLBACK["close_reason"] = {"landed": "completed", "abandoned": "not-planned"}
 FALLBACK["run_stage"] = {"build": "implement"}
 FALLBACK["friction_keys"] = {"phase": "stage"}
 # The two stored values of the `old_names:` table (`old_names` keeps the rest).
-FALLBACK["reassessment_kind"] = {"judgement": "judgment"}  # us-english-scan: allow - old name read until 9.0.0
-FALLBACK["check_id"] = {"dor-behaviour-is-gwt": "dor-behavior-is-gwt"}  # us-english-scan: allow - old name read until 9.0.0
+FALLBACK["reassessment_kind"] = {"judgement": "judgment"}  # us-english-scan: allow - old name a stored manifest holds
+FALLBACK["check_id"] = {"dor-behaviour-is-gwt": "dor-behavior-is-gwt"}  # us-english-scan: allow - old name a stored manifest holds
 
 _READ = None
 
@@ -194,20 +197,6 @@ SKILL_EFFECTS = ("require_skill", "strategy")
 SKILL_PREFIX = "compass:"
 
 
-def one_check_conflicts(doc):
-    """`(code, path, message)` for each check that a layer sets under both
-    its old id and its new id with different bodies. `_map_check_keys` leaves
-    the two keys as they are, so `merge.apply` raises these as a finding."""
-    checks = doc.get("checks") if isinstance(doc, dict) else None
-    ids = {r["old"]: r["new"] for r in old_names.rows("check_id")}
-    if not isinstance(checks, dict):
-        return []
-    return [("M-ONE-CHECK", f"checks.{old}",
-             f"{old} and {new} are one check ({new} is the current name), and "
-             f"this layer sets them to different values; keep one of them")
-            for old, new in ids.items() if old in checks and new in checks]
-
-
 def _map_ids(items, table, path, changes):
     """A list of check ids with each old id replaced. An id that is already in
     the list under its new name is not repeated."""
@@ -244,9 +233,9 @@ def _map_names(mapped, rows, changes):
       with or without the `compass:` prefix. The new name is written without
       the prefix, as the shipped default writes it, so the two compare equal.
 
-    An overlay that holds both ids of one check with different bodies keeps
-    both keys: the new word would otherwise win and hide the conflict, and
-    `merge.apply` refuses the layer (`one_check_conflicts`)."""
+    A layer that holds both ids of one check with different bodies keeps
+    both keys, so the new word never hides the conflict. A stored generation
+    holds no such pair: the merge refused it before the commit."""
     ids = rows.get("check_id") or {}
     if ids:
         checks = mapped.get("checks")
@@ -277,7 +266,7 @@ def _map_check_keys(checks, ids, changes):
             continue
         if new in checks:
             if checks[new] != entry:
-                out[key] = entry    # a conflict: `one_check_conflicts` reports it
+                out[key] = entry    # a conflict: both keys stay
                 continue
             changes.append((f"checks.{key}", key, new))
             continue                # the same body under both: the new id stays
@@ -386,80 +375,6 @@ def _map_when(when, path, table, changes):
                 when[key] = [_map_word(item, table, here, changes) for item in value]
             else:
                 when[key] = _map_word(value, table, here, changes)
-
-
-def map_fixture(doc, rows=None):
-    """A policy-test fixture with its assessment size and its expected stage
-    modes mapped: the words an older preset wrote."""
-    rows = tables() if rows is None else rows
-    if not isinstance(doc, dict):
-        return doc
-    out, changes = copy.deepcopy(doc), []
-    assessment = out.get("assessment")
-    if isinstance(assessment, dict) and "size" in assessment:
-        assessment["size"] = _map_word(assessment["size"], rows.get("size") or {},
-                                       "assessment.size", changes)
-    expect = out.get("expect")
-    if isinstance(expect, dict) and isinstance(expect.get("stages"), dict):
-        modes = rows.get("stage_mode") or {}
-        expect["stages"] = {stage: _map_word(mode, modes, f"expect.stages.{stage}", changes)
-                            for stage, mode in expect["stages"].items()}
-    return out
-
-
-def _stale_shape(shape, modes, depths):
-    if not isinstance(shape, dict):
-        return False
-    stages, artifacts = shape.get("stages"), shape.get("artifacts")
-    return (isinstance(stages, dict) and any(m in modes for m in stages.values())
-            or isinstance(artifacts, dict) and any(d in depths for d in artifacts.values()))
-
-
-def map_policy(policy, rows=None):
-    """A legacy routing policy (an 8.x `routing-policy.yml`) read through
-    the tables: a project that copied `governance/` before the rename keeps
-    its old words in the stage weights, the artifact depths, the size
-    vocabulary and the size tests of its rules, and routes as it did.
-
-    The evaluator reads the policy once for each assessment, so the check for
-    an old word looks only at the places a word sits and returns `policy`
-    itself, not a copy, when it finds none."""
-    rows = tables() if rows is None else rows
-    modes, depths = rows.get("stage_mode") or {}, rows.get("artifact_depth") or {}
-    sizes = rows.get("size") or {}
-    if not isinstance(policy, dict) or not (modes or depths or sizes):
-        return policy
-    vocabulary = policy.get("assessment_vocabulary") or {}
-    old_size = isinstance(vocabulary, dict) and any(
-        isinstance(w, str) and w in sizes for w in vocabulary.get("size") or ())
-    shapes = policy.get("route_shapes") or {}
-    ranks = policy.get("stage_mode_ranks")
-    old_ranks = isinstance(ranks, dict) and any(
-        isinstance(row, dict) and any(m in modes for m in row) for row in ranks.values())
-    old_shape = isinstance(shapes, dict) and any(
-        _stale_shape(shape, modes, depths) for shape in shapes.values())
-    if not (old_size or old_ranks or old_shape):
-        return policy
-    out, changes = copy.deepcopy(policy), []
-    if old_size:
-        out["assessment_vocabulary"]["size"] = [
-            _map_word(w, sizes, "assessment_vocabulary.size", changes)
-            for w in out["assessment_vocabulary"]["size"]]
-        _walk_predicates(out, "", rows, changes)
-    for name, shape in (out.get("route_shapes") or {}).items():
-        if isinstance(shape, dict):
-            where = f"route_shapes.{name}"
-            if isinstance(shape.get("stages"), dict):
-                shape["stages"] = {k: _map_word(v, modes, f"{where}.stages.{k}", changes)
-                                   for k, v in shape["stages"].items()}
-            if isinstance(shape.get("artifacts"), dict):
-                shape["artifacts"] = {k: _map_word(v, depths, f"{where}.artifacts.{k}", changes)
-                                      for k, v in shape["artifacts"].items()}
-    if old_ranks:
-        out["stage_mode_ranks"] = {
-            stage: {modes.get(m, m): rank for m, rank in row.items()}
-            for stage, row in out["stage_mode_ranks"].items()}
-    return out
 
 
 # --- manifests ----------------------------------------------------------------

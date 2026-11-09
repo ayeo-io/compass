@@ -30,7 +30,7 @@ import yaml
 import re as _re
 import fnmatch
 from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCHEMA_VERSION, CompassError, canonical_shape, display_shape, display_stage, load_manifest, reading_matches, resolve_issue_dir, shape_stages
-from compass_pkg import retired, word_map
+from compass_pkg import retired
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
                                     ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH,
                                     GATE_VERIFY_ANALYZE, MODE_LIGHTWEIGHT, MODE_THOROUGH,
@@ -198,9 +198,10 @@ def prepare_policy(policy):
     """The `PreparedPolicy` of `policy`. A policy that names one route twice
     raises here, as `evaluate_route` has always raised it first."""
     from compass_pkg.policy import checkpoint_table_errors
-    # A policy copied before the depth words and the size were renamed is
-    # read as the new words, so it routes as it did.
-    view, renamed = canonical_view(word_map.map_policy(policy))
+    # The policy is built from the check set or from a stored generation,
+    # which `generation.load` has already read in the new words, so no old
+    # depth or size word reaches it (ADR-098).
+    view, renamed = canonical_view(policy)
     vocab = {_VOCABULARY_KEYS.get(k, k): v
              for k, v in (view.get("assessment_vocabulary")
                           or view.get("reading_vocabulary") or {}).items()}
@@ -650,19 +651,6 @@ def cmd_approach_summary(args):
 
 # --- command: approach evaluate -----------------------------------------------
 
-def read_size(dimension, value):
-    """A size given on the command line, read through the retired-word table:
-    the old word evaluates as the new one and the notice goes to standard
-    error, so the output stays the new command's. A dimension other than
-    `size` comes back unchanged."""
-    new = word_map.tables()["size"].get(value) if dimension == "size" else None
-    if new is None:
-        return value
-    print(f"compass: size {value} is now {new}; the old word is read until 9.0.0.",
-          file=sys.stderr)
-    return new
-
-
 def _acceptance_block(task, task_dir, resolution, result, args, evaluated_before,
                       resolved=None):
     """The manifest's `acceptance_strategy` block a write stores, or None to
@@ -706,7 +694,9 @@ def cmd_route_evaluate(args):
             if k in ("labels", "artifacts"):
                 readings[k] = [t.strip() for t in v.split(",") if t.strip()]
             else:
-                readings[k] = read_size(k, v.strip())
+                # A typed value takes the 9.0.0 word only: an old size such as
+                # `standard` fails as any unknown value does (ADR-098).
+                readings[k] = v.strip()
     else:
         task_dir = resolve_issue_dir(args.task)
         task, task_path = load_manifest(task_dir)

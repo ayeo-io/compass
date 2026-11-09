@@ -139,7 +139,7 @@ The measurement covers `compass check` only. The hook, `compass next`, `compass 
    - The drift report and the framework lint: `governance.governance_drift`, the drift lines of `compass approach evaluate`, and the legacy reports of `policy_cmd`. `compass policy lint` is the settings lint in every project, the framework's included. `governance_drift` becomes a removed setting.
    - Old typed names and the role flags: the old names typed on the command line (the reassessment kind, the check id given to `evidence approve`, `evidence request` and `evidence review`, and the refusal code), the `old_names` rows and functions that only those read, the `shape_display` section of `cli/migrate-map.yml`, `quick-fix start --role` and `--justify role=`. A typed old name fails as any unknown name does. `retired.DIMENSIONS` stays, so the stored `assessment.role` readings still read.
 
-   The readers of old words in a stored file stay (decision 10): the manifest half of `word_map`, `routing.read_size`, the old-word mapping in `generation.load`, and the `old_names` rows that a stored record or a contract reads. Deleting them would change compatibility contracts 3, 4 and 5 or how 73 archived stored generations read.
+   Typed input takes only the 9.0.0 names, and stored files keep reading as stored (VD-043 decisions 8 and 9). So the old size `standard` typed on the command line (`routing.read_size`) and the `old_names` row of the refusal code are deleted too, and fail as any unknown value does. The readers of old words in a stored file stay (decision 10): the manifest half of `word_map`, the old-word mapping in `generation.load`, and the `old_names` rows that a stored record reads. Deleting them would change compatibility contract 3 or how 616 archived manifests and 73 archived stored generations read.
 
 10. **These readers stay, with the reason:**
     - `stable_ids.LEGACY_TO_PATH` and the readers of a legacy stage. All 616 archived manifests are 8.x, and `depends_on`, `--found-at` and `retro --lineage` values name legacy stages. ADR-092 added them in 9.0.0; the 2026-10-25 decision did not end them.
@@ -147,7 +147,7 @@ The measurement covers `compass check` only. The hook, `compass next`, `compass 
     - `generation.load`, the major refusal and `compass issue migrate --config`, because every stored generation needs them.
     - The legacy stage names of the checkpoint outcomes, so an old outcome still reads (ADR-092).
     - `.compass/config.yml` when `compass.yml` is absent. 9.0.0 still reads it (open question 5). No archived issue and no file in this repository reads it, so keeping it changes no verdict. Stopping would add a hook refusal and change about 100 test files. `compass migrate` rewrites `compass.yml` only, and tells a project with only the old file that 9.0.0 still reads it.
-    - The readers of old words in a stored file: the manifest half of `word_map` with the `values` and `friction_keys` sections of `cli/migrate-map.yml`, `routing.read_size`, the old-word mapping in `generation.load`, the copied-governance word reader, and the `old_names` rows `reassessment_kind`, `check_id`, `skill`, `state_key`, `refusal_code` and `term`. Contracts 3, 4 and 5 read them, and 73 archived stored generations hold an old check id or skill name. Each row still says `removed_in: 9.0.0`.
+    - The readers of old words in a stored file: the manifest half of `word_map` with the `values` and `friction_keys` sections of `cli/migrate-map.yml`, the old-word mapping in `generation.load`, and the `old_names` rows `reassessment_kind`, `check_id`, `skill`, `state_key` and `term`. 616 archived manifests and 73 archived stored generations hold those words, contract 3 reads them through `compass issue migrate`, and an 8.x `state.yml` stores the old state key. `term` is the other form of `catalog` that ADR-041 keeps. Each row says `removed_in: 10.0.0`, so `old_names.removal_problems` lists none of them in 9.x.
 
 11. **The other readers on the 2026-10-25 list wait for the owner.** Each changes what a compatibility contract asserts or a frozen file, so the owner decides (open questions 1 to 4, 6, 7 and 9):
     - copied governance, the generated views, `find_governance` and the `None` answer of `view_or_legacy`. The legacy adapter would move into a test helper, and every command would refuse a governance copy with `governance-copy-removed`;
@@ -204,10 +204,10 @@ What shipped:
 What was kept, and why:
 
 - The manifest half of `word_map`, with the `values` and `friction_keys` sections of `cli/migrate-map.yml`. Contract 3 runs `compass issue migrate` over an archive sample, which rewrites old manifest words through `word_map.map_manifest`; without that half, `issue lint` exits 1 instead of 0 on 16 of those issues. Contract 5 stores `define: full` (VD-040).
-- `routing.read_size`. Contract 4's regular issue stores `size: standard`, and three of its entries type `size=standard`.
+- `routing.read_size` until #359 step 9 deleted it (VD-043 decision 9). Contract 4's regular issue, which stores `size: standard`, still reads; the two entries that type `standard` on a project 9.0.0 reads exit 2 and are listed in `EXIT_CHANGED_IN_9_0_0`.
 - The old-word mapping in `generation.load`. 73 archived stored generations hold an old check id or skill name. Without the mapping they would read in their stored words.
 - The copied-governance reader, its word mapping and the structural lint of a copy, until copied governance goes (open questions 1 to 3).
-- The `old_names` rows `reassessment_kind`, `check_id`, `skill`, `state_key`, `refusal_code` and `term`, each still marked `removed_in: 9.0.0`, so `old_names.removal_problems("9.0.0")` lists them until they go.
+- The `old_names` rows `reassessment_kind`, `check_id`, `skill`, `state_key` and `term`, each marked `removed_in: 10.0.0`, so `old_names.removal_problems("9.0.0")` lists none. The `refusal_code` row went with step 9: no stored file holds a refusal code.
 - `.compass/config.yml` when `compass.yml` is absent (open question 5, VD-037).
 
 What waits for the owner:

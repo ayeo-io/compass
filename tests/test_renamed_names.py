@@ -350,12 +350,14 @@ def test_trc_048():
         assert "L-SETTING-REMOVED [project] checks:" in out, out
 
     # The word map, which reads a stored generation, keeps both ids when their
-    # bodies differ, and names the conflict, so the new id never hides it.
+    # bodies differ, so the new id never hides the conflict. The 8.x copy
+    # reader the tests keep names it (`legacy_copy.one_check_conflicts`).
     from compass_pkg import word_map
+    import legacy_copy
     layer = yaml.safe_load(text)
     mapped, _ = word_map.map_layer(layer)
     assert {NEW_CHECK, OLD_CHECK} <= set(mapped["checks"]), mapped
-    conflicts = word_map.one_check_conflicts(mapped)
+    conflicts = legacy_copy.one_check_conflicts(mapped)
     assert [(code, path) for code, path, _ in conflicts] == [
         ("M-ONE-CHECK", f"checks.{OLD_CHECK}")], conflicts
     assert "one check" in conflicts[0][2]
@@ -363,7 +365,7 @@ def test_trc_048():
     # The same value under both ids is not a conflict.
     same = yaml.safe_load(text.replace("severity: blocking", "severity: advisory"))
     mapped, _ = word_map.map_layer(same)
-    assert word_map.one_check_conflicts(mapped) == []
+    assert legacy_copy.one_check_conflicts(mapped) == []
     assert NEW_CHECK in mapped["checks"] and OLD_CHECK not in mapped["checks"]
 
 
@@ -551,25 +553,28 @@ def test_trc_056():
     from compass_pkg import aliases, core, old_names
 
     found = old_names.rows()
-    assert len(found) == 7, found
+    assert len(found) == 6, found
+    # The refusal code row went in 9.0.0: no stored file holds a refusal code
+    # and a typed old one is refused (ADR-098).
     assert {r["kind"] for r in found} == {
-        "reassessment_kind", "check_id", "skill", "refusal_code", "state_key", "term"}, found
-    # `bdd-specification`, merged into `atdd` (#360), is read until 10.0.0;
-    # every other row ends at 9.0.0. `behavior-mapping` has no row (VD-042).
-    assert {(r["old"], r["removed_in"]) for r in found
-            if r["removed_in"] != "9.0.0"} == {("bdd-specification", "10.0.0")}, found
+        "reassessment_kind", "check_id", "skill", "state_key", "term"}, found
+    # Typed input takes only the 9.0.0 names and stored files keep reading as
+    # stored (VD-043), so every row left is read through 9.x and ends at 10.0.0,
+    # with `bdd-specification`, merged into `atdd` (#360). `behavior-mapping`
+    # has no row (VD-042).
+    assert {r["removed_in"] for r in found} == {"10.0.0"}, found
     assert not any(r["old"] == MERGED_SKILL for r in found), found
     assert aliases.load_table()["aliases"] == []
 
-    # The table ends at 9.0.0 but for `bdd-specification`: a planted version
-    # lists each row that ends at or before it, 8.x none.
-    assert len(old_names.removal_problems("9.0.0")) == 6
+    # A planted version lists each row that ends at or before it: none
+    # through 9.x, every row at 10.0.0.
+    assert old_names.removal_problems("9.0.0") == []
     assert old_names.removal_problems("8.0.0") == []
     assert old_names.removal_problems("8.1.0") == []
-    assert len(old_names.removal_problems("9.1.0")) == 6
-    assert len(old_names.removal_problems("10.0.0")) == 7
+    assert old_names.removal_problems("9.1.0") == []
+    assert old_names.removal_problems("9.10.0") == []    # tuples, not strings
+    assert len(old_names.removal_problems("10.0.0")) == 6
     assert old_names.removal_problems("7.0.0") == []
-    assert old_names.removal_problems("7.10.0") == []    # tuples, not strings
 
     # The in-module copy equals the file (read directly), and the reader falls
     # back to it with the file made unreadable.
@@ -587,8 +592,8 @@ def test_trc_056_the_table_check_fails_for_a_row_that_is_missing(monkeypatch):
     planted = {k: dict(v) for k, v in old_names._FALLBACK.items()}
     planted["term"] = {}
     monkeypatch.setattr(old_names, "_READ", lambda name, fallback: planted)
-    assert len(old_names.rows()) == 6
-    assert old_names.removal_problems("9.0.0") and len(old_names.removal_problems("9.0.0")) == 5
+    assert len(old_names.rows()) == 5
+    assert old_names.removal_problems("10.0.0") and len(old_names.removal_problems("10.0.0")) == 5
 
 
 # --- The upgrade guide table is the reader table ------------------------------
@@ -620,7 +625,12 @@ DELETED_IN_9_0_0 = {
     ("JSON key", OLD_BEHAVIOR + "s", NEW_BEHAVIOR + "s", "9.0.0"),
     ("heading", "Current " + OLD_BEHAVIOR.capitalize(), "Current Behavior", "9.0.0"),
     ("heading", "Archived " + OLD_BEHAVIOR.capitalize(), "Archived Behavior", "9.0.0"),
+    ("refusal code", _U6_OLD_CODE, _U6_NEW_CODE, "9.0.0"),
 }
+
+#: The version that ends each row 9.0.0 kept. The 7.0.0 guide says 9.0.0; 9.0.0
+#: reads stored files as stored (VD-043), so the reader keeps the row to 10.0.0.
+KEPT_UNTIL = "10.0.0"
 
 
 #: The row the reader added when 9.0.0 merged `bdd-specification` into `atdd`
@@ -629,8 +639,10 @@ SKILL_ROWS_SINCE_9_0_0 = {("skill", "bdd-specification", NEW_SKILL, "10.0.0")}
 
 
 def _comparable(guide_rows: set) -> set:
-    """The guide's rows the reader must still hold as written."""
-    return guide_rows - DELETED_IN_9_0_0
+    """The guide's rows the reader must still hold: each kind, old and new name
+    as written, ending at `KEPT_UNTIL` where the guide says 9.0.0."""
+    return {(kind, old, new, KEPT_UNTIL if ends == "9.0.0" else ends)
+            for kind, old, new, ends in guide_rows - DELETED_IN_9_0_0}
 
 
 def test_trc_070():

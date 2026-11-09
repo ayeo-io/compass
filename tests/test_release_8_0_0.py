@@ -78,11 +78,11 @@ def test_trc_002_every_legacy_reader_still_reads_at_8_0_0():
     """Scenario `TRC-002`: at 8.0.0 no old-name row is overdue. The LEGACY
     waiver of a configuration layer went with the layers in 9.0.0 (ADR-094)."""
     assert old_names.removal_problems(RELEASE) == []
-    # `bdd-specification`, which 9.0.0 merged into `atdd` (#360), is read for
-    # one more major; every other row ends at 9.0.0.
+    # 9.0.0 keeps the rows a stored file needs through 9.x (VD-043), so every
+    # row, `bdd-specification` (merged into `atdd`, #360) with them, ends at
+    # 10.0.0.
     merged = {("skill", "bdd-specification")}
-    assert all(r["removed_in"] == ("10.0.0" if (r["kind"], r["old"]) in merged
-                                   else "9.0.0") for r in old_names.rows())
+    assert {r["removed_in"] for r in old_names.rows()} == {"10.0.0"}
     assert {(r["kind"], r["old"]) for r in old_names.rows()} >= merged
 
 

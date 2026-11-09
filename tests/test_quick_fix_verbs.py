@@ -223,7 +223,7 @@ def test_qfo2_on_the_path_start_takes_heavier_work_and_names_what_it_owes(repo):
     """ADR-092 decision: the quick fix no longer refuses heavier work. Start records it, with its scenario, and the evidence
     the bigger change owes; the next step is the first thing it owes."""
     result = _start(repo, "bigger-change",
-                    size="standard - several files and a design choice")
+                    size="medium - several files and a design choice")
     assert result.returncode == 0, result.stdout + result.stderr
 
     manifest = _manifest(repo, "bigger-change")

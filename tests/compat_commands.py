@@ -557,13 +557,27 @@ PHRASE_REMOVED_IN_9_0_0 = {
 #: A project with copied governance and no `compass.yml` is refused with exit 2
 #: (`governance-copy-removed`), because 9.0.0 does not read the copy (ADR-098). Its
 #: entries are also in `REFUSED_IN_9_0_0`.
+#:
+#: Typed input takes only the 9.0.0 names (VD-043 decision 9): the two entries that
+#: type the old size `standard` on a project that 9.0.0 reads exit 2, as any value
+#: outside the vocabulary does. Their recorded phrases are the old outcome's, so
+#: `OLD_WORD_REFUSED_IN_9_0_0` names what stderr says instead. The two entries that
+#: type it on a copied-governance project are refused for the copy first.
 EXIT_CHANGED_IN_9_0_0 = {"next-regular-without-approach-record": 0,
-                         "quick-fix-start-heavier": 0,
+                         "quick-fix-start-heavier": 2,
                          "quick-fix-start-auth-label": 0,
                          "evidence-review-recorded": 2,
                          "approach-evaluate-copied-governance": 2,
+                         "approach-evaluate-controlled-autonomy": 2,
                          "policy-lint-copied": 2,
                          "policy-lint-broken": 2}
+
+
+#: Entries that type an old word 9.0.0 no longer reads, each with the text stderr
+#: must hold: the refusal of a value outside the vocabulary.
+OLD_WORD_REFUSED_IN_9_0_0 = {
+    entry_id: "reading size='standard' is not in the vocabulary"
+    for entry_id in ("approach-evaluate-controlled-autonomy", "quick-fix-start-heavier")}
 
 
 #: Entries 9.0.0 refuses, each with the refusal code stderr must name. The exit is
@@ -586,12 +600,10 @@ PHRASE_CHANGED_IN_9_0_0 = {
     "next-quick-fix": ("Implement", "Build"),
     "approach-evaluate-quick-fix": ("quick fix - 3 gate(s)", "delivery - 3 gate(s)"),
     "approach-evaluate-no-compass-folder": ("quick fix - 3 gate(s)", "delivery - 3 gate(s)"),
-    "approach-evaluate-controlled-autonomy": ("regular - 6 gate(s)", "delivery - 6 gate(s)"),
     "approach-summary-regular": ("waits for you at: define, plan",
                                  "does not stop to wait for you"),
     "quick-fix-start-valid": ("recorded as quick fix", "recorded as delivery"),
     "quick-fix-start-advisory": ("recorded as quick fix", "recorded as delivery"),
-    "quick-fix-start-heavier": ("computes to regular", "recorded as delivery"),
     "quick-fix-start-auth-label": ("computes to full", "recorded as delivery"),
     # One check set ships, named by its id and version, not a preset (ADR-094). A
     # 9.0.0 major may move this entry (decision 2026-10-30).
@@ -622,6 +634,9 @@ def differences(entry: dict, outcome: Outcome, configuration: str = "A") -> list
     if entry["id"] in REFUSED_IN_9_0_0 and f"[{REFUSED_IN_9_0_0[entry['id']]}]" \
             not in outcome.stderr:
         found.append(f"stderr lacks the refusal code {REFUSED_IN_9_0_0[entry['id']]}")
+    if entry["id"] in OLD_WORD_REFUSED_IN_9_0_0 \
+            and OLD_WORD_REFUSED_IN_9_0_0[entry["id"]] not in outcome.stderr:
+        found.append(f"stderr lacks {OLD_WORD_REFUSED_IN_9_0_0[entry['id']]!r}")
     return found + _as_recorded(entry, outcome,
                                 EXIT_CHANGED_IN_9_0_0.get(entry["id"], entry["exit"]),
                                 PHRASE_CHANGED_IN_9_0_0.get(entry["id"], (None, None)))

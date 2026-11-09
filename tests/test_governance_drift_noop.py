@@ -33,15 +33,22 @@ FIXTURES = ROOT / "tests" / "fixtures" / "routes"
 
 def _readings(fx):
     """A fixture's assessment as `approach evaluate --assessment` reads it."""
-    from compass_pkg import routing
     from compass_pkg.core import ASSESSMENT_KEY_MAP
     out = {}
     for key, value in (fx.get("assessment") or fx.get("readings") or {}).items():
         if value in (None, ""):
             continue
         key = ASSESSMENT_KEY_MAP.get(key, key)
-        out[key] = list(value) if isinstance(value, list) else routing.read_size(key, value)
+        out[key] = list(value) if isinstance(value, list) else _size_now(key, value)
     return out
+
+
+def _size_now(key, value):
+    """A recorded 8.x size in the 9.0.0 word. The fixtures were written before
+    `standard` became `medium`, and 9.0.0 reads no old word typed on the
+    command line (ADR-098), so the test types the new one."""
+    import compat_baseline as cb
+    return cb.SIZE_NOW.get(value, value) if key == "size" else value
 
 
 def _cli_args(fx):
@@ -51,7 +58,7 @@ def _cli_args(fx):
             value = ",".join(str(v) for v in value)
         if value in (None, ""):
             continue
-        args += ["--assessment", f"{key}={value}"]
+        args += ["--assessment", f"{key}={_size_now(key, value)}"]
     return args
 
 

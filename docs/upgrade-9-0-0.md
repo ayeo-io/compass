@@ -243,6 +243,7 @@ These parts also changed in 9.0.0. A removed flag or old name fails as any unkno
 - The old British spelling of the reassessment kind `judgment` in `approach evaluate --kind`.
 - The old British spelling of the check id `dor-behavior-is-gwt`, given to `evidence approve --check`, `evidence request --check` or `evidence review`.
 - The old British spelling of the refusal code `not-initialized`, given to the refusal code lookup.
+- The old size `standard`, given to `approach evaluate --assessment size=` or `quick-fix start --size`. Type `medium`. A manifest or stored generation that holds `standard` still reads it as `medium`.
 - The drift report. `compass approach evaluate` no longer prints `POLICY DRIFT`, and `compass policy lint` no longer compares a governance copy with the shipped files. `policy lint --json` drops the findings `LEGACY-DRIFT`, `LEGACY-DRIFT-UNCOMPARED`, `LEGACY-WAIVER` and `LEGACY-WAIVED`. The `governance_drift` setting is removed (see "Removed settings").
 
 ### What changes without breaking
@@ -288,8 +289,8 @@ The refusal names each item with the edit that clears it, or `compass waiver wit
 
 | Reader | In 9.0.0 |
 |---|---|
-| Old names typed on the command line | ended for the reassessment kind, the check id and the refusal code (see "Removed verbs and flags"). The old size name `standard` is still read, because a compatibility contract types it. |
-| Old words in a stored manifest or generation | still read. 73 archived stored generations hold an old check id or skill name, and the compatibility contracts read old manifest words. |
+| Old names typed on the command line | ended for the reassessment kind, the check id, the refusal code and the size `standard` (see "Removed verbs and flags"). Typed input takes only the 9.0.0 names. |
+| Old words in a stored manifest or generation | still read, through 9.x. 616 archived 8.x manifests and 73 archived stored generations hold them, so `compass issue migrate`, the manifest loader and the generation loader read `standard`, `full`, `light`, the old check id, the old skill name and the other renamed manifest values. An 8.x `state.yml` that stores the old British spelling of `initialized` still reads. Each old name of this kind ends at 10.0.0 in `cli/migrate-map.yml`. |
 | Copied 5.x governance files with no `compass.yml` | ended. Every command that reads the policy refuses the project with exit 2 (`governance-copy-removed`). On Compass 8.x, run `compass policy migrate` to write `compass.yml` first. |
 | The generated views `governance/routing-policy.yml` and `governance/guardrails.yml` | ended. 9.0.0 deletes them and their four schema files. The check set, `governance/check-set.yml`, is the only machine-readable policy. |
 | `.compass/config.yml` when `compass.yml` is absent | still read. `compass migrate` rewrites `compass.yml` only. |
@@ -307,10 +308,7 @@ These readers were never on that list, and they stay:
 
 ## Not yet settled
 
-ADR-098 is proposed. These parts wait for the owner's decision, because each changes what a compatibility contract or a frozen file asserts. Until then they stay as 8.x left them, and none changes an archived verdict:
-
-- when the `extends:` pin of `compass:default@6` or `@7` stops keeping the acceptance strategy `S17` off for a project that did not run `compass migrate` (open question 6);
-- whether the old words in a stored manifest or generation stop being read.
+ADR-098 is proposed. One part waits for the owner's decision: when the `extends:` pin of `compass:default@6` or `@7` stops keeping the acceptance strategy `S17` off for a project that did not run `compass migrate` (open question 6). Until then it stays as 8.x left it, and it changes no archived verdict.
 
 ## The record
 

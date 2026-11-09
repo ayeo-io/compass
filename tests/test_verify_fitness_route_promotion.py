@@ -56,7 +56,7 @@ class TestVerifyFitnessPromotionBlastRadius:
             "approach", "evaluate", "--json",
             "--assessment", "risk=cross-cutting",
             "--assessment", "familiarity=brownfield-mapped",
-            "--assessment", "size=standard",
+            "--assessment", "size=medium",
             "--assessment", "intent=delivery",
             cwd=project_root,
         )
@@ -91,7 +91,7 @@ class TestVerifyFitnessPromotionBlastRadius:
             "approach", "evaluate", "--json",
             "--assessment", "risk=cross-cutting",
             "--assessment", "familiarity=brownfield-mapped",
-            "--assessment", "size=standard",
+            "--assessment", "size=medium",
             "--assessment", "intent=delivery",
             cwd=project_root,
         )

@@ -42,6 +42,13 @@ from conftest import load_route_fixtures
 # representative assessment values --
 
 
+def _size_now(key: str, value):
+    """A recorded 8.x size in the 9.0.0 word. The fixtures were written before
+    `standard` became `medium`, and 9.0.0 reads no old word typed on the
+    command line (ADR-098), so the test types the new one."""
+    return cb.SIZE_NOW.get(value, value) if key == "size" else value
+
+
 def _reading_args(readings: dict) -> list[str]:
     """Translate an assessment dict into --assessment key=value CLI args."""
     args = []
@@ -49,17 +56,17 @@ def _reading_args(readings: dict) -> list[str]:
         if isinstance(v, list):
             args.extend(["--assessment", f"{k}=" + ",".join(v)])
         else:
-            args.extend(["--assessment", f"{k}={v}"])
+            args.extend(["--assessment", f"{k}={_size_now(k, v)}"])
     return args
 
 
 def _as_read(readings: dict) -> dict:
     """The assessment as `approach evaluate --assessment` reads it: the old key
-    names mapped to the new ones and an old size word read as the new one."""
+    names mapped to the new ones, and a recorded old size in the new word."""
     out = {}
     for k, v in readings.items():
         k = ASSESSMENT_KEY_MAP.get(k, k)
-        out[k] = list(v) if isinstance(v, list) else routing.read_size(k, v)
+        out[k] = list(v) if isinstance(v, list) else _size_now(k, v)
     return out
 
 

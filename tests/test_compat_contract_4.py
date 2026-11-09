@@ -142,14 +142,19 @@ def test_contract_4_the_intended_9_0_0_changes_are_the_listed_ones():
     # `policy-lint-git-parent-no-sha` the git parent's removal. A project with copied
     # governance and no compass.yml is refused (ADR-098, VD-043 decision 3), so its
     # three entries that passed or failed the lint exit 2, and the four entries of
-    # the two copied states name the refusal.
+    # the two copied states name the refusal. Typed input takes only the 9.0.0
+    # names (VD-043 decision 9), so the two entries that type the old size on a
+    # project 9.0.0 reads exit 2 and name the value refused.
     assert cc.EXIT_CHANGED_IN_9_0_0 == {"next-regular-without-approach-record": 0,
-                                        "quick-fix-start-heavier": 0,
+                                        "quick-fix-start-heavier": 2,
                                         "quick-fix-start-auth-label": 0,
                                         "evidence-review-recorded": 2,
                                         "approach-evaluate-copied-governance": 2,
+                                        "approach-evaluate-controlled-autonomy": 2,
                                         "policy-lint-copied": 2,
                                         "policy-lint-broken": 2}
+    assert set(cc.OLD_WORD_REFUSED_IN_9_0_0) == {"approach-evaluate-controlled-autonomy",
+                                                 "quick-fix-start-heavier"}
     assert cc.REFUSED_IN_9_0_0 == {
         entry_id: "governance-copy-removed"
         for entry_id in ("approach-evaluate-copied-governance",
@@ -157,9 +162,8 @@ def test_contract_4_the_intended_9_0_0_changes_are_the_listed_ones():
                          "policy-lint-copied", "policy-lint-broken")}
     assert set(cc.PHRASE_CHANGED_IN_9_0_0) == {
         "next-quick-fix", "approach-evaluate-quick-fix", "approach-evaluate-no-compass-folder",
-        "approach-evaluate-controlled-autonomy",
         "approach-summary-regular", "quick-fix-start-valid", "quick-fix-start-advisory",
-        "quick-fix-start-heavier", "quick-fix-start-auth-label", "policy-effective-shipped",
+        "quick-fix-start-auth-label", "policy-effective-shipped",
         "policy-lint-git-parent-no-sha"}
     for entry_id, (recorded, _) in cc.PHRASE_CHANGED_IN_9_0_0.items():
         entry = next(e for e in ENTRIES if e["id"] == entry_id)
@@ -168,24 +172,38 @@ def test_contract_4_the_intended_9_0_0_changes_are_the_listed_ones():
 
 def test_contract_4_quick_fix_start_takes_heavier_work_on_the_path():
     """On the four-stage path (ADR-092) `quick-fix start` starts work heavier than a
-    quick fix. The entry's recorded refusal (exit 1, "computes to regular") is compared
+    quick fix. The entry's recorded refusal (exit 1, "computes to full") is compared
     as exit 0 with "recorded as delivery": the old refusal, or the old phrase alone,
     still differs."""
-    entry = next(e for e in ENTRIES if e["id"] == "quick-fix-start-heavier")
-    assert (entry["exit"], entry["stdout_contains"]) == (1, "computes to regular")
-    now = "compass quick-fix start: 'bigger' recorded as delivery."
+    entry = next(e for e in ENTRIES if e["id"] == "quick-fix-start-auth-label")
+    assert (entry["exit"], entry["stdout_contains"]) == (1, "computes to full")
+    now = "compass quick-fix start: 'login' recorded as delivery."
     assert cc.differences(entry, cc.Outcome(0, now, "")) == []
     assert cc.differences(entry, cc.Outcome(1, now, ""))
-    assert cc.differences(entry, cc.Outcome(0, "the change computes to regular", ""))
+    assert cc.differences(entry, cc.Outcome(0, "the change computes to full", ""))
 
 
 def test_contract_4_approach_evaluate_names_the_one_approach():
     """An assessment given on the command line is evaluated on the path, so it names
     `delivery` with the gate count 8.x gave. The old approach name still differs."""
-    entry = next(e for e in ENTRIES if e["id"] == "approach-evaluate-controlled-autonomy")
-    assert cc.differences(entry, cc.Outcome(0, "delivery - 6 gate(s), 13 kinds", "")) == []
-    assert cc.differences(entry, cc.Outcome(0, "regular - 6 gate(s)", ""))
-    assert cc.differences(entry, cc.Outcome(0, "delivery - 3 gate(s)", ""))
+    entry = next(e for e in ENTRIES if e["id"] == "approach-evaluate-quick-fix")
+    assert cc.differences(entry, cc.Outcome(0, "delivery - 3 gate(s), 8 kinds", "")) == []
+    assert cc.differences(entry, cc.Outcome(0, "quick fix - 3 gate(s)", ""))
+    assert cc.differences(entry, cc.Outcome(0, "delivery - 6 gate(s)", ""))
+
+
+def test_contract_4_a_typed_old_size_is_refused_as_an_unknown_value():
+    """9.0.0 reads no old word typed on the command line (VD-043 decision 9). The two
+    entries that type `size=standard` on a project 9.0.0 reads exit 2 and name the
+    value refused. Their recorded success, or another refusal, still differs."""
+    refused = ("compass: invalid assessment:\n  - reading size='standard' is not in "
+               "the vocabulary ['atomic', 'small', 'medium', 'large', 'product']\n")
+    for entry_id in ("approach-evaluate-controlled-autonomy", "quick-fix-start-heavier"):
+        entry = next(e for e in ENTRIES if e["id"] == entry_id)
+        assert "size=standard" in entry["argv"] or "standard - several files" in entry["argv"]
+        assert cc.differences(entry, cc.Outcome(2, "", refused)) == [], entry_id
+        assert cc.differences(entry, cc.Outcome(entry["exit"], entry["stdout_contains"], ""))
+        assert cc.differences(entry, cc.Outcome(2, "", "compass: some other refusal\n"))
 
 
 def test_contract_4_a_governance_copy_is_refused_by_name():

@@ -1089,7 +1089,7 @@
               "configuration",
               "unchanged"
             ],
-            "description": "What kind of re-assessment this was. 'judgement' is the old spelling of 'judgment', read until 9.0.0. Only 'judgment' says the assessment misread the work - a policy correction, a scope change, a change to the issue's own config: layer (configuration) or a reassess that left the approach as it was (unchanged, which keeps only its reason) is not the assessment having misread the work."
+            "description": "What kind of re-assessment this was. 'judgement' is the old spelling of 'judgment', read in a stored manifest until 10.0.0. Only 'judgment' says the assessment misread the work - a policy correction, a scope change, a change to the issue's own config: layer (configuration) or a reassess that left the approach as it was (unchanged, which keeps only its reason) is not the assessment having misread the work."
           },
           "generation": {
             "type": "object",

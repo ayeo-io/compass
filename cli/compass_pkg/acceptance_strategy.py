@@ -146,8 +146,9 @@ def approach_routing(resolved, approach):
 FIRST_MAJOR = 8
 #: `extends: compass:<name>@<major>`. 9.0.0 reads `extends:` as a removed setting
 #: (ADR-094), but the pin still keeps a project on @6 or @7 out of the strategy
-#: until the 9.0.0 upgrade command (#359) writes `acceptance_strategy: off` in its place
-#: (ADR-094 open question 7).
+#: until `compass migrate` writes `acceptance_strategy: off` in its place (ADR-094
+#: open question 7). This reader goes once the owner has moved this repository's
+#: `compass.yml` off its @6 pin (ADR-098 open question 6).
 _SHIPPED_PIN = re.compile(r"^compass:([a-z][a-z0-9-]*)@(\d+)$")
 
 

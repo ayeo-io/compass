@@ -36,9 +36,10 @@ by hand.
 
 ### What changes at 9.0.0
 
-9.0.0 ends the 8.x legacy readers that no compatibility contract needs and
-adds `compass migrate`, which moves an 8.x project to 9.0.0 and keeps its
-evidence (ADR-098). The facts are in `docs/upgrade-9-0-0.md`.
+9.0.0 ends most 8.x legacy readers and adds `compass migrate`, which moves an
+8.x project to 9.0.0 and keeps its evidence (ADR-098). It keeps the readers of
+old words in a stored manifest or generation, and it still reads
+`.compass/config.yml`. The facts are in `docs/upgrade-9-0-0.md`.
 
 The 9.0.0 release notes must hold this line, as `SECURITY.md` and the upgrade
 guide do:

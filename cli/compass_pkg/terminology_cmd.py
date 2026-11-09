@@ -159,8 +159,12 @@ def render_glossary(vocab: dict) -> str:
             if e.get(key):
                 line = f"**{label}:** {_fmt(e[key])}"
                 from compass_pkg import old_names
-                if key == "also" and old_names.is_old("term", str(e[key]).strip()):
-                    line += " <!-- us-english-scan: allow - old term, read until 9.0.0 -->"
+                also = str(e[key]).strip()
+                ends = [r["removed_in"] for r in old_names.rows("term") if r["old"] == also]
+                if key == "also" and ends:
+                    # The release comes from the table, so the page cannot
+                    # name an end the reader no longer has.
+                    line += f" <!-- us-english-scan: allow - old term, read until {ends[0]} -->"
                 out.append(line)
                 out.append("")
     return "\n".join(out).rstrip("\n") + "\n"

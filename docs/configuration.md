@@ -22,8 +22,9 @@ that holds `.compass` or `.git`), and reads the `owner` and `approvers` of
   9.0.0 removed that command (ADR-094).
 - **`.compass/config.yml`** holds the same settings for a project from 5.x that
   has not moved. The CLI reads it when `compass.yml` is absent, or present
-  without `schema:`, until 9.0.0. `compass policy migrate` on 8.x moves its
-  settings into `compass.yml`, and 9.0.0 stops reading it. In this file
+  without `schema:`, and 9.0.0 still reads it. `compass policy migrate` on
+  8.x moves its settings into `compass.yml`; `compass migrate` does not move
+  them, and says that 9.0.0 still reads the file. In this file
   the adoption setting is called `mode`; in `compass.yml` it is called
   `adoption`. No 6.0.0 command writes this file.
 - **The state file in `.compass/`** holds what the CLI writes, not what a
@@ -612,7 +613,7 @@ It gives each finding a code:
 | `L-SETTING-UNKNOWN` | error | a key `compass.yml` cannot hold |
 | `L-SETTING-INVALID` | error | a malformed value, or a tighten-only value that would not only add, such as a token outside the closed set, an extra field such as `remove:` or `severity:`, a project check that reuses a shipped id, or an assessment value the check set does not declare |
 | `L-SETTING-REMOVED` | warning | a key 9.0.0 removed, read as if absent: the catalogs (`dimensions`, `stages`, `rules`, `checks`, `gates`, `vocabulary`, and the earlier `approaches`, `artifacts`, `readiness`), `extends: compass:...`, `preset`, `preset_index`, `approvers.project-waiver` and the removed settings above. The message names what replaces the key (see "Removed settings and their replacements" below) |
-| `L-PARENT-REMOVED` | error | `extends:` names a git parent, which could hold checks this file does not show. Every command that resolves a policy refuses with exit 2 and says what to do: move the team's checks into the five settings above, or stay on 8.x until the 9.0.0 upgrade command (#359) |
+| `L-PARENT-REMOVED` | error | `extends:` names a git parent, which could hold checks this file does not show. Every command that resolves a policy refuses with exit 2 and says what to do: move the team's checks into the five settings above and delete `extends:`, or stay on 8.x. `compass migrate` refuses a git parent too |
 | `L-IMPL-UNKNOWN` | error | the integrity rule: a check, after the settings apply, names an implementation the CLI does not hold |
 
 The JSON Schema in `schemas/compass.schema.json` describes the same shapes. It

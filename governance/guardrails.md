@@ -561,7 +561,9 @@ references.
 
 `acceptance_strategy.pinned_below` still reads `extends: compass:default@6` or
 `@7`, which is otherwise a removed setting: such a pin keeps `S17` off until
-#359 writes `acceptance_strategy: off` in its place (ADR-094 open question 7).
+`compass migrate` writes `acceptance_strategy: off` in its place (ADR-094 open
+question 7). The reader goes once this repository's `compass.yml` no longer pins
+`@6` (ADR-098 open question 6).
 
 ## A deleted check
 

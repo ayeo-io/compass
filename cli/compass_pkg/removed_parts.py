@@ -53,7 +53,7 @@ GIT_PARENT_SCHEME = "github:"
 GIT_PARENT_FIX = ("Move the checks the team parent adds into the tighten-only settings of "
                   "compass.yml (signoff_labels, require_evidence, agent_review, "
                   "project_checks, capabilities) and delete extends:, or stay on Compass "
-                  "8.x until the 9.0.0 upgrade command (#359) rewrites the file")
+                  "8.x. compass migrate refuses a git parent too")
 
 
 def drops_removed(kind, name):

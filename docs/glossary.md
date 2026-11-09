@@ -270,7 +270,7 @@ A named switch for new blocking behavior, off in the shipped default. `capabilit
 
 One of the nine maps of configuration entries keyed by id: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, `readiness` and `vocabulary`. An id is stable; a display name lives in the `vocabulary` catalog.
 
-**Also:** catalogue <!-- us-english-scan: allow - old term, read until 9.0.0 -->
+**Also:** catalogue <!-- us-english-scan: allow - old term, read until 10.0.0 -->
 
 **Related:** `check-set`, `generation`
 
@@ -340,7 +340,7 @@ A copy of a delegation in the manifest's `delegations_used:`, written in the sam
 
 ### delivery-approach
 
-The chosen shape for an issue: the weight of each stage and the gates that apply, recorded in the manifest. Since 9.0.0 it names no documents (ADR-091). Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` reads as `thorough` until 9.0.0.
+The chosen shape for an issue: the weight of each stage and the gates that apply, recorded in the manifest. Since 9.0.0 it names no documents (ADR-091). Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` in a stored manifest reads as `thorough`.
 
 **Related:** `assess`, `quality-gate`
 

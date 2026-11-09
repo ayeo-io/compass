@@ -285,12 +285,12 @@ The refusal names each item with the edit that clears it, or `compass waiver wit
 
 ## Readers that ended and readers that stay
 
-7.0.0 kept seven readers of old forms until 9.0.0 (`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`). 9.0.0 deletes a reader only where no archived `compass check` verdict and no compatibility contract needs it. The measurement over this repository's 622 archived issues shows 0 verdict changes.
+7.0.0 kept seven readers of old forms until 9.0.0 (`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`). 9.0.0 deletes each reader of typed input or of a copied file. It keeps each reader of a stored manifest or generation, so an archived issue reads as it was stored. After each deletion, a run of `compass check` over this repository's 622 archived issues showed 0 verdict changes.
 
 | Reader | In 9.0.0 |
 |---|---|
 | Old names typed on the command line | ended for the reassessment kind, the check id, the refusal code and the size `standard` (see "Removed verbs and flags"). Typed input takes only the 9.0.0 names. |
-| Old words in a stored manifest or generation | still read, through 9.x. 616 archived 8.x manifests and 73 archived stored generations hold them, so `compass issue migrate`, the manifest loader and the generation loader read `standard`, `full`, `light`, the old check id, the old skill name and the other renamed manifest values. An 8.x `state.yml` that stores the old British spelling of `initialized` still reads. Each old name of this kind ends at 10.0.0 in `cli/migrate-map.yml`. |
+| Old words and old approach names in a stored manifest or generation | still read, through 9.x. 616 archived 8.x manifests and 73 archived stored generations hold them, so `compass issue migrate`, the manifest loader and the generation loader read `standard`, `full`, `light`, the old approach names, the old check id, the old skill name and the other renamed manifest values. An 8.x `state.yml` that stores the old British spelling of `initialized` still reads. Each row of the `old_names:` section of `cli/migrate-map.yml` ends at 10.0.0; the renamed manifest values under `values:` have no end release. |
 | Copied 5.x governance files with no `compass.yml` | ended. Every command that reads the policy refuses the project with exit 2 (`governance-copy-removed`). On Compass 8.x, run `compass policy migrate` to write `compass.yml` first. |
 | The generated views `governance/routing-policy.yml` and `governance/guardrails.yml` | ended. 9.0.0 deletes them and their four schema files. The check set, `governance/check-set.yml`, is the only machine-readable policy. |
 | `.compass/config.yml` when `compass.yml` is absent | still read. `compass migrate` rewrites `compass.yml` only. |

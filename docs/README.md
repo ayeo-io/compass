@@ -19,7 +19,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [safety-contract.md](safety-contract.md) - what Compass enforces, and what it does not claim.
 - [refusal-codes.md](refusal-codes.md) - every reason the pre-tool hook can refuse with, generated.
 - [artifact-catalog.md](artifact-catalog.md) - the artifact catalog: the fields of a kind, the skeleton, the word limits, the documents that repeat, the documents per work unit and the table of shipped kinds.
-- `artifact-catalogue.md` - the old name of the artifact catalog page, kept until 9.0.0 so a link to it opens the new page.
+- `artifact-catalogue.md` - the old name of the artifact catalog page, kept so a link to it opens the new page.
 - [delivery-record.md](delivery-record.md) - the record mode, `trail.md` and `compass trail`, and `compass record`: the delivery record kept in its own repository.
 - [checkpoints.md](checkpoints.md) - checkpoint outcomes and the `checkpoint-approval` record: their shapes, the two commands that write them, the landing refusal, and where `compass issue diagnose` and the delivery record show them.
 - [release-line.md](release-line.md) - the release line each shipping issue records: the `release_note` key, the three commands that write it, the texts they refuse, when a landing refuses an issue with none, and where the line is shown.

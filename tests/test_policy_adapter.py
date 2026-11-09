@@ -93,12 +93,16 @@ def test_ob_2_a_policy_with_no_ranks_lifts_exactly_the_fixed_set():
 
 
 def test_ob_2_a_policy_copied_before_the_rename_lifts_the_same_set():
-    """A copied policy that still says `light` and `full` routes as it did."""
+    """A copied policy that still says `light` and `full` routes as it did, once
+    the copy reader maps its words. Since 9.0.0 only `tests/legacy_copy.py` reads
+    a copied policy (ADR-098), so the mapping runs there, not in `evaluate_route`."""
+    from legacy_copy import map_policy
     for mode in ("light", "full"):      # `light` is lifted; `full` is already there
-        policy = _policy({"refine": mode}, _floor("refine"))
+        policy = map_policy(_policy({"refine": mode}, _floor("refine")))
         assert evaluate_route(READINGS, policy)["stages"]["refine"] == "thorough", mode
-    ranked = _policy({"refine": "draft", "implement": "full"}, _floor("refine"),
-                     {"refine": {"light": 2, "full": 3, "draft": 0}, "implement": {"full": 3}})
+    ranked = map_policy(_policy(
+        {"refine": "draft", "implement": "full"}, _floor("refine"),
+        {"refine": {"light": 2, "full": 3, "draft": 0}, "implement": {"full": 3}}))
     assert evaluate_route(READINGS, ranked)["stages"]["refine"] == "thorough"
 
 
@@ -365,7 +369,9 @@ def test_ob_3_the_replays_spelling_follows_cores_tables_and_the_adapters_rule(
 
 
 def test_ob_5_the_evaluator_applies_a_waived_stage_on_a_replaced_approach():
-    policy = _policy({"refine": "light", "implement": "full"})
+    # The copy reader maps the older words before the evaluator runs (ADR-098).
+    from legacy_copy import map_policy
+    policy = map_policy(_policy({"refine": "light", "implement": "full"}))
     policy["route_shapes"]["full"] = dict(policy["route_shapes"]["regular"], weight=9)
     policy["routing_guardrails"]["floors"].append(
         {"id": "F-UP", "when": {"risk": "contained"}, "force_minimum_route": "full"})

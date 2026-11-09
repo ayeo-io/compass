@@ -4,7 +4,7 @@ This issue bundles PyYAML, Compass's one *hard* dependency. `jsonschema` is
 already optional and already not bundled: `_jsonschema_errors()` in
 `cli/compass_pkg/policy.py` catches its own ImportError and returns None, and
 `compass issue lint` falls back to the built-in structural linter with a note
-saying what installing it would add. `compass policy lint` validates nothing
+saying what installing it would add. `compass policy lint` checks nothing
 against a JSON Schema since 9.0.0 deleted the two governance views and their
 schemas (ADR-098): it is the settings lint, so it passes the same with or
 without jsonschema and prints no note about it. Nothing in

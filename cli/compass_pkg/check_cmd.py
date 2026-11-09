@@ -61,7 +61,7 @@ from compass_pkg import outside_gate  # noqa: E402
 CHECK_GUIDANCE = {
     "command-passes": {
         "why": 'A project guardrail with `check: command-passes` runs a real command - an architecture check, a linter, a scanner - and the gate is cleared by that command exiting zero, not by anyone saying it would.',
-        "fix": 'Run the command the guardrail names and fix what it reports. If this project declares no such guardrail, nothing was checked and the pass is empty - declare one in governance/guardrails.yml with `check: command-passes` to make the gate mean something.',
+        "fix": 'Run the command the guardrail names and fix what it reports. If this project declares no such guardrail, nothing was checked and the pass is empty - declare one in `project_checks` of compass.yml to make the gate mean something.',
         "do": 'Run the command the guardrail names, or declare one to make this gate real.',
     },
     "landed-by-resolves": {
@@ -122,7 +122,7 @@ CHECK_GUIDANCE = {
     "gate-evidence-present": {
         "why": "The evidence-not-assertion guardrail: a gate marked pass must point at registry evidence of the right type. A mechanical gate cannot be cleared with a written note.",
         "do": 'Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.',
-        "fix": "Add the evidence to the top-level `evidence:` registry with the correct `type:` (see governance/guardrails.yml `gate_evidence_requirements`), then reference its id under the gate's `evidence:` list.",
+        "fix": "Add the evidence to the top-level `evidence:` registry with the correct `type:` (see the `accepts:` list of the gate in governance/check-set.yml), then reference its id under the gate's `evidence:` list.",
     },
     "human-approval-present": {
         "why": "The human-sign-off guardrail (a human signs off on the irreversible): this issue touches auth, payments, personal data, or migrations and needs a recorded approval.",
@@ -918,7 +918,7 @@ def cmd_check(args):
     # A spike ships nothing, so the delivery guardrails (`G1`-`G5`) do not apply.
     # It is still controlled: it must conclude, and it must not change
     # production code. On a spike, `compass check` runs `spike_guardrails`
-    # from guardrails.yml instead.
+    # from the configuration instead.
     if task.get("delivery_approach") == APPROACH_SPIKE:
         spike_gs = list(guardrails.get("spike_guardrails", []))
         run = _CheckRun(task_dir, task, mode, view)
@@ -928,7 +928,7 @@ def cmd_check(args):
             # ran, because nothing ran.
             run.guardrail("", "spike control")
             run.result("spike-guardrails-declared", False,
-                       "no `spike_guardrails:` defined in guardrails.yml - "
+                       "no spike guardrail defined in the configuration - "
                        "a Spike is uncontrolled")
             run.ran = run.failures = 1
             _emit_check(run, args)

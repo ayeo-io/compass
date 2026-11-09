@@ -199,7 +199,7 @@ def build_parser():
                      help="the run command, after `--`")
     pbv.set_defaults(func=cmd_bdd_verify, output_kind="hand-off")
 
-    pc = sub.add_parser("check", help="run the guardrails.yml checks against an issue")
+    pc = sub.add_parser("check", help="run the check set's checks against an issue")
     issue_arg(pc)
     pc.set_defaults(func=cmd_check, output_kind="hand-off")
 
@@ -438,7 +438,7 @@ def build_parser():
     peva = pevs.add_parser("add", help="append a typed evidence entry")
     peva.add_argument("evidence_id", help="evidence id (e.g. EV-5)")
     issue_arg(peva)
-    peva.add_argument("--type", required=True, help="evidence type (see guardrails.yml)")
+    peva.add_argument("--type", required=True, help="evidence type (see governance/check-set.yml)")
     peva.add_argument("--path", required=True, help="path to the evidence file")
     peva.add_argument("--scenario", help="scenario this evidence is for (optional)")
     peva.add_argument("--meets", action="append", metavar="CHECK",

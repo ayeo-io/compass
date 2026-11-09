@@ -40,7 +40,7 @@ VERB_DESCRIPTIONS = {
     'bdd extract':
         "Turn an issue's acceptance criteria into a .feature file a BDD runner can execute, so the scenarios written as the specification are the same ones that run as the acceptance suite. Writes the file; runs nothing.",
     'check':
-        "Run the guardrails.yml checks against an issue's manifest and evidence - the mechanical half of the verify gate. Every scenario has a test, the suite passed with a record on file, changed files trace to a scenario, and every gate marked pass points at evidence of an accepted type. A check that had nothing to inspect is reported apart from one that passed, so a clean run cannot be mistaken for a thorough one. With the capability entry-exit-evaluation on, it also checks the entry and exit lists of the stages the issue has reached, under the guardrail label stage:<stage>:<entry|exit>.",
+        "Run the check set's checks against an issue's manifest and evidence - the mechanical half of the verify gate. Every scenario has a test, the suite passed with a record on file, changed files trace to a scenario, and every gate marked pass points at evidence of an accepted type. A check that had nothing to inspect is reported apart from one that passed, so a clean run cannot be mistaken for a thorough one. With the capability entry-exit-evaluation on, it also checks the entry and exit lists of the stages the issue has reached, under the guardrail label stage:<stage>:<entry|exit>.",
     'ci':
         'Run the full mechanical gate suite - the governance policy lint, then the manifest lint and the guardrail checks for every issue on disk. Intended for continuous integration and required green before a release. Gate checks are skipped for an issue that has not started, and the skip is named rather than hidden.',
     'evidence add':
@@ -64,7 +64,7 @@ VERB_DESCRIPTIONS = {
     'follow-up resolve':
         "Mark an owed follow-up settled in an issue's manifest. On an issue assessed before 9.0.0 an unresolved follow-up blocks shipping, which is what makes owing one a commitment rather than a note. On a path issue nothing waits for it: the linked GitHub issue tracks the work.",
     'gate pass':
-        'Mark a gate passed, validating the evidence type at write time against what guardrails.yml says that gate accepts. A mechanical gate cannot be cleared with a written note. With --meets <item> the evidence also meets an item of the Definition of Done or Ready.',
+        'Mark a gate passed, validating the evidence type at write time against what the check set says that gate accepts. A mechanical gate cannot be cleared with a written note. With --meets <item> the evidence also meets an item of the Definition of Done or Ready.',
     'isolation record':
         "Run the acceptance suite in parallel once, then each scenario's declared tests twice with {tests} in --repeat replaced by their ids, and write the isolation-proof record of the exit codes, the candidate and the client. Each command is split into words and run with no shell. It exits 0 when the record is written, even when a run failed, because isolation-proven judges the record; it exits 2 when --repeat holds no {tests}, the issue declares no test, or the candidate or client is missing or unknown.",
     'layering record':

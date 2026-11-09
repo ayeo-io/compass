@@ -31,24 +31,19 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 
-GUARDRAILS = ROOT / "governance" / "guardrails.yml"
 CHECK_SET = ROOT / "governance" / "check-set.yml"
 REGISTER = ROOT / "tests" / "mutation_proofs.yml"
 REQUIRED = ("broken", "fails", "restores")
 
 
-def _checks(check_set=CHECK_SET, guardrails=GUARDRAILS):
-    """The shipped checks, by name. The check set is the source of the shipped
-    defaults, so it is read first; the frozen guardrails view answers only when
-    the check set is absent. Only a deterministic check has an implementation
-    to break, so a human or judged check has no mutation proof and is left out."""
-    if check_set.is_file():
-        data = yaml.safe_load(check_set.read_text(encoding="utf-8")) or {}
-        return {name: {"description": body.get("statement")}
-                for name, body in (data.get("checks") or {}).items()
-                if body.get("kind") == "deterministic"}
-    data = yaml.safe_load(guardrails.read_text(encoding="utf-8")) or {}
-    return data.get("checks") or {}
+def _checks(check_set=CHECK_SET):
+    """The shipped checks, by name, from the check set. Only a deterministic
+    check has an implementation to break, so a human or judged check has no
+    mutation proof and is left out."""
+    data = yaml.safe_load(check_set.read_text(encoding="utf-8")) or {}
+    return {name: {"description": body.get("statement")}
+            for name, body in (data.get("checks") or {}).items()
+            if body.get("kind") == "deterministic"}
 
 
 def _register(register=REGISTER):
@@ -128,8 +123,8 @@ def test_every_shipped_check_has_a_proof_on_record():
 
 def test_the_repository_still_declares_no_guardrail_of_its_own():
     """MPR-6: the proof check lives here so it never reaches adopters."""
-    data = yaml.safe_load(GUARDRAILS.read_text(encoding="utf-8"))
-    assert data.get("project") == []
+    from check_set_files import view as shipped_view
+    assert shipped_view("guardrails.yml").get("project") == []
 
 
 # --- the register test can fail, as the mutation-proof strategy asks ---------

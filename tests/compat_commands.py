@@ -197,11 +197,11 @@ def _regular_issue(root: Path, env: dict) -> None:
 
 
 def _with_copied_governance(root: Path, env: dict) -> None:
+    # 5.6.0 copied the framework's two governance files. 9.0.0 deleted them from
+    # the framework (ADR-098), so the copy is the last 8.x release's, packed.
+    from compat_baseline import GOVERNANCE_8_0_4, add_governance_copy
     _initialised(root, env)
-    governance = root / "governance"
-    governance.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copyfile(ROOT / "governance" / name, governance / name)
+    add_governance_copy(root, source=GOVERNANCE_8_0_4)
 
 
 def _outside_git(root: Path, env: dict) -> None:
@@ -408,10 +408,12 @@ STATES = {
 }
 
 
-# Configurations B (an empty overlay in compass.yml) and C (a 5.6.0 governance
-# copy) are added to a built state. A state that already holds a settings file
-# or governance of its own is not given another: it is that configuration, or
-# configuration D, already.
+# Configuration B (an empty overlay in compass.yml) is added to a built state. A
+# state that already holds a settings file or governance of its own is not given
+# another: it is that configuration, or configuration D, already. Configuration C
+# (a 5.6.0 governance copy) is not run here: 9.0.0 refuses a project with copied
+# governance (`governance-copy-removed`), so C holds for contracts 1 and 2 only
+# (VD-043 decision 2).
 _HAS_COMPASS_YML = {"regular-issue-broken-compass-yml", "with-compass-yml",
                     "with-looser-compass-yml", "with-broken-compass-yml"}
 _HAS_GOVERNANCE = {"with-copied-governance", "with-broken-governance"}
@@ -422,23 +424,16 @@ def configuration_applies(state: str, kind: str) -> bool:
     if kind == "B":
         return state not in _HAS_COMPASS_YML | _HAS_GOVERNANCE | _HAS_OLD_CONFIG
     if kind == "C":
-        return state not in _HAS_COMPASS_YML | _HAS_GOVERNANCE
+        return False
     return True
 
 
 def entry_applies(entry: dict, kind: str) -> bool:
     """Whether `entry` is a fair question under configuration `kind`. The
-    state must not already hold a settings file or governance of its own, and
-    `terminology` reads `governance/terminology.yml`, which a two-file
-    governance copy lacks (the 5.6.0 CLI refuses it the same way in such a
-    project). An entry whose command 9.0.0 removed is a fair question under
-    every configuration: it fails to parse the same way whatever the project
-    holds."""
-    if not configuration_applies(entry["project"], kind):
-        return False
-    if kind == "C" and entry["argv"][:1] == ["terminology"]:
-        return False
-    return True
+    state must not already hold a settings file or governance of its own. An
+    entry whose command 9.0.0 removed is a fair question under every
+    configuration: it fails to parse the same way whatever the project holds."""
+    return configuration_applies(entry["project"], kind)
 
 
 def build_configuration(kind: str, root: Path, fault: str | None = None) -> None:
@@ -558,10 +553,26 @@ PHRASE_REMOVED_IN_9_0_0 = {
 #: `design-review` through a `checks:` block in `compass.yml`, which 9.0.0 reads as a
 #: removed setting (ADR-094), so no judged check of that name exists to record a
 #: review against. The owner looks at this entry (ADR-094 open question 19).
+#:
+#: A project with copied governance and no `compass.yml` is refused with exit 2
+#: (`governance-copy-removed`), because 9.0.0 does not read the copy (ADR-098). Its
+#: entries are also in `REFUSED_IN_9_0_0`.
 EXIT_CHANGED_IN_9_0_0 = {"next-regular-without-approach-record": 0,
                          "quick-fix-start-heavier": 0,
                          "quick-fix-start-auth-label": 0,
-                         "evidence-review-recorded": 2}
+                         "evidence-review-recorded": 2,
+                         "approach-evaluate-copied-governance": 2,
+                         "policy-lint-copied": 2,
+                         "policy-lint-broken": 2}
+
+
+#: Entries 9.0.0 refuses, each with the refusal code stderr must name. The exit is
+#: compared as `EXIT_CHANGED_IN_9_0_0` gives it, or as recorded. A broken copy was
+#: already refused (exit 2) and is now refused for the copy itself.
+REFUSED_IN_9_0_0 = {entry_id: "governance-copy-removed"
+                    for entry_id in ("approach-evaluate-copied-governance",
+                                     "approach-evaluate-broken-governance",
+                                     "policy-lint-copied", "policy-lint-broken")}
 
 
 #: Entries whose phrase 9.0.0 changed on purpose, each with `(recorded, now)`. The exit
@@ -575,7 +586,6 @@ PHRASE_CHANGED_IN_9_0_0 = {
     "next-quick-fix": ("Implement", "Build"),
     "approach-evaluate-quick-fix": ("quick fix - 3 gate(s)", "delivery - 3 gate(s)"),
     "approach-evaluate-no-compass-folder": ("quick fix - 3 gate(s)", "delivery - 3 gate(s)"),
-    "approach-evaluate-copied-governance": ("regular - 6 gate(s)", "delivery - 6 gate(s)"),
     "approach-evaluate-controlled-autonomy": ("regular - 6 gate(s)", "delivery - 6 gate(s)"),
     "approach-summary-regular": ("waits for you at: define, plan",
                                  "does not stop to wait for you"),
@@ -609,6 +619,9 @@ def differences(entry: dict, outcome: Outcome, configuration: str = "A") -> list
         if REMOVED_IN_9_0_0[entry["id"]] not in outcome.stderr:
             found.append(f"stderr lacks {REMOVED_IN_9_0_0[entry['id']]!r}")
         return found
+    if entry["id"] in REFUSED_IN_9_0_0 and f"[{REFUSED_IN_9_0_0[entry['id']]}]" \
+            not in outcome.stderr:
+        found.append(f"stderr lacks the refusal code {REFUSED_IN_9_0_0[entry['id']]}")
     return found + _as_recorded(entry, outcome,
                                 EXIT_CHANGED_IN_9_0_0.get(entry["id"], entry["exit"]),
                                 PHRASE_CHANGED_IN_9_0_0.get(entry["id"], (None, None)))
@@ -620,9 +633,10 @@ def _as_recorded(entry, outcome, expected=None, changed=(None, None)):
     if outcome.exit != expected:
         found.append(f"exit {outcome.exit}, recorded {entry['exit']}")
     phrase = entry.get("stdout_contains")
-    if entry["exit"] == 0 and expected != 0:
-        # An entry that succeeded and now fails on purpose (`EXIT_CHANGED_IN_9_0_0`):
-        # its recorded phrase is the success's output, which a failure cannot print.
+    if expected not in (0, entry["exit"]):
+        # An entry that now fails on purpose with another exit (`EXIT_CHANGED_IN_9_0_0`):
+        # its recorded phrase is the old outcome's output, which the failure does not
+        # print. `REFUSED_IN_9_0_0` names what a new refusal prints instead.
         phrase = None
     recorded, now = changed
     if phrase and phrase == recorded:

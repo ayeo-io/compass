@@ -33,7 +33,7 @@ import fnmatch
 import re as _re
 import glob
 from compass_pkg import parse_cache, path_stages, status_words
-from compass_pkg.core import (CompassError, find_compass_dir, find_governance,
+from compass_pkg.core import (CompassError, find_compass_dir,
                               load_yaml, manifest_path, normalize_spine)
 from compass_pkg.stable_ids import APPROACH_SPIKE, PATH_STAGE_IDS, STAGE_IDS, STAGE_SHIP
 
@@ -55,9 +55,7 @@ def _routing_labels():
     """Every label a routing-policy rule names in `labels_any`."""
     from compass_pkg import effective
     try:
-        view = effective.view_or_legacy()
-        policy = (view.evaluator_policy() if view is not None else
-                  load_yaml(os.path.join(find_governance(), "routing-policy.yml")))
+        policy = effective.effective_for().evaluator_policy()
     except CompassError:
         return set()
     found, stack = set(), [policy]

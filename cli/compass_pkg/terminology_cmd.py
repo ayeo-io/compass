@@ -9,11 +9,13 @@ import sys
 
 import yaml
 
-from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_yaml
+from compass_pkg.core import FRAMEWORK_ROOT, CompassError, find_compass_dir, load_yaml
 
 
 def _load_terms():
-    path = os.path.join(find_governance(), "terminology.yml")
+    # The framework's vocabulary, read by path: a project's governance/ never
+    # held one, and 9.0.0 reads no copied governance (ADR-098).
+    path = os.path.join(FRAMEWORK_ROOT, "governance", "terminology.yml")
     doc = load_yaml(path)
     if not isinstance(doc, dict) or not isinstance(doc.get("terms"), dict):
         raise CompassError(

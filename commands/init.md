@@ -40,9 +40,11 @@ it is exempt from assessment.
      another tool's file. Stop and report that. Do not overwrite it and do not
      write a second file beside it. Tell the person to move it to another name
      or to add `schema: 1`.
-   - A `.compass/config.yml`, or copied governance: both
-     `governance/routing-policy.yml` and `governance/guardrails.yml` in the
-     project, a copy made under 5.x. Go to step 2.
+   - A `.compass/config.yml`, or copied governance:
+     `routing-policy.yml` or `guardrails.yml` in the
+     project, a copy made under 5.x. Compass 9.0.0 does not read the copy, and
+     refuses every command that reads the policy until the project has a
+     `compass.yml` (`governance-copy-removed`). Go to step 2.
    - None of these. Go to step 3.
 
    Then go on to the status line step below, which runs every time.

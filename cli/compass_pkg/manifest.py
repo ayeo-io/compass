@@ -34,7 +34,7 @@ import re as _re
 from compass_pkg import (checkpoint_outcomes, committed_landing, gate_status, release_line,
                          ship_commit_reason, status_words)
 from compass_pkg.terminal import say
-from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
+from compass_pkg.core import CompassError, find_compass_dir, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
 from compass_pkg.tip_scope import tip_own_paths
 from compass_pkg.binding import (changes_paths, declared_test_paths, describe, files_that_differ,
@@ -757,21 +757,11 @@ def _print_waiting(task_dir):
 
 
 def _load_gate_requirements(task_dir=None):
-    """Return (gate_evidence_requirements, known_evidence_types): from the
-    configuration `task_dir`'s issue runs against when it has a generation (or
-    its project has a `compass.yml`), else from guardrails.yml. Empty/empty on
-    any load failure of the file."""
-    if task_dir is not None:
-        from compass_pkg import effective
-        view = effective.view_or_legacy(task_dir)
-        if view is not None:
-            return view.gate_requirements()
-    try:
-        g = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
-    except CompassError:
-        return {}, set()
-    return (g.get("gate_evidence_requirements") or {},
-            set((g.get("evidence_types") or {}).keys()))
+    """Return (gate_evidence_requirements, known_evidence_types) from the
+    configuration `task_dir`'s issue runs against, or the project's live
+    configuration with no issue."""
+    from compass_pkg import effective
+    return effective.effective_for(task_dir).gate_requirements()
 
 
 def _validated_meets(args, task_dir, command, types, task=None):
@@ -782,7 +772,7 @@ def _validated_meets(args, task_dir, command, types, task=None):
     if not meets:
         return []
     from compass_pkg import effective, item_records
-    view = effective.view_or_legacy(task_dir)
+    view = effective.effective_for(task_dir)
     for check_id in meets:
         problem = item_records.unlisted_problem(view, check_id, command, task=task)
         if problem:

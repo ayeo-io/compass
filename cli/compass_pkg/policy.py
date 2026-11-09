@@ -33,8 +33,6 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg import status_words
-from compass_pkg.check_cmd import CHECK_FNS
-from compass_pkg.check_registry import REGISTRY, REMOVED
 from compass_pkg.stable_ids import (
     APPROACH_DELIVERY, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR,
     APPROACH_SPIKE)
@@ -52,10 +50,8 @@ from compass_pkg.manifest_store import load_manifest_mapping
 
 # --- commands: policy lint / issue lint --------------------------------------
 
-# The built-in `_lint_errors_*` functions below are the no-dependency floor:
-# they always run, and they do the one thing JSON Schema cannot - cross-check
-# that every declared guardrail check is actually implemented in CHECK_FNS.
-# `_jsonschema_errors` adds fuller structural validation against the real JSON
+# The built-in lint functions below are the no-dependency floor: they always
+# run. `_jsonschema_errors` adds fuller structural validation against the JSON
 # Schema files in schemas/, but only when the optional `jsonschema` library is
 # installed. PyYAML stays the CLI's only *hard* dependency.
 
@@ -187,173 +183,6 @@ def architecture_sources_lint_errors(gov):
     return errs
 
 
-def _lint_errors_routing_policy(p):
-    errs = list(checkpoint_table_errors(p))
-    for top in ("routing_strategies", "routing_guardrails", "route_shapes",
-                "assessment_vocabulary"):
-        if top not in p:
-            errs.append(f"missing top-level key: {top}")
-    rg = p.get("routing_guardrails", {})
-    # Waivers are checked here as well as in the JSON schema, because the schema
-    # can only say `waived/0` - it does not know rule ids. A reader fixing a bad
-    # waiver needs to be told which rule it was for.
-    for i, w in enumerate(rg.get("waived", []) or []):
-        if not isinstance(w, dict) or not w.get("id"):
-            errs.append(f"`waived:` entry {i} has no `id` - a waiver names the "
-                        f"framework rule it waives")
-            continue
-        if not str(w.get("reason", "")).strip():
-            errs.append(f"waiver for {w['id']} has no `reason` - a waiver "
-                        f"records a decision, so it requires one")
-    for fl in rg.get("floors", []):
-        if "id" not in fl:
-            errs.append(f"a floor has no id: {fl}")
-        if "when" not in fl:
-            errs.append(f"floor {fl.get('id', '?')} has no `when`")
-        if "rationale" not in fl:
-            errs.append(f"floor {fl.get('id', '?')} has no `rationale`")
-    for ig in rg.get("immovable_gates", []):
-        if "gate" not in ig:
-            errs.append(f"an immovable_gate has no `gate`: {ig}")
-    # A policy copied before the routes were renamed still keys them by the
-    # old names; read them as the new ones, as the evaluator does.
-    shapes = {canonical_shape(k): v for k, v in (p.get("route_shapes") or {}).items()}
-    # A policy declares the shipped default's two approaches (ADR-092) or, when it
-    # was copied from an 8.x release, the five approaches of that release.
-    names = ROUTE_NAMES if APPROACH_DELIVERY in shapes else LEGACY_ROUTE_NAMES
-    for name in names:
-        if name not in shapes:
-            errs.append(f"route_shapes is missing the shape named by default_shapes: {name}")
-        elif "weight" not in shapes[name]:
-            errs.append(f"route_shape '{name}' has no `weight`")
-    return errs
-
-
-def _check_declaration_errors(gid, name, decl):
-    """Problems in one `checks:` entry. `impl:` names a built-in
-    implementation; until stored generations decide who may choose one, the
-    runtime ignores it, so lint only refuses a name the registry lacks."""
-    if decl is None:
-        return []
-    if not isinstance(decl, dict):
-        return [f"guardrail {gid} references check '{name}', which is declared "
-                f"as a {type(decl).__name__} under `checks:`; it must be a "
-                f"mapping"]
-    impl = decl.get("impl")
-    if impl is not None and impl not in REGISTRY:
-        return [f"guardrail {gid} references check '{name}', which names impl "
-                f"'{impl}'; that is not in the check registry"]
-    return []
-
-
-def _lint_errors_guardrails(p):
-    errs = []
-    if "defaults" not in p:
-        errs.append("missing top-level key: defaults")
-    known_checks = set((p.get("checks") or {}).keys())
-    # Check all guardrails (defaults + project) for structural integrity.
-    # command-passes `params` validation ONLY applies to project guardrails -
-    # the framework's own guardrails (`G4`, evidence not assertion) legitimately
-    # register command-passes without per-guardrail params (it's a
-    # cross-cutting check that reads params from the project: guardrails it
-    # finds at run time).
-    for g in list(p.get("defaults", [])) + list(p.get("project", [])):
-        if "id" not in g:
-            errs.append(f"a guardrail has no id: {g}")
-        if not g.get("checks"):
-            errs.append(f"guardrail {g.get('id', '?')} has no `checks` - a "
-                        f"guardrail with no mechanical check is a strategy")
-        for c in g.get("checks", []):
-            if c not in known_checks:
-                errs.append(f"guardrail {g.get('id', '?')} references check "
-                            f"'{c}' not declared under `checks:`")
-                continue
-            errs.extend(_check_declaration_errors(
-                g.get("id", "?"), c, (p.get("checks") or {}).get(c)))
-            if c in REMOVED:
-                # A governance copy written before the check was removed still
-                # lists it. `compass check` reports it as nothing to check and runs
-                # its replacement, so the copy is not wrong, only old.
-                continue
-            if c not in CHECK_FNS:
-                # The integrity rule: a declared guardrail check the CLI does
-                # not implement would silently become advisory. Lint catches it
-                # here, before an issue relies on it; `compass check` also fails
-                # on it at run time. Both, because this is the line that keeps
-                # "guardrail" meaning hard-and-blocking.
-                errs.append(f"guardrail {g.get('id', '?')} references check "
-                            f"'{c}' which the CLI does not implement (not in "
-                            f"CHECK_FNS) - implement it, or move the guardrail "
-                            f"to strategies.md")
-
-    # command-passes params validation - only for project guardrails.
-    # Framework defaults (`G4`) can reference command-passes without params;
-    # the params come from the project guardrails that declare the actual
-    # commands to run.
-    for g in list(p.get("project", [])):
-        if "command-passes" not in (g.get("checks") or []):
-            continue
-        params = g.get("params") or {}
-        command = params.get("command")
-        script = params.get("script")
-        gid = g.get("id", "?")
-        # Two declaration forms, and exactly one of them per guardrail.
-        # `script:` names a file run with no shell; `command:` is a shell
-        # string. Allowing both would need a precedence rule, and a precedence
-        # rule is a quiet way to reach the shell from a declaration that looks
-        # like the safe form.
-        if script is not None and command is not None:
-            errs.append(
-                f"project guardrail {gid} declares both `params.script` and "
-                f"`params.command` - declare one. `script:` runs a file "
-                f"without a shell; `command:` runs a shell string"
-            )
-        elif script is not None:
-            if not isinstance(script, str):
-                errs.append(
-                    f"project guardrail {gid} uses check 'command-passes' but "
-                    f"`params.script` is not a string "
-                    f"(got {type(script).__name__!r}) - it must be a path "
-                    f"relative to the project root"
-                )
-            elif not script.strip():
-                errs.append(
-                    f"project guardrail {gid} uses check 'command-passes' but "
-                    f"`params.script` is an empty string - name a script path"
-                )
-            args = params.get("args")
-            if args is not None and (
-                    not isinstance(args, list)
-                    or not all(isinstance(a, str) for a in args)):
-                errs.append(
-                    f"project guardrail {gid}: `params.args` must be a list of "
-                    f"strings - they are passed to the script as separate "
-                    f"arguments, never joined into a command line"
-                )
-        elif command is None:
-            errs.append(
-                f"project guardrail {gid} uses check "
-                f"'command-passes' but both `params.command` and "
-                f"`params.script` are missing - add a `script:` path to run a "
-                f"file without a shell (preferred), or a `command:` shell "
-                f"string"
-            )
-        elif not isinstance(command, str):
-            errs.append(
-                f"project guardrail {gid} uses check "
-                f"'command-passes' but `params.command` is not a string "
-                f"(got {type(command).__name__!r}) - the command must be "
-                f"a shell-invocable string"
-            )
-        elif not command.strip():
-            errs.append(
-                f"project guardrail {gid} uses check "
-                f"'command-passes' but `params.command` is an empty "
-                f"string - provide a non-empty shell command"
-            )
-    return errs
-
-
 def _schema_note(ran):
     return ("" if ran else
             "  (jsonschema not installed - built-in linter only; "
@@ -442,7 +271,7 @@ def _unmatched_document_notes(task_dir):
     from compass_pkg import artifact_kinds, effective
 
     try:
-        view = effective.view_or_legacy(task_dir)
+        view = effective.effective_for(task_dir)
         names = artifact_kinds.unmatched_documents(view, task_dir)
     except Exception:  # noqa: BLE001 - a report must not fail the lint
         return []

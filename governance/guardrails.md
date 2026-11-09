@@ -8,18 +8,18 @@ strategy.
 This file ships with five **default guardrails** active. Compass runs one
 fixed check set (ADR-094), so no project can remove or loosen one. A project
 can only add to the set, with the tighten-only settings of its `compass.yml`
-(see `docs/configuration.md`). Only a project that copied this file under 5.x
-can omit a shipped guardrail, and `compass check` reports the omission. That
-project keeps running on its copy until #359.
+(see `docs/configuration.md`). A project that copied the 8.x
+`guardrails.yml` or `routing-policy.yml` under 5.x and has no `compass.yml` is
+refused by every command that reads the policy (`governance-copy-removed`,
+exit 2, ADR-098), so no copy can omit a shipped guardrail.
 
 **This document explains; the check set enforces.** The check set,
 `governance/check-set.yml`, is the machine-readable authority for *how each
 guardrail is checked* - it names the mechanical check behind every guardrail,
 and `compass check` runs those checks against an issue's `manifest.yml` and
 `evidence/`. Where this prose and that file could be read to differ on a
-mechanical detail, the check set wins. `governance/guardrails.yml` is the
-frozen 8.x view, read only for a project that copied the governance files
-(see "The fixed check set" below).
+mechanical detail, the check set wins. 9.0.0 deleted the 8.x view
+`guardrails.yml` (ADR-098).
 
 ---
 
@@ -556,10 +556,8 @@ so the two give the same numbers. The `--json` document keeps one entry per row,
 and its `ran`, `failed` and `nothing_to_check` count rows.
 Each generation commit writes the manifest's `policy:` block
 (`docs/generation-store.md`). `tests/test_check_set_content.py` checks the
-content of the set: the catalogue names, the stage-mode ranks, the references
-and the checks and evidence types of the frozen `governance/guardrails.yml`,
-less those added after it froze (`ship-approval-present`, `request-recorded`
-and `pr-approval`).
+content of the set: the catalogue names, the stage-mode ranks and the
+references.
 
 `acceptance_strategy.pinned_below` still reads `extends: compass:default@6` or
 `@7`, which is otherwise a removed setting: such a pin keeps `S17` off until

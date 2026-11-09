@@ -19,6 +19,7 @@ import subprocess
 import sys
 
 import yaml
+from check_set_files import view as shipped_view  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -54,9 +55,8 @@ def test_trc_c1_route_evaluate_should_report_which_policy_it_read(tmp_path):
     assert result.returncode == 0, result.stderr
 
     out = result.stdout
-    assert "routing-policy.yml" in out, f"the policy file is not named:\n{out}"
-    version = str(yaml.safe_load((GOVERNANCE / "routing-policy.yml").read_text())["version"])
-    assert version in out, f"the policy version {version} is not reported:\n{out}"
+    # 9.0.0 reads the check set (ADR-094); no project copy is read (ADR-098).
+    assert "the check set" in out, f"the policy is not named:\n{out}"
 
 
 # `TRC-C3` read the delivery-approach template, which 9.0.0 deleted (ADR-091).

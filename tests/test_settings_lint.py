@@ -217,11 +217,13 @@ def test_the_lint_accepts_the_settings_and_refuses_a_bad_shape():
 @pytest.mark.parametrize("key", ["signoff_labels", "require_evidence", "agent_review",
                                  "project_checks"])
 def test_a_governance_copy_cannot_hold_a_tighten_only_setting(key):
-    """A project's own governance copy is the one configuration besides
-    `compass.yml` (until #359); a setting belongs in `compass.yml` only."""
+    """The 8.x reader of a governance copy, which the contracts keep in
+    `tests/legacy_copy.py`, refuses a setting there: it belongs in
+    `compass.yml` only."""
+    import legacy_copy
     with pytest.raises(CompassError, match=f"legacy: {key} is a settings key and belongs "
                                            f"in the project's own compass.yml"):
-        effective._legacy_config({key: GOOD[key]})
+        legacy_copy._legacy_config({key: GOOD[key]})
 
 
 def test_the_committed_schema_holds_the_five_settings():

@@ -139,14 +139,25 @@ def test_contract_4_the_intended_9_0_0_changes_are_the_listed_ones():
     # issue configure` with the issue layer (ADR-094); it is in `REMOVED_IN_9_0_0` now.
     # `evidence-review-recorded` exits 2 since 9.0.0 reads compass.yml as settings only
     # (ADR-094 open question 19); `policy-effective-shipped` names the check set, and
-    # `policy-lint-git-parent-no-sha` the git parent's removal.
+    # `policy-lint-git-parent-no-sha` the git parent's removal. A project with copied
+    # governance and no compass.yml is refused (ADR-098, VD-043 decision 3), so its
+    # three entries that passed or failed the lint exit 2, and the four entries of
+    # the two copied states name the refusal.
     assert cc.EXIT_CHANGED_IN_9_0_0 == {"next-regular-without-approach-record": 0,
                                         "quick-fix-start-heavier": 0,
                                         "quick-fix-start-auth-label": 0,
-                                        "evidence-review-recorded": 2}
+                                        "evidence-review-recorded": 2,
+                                        "approach-evaluate-copied-governance": 2,
+                                        "policy-lint-copied": 2,
+                                        "policy-lint-broken": 2}
+    assert cc.REFUSED_IN_9_0_0 == {
+        entry_id: "governance-copy-removed"
+        for entry_id in ("approach-evaluate-copied-governance",
+                         "approach-evaluate-broken-governance",
+                         "policy-lint-copied", "policy-lint-broken")}
     assert set(cc.PHRASE_CHANGED_IN_9_0_0) == {
         "next-quick-fix", "approach-evaluate-quick-fix", "approach-evaluate-no-compass-folder",
-        "approach-evaluate-copied-governance", "approach-evaluate-controlled-autonomy",
+        "approach-evaluate-controlled-autonomy",
         "approach-summary-regular", "quick-fix-start-valid", "quick-fix-start-advisory",
         "quick-fix-start-heavier", "quick-fix-start-auth-label", "policy-effective-shipped",
         "policy-lint-git-parent-no-sha"}
@@ -171,10 +182,21 @@ def test_contract_4_quick_fix_start_takes_heavier_work_on_the_path():
 def test_contract_4_approach_evaluate_names_the_one_approach():
     """An assessment given on the command line is evaluated on the path, so it names
     `delivery` with the gate count 8.x gave. The old approach name still differs."""
-    entry = next(e for e in ENTRIES if e["id"] == "approach-evaluate-copied-governance")
+    entry = next(e for e in ENTRIES if e["id"] == "approach-evaluate-controlled-autonomy")
     assert cc.differences(entry, cc.Outcome(0, "delivery - 6 gate(s), 13 kinds", "")) == []
     assert cc.differences(entry, cc.Outcome(0, "regular - 6 gate(s)", ""))
     assert cc.differences(entry, cc.Outcome(0, "delivery - 3 gate(s)", ""))
+
+
+def test_contract_4_a_governance_copy_is_refused_by_name():
+    """9.0.0 reads no copy of the governance files (ADR-098): the entry that routed
+    over a copy now exits 2 and names `governance-copy-removed`. Its old success, or
+    a refusal for another reason, still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "approach-evaluate-copied-governance")
+    refused = "compass: Blocked: ... [governance-copy-removed]\n"
+    assert cc.differences(entry, cc.Outcome(2, "", refused)) == []
+    assert cc.differences(entry, cc.Outcome(0, "delivery - 6 gate(s), 13 kinds", ""))
+    assert cc.differences(entry, cc.Outcome(2, "", "compass: some other refusal\n"))
 
 
 def test_contract_4_the_issue_configure_entries_are_removed_in_9_0_0():

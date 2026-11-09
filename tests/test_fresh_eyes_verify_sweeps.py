@@ -322,9 +322,8 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
 
     import yaml
 
-    guardrails = yaml.safe_load(
-        (REPO_ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8")
-    )
+    from check_set_files import view as shipped_view
+    guardrails = shipped_view("guardrails.yml")
     assert len(guardrails["defaults"]) == 5
 
     terminology = yaml.safe_load(

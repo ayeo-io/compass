@@ -216,16 +216,14 @@ if [ -f "cli/compass" ]; then
 else
   fail "missing the CLI: cli/compass"
 fi
-# 8b. the machine-readable governance the CLI runs
-for f in governance/routing-policy.yml governance/guardrails.yml; do
-  if [ -f "$f" ]; then ok "file $f"; else fail "missing machine-readable governance: $f"; fi
-done
+# 8b. the machine-readable policy the CLI runs: the check set (ADR-094)
+if [ -f governance/check-set.yml ]; then ok "file governance/check-set.yml"
+else fail "missing machine-readable policy: governance/check-set.yml"; fi
 # 8c. the schemas directory: an executable JSON Schema and a readable
-#     companion for each of the three machine-readable files.
+#     companion for the issue manifest.
 if [ -d "schemas" ]; then
   ok "dir  schemas/"
-  # vocabulary-scan: allow - the loop iterates schema basenames on disk
-  for s in routing-policy guardrails manifest; do
+  for s in manifest; do
     if [ -f "schemas/$s.schema.json" ]; then ok "schema $s.schema.json"
     else fail "missing executable schema: schemas/$s.schema.json"; fi
     if [ -f "schemas/$s.reference.yml" ]; then ok "ref    $s.reference.yml"

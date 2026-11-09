@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from check_set_files import view as shipped_view  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -52,7 +53,7 @@ def _owed(**readings):
     """What the same assessment owes on the path, under the live default."""
     from compass_pkg import evidence_required
     from compass_pkg.core import load_yaml
-    policy = load_yaml(str(ROOT / "governance" / "routing-policy.yml"))
+    policy = shipped_view("routing-policy.yml")
     return evidence_required.evaluate(_readings(readings), policy)
 
 
@@ -84,9 +85,9 @@ def test_ua_1_on_the_path_a_small_unmapped_change_owes_what_a_mapped_one_owes(si
     assert unmapped["evidence_required"] == mapped["evidence_required"]
     assert unmapped["gates"] == mapped["gates"]
     assert "RP-FLOOR-002" not in unmapped["rules_fired"]
-    assert "behavior-mapping" not in unmapped["required_skills"]
+    assert "atdd" not in unmapped["required_skills"]
     advice = [s["strategy"] for s in unmapped["applicable_strategies"]]
-    assert "behavior-mapping" in advice, advice
+    assert "atdd" in advice, advice
 
 
 FLOOR_READINGS = [
@@ -115,7 +116,8 @@ def test_on_the_path_the_floor_still_applies_beyond_small_unlabelled_work(readin
     # ADR-092 decision: no stage modes, so the floor cannot force define to
     # thorough. The path has its four fixed stages, and the floor keeps its skill.
     assert result["stages"] == ("assess", "specify", "build", "ship")
-    assert "behavior-mapping" in result["required_skills"]
+    # #360 merged the skill into `atdd`, which the check set names.
+    assert "atdd" in result["required_skills"]
 
 
 CRITICAL_AND_DOMAIN = [

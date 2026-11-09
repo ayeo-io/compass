@@ -41,10 +41,11 @@ def _run(cwd, *argv, extra_env=None):
 
 
 def test_trc_011(tmp_path):
-    # A project's own governance copy, the one configuration besides compass.yml
-    # since 9.0.0 (ADR-094), is refused when it holds the key.
+    # The 8.x reader of a governance copy, kept for the contracts in
+    # `tests/legacy_copy.py`, refuses a copy that holds the key.
+    import legacy_copy
     try:
-        effective._legacy_config({"schema": 1, "language": "en-US"})
+        legacy_copy._legacy_config({"schema": 1, "language": "en-US"})
     except CompassError as exc:
         assert "language" in str(exc) and PARENT_RULE in str(exc), str(exc)
     else:

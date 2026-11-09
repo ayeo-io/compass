@@ -131,7 +131,7 @@ def test_a_project_pinned_to_a_frozen_major_resolves_the_path_approaches(tmp_pat
     still check."""
     from compass_pkg import effective
     root = projects.project(tmp_path, compass_yml=dict(projects.BALANCED, extends=frozen))
-    view = effective.view_or_legacy(start=str(root))
+    view = effective.effective_for(start=str(root))
     assert set(view.config["approaches"]) == {"delivery", "spike"}, frozen
     assert list(view.stage_order()) == ["assess", "specify", "build", "ship"], frozen
     done = projects.run(root, "check", "--issue", projects.SLUG)
@@ -168,18 +168,18 @@ def test_an_old_issue_gets_no_path_checkpoint_from_the_table():
 
 
 def test_a_copied_guardrail_checked_at_a_legacy_stage_is_read_at_its_path_stage():
-    from compass_pkg import effective
+    import legacy_copy
     # A copy of the 9.0.0 files declares only the path stages, so a project
     # guardrail it checks at `verify` names a stage the copy does not hold.
     doc = {"stages": {"assess": {"order": 1, "modes": {"thorough": {"rank": 3}}},
                       "ship": {"order": 4, "modes": {"thorough": {"rank": 3}}}},
            "gates": {"PG-A": {"kind": "guardrail", "stage": "verify",
                               "applies_to": {"ships": True}, "checks": []}}}
-    config, _ = effective._legacy_config(doc)
+    config, _ = legacy_copy._legacy_config(doc)
     assert config["gates"]["PG-A"]["stage"] == "ship"
     # A copy made before 9.0.0 declares its legacy stages and is read as it is.
     old = dict(doc, stages=dict(doc["stages"], verify={"order": 3, "modes": {}}))
-    config, _ = effective._legacy_config(old)
+    config, _ = legacy_copy._legacy_config(old)
     assert config["gates"]["PG-A"]["stage"] == "verify"
 
 

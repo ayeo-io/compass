@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.stable_ids import GATE_VERIFY_CORRECTNESS
-from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
+from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, load_yaml, manifest_path, normalize_spine
 from compass_pkg.spec_location import spec_path
 from compass_pkg.path_stages import is_path_issue
 from compass_pkg import approval_records, status_words
@@ -471,16 +471,7 @@ def _check_gate_evidence(task, task_dir):
     # Load the evidence typing rules. The one extra yaml load per `check` run is
     # negligible, and it keeps the check signature simple.
     from compass_pkg import effective
-    view = effective.view_or_legacy(task_dir)
-    if view is not None:
-        requirements, known_types = view.gate_requirements()
-    else:
-        try:
-            gpolicy = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
-        except CompassError:
-            gpolicy = {}
-        known_types = set((gpolicy.get("evidence_types") or {}).keys())
-        requirements = gpolicy.get("gate_evidence_requirements") or {}
+    requirements, known_types = effective.effective_for(task_dir).gate_requirements()
 
     problems = []
     for g in gates:
@@ -703,10 +694,9 @@ def _check_dod_evidence_typed(task, task_dir):
                                   % artifact_location(task_dir, "verification-report.md"))
     from compass_pkg import effective, item_records
     try:
-        view = effective.view_or_legacy(task_dir)
+        view = effective.effective_for(task_dir)
     except Exception as exc:                            # noqa: BLE001
         return False, "cannot read the issue's configuration to find its Definition of Done: %s" % exc
-    # An issue read without a configuration is judged by the shipped default's list.
     rows = item_records.items(task, task_dir, view, "dod")
     problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check, task))
                 for row in rows if row.state == item_records.OPEN]
@@ -911,6 +901,19 @@ def _check_spike_no_production_changes(task, task_dir):
     return True, "no production changed_files (correct - a Spike ships nothing)"
 
 
+def _quarantine_dir(task_dir):
+    """The folder whose `quarantine.yml` the check reads: the project's own
+    `governance/` when it holds one, else the framework's. It is found by path,
+    not by the two governance files 9.0.0 no longer reads (ADR-098)."""
+    from compass_pkg.core import FRAMEWORK_ROOT
+    from compass_pkg.project_settings import find_project_root
+    for root in (find_project_root(task_dir), FRAMEWORK_ROOT):
+        folder = os.path.join(root, "governance")
+        if os.path.isfile(os.path.join(folder, "quarantine.yml")):
+            return folder
+    return None
+
+
 def _load_quarantine_registry(gov_dir):
     """Load governance/quarantine.yml and return a dict of test id -> entry.
 
@@ -954,10 +957,7 @@ def _check_no_trusted_rerun(task, task_dir):
         return True, "no test-run evidence to evaluate"
 
     # Load quarantine registry once
-    try:
-        gov = find_governance()
-    except CompassError:
-        gov = None
+    gov = _quarantine_dir(task_dir)
     quarantine = _load_quarantine_registry(gov) if gov else {}
 
     problems = []
@@ -1052,16 +1052,7 @@ def _check_command_passes(task, task_dir):
 
     # Load the guardrails to find project guardrails with check: command-passes
     from compass_pkg import effective
-    view = effective.view_or_legacy(task_dir)
-    if view is not None:
-        project_guardrails = view.command_checks()
-    else:
-        try:
-            gov = find_governance()
-            gpolicy = load_yaml(os.path.join(gov, "guardrails.yml"))
-        except CompassError:
-            gpolicy = {}
-        project_guardrails = gpolicy.get("project") or []
+    project_guardrails = effective.effective_for(task_dir).command_checks()
     cp_guardrails = [
         g for g in project_guardrails
         if isinstance(g, dict) and "command-passes" in (g.get("checks") or [])

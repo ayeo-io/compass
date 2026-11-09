@@ -28,6 +28,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 from check_set_files import shipped  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t",
        "-c", "commit.gpgsign=false"]
@@ -234,9 +235,9 @@ def test_gil_10_the_documents_name_the_same_four_cases():
             assert word in text, (word, text)
         assert "critical" not in text, text
 
-    view = yaml.safe_load((ROOT / "governance/guardrails.yml").read_text())
+    view = shipped_view("guardrails.yml")
     g5_view = next(g for g in view["defaults"] if g["id"] == "G5")
-    assert g5_view["applies_when"] == {"touches_any": LABELS}, g5_view
+    assert g5_view["applies_when"] == {"labels_any": LABELS}, g5_view
 
     methodology = (ROOT / "docs/methodology.md").read_text(encoding="utf-8")
     assert "critical-risk work" not in methodology

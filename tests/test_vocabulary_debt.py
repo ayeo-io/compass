@@ -19,7 +19,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 APPROACHES = ROOT / "approaches"
-POLICY = ROOT / "governance" / "routing-policy.yml"
 DEEP_DIVE = ROOT / "docs" / "routing-deep-dive.md"
 
 LINK = re.compile(r"\[[^\]]+\]\(([^)]+\.md)\)")
@@ -68,7 +67,8 @@ def test_voc_b1_no_document_says_a_shipped_rename_is_still_pending():
 
 
 def _policy_immovable_gates():
-    doc = yaml.safe_load(POLICY.read_text(encoding="utf-8"))
+    from check_set_files import view as shipped_view
+    doc = shipped_view("routing-policy.yml")
     for key in ("policy", "routing", None):
         node = doc.get(key) if key else doc
         if isinstance(node, dict) and "immovable_gates" in node:
@@ -77,7 +77,7 @@ def _policy_immovable_gates():
     for v in doc.values():
         if isinstance(v, dict) and "immovable_gates" in v:
             return [g["gate"] for g in v["immovable_gates"]]
-    raise AssertionError("routing-policy.yml has no immovable_gates block")
+    raise AssertionError("the check set has no immovable_gates block")
 
 
 def _immovable_claim():

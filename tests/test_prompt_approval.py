@@ -163,7 +163,7 @@ def test_a3_reject_check_withdraws(setup):
     assert last["check"] == CHECK and last["decision"] == "rejected"
     assert last["reason"] == "the review missed the migration"
     from compass_pkg import approval_records, effective
-    view = effective.view_or_legacy(str(task_dir(root)))
+    view = effective.effective_for(str(task_dir(root)))
     status, detail = approval_records.judge(CHECK, view.config["checks"][CHECK],
                                             manifest_of(root), str(task_dir(root)))
     assert status == "fail" and detail.startswith("approval withdrawn"), detail

@@ -643,7 +643,8 @@ def test_trc_s7_quickstart_five_minutes_and_portability_match_the_code(tmp_path)
     # waits at assess and specify (ADR-092 open question 7). The quickstart
     # states both, and the code gives both.
     from compass_pkg.path_writer import checkpoints_for
-    policy = yaml.safe_load(_read("governance/routing-policy.yml"))
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
     assert policy["autonomy_checkpoints"]["balanced"]["delivery"] == []
     assert policy["autonomy_checkpoints"]["controlled"]["delivery"] == ["assess", "specify"]
     light = ["scenarios", "red-before-green", "suite-green"]
@@ -796,7 +797,8 @@ def test_trc_s3_routing_deep_dive_matches_the_evaluator():
     text = _flat(_read("docs/routing-deep-dive.md"))
 
     # The `G5` label list names the labels the rules read, and no others.
-    policy = yaml.safe_load(_read("governance/routing-policy.yml"))
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
     floor = next(r for r in policy["routing_guardrails"]["floors"] if r["id"] == "RP-REQUIRE-004")
     labels = floor["when"]["labels_any"]
     assert list(G5_LABELS) == labels, (G5_LABELS, labels)

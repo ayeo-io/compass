@@ -310,7 +310,7 @@ def _unmet_entry(task: dict, task_dir: str, stage: str) -> list:
     gives none."""
     try:
         from compass_pkg import effective, stage_lists
-        view = effective.view_or_legacy(task_dir)
+        view = effective.effective_for(task_dir)
         return stage_lists.unmet_entry(stage_lists.evaluate(view, task, task_dir), stage)
     except Exception:  # noqa: BLE001 - the stage line is the answer; this is extra
         return []

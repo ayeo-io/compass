@@ -37,8 +37,12 @@ PRESET = None
 # (ADR-091). The 7.0.0 preset is frozen with them, and a stored generation still
 # reads them, so the tests of the artifact rules read that preset.
 FROZEN = ROOT / "tests" / "fixtures" / "presets" / "default@7"
-VIEW = ROOT / "governance" / "routing-policy.yml"
 NOT_READ = "role is no longer an assessment dimension"
+
+
+def _shipped_policy():
+    from check_set_files import view as shipped_view
+    return shipped_view("routing-policy.yml")
 
 
 def _load(path):
@@ -116,7 +120,7 @@ def test_trc_a1_the_shipped_default_declares_no_role_dimension():
     dims = _preset_config()["dimensions"]
     assert "role" not in dims
     assert list(dims) == ["risk", "familiarity", "size", "goal", "urgency", "labels"]
-    view = _load(VIEW)
+    view = _shipped_policy()
     assert "role" not in view["assessment_vocabulary"]
     assert "role" not in _policy()["assessment_vocabulary"]
 
@@ -136,9 +140,9 @@ def test_trc_a2_the_shipped_rules_hold_no_role_rule_default_or_bias():
     rules = _preset_config()["rules"]
     assert all(s.get("kind") != "role-rules" for s in rules.values())
     assert "role_rules" not in rules and "role_defaults" not in rules
-    view = _load(VIEW)
-    assert "role_rules" not in view["routing_guardrails"]
-    assert "role_defaults" not in view["routing_strategies"]
+    view = _shipped_policy()
+    assert not view["routing_guardrails"].get("role_rules")
+    assert not view["routing_strategies"].get("role_defaults")
     for document in (rules, view):
         for when in _whens(document):
             assert "role" not in json.dumps(when), when
@@ -190,7 +194,7 @@ def test_trc_a4_an_assessment_without_a_role_routes_as_an_engineers_did():
         # 9.0.0 owes no document (ADR-091), so the documents are compared on the
         # frozen 7.0.0 preset. Documents a later 7.0.0 change added to the approach
         # (ADR-072) are not part of the role removal, so they are left out.
-        assert evaluate_route(dict(case), _load(VIEW))["artifacts"] == [], approach
+        assert evaluate_route(dict(case), _shipped_policy())["artifacts"] == [], approach
         seven = evaluate_route(dict(case), _policy(FROZEN))
         added = ADDED_AFTER_ROLE_REMOVAL.get(approach, ())
         assert [a for a in seven["artifacts"] if a["kind"] not in added] \
@@ -216,7 +220,7 @@ def test_trc_b1_a_positioning_document_brings_the_claims_gate_and_the_ship_block
     assert _blocks(result)["ship"] == (
         "every claim in positioning.md traces to a passing scenario")
     # The live default and its view hold no artifact rule since 9.0.0 (ADR-091).
-    for policy in (_policy(), _load(VIEW)):
+    for policy in (_policy(), _shipped_policy()):
         live = evaluate_route(_assess(artifacts=["positioning"]), policy)
         assert "verify.claims" not in live["gates"] and "RP-ART-001" not in _fired(live)
 
@@ -265,7 +269,7 @@ def test_trc_c1_a_manifest_that_records_a_role_evaluates_on_the_new_default(tmp_
     assert not [f for f in data.get("policy_rules_fired") or []
                 if f["id"].startswith("RP-ROLE")]
     assert "role" not in (data.get("justifications") or {})
-    result = evaluate_route(_assess(role="product-owner"), _load(VIEW))
+    result = evaluate_route(_assess(role="product-owner"), _shipped_policy())
     assert not result["blocked_phases"]
 
 
@@ -278,9 +282,9 @@ def test_trc_c2_a_stored_6x_configuration_keeps_its_role_rules():
     assert "verify.claims" in marketer["gates"]
     # A stored generation is a resolved configuration in catalogue form, which
     # holds the 6.x `role-rules` set.
-    from compass_pkg import legacy_adapter
+    import legacy_copy
     policy_text, guardrails_text = _six_0_1_texts()
-    stored = legacy_adapter.adapt(yaml.safe_load(policy_text),
+    stored = legacy_copy.adapt(yaml.safe_load(policy_text),
                                   yaml.safe_load(guardrails_text))
     owed = evaluate_route(_assess(role="product-owner"), obligations.policy_adapter(stored))
     assert "plan" in _blocks(owed)
@@ -437,18 +441,14 @@ def test_trc_c8_a_check_that_reads_documents_is_refused(tmp_path):
 
 def _old_evaluator(root, slug="t"):
     """What the 8.x evaluator gives for the issue over the configuration the CLI
-    reads for it: its stored generation, else the project's chain now (which
-    holds copied governance). On the four-stage path (ADR-092) the CLI shows the
-    evidence owed, so the approach and its role rules are read here."""
+    reads for it: its stored generation, else the check set now. On the
+    four-stage path (ADR-092) the CLI shows the evidence owed, so the approach
+    and its role rules are read here."""
     from compass_pkg import effective
     from compass_pkg.core import load_yaml, normalize_spine
     task_dir = Path(root) / ".compass" / "work" / slug
     task = normalize_spine(load_yaml(str(task_dir / "manifest.yml")))
-    view = effective.view_or_legacy(str(task_dir))
-    if view is None:
-        resolution = effective.resolve_live(str(root))
-        view = effective.EffectiveView("live", None, None, resolution.resolved,
-                                       resolution.versions)
+    view = effective.effective_for(str(task_dir))
     return evaluate_route(task["assessment"], view.evaluator_policy())
 
 
@@ -461,16 +461,14 @@ def _path_view(root, slug="t"):
     return result, err
 
 
-def test_trc_c2_copied_6x_governance_keeps_its_role_rules_through_the_cli(tmp_path):
-    """A project still on copied 6.x governance routes a product owner's issue with
-    RP-ROLE-002, as before, and the CLI evaluates the issue on the path."""
+def test_trc_c2_copied_6x_governance_is_refused_from_9_0_0(tmp_path):
+    """A project still on copied 6.x governance is refused: 9.0.0 reads no copy
+    (ADR-098), so its role rules are never dropped without a word."""
     root, _ = _project(tmp_path, assessment=_assess(role="product-owner"),
                        compass_yml=False)
     _copied_governance(root)
-    _path_view(root)
-    result = _old_evaluator(root)
-    assert "RP-ROLE-002" in [f["id"] for f in result["policy_rules_fired"]]
-    assert [b["phase"] for b in result["blocked_phases"]] == ["plan"]
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--json")
+    assert code == 2 and "[governance-copy-removed]" in err, out + err
 
 
 # An issue that Compass 6.0.1 assessed with `role: product-owner` and committed

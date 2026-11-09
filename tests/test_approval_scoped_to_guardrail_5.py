@@ -37,6 +37,7 @@ sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from compass_pkg import checks, status_words  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 SLUG = "feature"
 CHECK = "human-approval-present"
@@ -412,8 +413,7 @@ def _flat(text):
 
 def test_agf_12_docs_and_decision_entry_state_the_rule():
     from compass_pkg.check_cmd import CHECK_GUIDANCE
-    guardrails = yaml.safe_load((ROOT / "governance" / "guardrails.yml")
-                                .read_text(encoding="utf-8"))
+    guardrails = shipped_view("guardrails.yml")
     evidence_type = json.dumps(guardrails["evidence_types"]["human-approval"])
     for name, text in [
         ("docs/safety-contract.md", (ROOT / "docs" / "safety-contract.md").read_text()),

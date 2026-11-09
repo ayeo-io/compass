@@ -101,7 +101,8 @@ def test_manifest_schema_declares_the_new_keys():
 
 def test_route_shapes_declare_a_ceiling_not_a_word():
     """`TRC-B6`: no shape carries a topology word or an orchestration word. <!-- vocabulary-scan: allow - names the retired key the shape must not carry -->"""
-    policy = _yaml(ROOT / "governance" / "routing-policy.yml")
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
     shapes = policy["route_shapes"]
     for name, shape in shapes.items():
         assert "topology" not in shape, f"{name} still declares a topology"
@@ -150,13 +151,14 @@ def test_breakdown_stage_weight_is_one_of_the_allowed_values():
 
 def test_the_architecture_gate_is_named_for_what_it_checks():
     """`TRC-B5`: `compass check` prints the gate id on every run."""
-    guardrails = _yaml(ROOT / "governance" / "guardrails.yml")
+    from check_set_files import view as shipped_view
+    guardrails = shipped_view("guardrails.yml")
     accepts = guardrails["gate_evidence_requirements"]
     assert "verify.architecture" in accepts
     assert "verify.fitness" not in accepts
 
-    policy_text = (ROOT / "governance" / "routing-policy.yml").read_text()
-    assert "add_gate: verify.fitness" not in policy_text
+    policy_text = (ROOT / "governance" / "check-set.yml").read_text()
+    assert "verify.fitness" not in policy_text
 
 
 def test_an_archived_gate_id_still_resolves():

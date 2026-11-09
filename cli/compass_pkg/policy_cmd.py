@@ -7,35 +7,34 @@ between, migrate to or test a preset against. It also removed `--offline`
 (nothing is fetched), and `policy lint --issue` and `--exhaustive` (an issue
 has no config layer and the classifier went).
 
-- `policy lint` lints `compass.yml` as a file of settings (`settings_lint`)
-  for a project with a `compass.yml` Compass reads, the framework's own
-  repository included. For any other project it runs the structural lint of
-  the governance copy (`governance.legacy_structure`). 9.0.0 removed the drift
-  report that compared a copy with the framework's, and the framework mode
-  that linted the frozen views as well (ADR-098). `--file` lints one
-  `compass.yml` as settings. `compass ci` calls the structural lint in
-  `governance` directly.
+- `policy lint` lints `compass.yml` as a file of settings (`settings_lint`),
+  the framework's own repository included, and the project's own optional
+  governance files (`governance.files_errors`, `L-GOVERNANCE-FILE`). A project
+  with no `compass.yml` has no settings to lint. A project with a copy of the
+  governance files and no `compass.yml` is refused (`governance-copy-removed`,
+  exit 2): 9.0.0 reads no copy (ADR-098). `--file` lints one `compass.yml` as
+  settings, and nothing else. `compass ci` runs the same lint
+  (`governance.cmd_policy_lint`).
 - `policy show` prints the check set, its sha256, the sha256 of `compass.yml`
   and the tighten-only settings it applies. With `--issue` it adds the
-  issue's `policy:` block and its waivers.
+  issue's `policy:` block and its waivers. It refuses a governance copy as
+  `policy lint` does.
 
 Both exit 0 when nothing is wrong, 1 when the lint finds an error, and 2 when
 the command cannot run, because the release scripts, the `Makefile` and CI
 run `lint`.
 """
-# DEPENDENCY: standard library (json, os, re); compass_pkg.atomic_io, check_set, core,
+# DEPENDENCY: standard library (json, os); compass_pkg.atomic_io, check_set, core,
 # effective, governance, project_settings, settings_lint, terminal, tighten.
 from __future__ import annotations
 
 import json
 import os
-import re
 
-from compass_pkg import check_set, effective, governance, project_settings
+from compass_pkg import check_set, effective, project_settings
 from compass_pkg import settings_lint, tighten
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
-from compass_pkg.core import (CompassError, find_governance, load_manifest,
-                              resolve_issue_dir)
+from compass_pkg.core import CompassError, load_manifest, resolve_issue_dir
 from compass_pkg.terminal import mark_handled, resolve_mode
 
 #: The version of the JSON document `policy lint --json` prints.
@@ -48,50 +47,6 @@ def _emit(args, document, lines):
         print(json.dumps(document, indent=2, default=str))
     else:
         print("\n".join(lines))
-
-
-# --- the legacy lint, for a project with its own governance copy -----------------------
-
-_LEGACY_FILE = re.compile(r"^(?:\[([^\]]+)\]|([\w.-]+\.yml):) ")
-
-
-def _legacy_split(text):
-    """`(file, message)` from a legacy error line that starts `[file]` or
-    `file.yml:`, or `("", text)`."""
-    found = _LEGACY_FILE.match(text)
-    return ((found.group(1) or found.group(2)), text[found.end():]) if found else ("", text)
-
-
-def _legacy_finding(code, level, path, message):
-    return {"code": code, "level": level, "layer": "legacy", "path": path,
-            "group": "legacy", "message": message, "detail": None}
-
-
-def legacy_json(errors):
-    """The `--json` document for a project with no `compass.yml`, from the
-    structural lint's error lines. The keys are the 8.x ones, so a script that
-    reads `result` and `counts` keeps working."""
-    out = []
-    for text in errors:
-        path, message = _legacy_split(text)
-        out.append(_legacy_finding("LEGACY-STRUCTURE", "error", path, message))
-    out.sort(key=lambda f: (f["path"], f["code"], f["message"]))
-    failed = any(f["level"] == "error" for f in out)
-    return {
-        "schema": JSON_SCHEMA_VERSION,
-        "mode": "legacy",
-        "result": "fail" if failed else "pass",
-        "layers": [{"name": "legacy", "kind": "legacy"}],
-        "stopped_after": "legacy" if errors else None,
-        "counts": {"errors": sum(f["level"] == "error" for f in out),
-                   "warnings": sum(f["level"] == "warning" for f in out)},
-        "findings": out,
-    }
-
-
-def _legacy_report():
-    errors, _ = governance.legacy_structure(find_governance())
-    return legacy_json(errors)
 
 
 # --- the settings lint -----------------------------------------------------------------
@@ -170,14 +125,13 @@ def run_policy_lint(args):
     file = getattr(args, "file", None)
     if file:
         findings = settings_findings(file, root)
-    elif project_settings.compass_yml_counts(root):
-        findings = settings_findings(os.path.join(root, project_settings.COMPASS_YML), root)
     else:
-        if resolve_mode(args) != "json":
-            return governance.cmd_policy_lint(args)
-        report = _legacy_report()
-        _emit(args, report, [])
-        return 0 if report["result"] == "pass" else 1
+        effective.refuse_governance_copy(root, "compass policy lint")
+        findings = (settings_findings(os.path.join(root, project_settings.COMPASS_YML), root)
+                    if project_settings.compass_yml_counts(root) else [])
+        from compass_pkg import governance
+        findings += [settings_lint.Finding("L-GOVERNANCE-FILE", "error", path, message)
+                     for path, message in governance.files_errors(root)]
     _emit(args, _lint_json(findings), _lint_text(findings))
     return 0 if _ok(findings) else 1
 
@@ -194,7 +148,7 @@ def _issue_part(slug):
                          if w.get(k) is not None} for w in waivers]}
 
 
-def _show_text(document, notice):
+def _show_text(document):
     lines = [f"Policy: {document['check_set']} (sha256 {document['check_set_sha256']})"]
     settings = document["settings_sha256"]
     lines.append(f"Settings: compass.yml (sha256 {settings})" if settings
@@ -226,14 +180,13 @@ def _show_text(document, notice):
                       for w in issue["waivers"]]
         else:
             lines.append("  waivers: none")
-    if notice:
-        lines.append(notice)
     return lines
 
 
 def run_policy_effective(args):
     root = project_settings.find_project_root(os.getcwd())
     slug = getattr(args, "task", None)
+    effective.refuse_governance_copy(root, "compass policy show")
     doc = effective.project_doc(root)
     effective.refuse_git_parent(doc)
     loaded = check_set.load()
@@ -247,8 +200,7 @@ def run_policy_effective(args):
     }
     if slug:
         document["issue"] = _issue_part(slug)
-    notice = effective.GOVERNANCE_COPY_NOTICE if effective.has_governance_copy(root) else None
-    _emit(args, document, _show_text(document, notice))
+    _emit(args, document, _show_text(document))
     return 0
 
 
@@ -262,8 +214,7 @@ def register(pls):
                          "tighten-only settings applied")
     ple.add_argument("--issue", dest="task", metavar="SLUG", help=ISSUE_HELP)
     ple.set_defaults(func=run_policy_effective, output_kind="report")
-    pll = pls.add_parser("lint", help="lint compass.yml as settings, or the governance "
-                         "copy of a project without one")
+    pll = pls.add_parser("lint", help="lint compass.yml as settings")
     pll.add_argument("--file", metavar="PATH",
                      help="lint one compass.yml as settings over the check set")
     pll.set_defaults(func=run_policy_lint, output_kind="report")

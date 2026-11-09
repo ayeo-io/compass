@@ -27,7 +27,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
-GUARDRAILS = ROOT / "governance" / "guardrails.yml"
 CONTRACT = ROOT / "docs" / "safety-contract.md"
 
 APPROVAL = {
@@ -187,12 +186,3 @@ def test_scn_f1_the_safety_contract_names_the_four_labels_only():
     assert "critical" not in para, (
         "the contract names critical risk as a trigger of guardrail 5, which "
         "the 2026-10-12 decision removed")
-
-
-def test_scn_f2_guardrails_version_was_bumped():
-    doc = yaml.safe_load(GUARDRAILS.read_text(encoding="utf-8"))
-    version = str(doc.get("version", ""))
-    assert version and version not in ("1.4.0", "1.32.0"), (
-        f"guardrails.yml still reports version {version!r}; a rule change must "
-        "bump it, or `compass policy lint` cannot tell projects their copy is "
-        "stale")

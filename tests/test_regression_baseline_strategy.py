@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 
 import yaml
+from check_set_files import view as shipped_view  # noqa: E402
 
 
 def test_s6_registered_in_strategies_md(framework_root):
@@ -75,7 +76,7 @@ def test_build_prompts_baseline_before_change(framework_root):
 def test_absent_baseline_does_not_block_land(framework_root):
     """`TRC-R10-5`: no guardrails.yml check enforces a baseline - its absence
     cannot fail compass check or block ship (soft strategy)."""
-    g = yaml.safe_load((framework_root / "governance" / "guardrails.yml").read_text())
+    g = shipped_view("guardrails.yml")
     checks = g.get("checks") or {}
     assert not any("regression-baseline" in str(k) or "baseline" in str(k)
                    for k in checks), checks
@@ -92,7 +93,9 @@ def test_no_new_guardrail_or_gate_added(framework_root):
         assert gid in md, gid
     assert "G6" not in md, "a sixth guardrail must not have been added"
     # verify.regression accepted types unchanged
-    g = yaml.safe_load((gov / "guardrails.yml").read_text())
+    from check_set_files import view as shipped_view
+    g = shipped_view("guardrails.yml")
     assert g["gate_evidence_requirements"]["verify.regression"] == ["test-run"]
-    # guardrails.yml does not define the strategy (it is soft, lives in strategies.md)
-    assert "regression-baseline" not in (gov / "guardrails.yml").read_text()
+    # the check set declares no check for the strategy (it is soft, lives in
+    # strategies.md)
+    assert "regression-baseline" not in g["checks"]

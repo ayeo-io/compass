@@ -1268,8 +1268,8 @@
       "required": ["check_set", "check_set_sha256", "settings_sha256", "tightened", "resolved"],
       "additionalProperties": false,
       "properties": {
-        "check_set": {"type": "string", "minLength": 1, "description": "The check set the generation was resolved from, `<id>@<version>` such as `compass-checks@9.0.0`, or `legacy` for a project that runs its own copy of the governance files."},
-        "check_set_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "The sha256 of the check set file, lowercase hex as `sha256sum` prints it; null for `legacy`."},
+        "check_set": {"type": "string", "minLength": 1, "description": "The check set the generation was resolved from, `<id>@<version>` such as `compass-checks@9.0.0`."},
+        "check_set_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "The sha256 of the check set file, lowercase hex as `sha256sum` prints it."},
         "settings_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "The sha256 of `compass.yml` at the commit, lowercase hex as `sha256sum` prints it; null when the project has none that Compass reads."},
         "tightened": {"type": "object", "description": "The tighten-only settings of `compass.yml` that were applied, as written: `signoff_labels`, `require_evidence`, `agent_review`, `project_checks` and `capabilities`."},
         "autonomy": {"enum": ["controlled", "balanced", "autonomous"], "description": "The autonomy the generation was resolved with, from `compass.yml` (`balanced` without one). With the check set and `tightened`, it rebuilds a missing generation folder (#356). A block written before it was recorded has none; a rebuild then tries each value."},

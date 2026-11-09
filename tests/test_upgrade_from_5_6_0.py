@@ -210,9 +210,13 @@ def _legacy_view(root, slug):
     from compass_pkg.core import display_shape, load_yaml, normalize_spine
     from compass_pkg.render import fired_rule_line
     from compass_pkg.terminal import Emitter
-    resolution = effective.resolve_live(str(root))
-    policy = effective.EffectiveView("live", None, None, resolution.resolved,
-                                     resolution.versions).evaluator_policy()
+    # 9.0.0 refuses a project with copied governance (ADR-098), so the copy is
+    # read through the 8.x reader the tests keep.
+    sys.path.insert(0, str(ROOT / "tests"))
+    import legacy_copy
+    policy = effective.EffectiveView("live", None, None,
+                                     legacy_copy.resolved_from_copy(str(root)),
+                                     {}).evaluator_policy()
     task = normalize_spine(load_yaml(str(_manifest_path(root, slug))))
     result = routing.evaluate_route(task["assessment"], policy)
     ceiling = result["subtask_ceiling"]
@@ -232,7 +236,7 @@ def _legacy_view(root, slug):
     return emitter.rendered()
 
 
-def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(
+def test_up_2_a_5_6_0_project_with_old_governance_words_is_refused_and_reads_the_same(
         release, tmp_path):
     old_cli = release / "cli" / "compass"
     root = tmp_path / "proj"
@@ -261,19 +265,13 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(
         before = _cli(old_cli, root, "approach", "evaluate", "--issue", slug)
         after = _cli(CLI, root, "approach", "evaluate", "--issue", slug)
         assert before.returncode == 0, before.stdout + before.stderr
-        assert after.returncode == 0, after.stdout + after.stderr
+        # 9.0.0 reads no copy of the governance files (ADR-098): the project
+        # runs `compass policy migrate` on 8.x first.
+        assert after.returncode == 2, after.stdout + after.stderr
+        assert "[governance-copy-removed]" in after.stderr, after.stderr
         assert before.stdout.startswith(old_name), before.stdout
         legacy = _legacy_view(root, slug)
         assert legacy.startswith(new_name), legacy
-        # ADR-092 decision: no approaches. The CLI's view of the issue is the
-        # path's: the one delivery approach and the evidence owed.
-        assert re.match(r"delivery - \d+ gate\(s\), \d+ kinds of evidence owed\n",
-                        after.stdout), after.stdout
-        # 9.0.0 removed the drift report (ADR-098), so no concern line says the
-        # 5.6.0 governance copy lacks what the framework ships.
-        _, path_choices = _evaluate_lines(after.stdout)
-        assert not [c for c in path_choices if "policy is missing" in c], (
-            slug, path_choices)
         gates, choices = _evaluate_lines(legacy)
         # 9.0.0 drops the removed gate `verify.analyze` (ADR-091), which the copied
         # 5.6.0 rules `RP-REQUIRE-001` and `RP-REQUIRE-002` add; a rule that only adds it
@@ -291,12 +289,9 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(
         lint = _cli(CLI, root, "issue", "lint", "--issue", slug)
         assert lint.returncode == 0, lint.stdout + lint.stderr
 
-    # The old route names are read, with a notice on standard error that says
-    # what to rename, and the files themselves are not rewritten.
-    after = _cli(CLI, root, "approach", "evaluate", "--issue", "add-farewell")
-    # The notice says "approach", because "route" is a verb only (ADR-044).
-    assert "old approach names" in after.stderr and "expedition -> full" in after.stderr
+    # The lint refuses the copy too, and no file is rewritten.
     policy = _cli(CLI, root, "policy", "lint")
-    assert policy.returncode == 0, policy.stdout + policy.stderr
+    assert policy.returncode == 2 and "[governance-copy-removed]" in policy.stderr, (
+        policy.stdout + policy.stderr)
     assert (root / ".compass" / "config.yml").read_bytes() == config
     assert {p: p.read_bytes() for p in (root / "governance").rglob("*.yml")} == governance

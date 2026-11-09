@@ -222,7 +222,8 @@ def test_trc_a8_landed_task_not_rechecked(run_cli, make_task, project):
 def test_trc_a5_registered_under_g1_no_new_guardrail():
     """ADR-002: the framework grows by adding artifacts, not rules. The
     check registers under `G1`; the count stays at five."""
-    gy = yaml.safe_load(_read("governance/guardrails.yml"))
+    from check_set_files import view as shipped_view
+    gy = shipped_view("guardrails.yml")
 
     defaults = {g["id"]: g for g in gy["defaults"]}
     assert set(defaults) == {"G1", "G2", "G3", "G4", "G5"}, (

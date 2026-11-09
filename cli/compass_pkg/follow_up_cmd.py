@@ -98,7 +98,7 @@ def cmd_follow_up_add(args):
 def _defers_problem(task_dir, task, check_id, path_issue):
     """Why `--defers` cannot name `check_id`, or None. A path issue has only the
     Definition of Done, its build exit list, so the message names that list."""
-    view = effective.view_or_legacy(task_dir)
+    view = effective.effective_for(task_dir)
     if not path_issue:
         return item_records.unlisted_problem(view, check_id, VERB, task=task)
     listed = [c for c, _ in item_records.listed_checks(view, "dod")]

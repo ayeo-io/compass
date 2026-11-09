@@ -224,10 +224,8 @@ def test_request_without_issue_is_refused(root):
 
 
 def test_copied_governance_with_no_compass_yml_is_refused(root):
-    from migrate_9_helpers import ROOT
-    (root / "governance").mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        (root / "governance" / name).write_text((ROOT / "governance" / name).read_text())
+    import compat_baseline as cb
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
     old_issue(root, "copy")
     before = snapshot(root / ".compass")
     done = run(root, "migrate", "--apply")

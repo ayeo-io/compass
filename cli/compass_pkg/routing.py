@@ -29,7 +29,7 @@ import yaml
 
 import re as _re
 import fnmatch
-from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCHEMA_VERSION, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, shape_stages
+from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCHEMA_VERSION, CompassError, canonical_shape, display_shape, display_stage, load_manifest, reading_matches, resolve_issue_dir, shape_stages
 from compass_pkg import retired, word_map
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
                                     ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH,
@@ -93,18 +93,12 @@ def gates_added_by(fired):
     return found
 
 
-def policy_line(view, policy_file=None, policy=None):
-    """Which policy computed an approach, in one line. `approach evaluate --verbose` and
-    the delivery-approach record's policy-rules block both print it. `policy_file` is
-    the path of a project's own policy file when the approach was read from one."""
-    if policy_file:
-        version = (policy or {}).get("version", "unknown")
-        return f"{policy_file} (v{version})"
-    if view is not None and view.source == "generation":
+def policy_line(view):
+    """Which policy computed an approach, in one line. `approach evaluate --verbose`
+    prints it."""
+    if view.source == "generation":
         return (f"generation {view.generation} of this issue "
                 f"(parent {view.parent_version() or 'unknown'})")
-    if view is None:
-        return "this project's governance files"
     return "this project's effective configuration (the check set, tightened by compass.yml)"
 
 
@@ -741,23 +735,15 @@ def cmd_route_evaluate(args):
 
     # The configuration the approach is computed from. An issue with a
     # generation is judged by it. `--write` commits the configuration as it is
-    # now, so it computes from that. Only an issue with no generation, in a
-    # project with no `compass.yml`, reads the governance files.
+    # now, so it computes from that.
     from compass_pkg import effective
-    view = effective.view_or_legacy(task_dir, live=bool(args.write))
-    if resolution is not None and view is not None:
+    view = effective.effective_for(task_dir, live=bool(args.write))
+    if resolution is not None:
         # The configuration this write will commit, resolved once above.
         view = effective.EffectiveView("live", view.issue, None, resolution.resolved,
                                        resolution.versions, resolution.provenance)
-    if view is None:
-        gov = find_governance()
-        policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
-        from compass_pkg.core import load_autonomy
-        autonomy = load_autonomy()
-    else:
-        gov = None
-        policy = view.evaluator_policy()
-        autonomy = view.autonomy
+    policy = view.evaluator_policy()
+    autonomy = view.autonomy
     # The justifications are settled before anything prints or is written, so a
     # refusal leaves the manifest, the generations and the documents as they were.
     recorded_reasons = None
@@ -778,7 +764,7 @@ def cmd_route_evaluate(args):
             sys.stderr.write(retired.notice(f"assessment.{dim}") + "\n")
     prepared = prepare_policy(policy)
     result = evaluate_route(readings, prepared, autonomy,
-                            issue=view.evaluator_issue() if view is not None else None)
+                            issue=view.evaluator_issue())
     # The block the write stores, and the stage 2 and 3 reviews listed only
     # where the strategy applies to the issue (ADR-083).
     strategy = None
@@ -786,23 +772,15 @@ def cmd_route_evaluate(args):
         strategy = _acceptance_block(
             task, task_dir, resolution, result, args,
             bool(task.get("delivery_approach")) or bool(task.get("evaluated_assessment")),
-            resolved=None if args.write or view is None else view.resolved)
+            resolved=None if args.write else view.resolved)
         if (strategy or acceptance_strategy.stored(task) or {}).get("applies"):
             result["checkpoints"] = route_checkpoints(
                 prepared, result["stages"], result["delivery_approach"], autonomy,
                 strategy_applies=True)
     # A delivery assessment owes evidence, not an approach (ADR-092). A spike
-    # keeps the keys above (`path_writer.evaluate` gives None). A preview that
-    # reads the governance files has no resolved configuration, so it reads the
-    # one a write would commit: otherwise it would show no `S17` evidence that
-    # the write then stores.
+    # keeps the keys above (`path_writer.evaluate` gives None).
     from compass_pkg import path_writer
-    if resolution is not None:
-        resolved = resolution.resolved
-    elif view is not None:
-        resolved = view.resolved
-    else:
-        resolved = path_writer.live_resolved(task, task_dir)
+    resolved = resolution.resolved if resolution is not None else view.resolved
     path = path_writer.evaluate(readings, prepared.view, autonomy, result,
                                 path_writer.strategy_inputs(
                                     task, task_dir, resolved,
@@ -874,8 +852,7 @@ def cmd_route_evaluate(args):
         # but not which policy file produced them, so print the policy
         # first, so a reader can tell a genuinely light route from a
         # stale-governance one.
-        _policy_file = os.path.join(gov, "routing-policy.yml") if gov else None
-        print(f"  policy          : {policy_line(view, _policy_file, policy)}")
+        print(f"  policy          : {policy_line(view)}")
         print(f"  assessment      : {json.dumps(readings)}")
         if path:
             # The path has no candidate approach to raise: the evidence row that

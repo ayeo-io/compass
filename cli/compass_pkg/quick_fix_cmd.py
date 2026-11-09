@@ -44,7 +44,7 @@ from compass_pkg.stable_ids import (
     APPROACH_DELIVERY, APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY)
 from compass_pkg.core import (
     COMPASS_SCHEMA_VERSION, CompassError, WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
-    docs_dir, find_governance, find_upwards, reading_matches,
+    docs_dir, find_upwards,
     load_manifest, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
 from compass_pkg.init_cmd import ensure_initialised, resolve_project_root
@@ -61,8 +61,8 @@ from compass_pkg.tdd import (_acceptance_state, _neutralise_coverage, _run_test,
 from compass_pkg.tdd_green import _red_record_for, cmd_tdd_green, strategy_applies
 from compass_pkg.terminal import say
 
-#: The three gates a quick fix ever clears (route_shapes.quick-fix.gates in
-#: governance/routing-policy.yml). `finish` refuses if any OTHER gate on the
+#: The three gates a quick fix ever clears (route_shapes.quick-fix.gates of the
+#: 8.x routing policy). `finish` refuses if any OTHER gate on the
 #: issue is still pending - that is heavier work than a quick fix earns.
 THREE_GATES = (GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE,
                GATE_VERIFY_TRACEABILITY)
@@ -199,10 +199,9 @@ def _quick_fix_blockers(readings, task, task_dir=None):
     on the reason instead of stopping to ask. Every line stays under the
     terminal's 100-character cut, or the instruction at its end is lost."""
     from compass_pkg import effective
-    view = effective.view_or_legacy(task_dir)
-    policy = (view.evaluator_policy() if view is not None else
-              load_yaml(os.path.join(find_governance(), "routing-policy.yml")))
-    matches = view.matches if view is not None else reading_matches
+    view = effective.effective_for(task_dir)
+    policy = view.evaluator_policy()
+    matches = view.matches
     shapes = (policy.get("routing_strategies") or {}).get("default_shapes") or []
     shape = next((s for s in shapes
                   if canonical_shape(s.get("lean_toward")) == APPROACH_QUICK_FIX), None)
@@ -258,13 +257,8 @@ def cmd_quick_fix_start(args):
     # same message `compass approach evaluate` would give, before there is
     # a manifest to write it into.
     from compass_pkg import effective
-    view = effective.view_or_legacy()
-    if view is not None:
-        policy, autonomy = view.evaluator_policy(), view.autonomy
-    else:
-        from compass_pkg.core import load_autonomy
-        policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
-        autonomy = load_autonomy()
+    view = effective.effective_for()
+    policy, autonomy = view.evaluator_policy(), view.autonomy
     advice = (evaluate_route(readings, policy, autonomy)
               .get("applicable_strategies") or [])
 

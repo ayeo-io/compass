@@ -157,7 +157,6 @@ def test_TRC_105_no_current_document_states_a_delegation_limit_that_no_longer_ho
 
 
 def test_TRC_118_the_evidence_type_texts_name_the_issue_form():
-    guardrails = yaml.safe_load(_text("governance/guardrails.yml"))
     preset = shipped("evidence-types.yml")
 
     def find(node):
@@ -170,7 +169,6 @@ def test_TRC_118_the_evidence_type_texts_name_the_issue_form():
                     return found
         return ""
 
-    for label, doc in (("governance/guardrails.yml", guardrails),
-                       ("governance/check-set.yml", preset)):
+    for label, doc in (("governance/check-set.yml", preset),):
         text = _flat(find(doc))
         assert "--issue <slug> --delegated --as <agent>" in text, (label, text)

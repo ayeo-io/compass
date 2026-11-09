@@ -112,7 +112,7 @@ The check `request-recorded` fails until both parts are on record.
 
 It refuses with exit 2, before it writes anything:
 
-- a project with copies of the two governance files in `governance/` and no `compass.yml` (`governance-copy-removed`). On Compass 8.x, run `compass policy migrate` to write `compass.yml`, then run `compass migrate` again.
+- a project with a copy of `governance/routing-policy.yml` or `governance/guardrails.yml` and no `compass.yml` (`governance-copy-removed`). On Compass 8.x, run `compass policy migrate` to write `compass.yml`, then run `compass migrate` again.
 - a `compass.yml` whose `extends:` names a git parent (`git-parent-removed`). Move the checks the parent adds into the settings of `compass.yml`, delete `extends:`, then run `compass migrate` again.
 
 It refuses one issue, and lists it under "refused", when the issue has a 1.x manifest (run `compass issue migrate --apply` first) or a stored generation that is not whole.
@@ -290,8 +290,8 @@ The refusal names each item with the edit that clears it, or `compass waiver wit
 |---|---|
 | Old names typed on the command line | ended for the reassessment kind, the check id and the refusal code (see "Removed verbs and flags"). The old size name `standard` is still read, because a compatibility contract types it. |
 | Old words in a stored manifest or generation | still read. 73 archived stored generations hold an old check id or skill name, and the compatibility contracts read old manifest words. |
-| Copied 5.x governance files with no `compass.yml` | still read by every command except `compass migrate`, which refuses the project (`governance-copy-removed`). Not yet settled; see "Not yet settled". |
-| The generated views `governance/routing-policy.yml` and `governance/guardrails.yml` | kept as frozen files since 9.0.0 stopped generating them (ADR-094). Not yet settled. |
+| Copied 5.x governance files with no `compass.yml` | ended. Every command that reads the policy refuses the project with exit 2 (`governance-copy-removed`). On Compass 8.x, run `compass policy migrate` to write `compass.yml` first. |
+| The generated views `governance/routing-policy.yml` and `governance/guardrails.yml` | ended. 9.0.0 deletes them and their four schema files. The check set, `governance/check-set.yml`, is the only machine-readable policy. |
 | `.compass/config.yml` when `compass.yml` is absent | still read. `compass migrate` rewrites `compass.yml` only. |
 | Waivers that the 8.x settings migration wrote | ended with the configuration layers that held them (ADR-094). |
 | `--justify role=` and `quick-fix start --role` | ended. A stored role reading in an assessment still reads. |
@@ -309,7 +309,6 @@ These readers were never on that list, and they stay:
 
 ADR-098 is proposed. These parts wait for the owner's decision, because each changes what a compatibility contract or a frozen file asserts. Until then they stay as 8.x left them, and none changes an archived verdict:
 
-- whether every command refuses a project with copied governance files and no `compass.yml`, and the generated views and the legacy adapter are deleted (ADR-098 open questions 1 to 3);
 - when the `extends:` pin of `compass:default@6` or `@7` stops keeping the acceptance strategy `S17` off for a project that did not run `compass migrate` (open question 6);
 - whether the old words in a stored manifest or generation stop being read.
 

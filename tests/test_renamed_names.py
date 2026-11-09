@@ -190,8 +190,6 @@ def test_trc_045():
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert NEW_SKILL in text and OLD_SKILL not in text, rel
         assert MERGED_SKILL not in text and "bdd-specification" not in text, rel
-    # The view generated from the 7.0.0 preset, frozen since 9.0.0 (ADR-094).
-    assert OLD_SKILL not in (ROOT / "governance/routing-policy.yml").read_text(encoding="utf-8")
     for folder in ("commands", "agents", "approaches"):
         for path in sorted((ROOT / folder).rglob("*")):
             if path.is_file() and path.suffix in (".md", ".yml"):

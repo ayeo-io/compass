@@ -416,7 +416,7 @@ def _stale_shape(shape, modes, depths):
 
 
 def map_policy(policy, rows=None):
-    """A legacy routing policy (`governance/routing-policy.yml`) read through
+    """A legacy routing policy (an 8.x `routing-policy.yml`) read through
     the tables: a project that copied `governance/` before the rename keeps
     its old words in the stage weights, the artifact depths, the size
     vocabulary and the size tests of its rules, and routes as it did.

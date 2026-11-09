@@ -36,14 +36,12 @@ def _rules() -> list:
 
 @pytest.fixture
 def project(tmp_path):
-    """A Compass project with the repository's governance YAML, so
-    `policy lint` has a policy to read."""
+    """A Compass project with its own `governance/` folder for its review
+    rules."""
     root = tmp_path / "proj"
     (root / ".compass").mkdir(parents=True)
     gov = root / "governance"
     gov.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copy(ROOT / "governance" / name, gov / name)
     return root
 
 

@@ -11,7 +11,7 @@
 #   file_patterns  shell patterns on the repository-relative path; `*`
 #                  crosses `/`, so `hooks/*` covers every file under hooks/.
 #   enforces       the id of the guardrail or strategy the rule serves, as
-#                  guardrails.yml and strategies.md define them.
+#                  check-set.yml and strategies.md define them.
 #   rule           at most 150 words.
 #   allowed        what not to flag, so a reviewer does not reopen it.
 #   incident       the event that justifies the rule: a pull request, issue
@@ -48,8 +48,8 @@ rules:
     enforces: S11
     rule: >
       Before recommending a change to how a stage, gate or approach behaves,
-      check it against governance/routing-policy.yml, governance/guardrails.yml
-      and governance/decisions/. When the recommendation contradicts one of
+      check it against governance/check-set.yml, governance/routing-policy.md,
+      governance/guardrails.md and governance/decisions/. When the recommendation contradicts one of
       them, report the conflict with the file and line it contradicts; do not
       present it as a fix to make.
     allowed:

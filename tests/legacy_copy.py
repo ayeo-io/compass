@@ -1,32 +1,47 @@
-# compass_pkg.legacy_adapter - today's policy files as one catalogue-form layer
-"""Convert a routing policy and a guardrails file into catalogue form.
+# tests/legacy_copy.py - the 8.x reader of a copied governance folder, for the contracts
+"""Read a copy of `routing-policy.yml` and `guardrails.yml`
+as 8.x read it.
 
-A project that keeps its own copies of `governance/routing-policy.yml` and
-`governance/guardrails.yml`, and has no `compass.yml`, runs on them until
-#359: `effective` reads the copies through `adapt` in place of the check set
-(ADR-094). The compatibility contracts read the 5.6.0 and 8.0.4 copies the
-same way.
+Compass 9.0.0 does not read copied governance: a project that holds a copy and
+no `compass.yml` is refused with `governance-copy-removed` (ADR-098). This
+module is the reader 8.x ran, kept for the tests that compare 9.0.0 with what
+8.x routed: contracts 1 and 2 (the 8.0.4 copy, and configuration C, the 5.6.0
+copy), `test_evidence_required.py` and the route tests that compare with
+8.0.4 (VD-043 decision 1). No CLI module imports it.
 
-It reads data and returns data. It changes no behavior and no argument:
-every value is copied before it is renamed. Old key names are read through
-the migration map the loaders use, so a policy copied before the renames
-converts to the same document as today's. Three things change shape in the
-catalogue:
+`adapt` converts the two files into one catalogue-form document. It reads data
+and returns data, and copies every value before it renames it. Old key names
+are read through the migration map the loaders use, so a policy copied before
+the renames converts to the same document as a newer one. Three things change
+shape in the catalogue:
 
 - the fallback approach (`default_route`) becomes the last rule of the
   `default_shapes` set, matching every assessment;
 - the free-text `biases` become a rule set with no effect;
 - a guardrail's `checked_at` keeps its first stage as the gate's `stage`,
   which the design records and does not enforce.
+
+`resolved_from_copy` then reads the adapted document as the whole
+configuration, as `effective.resolve_live` read a copy before 9.0.0.
 """
-# DEPENDENCY: standard library (copy); compass_pkg.core, compass_pkg.routing,
-# compass_pkg.stable_ids, compass_pkg.artifact_kinds, compass_pkg.outside_gate,
-# compass_pkg.path_stages and compass_pkg.word_map.
+# DEPENDENCY: standard library (copy, os, re, sys); compass_pkg.core, compass_pkg.routing,
+# compass_pkg.stable_ids, compass_pkg.artifact_kinds,
+# compass_pkg.path_stages, compass_pkg.word_map, compass_pkg.catalogue_spec,
+# compass_pkg.check_set, compass_pkg.effective and compass_pkg.removed_parts.
 from __future__ import annotations
 
 import copy
+import os
+import re
+import sys
+from pathlib import Path
 
-from compass_pkg import artifact_kinds, core, outside_gate, stable_ids, word_map
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "cli"))
+
+from compass_pkg import artifact_kinds, check_set, core, removed_parts
+from compass_pkg import stable_ids, word_map
+from compass_pkg import catalogue_spec as spec
+from compass_pkg.effective import _non_text_keys
 from compass_pkg.routing import canonical_routes
 from compass_pkg.path_stages import rename_v1_stage_keys
 from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE,
@@ -94,10 +109,9 @@ DECLINING_CHECKS = (
     "isolation-proven", "layering-test-passed",
 )
 PASSING_CHECKS = ("declared-tests-resolve",)
-# The checks the preset declares `severity: advisory`. The legacy guardrails file
-# has no severity field, so `outside_gate` holds the list, which `compass check`
-# also reads when it judges an issue by that file.
-ADVISORY_CHECKS = outside_gate.ADVISORY_CHECKS
+# The checks the check set declares `severity: advisory`. The legacy guardrails
+# file has no severity field, so the adapter gives them this severity.
+ADVISORY_CHECKS = ("acceptance-applicability-agrees", "acceptance-support-present")
 
 # The parameters of each shipped check that takes some (ADR-064). The legacy
 # guardrails file has no field for them, so the adapter holds the table the
@@ -605,3 +619,265 @@ def adapt_evidence_types(guardrails):
     return {"schema": 1,
             "evidence_types": {name: {"description": body["description"]}
                                for name, body in types.items()}}
+
+
+# --- the copy as the whole configuration ---------------------------------------
+# What `effective.resolve_live` did for a project with a copy and no `compass.yml`
+# before 9.0.0. The value and entry checks are those the 8.x layer check ran on a
+# copy before anything merged, so a planted fault is refused as 8.x refused it.
+
+COPIED_FILES = ("routing-policy.yml", "guardrails.yml")
+
+
+def _legacy_parent(root):
+    """`(doc, meta)` for a project that keeps its own copies of the two
+    governance files, or None. `doc` is the copy in catalogue form (`adapt`),
+    with the check set's capabilities."""
+    folder = os.path.join(root, "governance")
+    if not all(os.path.isfile(os.path.join(folder, name)) for name in COPIED_FILES):
+        return None
+    policy = core.load_yaml(os.path.join(folder, "routing-policy.yml"))
+    guardrails = core.load_yaml(os.path.join(folder, "guardrails.yml"))
+    doc = adapt(policy, guardrails)
+    doc["capabilities"] = dict(check_set.load()["capabilities"])
+    return doc, {"id": "legacy", "version": str(policy.get("version", "")),
+                 "source": "legacy", "guardrails": guardrails}
+
+
+_ID = re.compile(spec.ID_PATTERN)
+#: The entry operations of the 8.x merge that change an entry below the layer. A
+#: copy is the whole configuration, so there is none for them to change.
+_CHANGES = ("set", "replace", "remove", "unlock")
+#: The operations that ride on an entry and are not read here: no lock or waiver
+#: exists in 9.0.0 (ADR-094). `locked` is kept where it is a field, as 8.x kept it.
+_IGNORED = ("locked", "waiver")
+
+
+def _legacy_enums():
+    """The closed set of each enumerated field, by catalogue and field."""
+    from compass_pkg import acceptance_strategy
+    return {
+        ("checks", "kind"): spec.CHECK_KINDS, ("checks", "severity"): spec.SEVERITIES,
+        ("checks", "on_skipped"): spec.ON_SKIPPED, ("checks", "locked"): spec.LOCKS,
+        ("gates", "kind"): spec.GATE_KINDS, ("gates", "locked"): spec.LOCKS,
+        ("dimensions", "type"): spec.DIMENSION_TYPES, ("dimensions", "tighter"): spec.TIGHTER,
+        ("approaches", "acceptance_strategy"): tuple(acceptance_strategy.ROUTINGS),
+    }
+
+
+def _is_type(value, expected):
+    if expected == "string":
+        return isinstance(value, str)
+    if expected == "list":
+        return isinstance(value, list)
+    if expected == "map":
+        return isinstance(value, dict)
+    if expected == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected == "boolean":
+        return isinstance(value, bool)
+    if expected == "integer-or-null":
+        return value is None or (isinstance(value, int) and not isinstance(value, bool))
+    if expected == "boolean-or-hard":
+        return value is True or value == "hard"
+    return True
+
+
+def _when_problems(path, when, ordered):
+    """`at_least:` compares by order, so it needs an ordered dimension and a
+    threshold among its values; a misspelt threshold would match nothing."""
+    out = []
+    for key, value in when.items():
+        if key == "any_of" and isinstance(value, list):
+            for i, clause in enumerate(value):
+                if isinstance(clause, dict):
+                    out += _when_problems(f"{path}.any_of[{i}]", clause, ordered)
+        elif isinstance(value, dict) and "at_least" in value:
+            if key not in ordered:
+                out.append(f"{path}.{key}: at_least needs an ordered dimension, "
+                           f"and {key} is not one")
+            elif value["at_least"] not in ordered[key]:
+                out.append(f"{path}.{key}: at_least '{value['at_least']}' is not a "
+                           f"value of {key} ({', '.join(ordered[key])})")
+    return out
+
+
+def _legacy_value_problems(doc):
+    """Every malformed field value in an adapted copy, as text naming its key
+    path: a value of the wrong type, a value outside the closed set of its field,
+    an incomplete dimension, and an `at_least:` that cannot match. These are the
+    value checks the 8.x layer check ran on a copy before anything merged; the
+    entry checks are `_legacy_entry_problems`."""
+    enums = _legacy_enums()
+    ordered = {name: list(values) for name, values in spec.SHIPPED_ORDERS.items()}
+    for name, entry in ((doc.get("dimensions") or {}).items()
+                        if isinstance(doc.get("dimensions"), dict) else ()):
+        if isinstance(entry, dict) and entry.get("type") == "ordered-enum" \
+                and isinstance(entry.get("values"), list):
+            ordered[name] = list(entry["values"])
+    out = []
+    for catalogue in spec.CATALOGUES:
+        entries = doc.get(catalogue)
+        if not isinstance(entries, dict):
+            continue
+        fields = spec.FIELDS[catalogue]
+        for entry_id, entry in entries.items():
+            if not isinstance(entry, dict):
+                continue
+            path = f"{catalogue}.{entry_id}"
+            values = {k: v for k, v in entry.items() if k in fields}
+            for key, value in values.items():
+                expected = fields[key]["type"]
+                list_op = expected == "list" and isinstance(value, dict) \
+                    and set(value) <= {"add", "remove"}
+                map_op = expected == "map" and isinstance(value, dict)
+                if not (list_op or map_op or _is_type(value, expected)):
+                    out.append(f"{path}.{key}: expected {expected.replace('-', ' ')}, "
+                               f"found {value!r}")
+                    continue
+                allowed = enums.get((catalogue, key))
+                if allowed is not None and value not in allowed:
+                    out.append(f"{path}.{key}: '{value}' is not one of "
+                               f"{', '.join(str(a) for a in allowed)}")
+            if catalogue == "dimensions" and values.get("type") in spec.DIMENSION_TYPES:
+                kind = values["type"]
+                if kind in ("ordered-enum", "enum") and not isinstance(values.get("values"), list):
+                    out.append(f"{path}.values: an {kind} lists its values")
+                if kind == "ordered-enum" and values.get("tighter") not in spec.TIGHTER:
+                    out.append(f"{path}.tighter: an ordered-enum says which way is "
+                               f"stricter: {', '.join(spec.TIGHTER)}")
+                if kind == "set" and not isinstance(values.get("open"), bool):
+                    out.append(f"{path}.open: a set says whether it is open (true or false)")
+            elif catalogue == "dimensions" and any(k in values
+                                                   for k in ("values", "tighter", "open")):
+                out.append(f"{path}.type: a dimension names its type: "
+                           f"{', '.join(spec.DIMENSION_TYPES)}")
+            for key in ("when", "blocking_when"):
+                if isinstance(values.get(key), dict):
+                    out += _when_problems(f"{path}.{key}", values[key], ordered)
+            if catalogue == "rules" and isinstance(values.get("rules"), dict):
+                for rule_id, rule in values["rules"].items():
+                    if isinstance(rule, dict) and isinstance(rule.get("when"), dict):
+                        out += _when_problems(f"{path}.rules.{rule_id}.when",
+                                              rule["when"], ordered)
+    return out
+
+
+def _legacy_entry_problems(catalogue, entry_id, entry):
+    """What stops one adapted entry being added as it stands, as text that
+    names its key path. These are the faults the 8.x merge refused in a full
+    entry added to an empty configuration."""
+    path = f"{catalogue}.{entry_id}"
+    if not isinstance(entry_id, str) or not _ID.match(entry_id):
+        return [f"{path}: '{entry_id}' is not a valid id "
+                f"(a letter, then letters, digits, '.', '_' or '-')"]
+    if not isinstance(entry, dict):
+        return [f"{path}: expected a mapping"]
+    fields = spec.FIELDS[catalogue]
+    out = [f"{path}.{key}: a copy cannot use {key}" for key in entry if key in _CHANGES]
+    out += [f"{path}.{key}: not a field of {catalogue}" for key in entry
+            if key not in _CHANGES and key not in _IGNORED and key not in fields]
+    out += [f"{path}: a full entry is needed; missing {name}"
+            for name, field_spec in fields.items()
+            if field_spec["required"] and name not in entry]
+    for key, value in entry.items():
+        kind = fields.get(key, {}).get("merge")
+        if (catalogue, key) == ("stages", "mode"):
+            out.append(f"{path}.mode: mode is the issue layer's choice; a copy cannot set it")
+        elif isinstance(value, dict) and (
+                kind == "list" or (kind == "map" and value and set(value) <= {"set", "remove"})):
+            out.append(f"{path}.{key}: a copy writes the value itself, not an operation on it")
+    return out
+
+
+def _legacy_config(doc):
+    """`(config, provenance)` of an adapted copy. The copy is the whole
+    configuration, so each entry is added as it stands and nothing merges
+    (ADR-094). A gate placed at a legacy stage the copy does not declare is read
+    at the path stage that shows it (`removed_parts.with_mapped_stages`).
+    The provenance names the layer `legacy` and the operation
+    `add` for each entry and field, as the 8.x merge stored them, so a
+    generation committed from a copy keeps its stored shape. It moved here from
+    `effective` when 9.0.0 stopped reading a copy."""
+    mapped, _ = word_map.map_layer(doc)
+    for key in mapped:
+        if key in spec.SETTINGS_KEYS:
+            raise core.CompassError(f"legacy: {key} is a settings key and belongs in the "
+                               f"project's own compass.yml, never in a parent (ADR-043)")
+    for where, key in _non_text_keys(mapped):
+        raise core.CompassError(f"legacy: {where}: {_non_text_key_message(key)} (L-KEY-NOT-TEXT)")
+    # A malformed value is refused before anything is added, as 8.x refused it.
+    problems = _legacy_value_problems(mapped)
+    if problems:
+        raise core.CompassError("legacy: " + "; ".join(problems))
+    # Two spellings of one check that disagree are refused, as the merge refused them.
+    errors = [f"{code} {path}: {message}"
+              for code, path, message in word_map.one_check_conflicts(mapped)]
+    mapped = removed_parts.with_mapped_stages(mapped, {})
+    config, prov = {}, {}
+    for catalogue in spec.CATALOGUES:
+        if catalogue not in mapped:
+            continue
+        entries = mapped[catalogue]
+        if not isinstance(entries, dict):
+            errors.append(f"{catalogue}: expected a mapping keyed by id")
+            continue
+        table = {}
+        for entry_id, entry in entries.items():
+            problems = _legacy_entry_problems(catalogue, entry_id, entry)
+            if problems:
+                errors += problems
+                continue
+            path = f"{catalogue}.{entry_id}"
+            fields = spec.FIELDS[catalogue]
+            table[entry_id] = {key: copy.deepcopy(value) for key, value in entry.items()
+                               if key in fields}
+            prov[path] = {"layer": "legacy", "operation": "add"}
+            for key in table[entry_id]:
+                prov[f"{path}.{key}"] = {"layer": "legacy", "operation": "add"}
+        if table:
+            config[catalogue] = table
+    if errors:
+        raise core.CompassError("legacy: " + "; ".join(errors))
+    return config, prov
+
+
+def _non_text_key_message(key):
+    """What YAML read a non-text key as, and how to write it as text."""
+    if key is None or isinstance(key, bool):
+        kind = "nothing (null)" if key is None else "a boolean"
+        example = {True: "on", False: "off", None: "null"}[key]
+    else:
+        kind = "a number" if isinstance(key, (int, float)) else f"a {type(key).__name__}"
+        example = str(key)
+    return (f"the key {key!r} is not text: YAML read it as {kind}. "
+            f"Quote it, for example \"{example}\":")
+
+
+def resolved_from_copy(root):
+    """The resolved mapping of the project's own copy of the governance files
+    at `root`, whatever its `compass.yml` says, with the autonomy `balanced`."""
+    legacy = _legacy_parent(os.path.abspath(root))
+    if legacy is None:
+        raise core.CompassError(f"{root} holds no copy of the governance files")
+    doc, meta = legacy
+    config, _ = _legacy_config(doc)
+    return _resolved(config, dict(doc.get("capabilities") or {}), "balanced",
+                     adapt_evidence_types(meta["guardrails"])["evidence_types"])
+
+
+def _resolved(config, capabilities, autonomy, evidence_types):
+    """The mapping a generation's `resolved.yml` holds, from resolved catalogues."""
+    return {
+        "capabilities": capabilities,
+        # An 8.x issue layer could pick an approach and set ceilings, and its
+        # stored generation keeps them. With no issue layer the key is always
+        # empty; it stays so that a generation committed without a layer keeps
+        # the same resolved document, and a reassess commits no new one for it.
+        "approach": None,
+        "autonomy": autonomy,
+        # No lock exists to unlock (ADR-094); the key keeps the stored shape.
+        "conformance": {"status": "conformant", "unlocked": []},
+        **{name: config[name] for name in spec.CATALOGUES if name in config},
+        "evidence_types": evidence_types,
+    }

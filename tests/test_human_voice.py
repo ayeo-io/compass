@@ -683,9 +683,8 @@ def test_trc_f3_no_new_guardrail_gate_check_or_cli_verb():
     # not touch the file" (defence in depth against a future edit to this
     # test that loosens the diff check above).
     import yaml
-    guardrails = yaml.safe_load(
-        (REPO_ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8")
-    )
+    from check_set_files import view as shipped_view
+    guardrails = shipped_view("guardrails.yml")
     assert len(guardrails["defaults"]) == 5
 
     terminology = yaml.safe_load(

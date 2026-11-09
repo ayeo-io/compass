@@ -38,7 +38,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [upgrade-9-0-0.md](upgrade-9-0-0.md) - how to move an 8.x project to 9.0.0 and keep its evidence: `compass migrate`, the removed settings, slash commands, verbs and checks, the readers that stay, and the 8.x support period.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it, and the five tighten-only settings that add to the check set.
 - [waivers.md](waivers.md) - a waiver of one check on one issue: how to ask for one, how a person approves it and what `compass check` then shows.
-- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show`: the settings lint of `compass.yml`, the legacy lint of a governance copy, the finding codes and both JSON shapes.
+- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show`: the settings lint of `compass.yml`, the refusal of a governance copy, the finding codes and both JSON shapes.
 - [check-implementations.md](check-implementations.md) - the version and fixture corpus of each check implementation, the build rule and what a major difference does.
 - [generation-store.md](generation-store.md) - the stored generation of an issue's policy: its files, the manifest's `policy:` block, the commit order, the states and what reads it.
 - [entry-exit-evaluation.md](entry-exit-evaluation.md) - the capability that evaluates each stage's entry and exit lists: when a list is due, how each kind of check is judged, what `on_skipped` does and where results show.
@@ -70,12 +70,12 @@ same commit.
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
 | `cli/compass_pkg/release_notes.py`, `cli/compass_pkg/shipped_issues.py` | `docs/release-notes.md` |
 | `cli/compass_pkg/project_settings.py`, `cli/compass_pkg/tighten.py`, `cli/compass_pkg/settings_lint.py`, `cli/compass_pkg/catalogue_spec.py`, `schemas/compass.schema.json`, `tests/test_tighten.py`, `tests/test_settings_lint.py`, `cli/compass_pkg/init_cmd.py` | `docs/configuration.md` |
-| `cli/compass_pkg/legacy_adapter.py`, `tests/fixtures/presets/default@6/`, `tests/fixtures/presets/default@7/` | `governance/routing-policy.md` |
+| `tests/legacy_copy.py`, `tests/fixtures/presets/default@6/`, `tests/fixtures/presets/default@7/` | `governance/routing-policy.md` |
 | `cli/compass_pkg/stable_ids.py`, `cli/compass_pkg/gate_status.py`, `tests/test_stable_ids.py` | `architecture/decisions/ADR-040-stable-ids-live-in-one-module.md` |
 | `cli/compass_pkg/path_stages.py`, `cli/compass_pkg/path_readers.py`, `tests/test_path_stages.py`, `tests/test_path_checks.py` | `architecture/decisions/ADR-092-compass-runs-one-path-of-four-stages.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
 | `cli/compass_pkg/obligations.py` | `governance/routing-policy.md` |
-| `cli/compass_pkg/policy_cmd.py`, `cli/compass_pkg/readiness_registry.py` | `docs/policy-lint.md` |
+| `cli/compass_pkg/policy_cmd.py`, `cli/compass_pkg/governance.py`, `cli/compass_pkg/readiness_registry.py` | `docs/policy-lint.md` |
 | `cli/compass_pkg/generation.py`, `cli/compass_pkg/effective.py`, `cli/compass_pkg/impl_versions.py`, `scripts/bench-evaluate.py` | `docs/generation-store.md` |
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
 | `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |
@@ -84,8 +84,8 @@ same commit.
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
 | `cli/compass_pkg/waiver_records.py`, `cli/compass_pkg/waiver_cmd.py`, `tests/test_waiver_records.py` | `docs/waivers.md` |
 | `cli/compass_pkg/check_set.py`, `governance/check-set.yml`, `tests/fixtures/check-set-digests.yml`, `tests/test_check_set_content.py` | `governance/guardrails.md` |
-| `cli/compass_pkg/routing.py`, `cli/compass_pkg/g5_label_prompt.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
-| `cli/compass_pkg/checks.py`, `cli/compass_pkg/dod_due.py`, `cli/compass_pkg/check_cmd.py`, `cli/compass_pkg/check_registry.py`, `cli/compass_pkg/red_first.py`, `governance/guardrails.yml` | `governance/guardrails.md` |
+| `cli/compass_pkg/routing.py`, `cli/compass_pkg/g5_label_prompt.py`, `cli/compass_pkg/approach_diagram.py`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
+| `cli/compass_pkg/checks.py`, `cli/compass_pkg/dod_due.py`, `cli/compass_pkg/check_cmd.py`, `cli/compass_pkg/check_registry.py`, `cli/compass_pkg/red_first.py` | `governance/guardrails.md` |
 | `governance/strategies.md` | `governance/strategies-rationale.md` |
 | `governance/terminology.yml` | `docs/glossary.md` |
 | `commands/`, `schemas/` | `skills/compass-runtime/SKILL.md` |

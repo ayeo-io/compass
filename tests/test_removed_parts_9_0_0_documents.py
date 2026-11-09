@@ -25,6 +25,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 from check_set_files import shipped  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 # The 8.x presets, kept as test data (VD-055).
 PRESETS = ROOT / "tests" / "fixtures" / "presets"
@@ -199,21 +200,17 @@ def _issue_with_the_5_6_0_governance(tmp_path, labels=("auth",)):
     return root, task_dir
 
 
-def test_approach_evaluate_writes_no_verify_analyze_from_copied_governance(tmp_path):
+def test_approach_evaluate_refuses_copied_governance_and_writes_nothing(tmp_path):
+    """9.0.0 reads no copy of the governance files (ADR-098), so the copied 5.6.0
+    rules that added `verify.analyze` are never read; the write is refused."""
     root, task_dir = _issue_with_the_5_6_0_governance(tmp_path)
+    before = (task_dir / "manifest.yml").read_bytes()
     proc = _run(["approach", "evaluate", "--issue", "demo", "--write", "--verbose",
                  *[f"--justify={d}=test" for d in ("risk", "familiarity", "size", "goal")]],
                 root)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert "verify.analyze" not in proc.stdout, proc.stdout
-    assert "RP-REQUIRE-002" not in proc.stdout, proc.stdout
-    body = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
-    gates = [g["id"] for g in body["gates"]]
-    fired = [f["id"] for f in body["policy_rules_fired"]]
-    assert "verify.analyze" not in gates and "verify.architecture" in gates, gates
-    assert "RP-REQUIRE-002" not in fired and "RP-REQUIRE-004" in fired, fired
-    # On the four-stage path (ADR-092) the architecture review is owed evidence.
-    assert "architecture" in body["evidence_required"], body["evidence_required"]
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert "[governance-copy-removed]" in proc.stderr, proc.stderr
+    assert (task_dir / "manifest.yml").read_bytes() == before
 
 
 # A manifest written before 9.0.0 can still list `verify.analyze` as pending. It is not
@@ -782,11 +779,10 @@ def test_the_live_default_declares_no_artifact_catalogue():
 
 
 def test_the_generated_views_hold_no_artifact_rule_or_map():
-    policy = yaml.safe_load((ROOT / "governance" / "routing-policy.yml").read_text(
-        encoding="utf-8"))
-    assert "artifact_rules" not in policy["routing_guardrails"]
+    policy = shipped_view("routing-policy.yml")
+    assert not policy["routing_guardrails"].get("artifact_rules")
     for name, shape in policy["route_shapes"].items():
-        assert "artifacts" not in shape, name
+        assert not shape.get("artifacts"), name
 
 
 def test_a_project_artifacts_key_is_named_by_lint():
@@ -814,7 +810,7 @@ def test_the_spec_section_is_listed_by_the_last_shipped_catalogue(monkeypatch, c
     nfr-rows-resolved still judges the spec."""
     from compass_pkg import effective, section_checks
     config = {} if catalogue is None else {"artifacts": catalogue}
-    monkeypatch.setattr(effective, "view_or_legacy", lambda task_dir: _View(config))
+    monkeypatch.setattr(effective, "effective_for", lambda task_dir: _View(config))
     for depth in ("thorough", "lightweight"):
         assert section_checks._listed("t", "acceptance-criteria", depth,
                                       section_checks.NFR_HEADING), depth
@@ -824,7 +820,7 @@ def test_a_catalogue_that_declares_the_spec_is_still_read_by_its_own_entry(monke
     from compass_pkg import effective, section_checks
     own = {"artifacts": {"acceptance-criteria": {"file": "acceptance-criteria.md",
                                                  "sections": {"thorough": ["Summary"]}}}}
-    monkeypatch.setattr(effective, "view_or_legacy", lambda task_dir: _View(own))
+    monkeypatch.setattr(effective, "effective_for", lambda task_dir: _View(own))
     assert not section_checks._listed("t", "acceptance-criteria", "thorough",
                                       section_checks.NFR_HEADING)
 

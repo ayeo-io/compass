@@ -33,7 +33,6 @@ from archive import archive_root  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 TERMINOLOGY = ROOT / "governance" / "terminology.yml"
 GLOSSARY = ROOT / "docs" / "glossary.md"
-ROUTING = ROOT / "governance" / "routing-policy.yml"
 
 # Surfaces a reader actually meets a code on. The archive is excluded: it is
 # historical record, and it keeps the ids that really fired.
@@ -216,7 +215,8 @@ def test_the_cli_renders_a_code():
 # --------------------------------------------------------------------------
 
 def _routing_rules() -> list[dict]:
-    doc = yaml.safe_load(ROUTING.read_text(encoding="utf-8"))
+    from check_set_files import view as shipped_view
+    doc = shipped_view("routing-policy.yml")
     rules = []
     for block in ("routing_strategies", "routing_guardrails"):
         section = doc.get(block) or {}

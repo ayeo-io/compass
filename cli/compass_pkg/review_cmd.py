@@ -87,7 +87,7 @@ def cmd_evidence_review(args):
     reviewer = parse_reviewer(args.reviewer)
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
-    check = _check_of(effective.view_or_legacy(task_dir), check_id)
+    check = _check_of(effective.effective_for(task_dir), check_id)
     if not review_records.declared_inputs(check):
         raise CompassError(f"compass evidence review: '{check_id}' declares no inputs, so "
                            f"a review of it has nothing to stay current with. Add `inputs:` "

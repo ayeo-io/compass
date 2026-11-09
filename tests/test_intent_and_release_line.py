@@ -183,7 +183,7 @@ def generation_config(root, slug=SLUG):
     """The configuration the issue's stored generation resolves to."""
     from compass_pkg import effective
     task_dir = str(root / ".compass" / "work" / slug)
-    return effective.view_or_legacy(task_dir).config
+    return effective.effective_for(task_dir).config
 
 
 # --- IRL-8 ----------------------------------------------------------------------------
@@ -298,12 +298,6 @@ def test_irl_23_default_declares_release_line(tmp_path):
         assert [c for c in codes if c[0] and c[0][0] in "LMCK"] == [
             ("L-SETTING-REMOVED", "approaches")], (value, codes, done.stdout)
 
-    # The views, frozen since 9.0.0 (ADR-094), carry a raised version.
-    for name, before in (("routing-policy.yml", "2.22.0"), ("guardrails.yml", "1.29.0")):
-        version = yaml.safe_load((ROOT / "governance" / name).read_text())["version"]
-        assert tuple(int(p) for p in version.split(".")) > tuple(
-            int(p) for p in before.split(".")), (name, version)
-
 
 # --- IRL-1 ----------------------------------------------------------------------------
 
@@ -395,7 +389,7 @@ def _meet_path_records(root, slug):
     task_dir = root / ".compass" / "work" / slug
     body = manifest(root, slug)
     if "definition-of-done" in (body.get("evidence_required") or []):
-        view = effective.view_or_legacy(str(task_dir), manifest=body)
+        view = effective.effective_for(str(task_dir), manifest=body)
         (task_dir / "evidence").mkdir(exist_ok=True)
         (task_dir / "evidence" / "dod.txt").write_text("1 passed\n")
         for n, item in enumerate(item_records.items(body, str(task_dir), view, "dod")):

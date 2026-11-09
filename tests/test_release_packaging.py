@@ -151,8 +151,6 @@ def test_the_packaged_plugin_contains_the_bundled_copy(source_clone, bare_interp
     project = tmp_path / "project"
     gov_dst = project / "governance"
     gov_dst.mkdir(parents=True)
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        (gov_dst / name).write_bytes((unpack_dir / "governance" / name).read_bytes())
     (project / ".compass" / "work").mkdir(parents=True)
     (project / ".compass" / "config.yml").write_text(
         "version: 1.0.0\nmode: enforced\n", encoding="utf-8")

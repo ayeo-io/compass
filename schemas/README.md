@@ -1,7 +1,10 @@
 # Schemas
 
-Schemas for the four machine-readable Compass files. Each of the first three
-comes in two forms; `compass.yml` has no readable companion. 9.0.0 removed
+Schemas for the two machine-readable Compass files. The manifest comes in two
+forms; `compass.yml` has no readable companion. 9.0.0 deleted the
+generated views `routing-policy.yml` and `guardrails.yml`
+and their schemas (ADR-098): the check set, `governance/check-set.yml`, is the
+only machine-readable policy. 9.0.0 removed
 the readiness record and its schema (ADR-093); a `.compass/readiness.yml`
 left in a checkout is not read. 9.0.0 also removed `signals.yml` and its
 schema (ADR-094): the stop hook's scope-bloat phrases are fixed in
@@ -9,8 +12,6 @@ schema (ADR-094): the stop hook's scope-bloat phrases are fixed in
 
 | File | Executable schema | Readable companion |
 |---|---|---|
-| `governance/routing-policy.yml` | `routing-policy.schema.json` | `routing-policy.reference.yml` |
-| `governance/guardrails.yml` | `guardrails.schema.json` | `guardrails.reference.yml` |
 <!-- vocabulary-scan: allow - the row names files on disk by their real names -->
 | `.compass/work/<issue>/manifest.yml` | `manifest.schema.json` | `manifest.reference.yml` |
 | `compass.yml` (a project's configuration file, ADR-043) | `compass.schema.json` | none |
@@ -26,13 +27,10 @@ the two could be read to differ, the `.schema.json` wins.
 
 ## How validation works
 
-`compass policy lint` and `compass issue lint` check in two layers:
+`compass issue lint` checks a manifest in two layers, and `compass policy lint`
+checks `compass.yml` with the settings lint (`docs/policy-lint.md`):
 
-1. **The built-in structural linter - always runs.** No dependencies. It
-   does the one thing JSON Schema *cannot*: cross-check that every
-   guardrail's declared `checks` is actually implemented in the CLI's
-   `CHECK_FNS`. A declared check with no implementation is the gap the
-   linter exists to catch - see `governance/guardrails.md`.
+1. **The built-in structural linter - always runs.** No dependencies.
 2. **JSON Schema validation - runs when `jsonschema` is installed.** Fuller
    structural coverage (required keys, enums, nested shapes) against the
    `.schema.json` files. `jsonschema` is an *optional* dependency Compass does

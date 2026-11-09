@@ -100,7 +100,7 @@ def test_trc_f1_a_found_tell_never_blocks_or_moves_a_gate(tmp_path):
     assert result.returncode == 0
     assert "advisory" in result.stdout.lower()
 
-    guardrails_text = (REPO_ROOT / "governance" / "guardrails.yml").read_text(
+    guardrails_text = (REPO_ROOT / "governance" / "check-set.yml").read_text(
         encoding="utf-8"
     )
     assert "voice-tells" not in guardrails_text

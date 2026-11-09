@@ -2,7 +2,8 @@
 """The delivery approaches as one HTML table, generated from the policy.
 
 What each approach does lives in `route_shapes` and `autonomy_checkpoints`
-in `governance/routing-policy.yml`, which nobody reads for an overview. This
+of the resolved policy (the check set, `governance/check-set.yml`), which
+nobody reads for an overview. This
 renders them: one row per approach, one column per stage, the weight in each
 cell as a word, and "stops for you" where the chosen autonomy setting makes
 the stage wait for a person. The shipped policy's render is committed as
@@ -11,16 +12,14 @@ the stage wait for a person. The shipped policy's render is committed as
 The output carries no date and no colour that matters: two renders of one
 policy are byte-identical, and every cell reads in plain text.
 """
-# DEPENDENCY: standard library (html, os, sys); compass_pkg.core, effective, routing, stable_ids.
+# DEPENDENCY: standard library (html, sys); compass_pkg.core, effective, routing, stable_ids.
 from __future__ import annotations
 
 import html
-import os
 import sys
 
 from compass_pkg.stable_ids import PATH_STAGE_IDS, STAGE_IDS
-from compass_pkg.core import (AUTONOMY_VALUES, CompassError, find_governance,
-                              load_autonomy, load_yaml)
+from compass_pkg.core import AUTONOMY_VALUES, CompassError
 from compass_pkg.routing import canonical_routes
 
 STAGES = STAGE_IDS
@@ -62,7 +61,6 @@ td.skipped, td.collapsed { color: #555; }
 """
 
 
-LEGACY_SOURCE = "governance/routing-policy.yml"
 LAYERED_SOURCE = ("the effective configuration: the check set "
                   "<code>governance/check-set.yml</code> with the settings of "
                   "<code>compass.yml</code>")
@@ -71,9 +69,9 @@ LAYERED_SOURCE = ("the effective configuration: the check set "
 def render(policy, autonomy, stages=None, source=None):
     """The HTML page for `policy` under `autonomy`. `stages` are the columns,
     in order (the stages the policy's approaches name when left out). `source`
-    is the markup that names where `policy` came from (the legacy file when
+    is the markup that names where `policy` came from (the check set when
     left out)."""
-    source = source or f"<code>{LEGACY_SOURCE}</code>"
+    source = source or LAYERED_SOURCE
     policy, _ = canonical_routes(policy)
     shapes = policy.get("route_shapes") or {}
     columns = stages or _columns(shapes)
@@ -143,21 +141,16 @@ def render(policy, autonomy, stages=None, source=None):
 
 def cmd_approach_diagram(args):
     # A project is drawn from its effective configuration, the check set with
-    # its settings (ADR-094); a project with its own copy of the governance
-    # files and no `compass.yml` from that copy, as before.
+    # its settings (ADR-094).
     from compass_pkg import effective
-    view = effective.view_or_legacy()
-    autonomy = args.autonomy or (view.autonomy if view is not None else load_autonomy())
+    view = effective.effective_for()
+    autonomy = args.autonomy or view.autonomy
     if autonomy not in AUTONOMY_VALUES:
         raise CompassError(
             f"compass approach render: '{autonomy}' is not an autonomy "
             f"setting; use {', '.join(AUTONOMY_VALUES)}.")
-    if view is not None:
-        page = render(view.evaluator_policy(), autonomy, view.stage_order() or None,
-                      LAYERED_SOURCE)
-    else:
-        policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml")) or {}
-        page = render(policy, autonomy)
+    page = render(view.evaluator_policy(), autonomy, view.stage_order() or None,
+                  LAYERED_SOURCE)
     if args.out:
         with open(args.out, "w", encoding="utf-8") as fh:
             fh.write(page)

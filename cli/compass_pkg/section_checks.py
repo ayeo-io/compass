@@ -89,7 +89,7 @@ def _listed(task_dir, kind, depth, heading):
 
     if not depth:
         return False
-    entry = (artifact_kinds.entry(effective.view_or_legacy(task_dir), kind)
+    entry = (artifact_kinds.entry(effective.effective_for(task_dir), kind)
              or artifact_kinds.shipped().get(kind) or {})
     sections = entry.get("sections")
     listed = sections.get(depth) if isinstance(sections, dict) else None

@@ -188,7 +188,7 @@ def test_trc_b3_loading_the_cli_by_file_path_should_still_work():
         importlib.machinery.SourceFileLoader("compass_cli_probe", str(CLI)))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    for name in ("legacy_structure", "reading_matches", "CHECK_FNS"):
+    for name in ("reading_matches", "CHECK_FNS"):
         assert hasattr(mod, name), (
             f"{name} is no longer reachable from a path-loaded cli/compass; "
             f"the entry point must re-export what it moved")
@@ -293,6 +293,10 @@ def test_trc_f2_no_function_should_be_renamed_merged_or_split_by_this_task():
         # copy with the framework's, its printer, its two helpers and the reader
         # of `governance_drift`. The structural lint of a copy stays.
         "governance_drift", "_print_drift", "_drift_is_strict", "_dig", "_rule_ids",
+        # 9.0.0 reads no copy of the governance files (ADR-098): the lookup of a
+        # governance folder and the structural lint of its two policy files went
+        # with the generated views they read.
+        "find_governance", "_lint_errors_guardrails", "_lint_errors_routing_policy",
     }
     before -= DELIBERATELY_REMOVED
 

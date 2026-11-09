@@ -488,15 +488,11 @@ def _(root):
 
 @case("command-passes", "broken")
 def _(root):
-    gov = root / "governance"
-    gov.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copy(ROOT / "governance" / name, gov / name)
-    rules = yaml.safe_load((gov / "guardrails.yml").read_text(encoding="utf-8"))
-    rules["project"] = [{"id": "P-1", "name": "fails", "checks": ["command-passes"],
-                         "params": {"command": "false"}}]
-    _write(gov / "guardrails.yml", yaml.safe_dump(rules, sort_keys=False))
-    _write(root / ".compass" / "config.yml", "allow_project_commands: true\n")
+    # A project check (ADR-094) whose command fails.
+    _write(root / "compass.yml", yaml.safe_dump({
+        "schema": 1, "allow_project_commands": True,
+        "project_checks": [{"id": "P-1", "name": "fails", "command": "false",
+                            "stage": "ship"}]}, sort_keys=False))
     return _issue(root, {})
 
 

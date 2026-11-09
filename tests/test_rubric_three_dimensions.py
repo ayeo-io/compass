@@ -33,8 +33,7 @@ GOAL_AS_SCORED = re.compile(
     r"risk,\s+familiarity,\s+size,?\s+(?:and\s+)?goal", re.I)
 
 # The docs and agents a session or an adopter reads to learn how Compass
-# assesses a change. governance/routing-policy.yml is generated from the
-# default preset, so it is checked here and fixed at its source.
+# assesses a change. The check set is read in its routing-policy shape below.
 DESCRIBING_FILES = (
     "AGENTS.md",
     "README.md",
@@ -54,7 +53,6 @@ DESCRIBING_FILES = (
     "docs/routing-deep-dive.md",
     "docs/safety-contract.md",
     "governance/routing-policy.md",
-    "governance/routing-policy.yml",
     "commands/quick-fix.md",
 )
 
@@ -76,7 +74,8 @@ def test_the_switches_are_goal_and_urgency():
     assert EVALUATOR_REQUIRED == ("risk", "familiarity", "size")
     assert _switches() == ["goal", "urgency"]
     # The spike shape reads `goal`, and the evidence rows read `urgency`.
-    policy = yaml.safe_load(_text("governance/routing-policy.yml"))
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
     read = {key for shape in policy["routing_strategies"]["default_shapes"]
             for key in shape["when"]}
     assert read == {"goal"}, read

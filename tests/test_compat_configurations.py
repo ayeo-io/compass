@@ -12,7 +12,9 @@ configurations, and each must equal the 5.6.0 baseline:
   preset whatever major `extends:` names, so contracts 1 and 2 read B as the
   empty overlay over the 8.0.4 governance copy, as they read A (ADR-092).
 - C. A project that carries a copy of the 5.6.0 governance files, read through
-  the legacy adapter.
+  the 8.x copy reader the tests keep (`tests/legacy_copy.py`). 9.0.0 refuses
+  such a project (`governance-copy-removed`, ADR-098), so C holds for contracts
+  1 and 2 only. Contracts 3 to 6 run under B (VD-043 decision 2).
 
 Configuration D (contracts 4 and 5 only) is the settings moved into
 `compass.yml`; `test_compat_contract_5.py` runs it, and contract 4 runs it in
@@ -42,6 +44,8 @@ from test_compat_contract_5 import _NOT_MOVABLE
 
 BC = ("B", "C")
 ALL = BC  # A has its own files, and contracts 1 and 2 there read the 8.0.4 copy
+#: The configurations a 9.0.0 CLI runs in: C is refused (VD-043 decision 2).
+RUNS = ("B",)
 
 
 # The governance copy each configuration's routing is read over in contracts 1
@@ -184,16 +188,9 @@ def archive_runs():
         runs.remove_projects()
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", RUNS)
 def test_contract_3_gives_the_recorded_verdicts_under(kind, archive_runs):
     recorded = _recorded()["issues"]
-    if kind == "C":
-        # A copied 5.6.0 governance folder cannot declare the 7.0.0 check
-        # `artifacts-approved` (ADR-050), so it records no row for it. Every
-        # other recorded verdict must still match.
-        recorded = {slug: dict(r, verdicts={k: v for k, v in r["verdicts"].items()
-                                            if k != "artifacts-approved"})
-                    for slug, r in recorded.items()}
     # The sample is read after `issue migrate` and `issue render --all`, and exactly the
     # three row moves of 7.0.0 are allowed (ADR-051, `allow_7_0_0_moves`).
     old, new = cb.allow_7_0_0_moves(recorded, archive_runs[kind])
@@ -201,14 +198,14 @@ def test_contract_3_gives_the_recorded_verdicts_under(kind, archive_runs):
     assert differences == [], "\n".join(differences)
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", RUNS)
 def test_contract_6_every_sampled_issue_stays_readable_under(kind, archive_runs):
     unreadable = {slug: r for slug, r in archive_runs[kind].items()
                   if r["lint_exit"] or r["show_exit"]}
     assert unreadable == {}
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", RUNS)
 def test_contract_3_under_the_configuration_can_fail(kind):
     recorded = _recorded()["issues"]
     slug = next(s for s, r in recorded.items()
@@ -225,7 +222,7 @@ def test_contract_3_under_the_configuration_can_fail(kind):
 # --- contract 4: CLI exit codes on the command corpus -------------------------
 
 ENTRIES = cc.load()
-CASES = [(e, k) for e in ENTRIES for k in BC if cc.entry_applies(e, k)]
+CASES = [(e, k) for e in ENTRIES for k in RUNS if cc.entry_applies(e, k)]
 
 
 @pytest.fixture(scope="module")
@@ -236,7 +233,7 @@ def projects(tmp_path_factory):
 def test_contract_4_configurations_cover_most_of_the_corpus():
     """The states that already hold a settings file or governance of their own
     are not given another, so the count of what is skipped is stated."""
-    for kind in BC:
+    for kind in RUNS:
         applied = [e for e in ENTRIES if cc.entry_applies(e, kind)]
         assert len(applied) >= len(ENTRIES) * 0.7, (kind, len(applied), len(ENTRIES))
 
@@ -250,7 +247,7 @@ def test_contract_4_exit_code_matches_the_baseline_under(projects, entry, kind):
         f"stdout:\n{outcome.stdout}\nstderr:\n{outcome.stderr}")
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", RUNS)
 def test_contract_4_under_the_configuration_can_fail(projects, kind):
     """Build the state cleanly, then break the configuration the builder added,
     and run a command that passed at 5.6.0 and reads the configuration."""

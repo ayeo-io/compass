@@ -27,6 +27,7 @@ from tests.acceptance.atdd_strategy.support import ROOT
 sys.path.insert(0, str(ROOT / "cli"))
 from compass_pkg import support_code  # noqa: E402
 from compass_pkg.core import CompassError  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 CHECK = "acceptance-support-present"
 
@@ -119,9 +120,9 @@ def test_trc_i1_a_setting_that_is_not_paths_is_refused(tmp_path, value):
 # --- `TRC-I2` ------------------------------------------------------------------------------
 
 def _claim_limit():
-    """The claim limit as `governance/guardrails.yml` states it, in the description
-    of the check that reports it."""
-    rules = yaml.safe_load((ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8"))
+    """The claim limit as the check set states it, in the statement of the check
+    that reports it."""
+    rules = shipped_view("guardrails.yml")
     description = " ".join(rules["checks"][CHECK]["description"].split())
     found = re.search(r"Claim limit: (.*?\.)", description)
     assert found, description
@@ -226,8 +227,8 @@ def test_trc_i2_the_advice_stays_advice_without_a_generation(tmp_path):
     body = issue.manifest()
     del body["generation"]
     issue.write_manifest(body)
-    # With no compass.yml the issue is judged by governance/guardrails.yml, which
-    # holds no severity; the settings move to the old file.
+    # With no compass.yml the issue is judged by the check set; the settings
+    # move to the old file.
     root = issue.project.root
     settings = yaml.safe_load((root / "compass.yml").read_text(encoding="utf-8"))
     (root / "compass.yml").unlink()

@@ -18,6 +18,7 @@ import yaml
 from tests.acceptance.atdd_strategy import support
 from tests.acceptance.atdd_strategy.support import ROOT
 from tests.check_set_files import shipped
+from check_set_files import view as shipped_view  # noqa: E402
 
 CHECK = "acceptance-applicability-agrees"
 STRATEGY = "four-layer acceptance strategy"
@@ -55,7 +56,7 @@ def test_trc_a1():
     rationale = (ROOT / "governance" / "strategies-rationale.md").read_text(encoding="utf-8")
     assert re.search(r"^## .*\(`S17`\)$", rationale, re.M), "no S17 entry in the rationale"
     before = support.recorded("guardrails")["spike_guardrails"]
-    now = yaml.safe_load((ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8"))
+    now = shipped_view("guardrails.yml")
     assert [g["id"] for g in now["spike_guardrails"]] == before
 
 
@@ -288,7 +289,7 @@ def test_trc_a14(tmp_path):
 def test_trc_a19():
     """The strategy changes no locked guardrail, and the definition of a strategy changed."""
     before = support.recorded("guardrails")["checks"]
-    now = yaml.safe_load((ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8"))
+    now = shipped_view("guardrails.yml")
     lists = {g["id"]: g["checks"] for g in now["defaults"]}
     assert {g: lists[g] for g in ("G1", "G4")} == before
     # No lock exists since 9.0.0 (ADR-094); `never_waived` holds the 8.x hard locks.
@@ -307,8 +308,6 @@ def test_trc_a19():
     introduction = strategies[:strategies.index("\n## ")]
     assert sentence in " ".join(introduction.split())
     assert "No strategy fails `compass check`" not in introduction
-    header = (ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8")
-    assert sentence in " ".join(line.lstrip("# ") for line in header.splitlines()[:30])
 
 
 def _terms(doc):

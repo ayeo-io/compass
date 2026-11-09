@@ -430,9 +430,8 @@ QUICK_FIX_SHAPE = "quick-fix"
 
 
 def _routing_policy():
-    import yaml
-    return yaml.safe_load(
-        (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8"))
+    from check_set_files import view as shipped_view
+    return shipped_view("routing-policy.yml")
 
 
 def test_trc_f2_the_quick_fix_shape_requires_no_document():
@@ -444,7 +443,7 @@ def test_trc_f2_the_quick_fix_shape_requires_no_document():
     shapes = _routing_policy()["route_shapes"]
     assert set(shapes) == {"delivery", "spike"}, sorted(shapes)
     for name, shape in shapes.items():
-        assert "artifacts" not in shape, (name, shape)
+        assert not shape.get("artifacts"), (name, shape)
 
 
 def _quick_fix_issue(project, with_green):

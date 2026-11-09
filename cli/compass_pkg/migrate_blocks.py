@@ -76,7 +76,7 @@ class Outcome:
 def _view(task_dir):
     from compass_pkg import effective
     try:
-        return effective.view_or_legacy(task_dir)
+        return effective.effective_for(task_dir)
     except Exception:                                    # noqa: BLE001
         # A configuration that cannot be read is judged by the shipped lists, as a reader
         # does for an issue with none.

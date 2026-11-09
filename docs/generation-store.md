@@ -18,12 +18,12 @@ differs and the command that changes what it holds, `compass issue migrate
 are removed, and a manifest's `config:` is not read. The modules that read
 configuration (`routing`, `check_cmd`, `checks`, `manifest`,
 `calibration`, `flow`, `quick_fix_cmd`, `loop_ceilings`, `lessons`,
-`review_rules` and `approach_diagram`) ask `effective.view_or_legacy` first.
+`review_rules` and `approach_diagram`) ask `effective.effective_for` first.
 An issue with a generation is judged by that generation, whatever the project's
-`compass.yml` or governance files now say. A new generation is resolved from
-the one fixed check set (`governance/check-set.yml`, ADR-094) with the
-tighten-only settings of `compass.yml` applied. See "Reading" for the one case
-that reads the governance files.
+`compass.yml` now says. A new generation is resolved from the one fixed check
+set (`governance/check-set.yml`, ADR-094) with the tighten-only settings of
+`compass.yml` applied. A project with a copy of the 8.x governance files and no
+`compass.yml` is refused (see "Reading").
 
 ## The manifest keys
 
@@ -32,7 +32,7 @@ that reads the governance files.
 | `generation: n` | The generation the issue runs against. The manifest names it, and it is the authority. |
 | `generation: 0` | The issue was assessed under 6.x and has no generation yet. A command that needs its configuration refuses and names `compass approach evaluate --write`. |
 | no `generation` key | The issue predates 6.0.0. It reads live governance as 5.6.0 did, and `compass approach evaluate --write` gives it generation 1. |
-| `policy:` | The policy the generation in force was committed under (ADR-094): `check_set` (`compass-checks@9.0.0`), `check_set_sha256` and `settings_sha256` (the sha256 of the check set file and of `compass.yml`, lowercase hex as `sha256sum` prints it; `settings_sha256` is null without a `compass.yml`), `tightened` (the tighten-only settings applied, as written), `autonomy` (the autonomy `resolved.yml` holds, from `compass.yml`, else `balanced`) and `resolved` (the digest the generation's `complete` marker holds for `resolved.yml`). Each generation commit writes it, and a reassess that commits nothing writes it for the generation in force. A project that runs its own copy of the governance files names `check_set: legacy` with a null `check_set_sha256`. A manifest written before 9.0.0 has none and stays valid. #356 keeps the generation folders out of the commit, so this block is the copy a reviewer reads, and the source a missing folder is rebuilt from (see "A missing folder"). A block written on v9 before `autonomy` was recorded has none, and stays valid. |
+| `policy:` | The policy the generation in force was committed under (ADR-094): `check_set` (`compass-checks@9.0.0`), `check_set_sha256` and `settings_sha256` (the sha256 of the check set file and of `compass.yml`, lowercase hex as `sha256sum` prints it; `settings_sha256` is null without a `compass.yml`), `tightened` (the tighten-only settings applied, as written), `autonomy` (the autonomy `resolved.yml` holds, from `compass.yml`, else `balanced`) and `resolved` (the digest the generation's `complete` marker holds for `resolved.yml`). Each generation commit writes it, and a reassess that commits nothing writes it for the generation in force. A manifest written before 9.0.0 has none and stays valid. #356 keeps the generation folders out of the commit, so this block is the copy a reviewer reads, and the source a missing folder is rebuilt from (see "A missing folder"). A block written on v9 before `autonomy` was recorded has none, and stays valid. |
 | `config:` | The issue's own configuration layer in 8.x. It stays valid in the schema and is not written or read since 9.0.0 (ADR-094): a generation committed with it keeps its effect, and a new or changed `config:` changes nothing. `compass check` names one the generation in force was not committed with, and `compass issue lint` warns about it. |
 
 `templates/manifest.yml` ships `generation: 0`.
@@ -45,7 +45,7 @@ that reads the governance files.
 |---|---|---|
 | `resolved.yml` | The resolved configuration: since 9.0.0 the check set with the tighten-only settings applied, before it the result of merging every layer. It holds the catalogues, the evidence types, the capability switches, the approach and the ceilings an 8.x issue's overlay named (`approach` is empty since 9.0.0), the autonomy value, and the conformance status. | At commit, then fixed. |
 | `provenance.yml` | `fields`: for each field, the layers that wrote it and the operation of each. Each rule has a path of its own, `rules.<set>.rules.<id>`, with a step for the layer that added, changed or removed it, because the rule set is one field and would not show which layer a rule came from. A generation stored before this has no such paths, and a reader must not guess a rule's layer from the rule set. `waivers`: each waiver with the parent value it saw. `classification`: for the project and issue layers, that the lint raised no error (`result: accepted`) and which waivers the layer holds. It holds no classifier points: a generation stored by this version has no `points` key, and a reader must treat absent points as "not recorded", never as zero. | At commit, then fixed. |
-| `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source; since 9.0.0 the one parent is the check set, `{ref: compass:checks@9, version, digest, sha256, source: shipped}`, or `legacy` for a project's own copy; an 8.x git parent added `sha`, with `source: git`, and the `classification` of the chain through it), `project` (path, digest, git blob), `issue_overlay_digest` (empty since 9.0.0), and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
+| `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source; since 9.0.0 the one parent is the check set, `{ref: compass:checks@9, version, digest, sha256, source: shipped}`; an 8.x git parent added `sha`, with `source: git`, and the `classification` of the chain through it), `project` (path, digest, git blob), `issue_overlay_digest` (empty since 9.0.0), and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
 | `records.yml` | The status of each approval, waiver and check result at commit: `valid`, `superseded` or `invalidated`, with a reason. | At commit, then fixed. |
 | `complete` | A marker holding a digest of each of the four files above. | Last of the four-file commit. |
 | `results.yml` | The latest `compass check` verdict for each check: `verdict` (`pass`, `fail`, `advisory` or `nothing-to-check`), `at`, the implementation id and version, a digest of the check's definition, and `status`. | After each `compass check`, replacing the file. The marker does not cover it. |
@@ -65,9 +65,7 @@ generation recorded (see "Implementation versions" below).
 first, which runs the settings lint of `compass.yml` and stops a file the lint
 refuses. Then, holding an exclusive lock on
 `.compass/work/<slug>/.generation.lock`, it compares the result with the
-generation in force. When something changed and a write follows, a project's
-own governance copy is checked once more (every check a gate names is declared).
-If that check fails, nothing is written. Then:
+generation in force. When something changed and a write follows:
 
 1. It writes `resolved.yml`, `provenance.yml`, `versions.yml` and `records.yml`
    into `generations/<n+1>/`, each atomically.
@@ -335,26 +333,12 @@ commit stores it (exit 2). The check set is parsed once per process while the
 file is unchanged, and a resolution copies it once: `compass flow` resolves
 every issue on the board.
 
-A project with no `compass.yml` and its own `governance/` copies is resolved
-through the legacy adapter in place of the check set, until #359. The copy is the
-whole configuration, so each entry is added as it stands and nothing merges
-(`effective._legacy_config`). A gate the copy places at a legacy stage it does
-not declare is read at the path stage that shows it. The
-provenance names the layer `legacy` and the operation `add`, as 8.x stored it.
-An entry that is not a mapping, names a field its catalogue lacks, or misses a
-required field is refused, with every fault named, and so is a field value of
-the wrong type or outside its field's closed set (`legacy: <path>: expected map,
-found 7`). Nothing is resolved from such a copy. The adapter also
-converts the `project:` guardrails of such a copy: each becomes a guardrail gate
-with its own checks and its stage from `checked_at`, and a `command-passes`
-check becomes a check named for the guardrail id and name (`PG-E-command-and-suite`)
-that carries the guardrail's `params`. A guardrail that omits a default the
-framework ships is still reported as absent by `compass check` and
-`compass approach evaluate --verbose`, with or without a generation. Before a
-generation is written from such a copy, the commit refuses a gate that names a
-check the copy does not declare, such as the 5.x `coverage-floor` example, and
-writes nothing: no implementation runs that check, and the generation would
-keep it.
+A project with no `compass.yml` and a copy of `routing-policy.yml` or
+`guardrails.yml` is refused with exit 2 (`governance-copy-removed`,
+`effective.refuse_governance_copy`): 9.0.0 does not read the copy (ADR-098), and
+the project runs `compass policy migrate` on 8.x first. A stored generation is
+read as stored, so only a live read is refused. The 8.x reader of a copy is the
+test helper `tests/legacy_copy.py`, for compatibility contracts 1 and 2.
 
 `EffectiveView.evaluator_policy()` returns the routing policy in the shape
 `evaluate_route` takes, built by `obligations.policy_adapter` from the resolved
@@ -365,11 +349,12 @@ view.
 
 ### What a reader calls
 
-A reader module calls `effective.view_or_legacy(task_dir)`. It returns a view,
-or None when the module must read the governance files as before. That is only
-an issue with no `generation:` key (or no issue) in a project with its own copy
-of the governance files and no `compass.yml`. Every other project, the
-framework's own repository included, reads the check set. A generation of 0, or one that is not whole, raises.
+A reader module calls `effective.effective_for(task_dir)`. It returns a view:
+the stored generation, or a live view of the check set for an issue with none
+(or no issue). With `live=True` a stored generation is not read, and with no
+issue `start` names the directory whose project is meant. A generation of 0,
+one that is not whole, and a live read of a project with copied governance
+raise.
 
 | Call on the view | Returns | Used by |
 |---|---|---|
@@ -393,7 +378,8 @@ check's id.
 live configuration, because the commit stores that configuration. Without `--write` it reads the generation.
 
 The quarantine registry (`governance/quarantine.yml`) is a project file, not
-catalogue data, and stays where it is.
+catalogue data, and stays where it is. The check `no-trusted-rerun` reads it by
+path: the project's own, else the framework's (`checks._quarantine_dir`).
 
 ## The `compass check` header
 
@@ -401,8 +387,7 @@ Every run names the policy it judges by, ahead of the other notices: `Policy:
 compass-checks@9.0.0 (sha256 <hex>)`, and `Tightened:` with the names of the
 tighten-only settings applied when there are any. An issue with a generation
 takes the line from its manifest's `policy:` block, and one committed before
-9.0.0 has no such block and gets no line. An issue read from a project's own
-copy of the governance files gets none either. No conformance line is printed:
+9.0.0 has no such block and gets no line. No conformance line is printed:
 no lock exists to unlock (ADR-094).
 
 An issue with a generation also gets a line `generation <n> (parent <version>)`

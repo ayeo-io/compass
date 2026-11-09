@@ -29,7 +29,6 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 from compass_pkg import check_registry  # noqa: E402
 from compass_pkg.check_cmd import CHECK_FNS  # noqa: E402
-from compass_pkg.policy import _lint_errors_guardrails  # noqa: E402
 
 import check_corpus_runner as runner  # noqa: E402
 
@@ -142,47 +141,3 @@ def test_cr_3_a_false_label_is_reported_by_case(tmp_path):
     assert problems == ["suite-passed/broken is labelled pass but computes fail"]
 
 
-# --- policy lint (`CR-5`) ---------------------------------------------------------
-
-def _policy(name, decl):
-    return {"defaults": [{"id": "G9", "checks": [name]}], "checks": {name: decl}}
-
-
-def test_cr_5_lint_refuses_an_impl_the_registry_does_not_hold_by_name():
-    errs = _lint_errors_guardrails(
-        _policy("suite-passed", {"description": "x", "impl": "no-such-impl"}))
-    assert any("no-such-impl" in e and "registry" in e and "G9" in e
-               for e in errs), errs
-
-
-def test_cr_5_lint_accepts_a_registered_impl_and_a_check_with_none():
-    assert _lint_errors_guardrails(
-        _policy("suite-passed", {"description": "x", "impl": "suite-passed"})) == []
-    assert _lint_errors_guardrails(
-        _policy("suite-passed", {"description": "x"})) == []
-
-
-@pytest.mark.parametrize("decl", ["a string", ["a", "list"]])
-def test_cr_5_lint_refuses_a_check_declared_as_a_string_or_list_by_name(decl):
-    errs = _lint_errors_guardrails(_policy("suite-passed", decl))
-    assert any("suite-passed" in e and "mapping" in e for e in errs), errs
-
-
-def test_cr_5_an_impl_on_a_default_check_does_not_change_what_runs(
-        run_cli, edit_governance, make_task):
-    """A project's guardrails.yml must not redirect a default check to a
-    weaker implementation. `impl:` is read by lint only until stored
-    generations and locks decide who may choose an implementation."""
-    with edit_governance("guardrails.yml") as gr:
-        gr["checks"]["suite-passed"]["impl"] = "spike-no-production-changes"
-    make_task("redirect-probe", {
-        "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
-                       "size": "small", "intent": "delivery"},
-        "delivery_approach": "regular",
-        "scenarios": [{"id": "SCN-001", "intent": "INT-1",
-                       "tests": ["tests/test_x.py::test_y"]}],
-        "gates": [{"id": "verify.correctness", "status": "pending"}],
-    })
-    r = run_cli("check", "--issue", "redirect-probe")
-    assert r.returncode != 0, r
-    assert "no test-run evidence" in (r.stdout + r.stderr), r

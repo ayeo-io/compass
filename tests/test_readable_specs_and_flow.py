@@ -31,6 +31,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
 sys.path.insert(0, str(ROOT / "tests"))
 from archive import archive_root, checkable_root  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 SPEC_TEMPLATE = "templates/acceptance-criteria.md"
 # `bdd-specification` merged into `atdd` in 9.0.0 (#360); the scenario
@@ -276,7 +277,7 @@ def test_trc_c4_guardrail_count_stays_five():
     sixth guardrail would dilute the concept."""
     import yaml
 
-    gy = yaml.safe_load((ROOT / "governance/guardrails.yml").read_text())
+    gy = shipped_view("guardrails.yml")
 
     def _walk_ids(node, found):
         if isinstance(node, dict):
@@ -304,7 +305,7 @@ def test_trc_c6_no_gate_or_floor_added():
     promotes it, and no delivery-approach shape lists it as a gate."""
     import yaml
 
-    rp = yaml.safe_load((ROOT / "governance/routing-policy.yml").read_text())
+    rp = shipped_view("routing-policy.yml")
 
     floors = rp["routing_guardrails"].get("floors", [])
     for floor in floors:

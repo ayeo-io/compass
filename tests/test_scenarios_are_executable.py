@@ -33,6 +33,7 @@ import subprocess
 import sys
 
 import yaml
+from check_set_files import view as shipped_view  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -141,7 +142,7 @@ def line_for(out, name="scenarios-are-executable"):
 # ---------------------------------------------------------------------------
 
 def test_trc_c1_the_check_should_be_registered_and_implemented():
-    g = yaml.safe_load((GOVERNANCE / "guardrails.yml").read_text())
+    g = shipped_view("guardrails.yml")
     assert "scenarios-are-executable" in g["checks"], (
         "the check is not declared in guardrails.yml")
     g1 = next(x for x in g["defaults"] if x["id"] == "G1")

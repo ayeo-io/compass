@@ -666,7 +666,7 @@ _register(Rule(
             "cli/compass_pkg/landed_by.py",
             "and `backfills-paid` still apply",
             "backfills-paid is the real check id in "
-            "the `checks` block of governance/guardrails.yml, an identifier - the audit notes "
+            "the `checks` block of governance/check-set.yml, an identifier - the audit notes "
             "the `backfills:` key is an identifier and stays; this is the "
             "same class of identifier."),
         Exemption(
@@ -954,11 +954,6 @@ _register(Rule(
             "the same rule-id false match as RP-REQUIRE-003 above, for the "
             "fitness-check floor this test's fixture triggers."),
         Exemption(
-            "schemas/routing-policy.schema.json", "RP-REQUIRE-003",
-            "the same rule-id false match as the skills/evidence-gates "
-            "exemption above, quoted here as the schema's own example "
-            "waiver id."),
-        Exemption(
             "cli/compass_pkg/routing.py",
             "calling it a floor is the same conflation the RP-REQUIRE ids "
             "were",
@@ -1065,8 +1060,6 @@ _register(Rule(
         Exemption("governance/guardrails.md",
                    "Checked at Verify and again at ship time",
                    "names the Verify stage, not the verb."),
-        Exemption("governance/guardrails.yml", "compass bdd verify",
-                   "compass bdd verify is a CLI verb, not the plain verb."),
         Exemption("cli/compass_pkg/bdd.py", "and `compass bdd verify`",
                    "compass bdd verify is a CLI verb, not the plain verb."),
         Exemption("cli/compass_pkg/bdd.py", "compass bdd verify -- <run",
@@ -1083,11 +1076,8 @@ _register(Rule(
                    "the same supply-chain stance",
                    "\"supply chain\" is the established compound noun, not "
                    "the verb \"supply\" the word table retires."),
-        Exemption("governance/guardrails.yml", "attempts: <int>",
-                   "attempts: <int> names the evidence field, not the verb "
-                   "\"attempt\"."),
         # The fixed check set (ADR-094) was built from the 8.x live preset, which
-        # copied the check and type text from governance/guardrails.yml, so it
+        # copied the check and type text from the 8.x guardrails.yml, so it
         # carries the same text and the same reasons.
         Exemption("governance/check-set.yml", "compass bdd verify",
                    "compass bdd verify is a CLI verb, not the plain verb; the "
@@ -1164,9 +1154,6 @@ _register(Rule(
         Exemption("tests/test_verify_fitness_route_promotion.py",
                    "When touches fires RP-REQUIRE-004, it appears in "
                    "fired_guardrails.",
-                   "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("governance/routing-policy.yml",
-                   "two of the entries below carry RP-REQUIRE ids",
                    "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("governance/strategies-rationale.md",
                    "[RP-REQUIRE-003] requirement:",
@@ -2154,6 +2141,14 @@ _REMOVED_IN_9_0_0 = frozenset({
     # tests/test_frozen_files_unchanged.py when the presets became test fixtures
     # (#359 step 10). ADR-094 names the file and is not edited.
     "tests/fixtures/preset-digests.yml",
+    # The generated views, their schemas, the reader of a governance copy and the
+    # tests of the views (ADR-098, #359 step 6). The reader is the test helper
+    # `tests/legacy_copy.py` now.
+    "governance/routing-policy.yml", "governance/guardrails.yml",
+    "schemas/routing-policy.schema.json", "schemas/routing-policy.reference.yml",
+    "schemas/guardrails.schema.json", "schemas/guardrails.reference.yml",
+    "cli/compass_pkg/legacy_adapter.py", "tests/test_governance_drift.py",
+    "tests/test_governance_discovery.py", "tests/fixtures/governance-content-hashes.json",
 })
 #: Paths 9.0.0 removed that this repository's `compass.yml` still names, keyed by
 #: the path. An agent may not edit `compass.yml`; the owner deletes its readiness
@@ -2161,6 +2156,13 @@ _REMOVED_IN_9_0_0 = frozenset({
 #: still_needed` fails once the file stops naming a path, so the entry goes too.
 _NAMED_BY_COMPASS_YML_UNTIL_THE_OWNER_EDITS = frozenset({
     "docs/readiness.md", "tests/test_project_readiness.py",
+})
+#: Paths 9.0.0 removed that this repository's `CLAUDE.md` still names. An agent
+#: may not edit `CLAUDE.md`; the owner rewrites its Governance bullets, which name
+#: the two generated views (ADR-098). `test_pbw_a8_the_claude_md_exemption_is_
+#: still_needed` fails once the file stops naming a path, so the entry goes too.
+_NAMED_BY_CLAUDE_MD_UNTIL_THE_OWNER_EDITS = frozenset({
+    "governance/routing-policy.yml", "governance/guardrails.yml",
 })
 # A sample decision record under `templates/architecture/decisions/` is a
 # decision record too.
@@ -2197,6 +2199,8 @@ def _find_missing_reference(span: ProseSpan) -> list[Finding]:
             continue
         if span.path == "compass.yml" and path in _NAMED_BY_COMPASS_YML_UNTIL_THE_OWNER_EDITS:
             continue
+        if span.path == "CLAUDE.md" and path in _NAMED_BY_CLAUDE_MD_UNTIL_THE_OWNER_EDITS:
+            continue
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
         if (not (REPO_ROOT / path).exists()
@@ -2213,6 +2217,16 @@ def test_pbw_a8_the_compass_yml_exemption_is_still_needed():
         assert not (REPO_ROOT / path).exists(), path
     # The exemption is for `compass.yml` only: another file is still reported.
     other = ProseSpan("docs/x.md", 1, "See `docs/readiness.md`.", "markdown")
+    assert _find_missing_reference(other)
+
+
+def test_pbw_a8_the_claude_md_exemption_is_still_needed():
+    text = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    for path in _NAMED_BY_CLAUDE_MD_UNTIL_THE_OWNER_EDITS:
+        assert path in text, f"CLAUDE.md no longer names {path}; remove its exemption"
+        assert not (REPO_ROOT / path).exists(), path
+    # The exemption is for `CLAUDE.md` only: another file is still reported.
+    other = ProseSpan("docs/x.md", 1, "See `governance/guardrails.yml`.", "markdown")
     assert _find_missing_reference(other)
 
 
@@ -3353,7 +3367,9 @@ _GROWING_REACH = {
     # (ADR-095).
     # 127 with the five case manifests of tests/fixtures/impls/request-recorded/
     # (#356).
-    "PBW-C4": (lambda path: path.startswith("tests/"), 127),
+    # 126 when 9.0.0 deleted the generated views and the plain JSON fixture of
+    # their content hashes (ADR-098).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 126),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.
@@ -3896,7 +3912,7 @@ def test_pbw_e4_a_prose_sequence_item_is_blanked_but_still_counted(tmp_path):
     """A prose sequence item under a `PROSE_KEYS` key can be reworded and
     rewrapped freely, but adding or removing one is reported. `PBW-E4`.
 
-    `governance/routing-policy.yml`'s `biases:` holds free-text tie-breakers,
+    The 8.x `routing-policy.yml`'s `biases:` held free-text tie-breakers,
     and its own comment says they are not machine-evaluated. The reader
     blanked only scalar values, so batch 3 could not prove a rewording of them
     safe and correctly left the findings unfixed in a shipped governance file.
@@ -4468,7 +4484,7 @@ def test_pbw_d1_every_tracked_yaml_file_parses():
     whole-line comments only, so a YAML file that does not parse loses every
     `PROSE_KEYS` value the sweeps would otherwise read - and nothing says
     so. Finding 12, `review-dimensions.md`: `schemas/manifest.reference.yml`
-    and `schemas/routing-policy.reference.yml` both failed to parse, on a
+    and the routing-policy reference (deleted in 9.0.0) both failed to parse, on a
     `key:# comment` with no space between the colon and the `#`, which YAML
     reads as an unterminated key rather than a mapping entry with a trailing
     comment. Both are fixed; this is the guard against the next one."""

@@ -177,7 +177,7 @@ def test_policy_keys_speak_v2():
     """The routing policy's machine keys follow the manifest - the
     dimension keys in shapes and rules use risk/familiarity/size/goal and
     labels, not the v1 names (TRC-A7)."""
-    text = (REPO_ROOT / "governance" / "routing-policy.yml").read_text()
+    text = (REPO_ROOT / "governance" / "check-set.yml").read_text()
     for stale in ("blast_radius", "terrain:", "magnitude", "touches_any",
                   "touches_common"):
-        assert stale not in text, f"routing-policy.yml still says {stale!r}"
+        assert stale not in text, f"check-set.yml still says {stale!r}"

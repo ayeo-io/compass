@@ -285,7 +285,7 @@ def owed_commands(task, task_dir, cleared_gates=()):
         out.append(requirements)
     if _owed(task, task_dir, "definition-of-done"):
         from compass_pkg import effective, item_records
-        view = effective.view_or_legacy(task_dir)
+        view = effective.effective_for(task_dir)
         out += [f"compass evidence add <EV-id> --type <type> --path <path> --meets {i.check}"
                 for i in item_records.items(task, task_dir, view, "dod")
                 if i.state == item_records.OPEN]
@@ -542,7 +542,7 @@ def _open_requirements(task, task_dir):
 
 def _open_dod_item(task, task_dir):
     from compass_pkg import effective, item_records
-    view = effective.view_or_legacy(task_dir)
+    view = effective.effective_for(task_dir)
     for item in item_records.items(task, task_dir, view, "dod"):
         if item.state == item_records.OPEN:
             return item.check

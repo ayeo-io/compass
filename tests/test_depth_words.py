@@ -25,7 +25,6 @@ PRESET = None
 # frozen `default@7` preset and the 8.0.4 views, so their presence is read there,
 # and the live preset and views are held to hold no old word.
 FROZEN = ROOT / "tests" / "fixtures" / "presets" / "default@7"
-POLICY_VIEW = ROOT / "governance" / "routing-policy.yml"
 
 OLD_WORDS = {"full", "light", "full-plus-backfill"}
 RANKS = {"skipped": 0, "collapsed": 1, "lightweight": 2, "thorough": 3,
@@ -68,8 +67,9 @@ def _approach_words(doc):
 
 
 def _view_words(text=None):
-    """The same words in the legacy routing policy view, or in `text`."""
-    policy = yaml.safe_load(text if text is not None else POLICY_VIEW.read_text(encoding="utf-8"))
+    """The same words in the check set read as the 8.x routing policy, or in `text`."""
+    from check_set_files import view as shipped_view
+    policy = yaml.safe_load(text) if text is not None else shipped_view("routing-policy.yml")
     modes, depths = [], []
     for name, shape in policy["route_shapes"].items():
         modes += [(f"route_shapes.{name}.stages.{stage}", mode)
@@ -148,14 +148,14 @@ def test_vr_a2_the_evaluator_writes_the_new_words_and_keeps_the_approach(
 
 def test_vr_a2_a_policy_copy_in_the_old_words_still_writes_the_new_ones(
         project, make_task, run_cli, tmp_path_factory):
-    """A project that copied `governance/` before the rename keeps the old
-    words in its policy; the result the evaluator gives does not."""
-    view = project / "governance" / "routing-policy.yml"
-    view.write_text(_old_words(view.read_text(encoding="utf-8")), encoding="utf-8")
+    """A policy copied before the rename keeps the old words; the result the
+    evaluator gives does not. 9.0.0 refuses a project copy (ADR-098), so the
+    write runs on the check set and the copy is read as 8.x read it."""
     manifest = _path_write(make_task, run_cli)
     assert not {a.get("depth") for a in manifest.get("artifacts") or []} & OLD_WORDS
-    # The same respelling of the 8.0.4 copy, read as a project reads its copy.
+    # A respelling of the 8.0.4 copy, read as 8.x read a copy.
     import compat_baseline as cb
+    import legacy_copy
     from compass_pkg import effective
     root = tmp_path_factory.mktemp("old-words") / "project"
     (root / ".compass" / "work").mkdir(parents=True)
@@ -163,9 +163,8 @@ def test_vr_a2_a_policy_copy_in_the_old_words_still_writes_the_new_ones(
     copy = root / "governance" / "routing-policy.yml"
     copy.write_text(_old_words(copy.read_text(encoding="utf-8")), encoding="utf-8")
     assert "full-plus-backfill" in copy.read_text(encoding="utf-8")
-    resolution = effective.resolve_live(str(root))
-    policy = effective.EffectiveView("live", None, None, resolution.resolved,
-                                     resolution.versions).evaluator_policy()
+    resolved = legacy_copy.resolved_from_copy(str(root))
+    policy = effective.EffectiveView("live", None, None, resolved, {}).evaluator_policy()
     result = _route_8_0_4(policy)
     assert not set(result["stages"].values()) & OLD_WORDS, result["stages"]
     assert not {a.get("depth") for a in result.get("artifacts") or []} & OLD_WORDS
@@ -222,7 +221,7 @@ def test_vr_a4_the_ranks_keep_their_order_under_the_new_names():
 
 
 def test_vr_a4_the_legacy_adapter_ranks_match_the_preset():
-    from compass_pkg import legacy_adapter
+    import legacy_copy as legacy_adapter
     assert legacy_adapter.MODE_RANKS == RANKS
 
 

@@ -28,11 +28,11 @@ wait for a person, its gates and its documents - open
 the policy, and a test fails when the committed copy is out of date. Run it
 in a project to see that project's own policy and autonomy setting. It renders
 the effective configuration, the check set `governance/check-set.yml` with the
-settings of `compass.yml` (ADR-094), and the page says so. Only a project with
-its own copy of the governance files and no `compass.yml` gets the page from
-its `governance/routing-policy.yml`, as before. A policy drawn on the eight legacy stages, such as a stored 8.x generation or
-copied 8.x governance, also shows each approach's subtask ceiling; the four-stage
-path has none (ADR-092 decision 11).
+settings of `compass.yml` (ADR-094), and the page says so. A project with its
+own copy of the governance files and no `compass.yml` is refused
+(`governance-copy-removed`, ADR-098). A policy drawn on the eight legacy
+stages, such as a stored 8.x generation, also shows each approach's subtask ceiling;
+the four-stage path has none (ADR-092 decision 11).
 
 Assess applies this policy after scoring the three dimensions
 and composing a candidate delivery approach, before writing the approach to the
@@ -40,12 +40,12 @@ manifest. Every routing rule that fires is recorded in the manifest's
 `policy_rules_fired:` with its rationale - so `compass approach show --verbose`
 shows not just the delivery approach, but which bounds were active and why.
 
-**This document explains; `routing-policy.yml` enforces.** The companion
-`governance/routing-policy.yml` is the machine-readable, authoritative policy -
+**This document explains; the check set enforces.** The companion
+`governance/check-set.yml` is the machine-readable, authoritative policy -
 it has the live floors, caps, immovable gates and default shapes,
 each with a stable id, and `compass approach evaluate` runs it deterministically.
-The YAML excerpts below are *illustrative*; where this prose and that file
-could be read to differ, the `.yml` wins. The crucial boundary: the
+The YAML excerpts below are *illustrative*, in the shape of the 8.x routing
+policy; where this prose and that file could be read to differ, the `.yml` wins. The crucial boundary: the
 *assessment* (three scored dimensions, two switches and the domain labels) is judgement (assess produces it, and that
 judgement is the adaptivity); this policy governs only what happens *after* -
 composing and constraining the delivery approach from the assessment, which is deterministic.
@@ -82,7 +82,7 @@ approach, can drop one.
 
 A gate a release removed owes nothing. 9.0.0 removed the gate
 `verify.analyze` with the command that wrote its evidence (ADR-091).
-`routing.REMOVED_GATES` lists it. A stored generation or copied governance can still hold the rules
+`routing.REMOVED_GATES` lists it. A stored generation can still hold the rules
 `RP-REQUIRE-001` and `RP-REQUIRE-002`, which add it. The evaluator leaves a
 removed gate out of every gate set it writes or prints. A rule whose only
 effect was to add one does not fire. A manifest written before 9.0.0 that
@@ -97,10 +97,9 @@ issue. Since 9.0.0 no command reads which documents an issue has (ADR-091), so
 a rule that names a document does not fire, and a document on disk adds no
 gate and blocks no stage. A stored generation can still
 hold such a rule; it is read and does not fire. A stored 6.x
-generation keeps its `role_rules` until the issue is re-assessed, and a
-project's copied 6.x governance keeps them until `compass policy migrate` on 8.x runs.
+generation keeps its `role_rules` until the issue is re-assessed.
 
-The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
+The shipped defaults (see `governance/check-set.yml` for the live, id-tagged set):
 
 - **floors** - `RP-FLOOR-002` brownfield-unmapped familiarity at medium size
   or more, with cross-cutting or critical risk, or with one of the four domain
@@ -138,7 +137,7 @@ every other assessment falls back to `delivery`, the four-stage path
 
 ```yaml
 routing_strategies:
-  # These mirror governance/routing-policy.yml; the live file also carries an
+  # These mirror governance/check-set.yml; the live file also carries an
   # `id:` and a `rationale:` per entry, which the evaluator reports when a
   # shape fires.
   default_shapes:
@@ -253,11 +252,11 @@ key an older assessment wrote is left as it is.
 
 ## Schema reference
 
-The authoritative structure is `routing-policy.yml`, validated by `compass
-policy lint` - against the executable `schemas/routing-policy.schema.json`
-(when `jsonschema` is installed) and the CLI's built-in linter. The
-human-readable field-by-field companion is `schemas/routing-policy.reference.yml`.
-In brief:
+The authoritative structure is `governance/check-set.yml`, which
+`cli/compass_pkg/check_set.py` checks when it loads it, and which
+`tests/fixtures/check-set-digests.yml` pins. Its fields are those of
+`cli/compass_pkg/catalogue_spec.py`. The evaluator reads it in the shape of
+the 8.x routing policy (`EffectiveView.evaluator_policy`). In brief:
 
 `when` conditions match against the assessment - `risk`, `familiarity`,
 `size`, `goal`, `urgency` - or `artifacts_any` (the documents present for
@@ -265,9 +264,9 @@ the issue, such as `positioning` or `intent`) or `labels_any` (a domain-tag list
 `auth`, `payments`, `personal-data`, `migrations`, `public-api`, …). A list
 value means "any of".
 
-A policy written before the v2 freeze keeps working: the evaluator maps the
-retired dimension names on read, so an unmigrated project file still
-matches. Write the current names in anything new.
+A stored generation written before the v2 freeze keeps working: the
+evaluator maps the retired dimension names on read. Write the current names
+in anything new.
 
 The evaluator refuses an `assessment:` key that
 `schemas/manifest.schema.json` does not allow, such as `risk_reason`, before
@@ -287,13 +286,13 @@ Routing-strategy keys: `lean_toward`, `suggest_artifact`, free-text `biases`.
 ## Changing routing
 
 Compass runs one fixed check set (ADR-094), so a project does not change a
-routing rule. `routing-policy.yml` is frozen: no generator writes it, and only
-the legacy readers read it, until #359 (see "The check set and the frozen
-views" below). A project adds to what an issue owes with the tighten-only
+routing rule. A project adds to what an issue owes with the tighten-only
 settings of its `compass.yml` (`docs/configuration.md`); `compass policy lint`
 checks them and `compass policy show` prints the check set and the settings
-that tighten it. A project that copied these files under 5.x keeps running
-on its copy until #359.
+that tighten it. A project that copied `routing-policy.yml` or
+`guardrails.yml` under 5.x and has no `compass.yml` is refused by every
+command that reads the policy (`governance-copy-removed`, exit 2): it runs
+`compass policy migrate` on 8.x first (`docs/upgrade-9-0-0.md`).
 
 - **No setting loosens a routing rule.** A `rules:` key in `compass.yml` is a
   removed setting and is not read. One check on one issue can be excused by a
@@ -302,16 +301,16 @@ on its copy until #359.
   tokens for the assessments that match, and `signoff_labels` adds labels that
   owe what a `G5` label owes.
 
-## The check set and the frozen views
+## The check set
 
 `governance/check-set.yml` holds the shipped defaults in catalogue form, in
 one file (ADR-094). It replaced `governance/presets/default/`, the preset
-directory of ADR-042, which `cli/compass_pkg/legacy_adapter.py` produced once
-from `routing-policy.yml` and `guardrails.yml`. Since 9.0.0 the two files are
-frozen: they were the views generated from the preset, they keep the last
-generated text with a banner that says so, and only the legacy readers read
-them. `cli/compass_pkg/legacy_adapter.py` still converts a project's own copy
-of the two files into catalogue form, until #359.
+directory of ADR-042, and the two views generated from it,
+`routing-policy.yml` and `guardrails.yml`, which 9.0.0
+deleted with the reader of a copy of them (ADR-098). The 8.x reader of a copy
+is now the test helper `tests/legacy_copy.py`: compatibility contracts 1 and 2
+and the route tests that compare with 8.0.4 read the packed 5.6.0 and 8.0.4
+copies through it, and no CLI module imports it.
 
 Each artifact of the 8.x catalogue (`governance/artifacts-8.0.4.yml`) names the stage that owns it with `stage:`
 (`architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md`).
@@ -348,10 +347,6 @@ check. No setting can suspend the strategy on an approach that ships; the
 settings key is the one way to turn the strategy off (decided by jed72,
 2026-10-30).
 
-- Never edit `routing-policy.yml` or `guardrails.yml`: their first line says
-  they are frozen. `tests/fixtures/governance-content-hashes.json` holds a hash
-  of their parsed content, and `tests/test_governance_drift.py` fails when it
-  moves.
 - A change to the defaults is a change to `governance/check-set.yml`, with a
   raised `version` and a new pin in `tests/fixtures/check-set-digests.yml`
   (`governance/guardrails.md`).
@@ -522,12 +517,8 @@ the assessment the issue already holds.
   of the gate line on a path issue. It prints no conformance or parent line:
   the resolver reads the one check set, where no lock exists, and a git
   parent is refused (ADR-094).
-- **Without `--write`** the command shows what the write would store. A
-  project with its own copy of the governance files and no `compass.yml` reads
-  that copy, which does not declare `S17`, but a write commits the live
-  configuration, which does. So
-  the preview reads the live configuration for the strategy, and owes the
-  same `S17` tokens the write stores. An assessment given on the command line
+- **Without `--write`** the command shows what the write would store, and
+  owes the same `S17` tokens the write stores. An assessment given on the command line
   (`--assessment`) is evaluated on the path too, as a new issue in the
   project would be.
 - The output of a path issue, in text and in `--json`, has none of the 8.x
@@ -570,8 +561,8 @@ an 8.x issue's own layer that a stored generation keeps (`issue_input`). It
 computes no approach: the evaluator answers. `compass approach evaluate` reads
 the resolved configuration: an issue's stored generation, or else the check
 set with the tighten-only settings of `compass.yml`, and `--verbose` prints
-which. An unmigrated 5.x project with no `compass.yml` reads its own copy of
-the governance files through the legacy adapter. The classifier that compared
+which. An unmigrated 5.x project with a copy of the governance files and no
+`compass.yml` is refused (`governance-copy-removed`). The classifier that compared
 two configurations by the facts each owed went with the configuration layers
 in 9.0.0 (ADR-094).
 

@@ -217,9 +217,6 @@ def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path):
     import yaml
     proj = tmp_path / "p"
     (proj / "governance").mkdir(parents=True)
-    for f in ("routing-policy.yml", "guardrails.yml"):
-        (proj / "governance" / f).write_text(
-            (REPO_ROOT / "governance" / f).read_text())
     td = proj / ".compass" / "work" / "t"
     td.mkdir(parents=True)
     (proj / ".compass" / "current-task").write_text("t\n")
@@ -565,9 +562,6 @@ def _failing_issue(tmp_path):
     import yaml
     proj = tmp_path / "proj"
     (proj / "governance").mkdir(parents=True)
-    for f in ("routing-policy.yml", "guardrails.yml"):
-        (proj / "governance" / f).write_text(
-            (REPO_ROOT / "governance" / f).read_text())
     td = proj / ".compass" / "work" / "t"
     td.mkdir(parents=True)
     (proj / ".compass" / "current-task").write_text("t\n")
@@ -812,12 +806,6 @@ def report_project(tmp_path_factory):
 
     proj = tmp_path_factory.mktemp("reports")
     (proj / "governance").mkdir()
-    # terminology.yml too: `compass terminology` reads the project's copy, and
-    # without it the verb says "not found" and these tests would assert against
-    # an error message instead of a glossary.
-    for f in ("routing-policy.yml", "guardrails.yml", "terminology.yml"):
-        (proj / "governance" / f).write_text(
-            (REPO_ROOT / "governance" / f).read_text())
     work = proj / ".compass" / "work"
     work.mkdir(parents=True)
     (proj / ".compass" / "config.yml").write_text(
@@ -1094,9 +1082,6 @@ def tail_project(tmp_path):
 
     proj = tmp_path / "tail"
     (proj / "governance").mkdir(parents=True)
-    for f in ("routing-policy.yml", "guardrails.yml", "terminology.yml"):
-        (proj / "governance" / f).write_text(
-            (REPO_ROOT / "governance" / f).read_text())
     td = proj / ".compass" / "work" / "t"
     (td / "evidence").mkdir(parents=True)
     (proj / ".compass" / "current-task").write_text("t\n")

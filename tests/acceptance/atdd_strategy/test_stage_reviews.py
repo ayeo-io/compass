@@ -389,7 +389,7 @@ def test_trc_d9_compass_next_asks_for_the_stage_3_review_once_every_gate_passed(
         assert _request(issue, stage)[0] == 0, stage
         assert not _type(project, "approve").block, stage
     body = issue.manifest()
-    items = [c for c, _ in item_records.listed_checks(effective.view_or_legacy(str(issue.dir)),
+    items = [c for c, _ in item_records.listed_checks(effective.effective_for(str(issue.dir)),
                                                       "dod")]
     (issue.dir / "evidence" / "review.txt").write_text("reviewed\n", encoding="utf-8")
     body["evidence"] = body["evidence"] + [

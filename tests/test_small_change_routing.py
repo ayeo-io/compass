@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from check_set_files import view as shipped_view  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -44,7 +45,7 @@ def test_on_the_path_a_small_contained_greenfield_change_owes_the_light_row():
     """The path twin: the 8.x quick fix is the light evidence row (ADR-092)."""
     from compass_pkg import evidence_required
     from compass_pkg.core import load_yaml
-    policy = load_yaml(str(ROOT / "governance" / "routing-policy.yml"))
+    policy = shipped_view("routing-policy.yml")
     result = evidence_required.evaluate(GREENFIELD, policy)
     assert result["delivery_approach"] == "delivery"
     assert result["rules_fired"] == ["RP-EVID-LIGHT"], result["rules_fired"]

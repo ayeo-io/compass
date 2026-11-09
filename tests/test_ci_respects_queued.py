@@ -64,12 +64,6 @@ def _project(tmp_path, slug, status):
         "version: 1.0.0\nmode: enforced\n", encoding="utf-8")
     (work / "manifest.yml").write_text(
         SPINE.format(slug=slug, status=status), encoding="utf-8")
-    gov = tmp_path / "governance"
-    gov.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        (gov / name).write_text(
-            (ROOT / "governance" / name).read_text(encoding="utf-8"),
-            encoding="utf-8")
     return tmp_path
 
 

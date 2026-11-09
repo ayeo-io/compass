@@ -7,17 +7,13 @@ one issue. `compass check` runs each of them after the gate
 loop, in the order of `CHECKS`, through `judged`.
 
 A check runs only when the configuration the issue is judged by declares it:
-the stored generation, the live view of a project with a `compass.yml`, or the
-legacy `governance/guardrails.yml`. An issue stored before a check existed
+the stored generation, or the live check set with the settings of
+`compass.yml`. An issue stored before a check existed
 does not run it until its next `compass approach evaluate --write` (ADR-036).
 """
-# DEPENDENCY: standard library (os); compass_pkg.core. It imports no command
-# module and no check module at load time, so a check module can import it.
+# DEPENDENCY: compass_pkg.effective, imported when a check is judged. It imports no
+# command module and no check module at load time, so a check module can import it.
 from __future__ import annotations
-
-import os
-
-from compass_pkg.core import load_yaml, reading_matches
 
 #: The checks that sit in no gate, in the order `compass check` reports them. 9.0.0
 #: removes `artifacts-approved`, `contracts-declared` and `design-within-word-ceiling`
@@ -32,11 +28,6 @@ CHECKS = ("request-recorded", "artifacts-approved", "nfr-rows-resolved", "contra
 #: registers no spec or design. The four-layer acceptance strategy is suspended on
 #: a spike, as strategy `S2` is, so none of its checks is here.
 SPIKE_CHECKS = ("nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling")
-
-#: The checks here the default preset declares `severity: advisory`. The legacy
-#: `governance/guardrails.yml` has no severity field, so `judged` gives them this
-#: severity when an issue is judged by that file, and the legacy adapter writes it.
-ADVISORY_CHECKS = ("acceptance-applicability-agrees", "acceptance-support-present")
 
 #: The label each check's row is reported under, where a gate row names its guardrail.
 LABELS = {
@@ -62,29 +53,19 @@ def judged(check_id, fn, task, task_dir, judge):
     caller so this module imports no command module. `passed` can be
     `ADVISORY_FAILURE` after a waiver."""
     from compass_pkg import effective
-    from compass_pkg.core import find_governance
 
     try:
-        view = effective.view_or_legacy(task_dir)
-        if view is None:
-            guardrails = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
-            matches = reading_matches
-            readings = task.get("assessment") or {}
-        else:
-            guardrails = view.guardrail_gates()
-            matches = view.matches
-            readings = view.listing_assessment(task.get("assessment") or {},
-                                               task.get("delivery_approach"))
+        view = effective.effective_for(task_dir)
+        guardrails = view.guardrail_gates()
+        matches = view.matches
+        readings = view.listing_assessment(task.get("assessment") or {},
+                                           task.get("delivery_approach"))
     except Exception:                                   # noqa: BLE001 - no configuration, nothing declared
         return None
     if check_id not in (guardrails.get("impl") or {}) and check_id not in (
             guardrails.get("checks") or {}):
         return None
     declared = (guardrails.get("checks") or {}).get(check_id) or {}
-    if view is None and check_id in ADVISORY_CHECKS:
-        # The legacy file holds no severity, so an advisory check takes the one
-        # the preset declares; otherwise its advice would fail the run.
-        declared = dict(declared, severity="advisory")
     try:
         passed, detail = fn(task, task_dir)
     except Exception as exc:                            # noqa: BLE001 - a check must not crash the run

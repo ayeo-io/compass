@@ -843,6 +843,11 @@ def test_d2_repairs_change_only_retired_names():
     The fix that writes manifests with no YAML anchors (024f2497) added one
     bullet to `docs/safety-contract.md` (list_items 133 -> 134).
 
+    #359 step 6 (copied governance and the generated views, ADR-098)
+    re-baselined `architecture/relations.md` (table_rows 33 -> 32: the row for
+    the deleted views went) and `governance/routing-policy.md` (list_items
+    50 -> 49: the bullet that said never to edit the deleted views went).
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

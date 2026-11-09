@@ -102,36 +102,16 @@ stale, contradictory strategies is its own kind of mess. So:
 | `quarantine.yml` | Records of intermittent tests explicitly quarantined with a tracking issue | Pairs with the `no-trusted-rerun` rule on evidence-not-assertion (see `strategies.md` `S5`) |
 
 The framework ships these with sane, active defaults. A project that does
-nothing runs on them as they are. A project that copied them under 5.x runs on
-its copy until `compass policy migrate` on 8.x turns the copy into a `compass.yml`
-overlay. A new project's `/compass:init` copies nothing. Editing is accretion,
-not a precondition.
+nothing runs on them as they are. A new project's `/compass:init` copies
+nothing. Editing is accretion, not a precondition.
 
 ## A project that copied governance under 5.x
 
-A 6.0.0 project does not copy these files. It edits `compass.yml`, and the
-shipped default stays in force beneath it. The rest of this section is about a
-5.x project that copied `governance/` into its root. That copy keeps working
-until `compass policy migrate` on 8.x converts it (`docs/upgrade-6-0-0.md`).
-
-**A copy replaces the shipped defaults. It is not added to them.**
-
-For such a project `compass check` builds the guardrail set from the one
-`governance/` directory in force - the project's copy. A project that
-declares its own therefore keeps only what its files contain. Edit the copy of
-the shipped `guardrails.yml` rather than writing a short file from scratch, or
-the five default guardrails stop applying.
-
-**A shipped guardrail the project omits is reported, but does not fail the
-run.** When `compass check` meets an issue that one of the framework's defaults
-would have applied to, and the project's file does not define it, it prints
-that the guardrail is absent and points at `compass policy lint`. That is a
-notice, not a failure - the project is allowed to decide it wants fewer rules,
-and Compass says so rather than pretending.
-
-**Both files are required together.** A `governance/` directory holding
-`guardrails.yml` with no `routing-policy.yml`, or the reverse, is refused with
-a message naming the missing file and two ways to fix it. Compass will not
-quietly substitute its own defaults for governance a project has declared. A
-directory holding neither file is passed over, because sharing a name is not a
-declaration.
+A 6.0.0 project does not copy governance files. It edits `compass.yml`, and the
+shipped check set stays in force beneath it. A 5.x project that copied
+`routing-policy.yml` or `guardrails.yml` into its own `governance/` and has no
+`compass.yml` is refused by every 9.0.0 command that reads the policy
+(`governance-copy-removed`, exit 2, ADR-098). It runs `compass policy migrate`
+on Compass 8.x first, which writes its `compass.yml`
+(`docs/upgrade-9-0-0.md`). A project's own `quarantine.yml`,
+`review-rules.yml` and `architecture-sources.yml` are read by path, as before.

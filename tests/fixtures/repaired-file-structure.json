@@ -60,7 +60,7 @@
       2
     ],
     "list_items": 3,
-    "table_rows": 33
+    "table_rows": 32
   },
   "architecture/system-context.md": {
     "fences": 0,
@@ -380,7 +380,7 @@
       2,
       2
     ],
-    "list_items": 50,
+    "list_items": 49,
     "table_rows": 33
   },
   "governance/strategies.md": {

@@ -28,7 +28,7 @@ import subprocess
 
 import yaml
 
-from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_yaml
+from compass_pkg.core import CompassError, find_compass_dir, load_yaml
 
 LESSONS = "lessons.yml"
 PENDING = "lessons-pending.yml"
@@ -89,15 +89,7 @@ def _decider():
 
 def _guardrail_ids():
     from compass_pkg import effective
-    view = effective.view_or_legacy()
-    if view is not None:
-        return {str(i) for i in view.known_ids()}
-    try:
-        gr = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
-    except CompassError:
-        return set()
-    return {str(g.get("id")) for key in ("defaults", "project")
-            for g in gr.get(key) or [] if isinstance(g, dict) and g.get("id")}
+    return {str(i) for i in effective.effective_for().known_ids()}
 
 
 def _refusal(rule, source):

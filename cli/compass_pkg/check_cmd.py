@@ -38,7 +38,7 @@ from compass_pkg.landed_by import LANDED_BY_RELAXES, landed_by_holds, _check_lan
 from compass_pkg.check_results import ADVISORY_FAILURE, WAIVED
 from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
 from compass_pkg.binding import _check_evidence_matches_tree
-from compass_pkg.core import CompassError, FRAMEWORK_ROOT, exit_for_mode, find_governance, load_mode, load_manifest, load_yaml, mode_banner, reading_matches, resolve_issue_dir
+from compass_pkg.core import CompassError, exit_for_mode, load_mode, load_manifest, mode_banner, resolve_issue_dir
 
 
 
@@ -514,8 +514,7 @@ def _policy_lines(run):
     """`Policy: compass-checks@9.0.0 (sha256 <hex>)` and the tighten-only
     settings applied (ADR-094). An issue with a stored generation names the
     `policy:` block of its manifest; one committed before 9.0.0 has none and
-    gets no line. An issue read from a project's own copy of the governance
-    files gets none either."""
+    gets no line."""
     view = getattr(run, "policy_view", None)
     if view is None:
         return []
@@ -525,8 +524,6 @@ def _policy_lines(run):
             return []
         ref, sha = block.get("check_set"), block.get("check_set_sha256")
         tightened = block.get("tightened") or {}
-    elif view.from_governance_copy():
-        return []
     else:
         from compass_pkg import check_set, effective, tighten
         from compass_pkg.core import CompassError
@@ -904,26 +901,19 @@ def cmd_check(args):
     # check refuses (ADR-036). An issue with no generation is not asked.
     from compass_pkg import effective
     effective.require_whole(task_dir)
-    # An issue with a generation is judged by it, whatever the governance files
-    # now say. Only an issue with none, in a project with no `compass.yml`,
-    # reads the governance files.
-    view = effective.view_or_legacy(task_dir)
-    if view is None:
-        gov = find_governance()
-        guardrails = load_yaml(os.path.join(gov, "guardrails.yml"))
-    else:
-        guardrails = view.guardrail_gates()
+    # An issue with a generation is judged by it; any other by the check set.
+    view = effective.effective_for(task_dir)
+    guardrails = view.guardrail_gates()
     impls = guardrails.get("impl") or {}
-    matches = view.matches if view is not None else reading_matches
+    matches = view.matches
     # A check built for another major is refused rather than run (ADR-038). A
     # resolver or schema major was refused by `require_whole` above.
     from compass_pkg import impl_versions
     refused = impl_versions.refusals(task_dir, task).checks
     readings = task.get("assessment") or {}
-    if view is not None:
-        # A `when`, `applies_when` or `blocking_when` reads one derived key
-        # beside the assessment: `ships` (ADR-037, the amendment of 2026-10-08).
-        readings = view.listing_assessment(readings, task.get("delivery_approach"))
+    # A `when`, `applies_when` or `blocking_when` reads one derived key
+    # beside the assessment: `ships` (ADR-037, the amendment of 2026-10-08).
+    readings = view.listing_assessment(readings, task.get("delivery_approach"))
 
     # A spike ships nothing, so the delivery guardrails (`G1`-`G5`) do not apply.
     # It is still controlled: it must conclude, and it must not change
@@ -1028,32 +1018,6 @@ def cmd_check(args):
     advisory = 0
     # Reads `delivery_approach`, the live manifest key.
     run = _CheckRun(task_dir, task, mode, view)
-
-    # Report a guardrail the project's file omits when it would apply to
-    # this issue. Only this issue's: a full list on every run would not be
-    # read, and `compass policy lint` prints the full list. A generation
-    # holds the guardrails the issue runs against, so nothing is absent from it.
-    declared_ids = {g.get("id") for g in all_guardrails}
-    try:
-        fw_guardrails = load_yaml(
-            os.path.join(FRAMEWORK_ROOT, "governance", "guardrails.yml"))
-        fw_defaults = (fw_guardrails.get("defaults") or []) if isinstance(
-            fw_guardrails, dict) else []
-    except Exception:                                   # noqa: BLE001
-        fw_defaults = []
-    if view is not None and not view.from_governance_copy():
-        fw_defaults = []
-    for fg in fw_defaults:
-        fid = fg.get("id")
-        if fid in declared_ids:
-            continue
-        applies = fg.get("applies_when")
-        if applies and not reading_matches(applies, readings):
-            continue          # absent, but would not have applied here anyway
-        run.line(f"  {fid} {fg.get('name', '')}: ABSENT from this project's "
-                 f"governance, and it applies to this assessment - the "
-                 f"framework defines it but governance/guardrails.yml does "
-                 f"not. Run `compass policy lint`.")
 
     for g in all_guardrails:
         gid = g.get("id", "?")

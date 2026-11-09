@@ -27,13 +27,12 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg import catalogue_spec, check_set, legacy_adapter  # noqa: E402
+from compass_pkg import catalogue_spec, check_set  # noqa: E402
 
 sys.path.insert(0, str(ROOT / "tests"))
-from check_set_files import ADDED_AFTER_THE_FREEZE  # noqa: E402
+import legacy_copy  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
-POLICY = ROOT / "governance" / "routing-policy.yml"
-GUARDRAILS = ROOT / "governance" / "guardrails.yml"
 RANK_RULING = (ROOT / "governance" / "decisions"
                / "2026-10-06-stage-mode-ranks-cover-the-depth-ladder-only.md")
 
@@ -43,7 +42,8 @@ def _load(path):
 
 
 def _today():
-    return _load(POLICY), _load(GUARDRAILS)
+    """The check set in the shape of the two 8.x views 9.0.0 deleted (ADR-098)."""
+    return shipped_view("routing-policy.yml"), shipped_view("guardrails.yml")
 
 
 def _v8():
@@ -199,7 +199,7 @@ def test_dp_5_old_key_names_convert_to_the_same_preset():
     policy, guardrails = _v8()
     old = _with_old_names(policy)
     assert old != policy
-    assert legacy_adapter.adapt(old, guardrails) == legacy_adapter.adapt(policy, guardrails)
+    assert legacy_copy.adapt(old, guardrails) == legacy_copy.adapt(policy, guardrails)
 
 
 def _old_spellings(policy):
@@ -235,7 +235,7 @@ def test_dp_5_old_dimension_and_stage_names_convert_to_the_same_preset():
     policy, guardrails = _v8()
     old = _old_spellings(policy)
     assert old != policy
-    assert legacy_adapter.adapt(old, guardrails) == legacy_adapter.adapt(policy, guardrails)
+    assert legacy_copy.adapt(old, guardrails) == legacy_copy.adapt(policy, guardrails)
 
 
 def test_dp_5_old_when_keys_in_the_guardrails_file_convert_too():
@@ -247,14 +247,14 @@ def test_dp_5_old_when_keys_in_the_guardrails_file_convert_too():
         "risk": ["cross-cutting", "critical"]}
     new["defaults"][0]["checked_at"] = ["verify", "ship"]
     assert new != guardrails
-    assert legacy_adapter.adapt(policy, new) == legacy_adapter.adapt(policy, guardrails)
+    assert legacy_copy.adapt(policy, new) == legacy_copy.adapt(policy, guardrails)
 
 
 # --- a copied policy converts without losing or failing (`DP-5`) ----------------
 
 def _adapted(policy, guardrails):
     try:
-        return legacy_adapter.adapt(policy, guardrails)
+        return legacy_copy.adapt(policy, guardrails)
     except Exception as exc:  # report a failure to convert as a failed assertion
         raise AssertionError(f"the adapter raised {type(exc).__name__}: {exc}")
 
@@ -269,7 +269,7 @@ def test_dp_5_a_cap_with_forbid_route_and_no_worktree_limit_converts():
 
 
 def test_dp_5_a_role_rule_with_a_gate_and_no_artifact_converts():
-    policy, guardrails = _today()
+    policy, guardrails = _v8()
     planted = copy.deepcopy(policy)
     # A 6.x copy still holds role rules; the adapter converts them as before.
     planted["routing_guardrails"].setdefault("role_rules", []).append(
@@ -280,7 +280,7 @@ def test_dp_5_a_role_rule_with_a_gate_and_no_artifact_converts():
 
 
 def test_dp_5_an_artifact_rule_with_a_gate_and_no_artifact_converts():
-    policy, guardrails = _today()
+    policy, guardrails = _v8()
     planted = copy.deepcopy(policy)
     # 9.0.0 declares no artifact rule (ADR-091); a 7.0.0 copy still holds the block.
     planted["routing_guardrails"].setdefault("artifact_rules", []).append(
@@ -311,16 +311,17 @@ def test_dp_5_a_shape_with_no_subtask_ceiling_gets_the_default_of_one():
 
 
 def test_dp_5_the_adapter_leaves_its_input_unchanged():
-    policy, guardrails = _today()
+    policy, guardrails = _v8()
     before = copy.deepcopy((policy, guardrails))
-    legacy_adapter.adapt(policy, guardrails)
-    legacy_adapter.adapt_evidence_types(guardrails)
+    legacy_copy.adapt(policy, guardrails)
+    legacy_copy.adapt_evidence_types(guardrails)
     assert (policy, guardrails) == before
 
 
-def test_dp_5_only_effective_reads_the_adapter_and_nothing_reads_a_live_preset():
-    """The adapter converts a project's own governance copy, and `effective` is
-    its one caller. The live preset went in 9.0.0 (ADR-094), so no file names it."""
+def test_dp_5_no_shipped_code_reads_the_adapter_and_nothing_reads_a_live_preset():
+    """The adapter is the test helper `tests/legacy_copy.py` since 9.0.0 stopped
+    reading a governance copy (ADR-098), so no shipped file names it. The live
+    preset went in 9.0.0 (ADR-094), so no file names it either."""
     hits, preset = [], []
     for top in ("cli", "hooks", "scripts"):
         for path in sorted((ROOT / top).rglob("*")):
@@ -331,18 +332,18 @@ def test_dp_5_only_effective_reads_the_adapter_and_nothing_reads_a_live_preset()
                 text = path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
                 continue
-            if "legacy_adapter" in text:
+            if "legacy_adapter" in text or "legacy_copy" in text:
                 hits.append("/".join(parts))
             if "presets/default/" in text or '"presets", "default")' in text:
                 preset.append("/".join(parts))
-    assert hits == ["cli/compass_pkg/effective.py", "cli/compass_pkg/legacy_adapter.py"], hits
+    assert hits == [], hits
     assert preset == [], preset
 
 
 def test_dp_5_the_adapter_is_not_in_core_and_core_stays_in_bounds():
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")
     assert len(core.splitlines()) <= 1200
-    assert "legacy_adapter" not in core
+    assert "legacy_adapter" not in core and "legacy_copy" not in core
 
 
 # --- references and evidence types (`DP-6`) -----------------------------------
@@ -396,45 +397,32 @@ def test_dp_6_every_reference_in_the_preset_resolves():
                 assert check in checks, (stage_id, side, check)
 
 
-def test_dp_6_the_checks_are_the_guardrail_files_registry():
-    _, guardrails = _today()
+def test_dp_6_the_checks_declare_their_severity():
     checks = {n: c for n, c in _preset()["checks"].items() if c["kind"] == "deterministic"}
-    assert set(checks) == set(guardrails["checks"]) | ADDED_AFTER_THE_FREEZE["checks"]
-    assert not ADDED_AFTER_THE_FREEZE["checks"] & set(guardrails["checks"])
-    for name, entry in guardrails["checks"].items():
-        assert checks[name]["statement"] == entry["description"]
     blocking = checks["scenarios-are-executable"]
     assert blocking["blocking_when"] == {"risk": ["cross-cutting", "critical"]}
-    assert all(c["severity"] == ("advisory" if n in legacy_adapter.ADVISORY_CHECKS
+    assert all(c["severity"] == ("advisory" if n in legacy_copy.ADVISORY_CHECKS
                                  else "blocking") for n, c in checks.items())
 
 
-def test_dp_6_the_evidence_types_and_accepted_types_equal_the_guardrails_file():
-    _, guardrails = _today()
+def test_dp_6_every_accepted_type_is_a_declared_evidence_type():
     types = {"evidence_types": check_set.resolved()["evidence_types"]}
-    assert set(types["evidence_types"]) == (set(guardrails["evidence_types"])
-                                            | ADDED_AFTER_THE_FREEZE["evidence_types"])
-    assert not ADDED_AFTER_THE_FREEZE["evidence_types"] & set(guardrails["evidence_types"])
-    for name, entry in guardrails["evidence_types"].items():
-        assert types["evidence_types"][name]["description"] == entry["description"]
     gates = _preset()["gates"]
-    for gate, accepted in guardrails["gate_evidence_requirements"].items():
-        assert gates[gate]["kind"] == "review"
-        assert gates[gate]["accepts"] == accepted
     for gate in gates.values():
         for accepted in gate.get("accepts", []):
             assert accepted in types["evidence_types"]
+    for gate in gates.values():
+        if gate.get("accepts"):
+            assert gate["kind"] == "review"
 
 
-def test_dp_6_the_guardrails_keep_their_names_and_the_spike_ones_apply_off_ships():
-    _, guardrails = _today()
+def test_dp_6_the_guardrails_apply_to_shipping_and_the_spike_ones_off_ships():
     gates = _preset()["gates"]
-    for g in guardrails["defaults"]:
-        assert gates[g["id"]]["name"] == g["name"]
-        assert gates[g["id"]]["kind"] == "guardrail"
-        assert gates[g["id"]]["applies_to"] == {"ships": True}
-    for g in guardrails["spike_guardrails"]:
-        assert gates[g["id"]]["applies_to"] == {"ships": False}
+    for gid in ("G1", "G2", "G3", "G4", "G5"):
+        assert gates[gid]["kind"] == "guardrail"
+        assert gates[gid]["applies_to"] == {"ships": True}
+    for gid in ("S1", "S2"):
+        assert gates[gid]["applies_to"] == {"ships": False}
     assert gates["G5"]["when"] == {
         "labels_any": ["auth", "payments", "personal-data", "migrations"]}
 
@@ -493,17 +481,3 @@ def test_dp_3_the_rank_ruling_is_recorded_in_the_repository():
         assert any(f"| `{s}` | `{was}` | {shown} |" in text for s in legacy), (stage, mode)
 
 
-# --- each gate's stage comes from the frozen guardrails file (`DP-1`) ------------
-
-
-def test_dp_1_each_gate_stage_is_the_first_stage_of_its_checked_at_list():
-    from compass_pkg import core
-    from compass_pkg.path_stages import rename_v1_stage_keys
-    renames = core._stage_key_renames()
-    _, guardrails = _today()
-    gates = _preset()["gates"]
-    for group in ("defaults", "spike_guardrails"):
-        for guardrail in guardrails[group]:
-            # `build` is a path stage too, so only a v1 list is renamed (ADR-092).
-            first = rename_v1_stage_keys(guardrail["checked_at"], renames)[0]
-            assert gates[guardrail["id"]]["stage"] == first, guardrail["id"]

@@ -767,17 +767,15 @@ def test_gs_11_without_write_nothing_is_committed(tmp_path):
     assert "generation" not in _manifest(task_dir)
 
 
-def test_gs_11_a_project_with_copied_governance_is_stored_against_its_copies(tmp_path):
-    import shutil
+def test_gs_11_a_project_with_copied_governance_is_refused_and_stores_nothing(tmp_path):
+    """9.0.0 reads no copy of the governance files (ADR-098): the write is
+    refused and no generation is stored."""
+    import compat_baseline as cb
     root, task_dir = _project(tmp_path)
-    (root / "governance").mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copyfile(ROOT / "governance" / name, root / "governance" / name)
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
     code, out, err = _evaluate_write(root)
-    assert code == 0, out + err
-    versions = _load(_gen(task_dir, 1) / "versions.yml")
-    assert (versions["parents"][0]["ref"], versions["parents"][0]["source"]) == (
-        "legacy", "legacy")
+    assert code == 2 and "[governance-copy-removed]" in err, out + err
+    assert not (task_dir / "generations").exists()
 
 
 def test_gs_11_the_compat_regular_issue_state_gains_a_generation(tmp_path):

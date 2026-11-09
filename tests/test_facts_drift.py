@@ -8,7 +8,7 @@ derivation does not use.
 
 This is a small, explicit registry, not a document compiler. Each entry names
 a document, the sentence that makes a claim, and the live fact it claims. The
-fact is computed from `governance/routing-policy.yml` through the same
+fact is computed from the check set (`governance/check-set.yml`) through the same
 evaluator `compass approach evaluate` runs, or from the CLI's own code. A claim
 that is reworded so its pattern no longer matches fails too, so the registry
 moves with the prose.
@@ -31,10 +31,10 @@ CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
 from compass_pkg.issue_layout import docs_dir_for  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 DEEP_DIVE = ROOT / "docs" / "routing-deep-dive.md"
-POLICY = yaml.safe_load((ROOT / "governance" / "routing-policy.yml")
-                        .read_text(encoding="utf-8"))["routing_guardrails"]
+POLICY = shipped_view("routing-policy.yml")["routing_guardrails"]
 
 WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
          "seven": 7, "eight": 8, "nine": 9}

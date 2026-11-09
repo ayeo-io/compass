@@ -70,14 +70,10 @@ def test_ci_fails_when_any_task_fails(run_cli, make_task):
     assert "FAIL" in r.stdout, r
 
 
-def test_ci_fails_on_invalid_policy(run_cli, edit_governance, make_task):
-    """Broken governance => ci fails before any issue check."""
-    with edit_governance("guardrails.yml") as gr:
-        gr.setdefault("project", []).append({
-            "id": "Q-BAD",
-            "name": "no checks",
-            "statement": "...",
-        })
+def test_ci_fails_on_invalid_policy(run_cli, project, make_task):
+    """A `compass.yml` the settings lint refuses => ci fails."""
+    (project / "compass.yml").write_text("schema: 1\nautonomy: sometimes\n",
+                                         encoding="utf-8")
     task_dir = make_task("anything", _valid_task("anything"))
     _write_green(task_dir)
     r = run_cli("ci")

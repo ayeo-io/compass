@@ -3,7 +3,7 @@
 `scripts/render-explainer.py` runs each example assessment through
 `evidence_required.evaluate` and draws the evidence the policy returns. The committed
 `assets/compass-explainer.svg` must be what the script writes, so the README
-cannot disagree with `governance/routing-policy.yml`.
+cannot disagree with the check set, `governance/check-set.yml`.
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def test_the_committed_explainer_is_what_the_script_writes():
 
 def test_two_renders_write_the_same_bytes():
     module = _load()
-    policy = module.load_yaml(module.POLICY)
+    policy = module.load_policy()
     assert module.render(policy) == module.render(policy)
 
 
@@ -51,7 +51,7 @@ def test_each_scene_draws_the_evidence_the_policy_computes():
     from compass_pkg import evidence_required
     from compass_pkg.stable_ids import PATH_STAGE_IDS
     module = _load()
-    policy = module.load_yaml(module.POLICY)
+    policy = module.load_policy()
     computed = module.scenes(policy)
     svg = module.render(policy)
     # The three example assessments land on three different evidence rows, so
@@ -77,7 +77,7 @@ def test_the_explainer_holds_no_script_and_names_its_source():
     text = COMMITTED.read_text(encoding="utf-8")
     assert "<script" not in text
     assert "scripts/render-explainer.py" in text
-    assert "governance/routing-policy.yml" in text
+    assert "governance/check-set.yml" in text
     # Every animation loops, so a reader who arrives late still sees all three.
     assert re.search(r'repeatCount="indefinite"', text)
 

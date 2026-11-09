@@ -311,7 +311,7 @@ def _may_tick(task_dir, approver, check_id):
 def _record_check(task_dir, answer, save):
     check_id = answer.value
     task, task_path = load_manifest(task_dir)
-    check = _check_of(effective.view_or_legacy(task_dir), check_id, task)
+    check = _check_of(effective.effective_for(task_dir), check_id, task)
     owner = approval_records.project_owner(task_dir)
     if answer.approver is None:
         pass

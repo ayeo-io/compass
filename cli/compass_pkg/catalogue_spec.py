@@ -1,11 +1,9 @@
 # compass_pkg.catalogue_spec - the configuration catalogues' field table
 """The shapes a resolved configuration holds, and the keys `compass.yml` can hold.
 
-A resolved configuration (the check set, a stored generation or a project's
-governance copy read through the legacy adapter) holds the catalogues in
-`CATALOGUES`. `FIELDS` names the fields of each, which the retired-word
-tables (`word_map`) and the legacy copy reader (`effective._legacy_config`)
-read. The settings keys, the tighten-only keys and the descriptions the
+A resolved configuration (the check set or a stored generation) holds the
+catalogues in `CATALOGUES`. `FIELDS` names the fields of each, which the
+retired-word tables (`word_map`) read. The settings keys, the tighten-only keys and the descriptions the
 settings schema carries (`settings_lint.schema`) are here too, and `at_least`,
 which compares by the shipped orders. No I/O.
 

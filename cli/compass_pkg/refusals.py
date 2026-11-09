@@ -285,11 +285,12 @@ REFUSALS: dict[str, dict[str, str]] = {
     },
     # The project refusals of `compass migrate` (migrate_9._refuse_project, #359).
     # 9.0.0 reads neither a copied governance folder nor a git parent, so the
-    # project moves on 8.x first, or by an edit of compass.yml.
+    # project moves on 8.x first, or by an edit of compass.yml. Every command
+    # that resolves the policy gives the first too (`effective.refuse_governance_copy`).
     "governance-copy-removed": {
         "what": "{verb} in this project",
-        "why": "governance/ holds copies of the two governance files and there is no "
-               "compass.yml. Compass 9.0.0 does not read copied governance.",
+        "why": "governance/ holds a copy of routing-policy.yml or guardrails.yml and "
+               "there is no compass.yml. Compass 9.0.0 does not read copied governance.",
         "fix": "on Compass 8.x, run compass policy migrate to write compass.yml, then run "
                "compass migrate again. docs/upgrade-9-0-0.md lists the steps.",
     },

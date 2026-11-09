@@ -1,13 +1,15 @@
 """The integrity rule: a declared guardrail's check must be implemented in
-the CLI's CHECK_FNS. The contract (guarantee 2 in safety-contract.md) says
-this must fail in BOTH `compass policy lint` and `compass check` - otherwise
-a team could believe they have a hard guardrail when in fact none runs.
+the CLI's CHECK_FNS (guarantee 2 in safety-contract.md). Since 9.0.0 the
+shipped check set is the only policy, and the settings lint refuses a project
+check whose implementation the CLI lacks (`L-IMPL-UNKNOWN`,
+`tests/test_settings_lint.py`). 9.0.0 reads no copy of `guardrails.yml`
+(ADR-098), so these tests read the check set.
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-import yaml
+from check_set_files import view as shipped_view
 
 
 def test_policy_lint_passes_on_shipped_governance(run_cli):
@@ -15,61 +17,6 @@ def test_policy_lint_passes_on_shipped_governance(run_cli):
     r = run_cli("policy", "lint")
     assert r.returncode == 0, r
     assert "PASS" in r.stdout
-
-
-def test_policy_lint_fails_on_missing_check_implementation(run_cli, edit_governance):
-    """Add a guardrail that references a check name not in CHECK_FNS;
-    `compass policy lint` must fail and the message must say WHY."""
-    with edit_governance("guardrails.yml") as gr:
-        gr.setdefault("checks", {})
-        gr["checks"]["my-fake-check"] = {"description": "fake"}
-        gr.setdefault("project", []).append({
-            "id": "Q-FAKE",
-            "name": "fake guardrail",
-            "statement": "this references an unimplemented check",
-            "checks": ["my-fake-check"],
-            "checked_at": ["verify"],
-        })
-    r = run_cli("policy", "lint")
-    assert r.returncode != 0, r
-    assert "FAIL" in r.stdout, r
-    combined = (r.stdout + r.stderr).lower()
-    assert "my-fake-check" in combined, r
-    assert "check_fns" in combined or "not implement" in combined, r
-
-
-def test_check_fails_on_missing_check_implementation(run_cli, edit_governance, make_task):
-    """The same defect must also be caught by `compass check` at run time -
-    not just at lint. This is the integrity second check."""
-    with edit_governance("guardrails.yml") as gr:
-        gr.setdefault("checks", {})
-        gr["checks"]["my-fake-check"] = {"description": "fake"}
-        gr.setdefault("project", []).append({
-            "id": "Q-FAKE",
-            "name": "fake guardrail",
-            "statement": "no implementation",
-            "checks": ["my-fake-check"],
-            "checked_at": ["verify"],
-        })
-    # set up a minimal issue so `compass check` has something to run against
-    make_task("integrity-probe", {
-        "assessment": {
-            "risk": "contained",
-            "familiarity": "brownfield-mapped",
-            "size": "small",
-            "intent": "delivery",
-        },
-        "delivery_approach": "express",
-        "scenarios": [{"id": "SCN-001", "intent": "INT-1",
-                       "tests": ["tests/test_x.py::test_y"]}],
-        "gates": [{"id": "verify.correctness", "status": "pending"}],
-    })
-    r = run_cli("check", "--issue", "integrity-probe")
-    # in enforced mode an unimplemented check is a hard fail
-    assert r.returncode != 0, r
-    combined = (r.stdout + r.stderr).lower()
-    assert "my-fake-check" in combined, r
-    assert "no cli implementation" in combined or "not implement" in combined, r
 
 
 def test_policy_lint_jsonschema_validation_runs_when_installed(run_cli):
@@ -80,36 +27,15 @@ def test_policy_lint_jsonschema_validation_runs_when_installed(run_cli):
     assert "jsonschema not installed" not in r.stdout, r
 
 
-def test_policy_lint_fails_on_invalid_yaml_structure(run_cli, edit_governance):
-    """A guardrail with no `checks:` list is not a guardrail (it is a
-    strategy). policy lint must catch that."""
-    with edit_governance("guardrails.yml") as gr:
-        gr.setdefault("project", []).append({
-            "id": "Q-BARE",
-            "name": "guardrail without checks",
-            "statement": "...",
-            "checked_at": ["verify"],
-        })
-    r = run_cli("policy", "lint")
-    assert r.returncode != 0, r
-    assert "FAIL" in r.stdout, r
-
-
 # ---------------------------------------------------------------------------
 # `TRC-E6` - guardrails.yml registers the new DoD check
 # ---------------------------------------------------------------------------
 
 def test_dod_check_registered(run_cli):
-    """`TRC-E6`: governance/guardrails.yml must contain a check entry named
+    """`TRC-E6`: the check set must contain a check entry named
     'dod-evidence-typed', and the CLI must implement CHECK_FNS for that key.
     `compass policy lint` must still pass - the new entry is well-formed."""
-    import yaml
-    from pathlib import Path
-
-    # Locate the shipped guardrails.yml (the one the CLI and tests use)
-    framework_root = Path(__file__).resolve().parent.parent
-    gr_path = framework_root / "governance" / "guardrails.yml"
-    gr = yaml.safe_load(gr_path.read_text())
+    gr = shipped_view("guardrails.yml")
 
     # 1. The check entry must exist under `checks:`
     assert "dod-evidence-typed" in (gr.get("checks") or {}), (
@@ -147,8 +73,8 @@ def test_guardrail_count_unchanged():
     """`TRC-F2`: No sixth guardrail has been added.
 
     governance/guardrails.md must list exactly five guardrails (`G1`..`G5`).
-    governance/guardrails.yml must have no guardrail entries beyond `G1`..`G5`
-    in its `defaults:` block.
+    The check set must have no guardrail of a shipping approach beyond
+    `G1`..`G5`.
 
     This is a regression test over the framework's shipped content - it
     checks `Inv-2` (five guardrails, not more; architecture/decisions/README.md)
@@ -158,10 +84,8 @@ def test_guardrail_count_unchanged():
 
     framework_root = Path(__file__).resolve().parent.parent
     guardrails_md = framework_root / "governance" / "guardrails.md"
-    guardrails_yml = framework_root / "governance" / "guardrails.yml"
 
     assert guardrails_md.is_file(), f"not found: {guardrails_md}"
-    assert guardrails_yml.is_file(), f"not found: {guardrails_yml}"
 
     # --- guardrails.md: parse the canonical G<N> headings -------------------
     # The canonical guardrails use H3 headings with the machine id as a
@@ -180,7 +104,7 @@ def test_guardrail_count_unchanged():
     )
 
     # --- guardrails.yml: assert defaults block has exactly `G1`..`G5` -----------
-    yml_data = yaml.safe_load(guardrails_yml.read_text(encoding="utf-8"))
+    yml_data = shipped_view("guardrails.yml")
     defaults = yml_data.get("defaults", [])
     default_ids = [g.get("id") for g in defaults]
     assert len(default_ids) == 5, (
@@ -203,19 +127,18 @@ def test_guardrail_count_unchanged():
 
 
 def test_guardrail_ids_in_yml_match_md():
-    """`TRC-F2` (supplementary): the five G-ids in guardrails.yml match those
+    """`TRC-F2` (supplementary): the five G-ids in the check set match those
     in guardrails.md - no silent split between the prose and the machine file.
     """
     import re
 
     framework_root = Path(__file__).resolve().parent.parent
     guardrails_md = framework_root / "governance" / "guardrails.md"
-    guardrails_yml = framework_root / "governance" / "guardrails.yml"
 
     md_text = guardrails_md.read_text(encoding="utf-8")
     g_headings = set(re.findall(r"^###\s+.*\(`(G\d+)`\)", md_text, re.MULTILINE))
 
-    yml_data = yaml.safe_load(guardrails_yml.read_text(encoding="utf-8"))
+    yml_data = shipped_view("guardrails.yml")
     defaults = yml_data.get("defaults", [])
     yml_ids = {g.get("id") for g in defaults}
 

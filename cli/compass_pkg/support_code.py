@@ -38,8 +38,8 @@ PIECES = tuple(zip(ACCEPTANCE_SUPPORT, ("alias helper", "driver factory", "DSL r
                                          "layering test")))
 
 #: What an issue the strategy applies to can claim while a piece is missing.
-#: The check's statement in the default preset holds the same sentence, so
-#: `governance/guardrails.yml` states it; a test fails when the two differ.
+#: The check's statement in the check set (`governance/check-set.yml`) holds the
+#: same sentence; a test fails when the two differ.
 CLAIM_LIMIT = ("while a piece is missing, the issue can claim that its scenarios "
                "pass, and not that its acceptance tests are isolated from each other "
                "(alias helper), run through a driver chosen at start-up (driver "

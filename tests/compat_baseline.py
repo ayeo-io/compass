@@ -26,7 +26,6 @@ from compass_pkg.routing import evaluate_route  # noqa: E402
 FIXTURES = ROOT / "tests" / "fixtures" / "compat"
 ROUTING = FIXTURES / "contract-1-routing.jsonl.gz"
 OWED = FIXTURES / "contract-2-owed.yml"
-POLICY = ROOT / "governance" / "routing-policy.yml"
 
 DIMENSIONS = ("risk", "familiarity", "size", "goal", "urgency", "role")
 AUTONOMY = ("controlled", "balanced", "autonomous")
@@ -96,7 +95,13 @@ def _as_recorded_with_role(out, role):
 
 
 def shipped_policy():
-    return load_yaml(str(POLICY))
+    """The routing policy the evaluator reads for a project with no
+    configuration: the shipped check set, in the shape `evaluate_route` takes.
+    It replaced the generated view `routing-policy.yml`, which 9.0.0
+    deleted (ADR-098)."""
+    from compass_pkg import check_set, effective
+    return effective.EffectiveView("live", None, None, check_set.resolved(),
+                                   {}).evaluator_policy()
 
 
 # 9.0.0 removes `compass analyze` (ADR-091), and with it the gate `verify.analyze` and
@@ -561,7 +566,8 @@ def archive_differences(recorded, now):
 #
 # The contracts hold under three configurations: A (nothing, the shipped
 # default alone), B (an empty overlay) and C (a copy of the 5.6.0 governance
-# files, read through the legacy adapter). The files for C are byte copies of
+# files, read through `tests/legacy_copy.py`). 9.0.0 refuses a project with
+# copied governance, so C holds for contracts 1 and 2 only (VD-043 decision 2). The files for C are byte copies of
 # what 5.6.0 shipped, taken once with `git show v5.6.0:governance/<file>`.
 # Contracts 1 and 2 read the 8.0.4 governance copy in place of A (see below).
 
@@ -628,6 +634,7 @@ def policy_under(kind, scratch, fault=None, governance=None):
     empty overlay over the 8.0.4 copy, because 9.0.0 replaces the delivery
     approaches the live default routes (ADR-092), as they read A."""
     from compass_pkg import effective
+    import legacy_copy
 
     root = Path(scratch) / "project"
     (root / ".compass" / "work").mkdir(parents=True)
@@ -637,7 +644,7 @@ def policy_under(kind, scratch, fault=None, governance=None):
         # overlay holds no catalogue, so nothing merges (ADR-094).
         from compass_pkg import tighten
         add_governance_copy(root, source=governance)
-        resolved = effective.legacy_resolved(str(root))
+        resolved = legacy_copy.resolved_from_copy(str(root))
         build_configuration(kind, root, fault)
         doc = load_yaml(str(root / "compass.yml"))
         if not isinstance(doc, dict):
@@ -645,6 +652,12 @@ def policy_under(kind, scratch, fault=None, governance=None):
         resolved = tighten.apply(resolved, tighten.settings_of(doc))
         return effective.EffectiveView("live", None, None, resolved, {}).evaluator_policy()
     build_configuration(kind, root, fault)
+    if kind == "C":
+        # 9.0.0 refuses a project with copied governance (`governance-copy-removed`),
+        # so contracts 1 and 2 read C's copy through the 8.x reader the tests keep
+        # (VD-043 decisions 1 and 2).
+        resolved = legacy_copy.resolved_from_copy(str(root))
+        return effective.EffectiveView("live", None, None, resolved, {}).evaluator_policy()
     resolution = effective.resolve_live(str(root))
     view = effective.EffectiveView("live", None, None, resolution.resolved,
                                    resolution.versions)
@@ -659,8 +672,8 @@ def policy_under(kind, scratch, fault=None, governance=None):
 # read this copy in place of the live default, so a change to the live default's
 # approaches does not move them. The evidence rows of 9.0.0
 # (`compass_pkg.evidence_required`) must owe the gates 8.0.4 routed, so their test
-# compares them with this copy too. It is read through the legacy adapter as
-# configuration C reads the 5.6.0 copy. The two files are byte copies taken with
+# compares them with this copy too. It is read through the 8.x copy reader the
+# tests keep (`tests/legacy_copy.py`), as configuration C reads the 5.6.0 copy. The two files are byte copies taken with
 # `git show v8.0.4:governance/<file>`, packed for the same reason as the 5.6.0
 # copy. The copy is not named with a letter: the D of `docs/releasing.md` is the
 # settings moved into `compass.yml`.
@@ -680,6 +693,7 @@ def policy_8_0_4(scratch=None):
     is then removed, and each call returns a new copy of that policy, so a caller
     can change its copy as it can change what `shipped_policy` returns."""
     from compass_pkg import effective
+    import legacy_copy
 
     if scratch is None:
         if not _POLICY_8_0_4:
@@ -690,10 +704,8 @@ def policy_8_0_4(scratch=None):
     root = Path(scratch) / "project"
     (root / ".compass" / "work").mkdir(parents=True)
     add_governance_copy(root, source=GOVERNANCE_8_0_4)
-    resolution = effective.resolve_live(str(root))
-    view = effective.EffectiveView("live", None, None, resolution.resolved,
-                                   resolution.versions)
-    return view.evaluator_policy()
+    resolved = legacy_copy.resolved_from_copy(str(root))
+    return effective.EffectiveView("live", None, None, resolved, {}).evaluator_policy()
 
 
 def archive_under(kind, fault=None):

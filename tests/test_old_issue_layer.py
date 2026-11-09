@@ -45,7 +45,7 @@ def _layer(task_dir):
     """The issue's layer the configuration in force hands the evaluator: the
     stored generation's, or the live view's for an issue with none."""
     from compass_pkg import effective
-    view = effective.view_or_legacy(str(task_dir))
+    view = effective.effective_for(str(task_dir))
     # A project with no `compass.yml` has no view, and so no issue layer.
     return view.evaluator_issue() if view is not None else None
 
@@ -70,11 +70,12 @@ def _view_8_0_4(tmp_path, issue_doc, project_doc=None):
     8.x either, so it adds nothing. 8.x merged the layers; 9.0.0 has no merge
     (ADR-094), so the stored shape is built here."""
     import compat_baseline as cb
+    import legacy_copy
     from compass_pkg import effective, word_map
     copy_root = tmp_path / "copy-8-0-4"
     (copy_root / ".compass").mkdir(parents=True, exist_ok=True)
     cb.add_governance_copy(copy_root, source=cb.GOVERNANCE_8_0_4)
-    resolved = effective.legacy_resolved(str(copy_root))
+    resolved = legacy_copy.resolved_from_copy(str(copy_root))
     issue = word_map.map_layer(copy.deepcopy(issue_doc))[0]
     for stage, entry in (issue.get("stages") or {}).items():
         resolved["stages"][stage]["mode"] = entry["set"]["mode"]

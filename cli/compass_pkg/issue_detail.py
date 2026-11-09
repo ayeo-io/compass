@@ -87,7 +87,7 @@ def _refuse_another_major(manifest, task_dir, other):
         return
     from compass_pkg import effective
     try:
-        effective.view_or_legacy(task_dir, manifest=manifest)
+        effective.effective_for(task_dir, manifest=manifest)
     except effective.MajorRefusal:
         raise
     except Exception:                                       # noqa: BLE001 - no configuration

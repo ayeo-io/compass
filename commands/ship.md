@@ -27,8 +27,8 @@ the issue.
   them from the marketer's perspective too.
 - If this issue is itself a sweep, rename, or cleanup touching many files,
   check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9`
-  describes (an unmigrated 5.x project runs on its own copied `governance/`
-  until `compass policy migrate` on 8.x): a fresh agent that has not seen the
+  describes (an unmigrated 5.x project is refused until `compass policy
+  migrate` on 8.x): a fresh agent that has not seen the
   change, not its author.
 - A guard offered as part of the change is accepted on a demonstrated failure
   rather than a passing test - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
@@ -37,7 +37,7 @@ the issue.
   call sites, how much output, how often it fires - measure the number and
   report it before defending either position
   (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S11`; an unmigrated 5.x
-  project reads its own copied `governance/`).
+  project is refused until it migrates).
 
 ## Spike note
 
@@ -58,7 +58,7 @@ instead of the procedure below.
    through `compass tdd-green -- <cmd>`, which confirms it passes and writes
    the record. Point to that record rather than reproducing the run.
 2. **Run `compass check`.** This is the **mechanical half** of the gate: the
-   CLI runs the `guardrails.yml` checks against `manifest.yml` and
+   CLI runs the check set's checks against `manifest.yml` and
    `evidence/` - every scenario has a test, the suite passed, every changed
    file traces to a scenario, every `pass` gate has resolving evidence, and
    so on. It exits non-zero on any failure. You still judge the *judgment*
@@ -67,8 +67,8 @@ instead of the procedure below.
    `correctness`, `governance`, `traceability`, and as the change needs
    `regression`, `security`, `clarity`, `claims`. The `governance` dimension
    checks the work against the governance in force (`compass policy show`;
-   an unmigrated 5.x project runs on its own copied `governance/` until
-   `compass policy migrate` on 8.x): the guardrails (hard, evidence-backed - `compass check` is the mechanical
+   an unmigrated 5.x project is refused until `compass policy migrate` on
+   8.x): the guardrails (hard, evidence-backed - `compass check` is the mechanical
    part) and the applicable strategies (assessed as judgment, reported
    separately). How to do the review is below.
 4. **Pass the gates.** As each gate is cleared, register the evidence, then
@@ -120,7 +120,7 @@ This session does the review that a separate reviewer agent did before 9.0.0
   `scripts/voice-tells.py` over the issue's documents for the tells a fixed
   string can find. Cold-reader writing is a strategy
   (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S8` names the calibration
-  sample; an unmigrated 5.x project reads its own copied `governance/`), so a
+  sample; an unmigrated 5.x project is refused until it migrates), so a
   finding is a note and a conversation, never an automatic gate failure.
   Flag a short code with no plain words in front of it: the fix is to
   put the meaning first and the code in brackets, never to delete the code.

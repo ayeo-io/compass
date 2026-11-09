@@ -344,7 +344,7 @@ def test_f14_overrule_a_delegated_check(tmp_path):
     last = manifest_of(root)["evidence"][-1]
     assert last["check"] == CHECK and last["decision"] == "rejected"
     assert last["overrules"] == check_id and last["via"] == "prompt"
-    view = effective.view_or_legacy(str(task_dir(root)))
+    view = effective.effective_for(str(task_dir(root)))
     status, detail = approval_records.judge(CHECK, view.config["checks"][CHECK],
                                             manifest_of(root), str(task_dir(root)))
     assert status == "fail" and detail.startswith("approval withdrawn"), detail

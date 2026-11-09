@@ -104,7 +104,7 @@ def policy_checks(task_dir):
     else the live view, else the check set itself."""
     from compass_pkg import effective
     try:
-        view = effective.view_or_legacy(task_dir)
+        view = effective.effective_for(task_dir)
     except CompassError:
         view = None
     checks = (view.config.get("checks") if view is not None else None) or \

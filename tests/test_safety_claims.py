@@ -22,7 +22,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "cli"))
 
-GUARDRAILS_YML = REPO_ROOT / "governance" / "guardrails.yml"
+CHECK_SET_YML = REPO_ROOT / "governance" / "check-set.yml"
 GUARDRAILS_MD = REPO_ROOT / "governance" / "guardrails.md"
 METHODOLOGY = REPO_ROOT / "docs" / "methodology.md"
 CONTRACT = REPO_ROOT / "docs" / "safety-contract.md"
@@ -36,12 +36,12 @@ OVERCLAIM = "No code reaches main without a passing automated test it traces to"
 def _g1_statement() -> str:
     """The tested-before-it-lands guardrail's statement (`G1`), read from the
     machine-readable file that owns it."""
-    import yaml
-    data = yaml.safe_load(GUARDRAILS_YML.read_text(encoding="utf-8"))
+    from check_set_files import view as shipped_view
+    data = shipped_view("guardrails.yml")
     for g in (data.get("defaults") or []):
         if g.get("id") == "G1":
             return " ".join(str(g.get("statement", "")).split())
-    raise AssertionError("G1 is not in governance/guardrails.yml")
+    raise AssertionError("G1 is not in governance/check-set.yml")
 
 
 def _normalise(text: str) -> str:
@@ -118,7 +118,7 @@ def test_b2_promise_reads_the_same_in_all_three_files():
 
 def test_b2b_the_old_overclaim_is_gone_from_every_file():
     """The removal is checked, not assumed (TRC-B2)."""
-    for path in (GUARDRAILS_YML, GUARDRAILS_MD, METHODOLOGY, CONTRACT):
+    for path in (CHECK_SET_YML, GUARDRAILS_MD, METHODOLOGY, CONTRACT):
         body = _normalise(path.read_text(encoding="utf-8"))
         assert OVERCLAIM.lower() not in body.lower(), (
             f"{path.relative_to(REPO_ROOT)} still carries the overclaim")
@@ -133,8 +133,8 @@ def test_f2_narrowed_wording_does_not_soften_the_check():
     permission to soften the check. `G1`'s `checks:` list is what actually runs,
     and it must be untouched by this issue.
     """
-    import yaml
-    data = yaml.safe_load(GUARDRAILS_YML.read_text(encoding="utf-8"))
+    from check_set_files import view as shipped_view
+    data = shipped_view("guardrails.yml")
     g1 = next(g for g in data["defaults"] if g.get("id") == "G1")
 
     expected = {"scenarios-have-tests", "declared-tests-resolve", "suite-passed",

@@ -243,7 +243,8 @@ def test_familiarity_never_changes_the_evidence(live):
 
 def test_unmapped_ground_keeps_its_required_skill_and_its_advice(live):
     medium = er.evaluate(_assess(familiarity="brownfield-unmapped", size="medium"), live)
-    assert medium["required_skills"] == ["behavior-mapping"]
+    # #360 merged the skill into `atdd`, which the check set names.
+    assert medium["required_skills"] == ["atdd"]
     assert "RP-FLOOR-002" in medium["rules_fired"]
     small = er.evaluate(_assess(familiarity="brownfield-unmapped"), live)
     assert small["required_skills"] == []

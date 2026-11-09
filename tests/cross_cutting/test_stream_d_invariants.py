@@ -166,7 +166,7 @@ def test_trc_d2_only_two_new_public_cli_verbs():
 
 # ---------------------------------------------------------------------------
 # No fixed-tier ladder is shipped (`TRC-D3`)
-# Source-of-truth: governance/routing-policy.yml - no `tier`, `level`, or
+# Source-of-truth: routing-policy.yml - no `tier`, `level`, or
 # equivalent process vocabulary, outside the `model_rules` block, which names
 # the model each seat runs on; the four assessment dimensions remain
 # risk/familiarity/size/intent (`BR-012`).
@@ -192,14 +192,15 @@ def model_rules_problems(policy):
 
 
 def test_trc_d3_no_tier_ladder_in_routing_policy():
-    """governance/routing-policy.yml has no `tier` or `level`
-    vocabulary; the four assessment dimensions are unchanged (`TRC-D3`)."""
-    text = (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8")
+    """The check set has no `tier` or `level` vocabulary; the four assessment
+    dimensions are unchanged (`TRC-D3`)."""
+    text = (ROOT / "governance" / "check-set.yml").read_text(encoding="utf-8")
     # The `model_rules` block names a model tier per seat (which model runs a
     # stage), not a process tier a person picks from a menu: it changes no
     # stage, gate or approach. It is checked on its own below, and the rest of
     # the file keeps the hard prohibition.
-    policy = yaml.safe_load(text)
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
     problems = model_rules_problems(policy)
     assert not problems, "\n".join(problems)
     start = text.find("\nmodel_rules:\n")
@@ -207,7 +208,7 @@ def test_trc_d3_no_tier_ladder_in_routing_policy():
     # Hard prohibition - no "tier:" or "level:" keys anywhere else
     for forbidden in ("tier:", "level:"):
         assert forbidden not in rest, (
-            f"routing-policy.yml must not introduce '{forbidden}' - would be a tier-ladder"
+            f"check-set.yml must not introduce '{forbidden}' - would be a tier-ladder"
         )
     # Reading vocabulary keys: the dimensions + urgency. Role left the
     # assessment at 7.0.0 (ADR-070); nothing took its place.
@@ -247,7 +248,7 @@ def test_trc_d4_no_new_agent_persona_no_new_role():
 
 # ---------------------------------------------------------------------------
 # Pipeline phases still flex by delivery approach (`TRC-D5`)
-# Source-of-truth: governance/routing-policy.yml `route_shapes` - at least
+# Source-of-truth: routing-policy.yml `route_shapes` - at least
 # two route shapes differ in their phase-weight maps (`BR-014`).
 # ---------------------------------------------------------------------------
 def test_trc_d5_pipeline_phases_flex_by_route():
@@ -282,7 +283,7 @@ def test_trc_d5_pipeline_phases_flex_by_route():
 
 # ---------------------------------------------------------------------------
 # Phases and gates remain enforced (`TRC-D6`)
-# Source-of-truth: governance/routing-policy.yml `immovable_gates` and every
+# Source-of-truth: routing-policy.yml `immovable_gates` and every
 # route_shape's `gates` list (`BR-015`).
 # ---------------------------------------------------------------------------
 IMMOVABLE_GATE_IDS = {"verify.correctness", "verify.governance", "verify.traceability"}
@@ -291,9 +292,8 @@ IMMOVABLE_GATE_IDS = {"verify.correctness", "verify.governance", "verify.traceab
 def test_trc_d6_phases_and_gates_remain_enforced():
     """Immovable gates are still immovable; no route shape's gate
     set is empty - no fluid no-gate mode (`TRC-D6`, `BR-015`)."""
-    policy = yaml.safe_load(
-        (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8")
-    )
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
     # Immovable gates present
     immovable = {g["gate"] for g in policy["routing_guardrails"]["immovable_gates"]}
     assert IMMOVABLE_GATE_IDS.issubset(immovable), (

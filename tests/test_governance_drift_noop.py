@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 import yaml
+from check_set_files import view as shipped_view  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -239,14 +240,14 @@ EXPECTED_SUBCOMMANDS = {
 
 
 def test_trc_f6_the_framework_should_grow_by_artifacts_and_checks_only():
-    g = yaml.safe_load((GOVERNANCE / "guardrails.yml").read_text())
+    g = shipped_view("guardrails.yml")
     ids = {x["id"] for x in g["defaults"]}
     ids |= {x["id"] for x in g["spike_guardrails"]}
     ids |= {x["id"] for x in (g.get("project") or [])}
     assert ids == EXPECTED_GUARDRAIL_IDS, (
         f"the guardrail id set changed: {sorted(ids ^ EXPECTED_GUARDRAIL_IDS)}")
 
-    policy = yaml.safe_load((GOVERNANCE / "routing-policy.yml").read_text())
+    policy = shipped_view("routing-policy.yml")
     gates = set()
     for shape in policy["route_shapes"].values():
         gates.update(shape.get("gates", []))
@@ -282,13 +283,9 @@ def test_trc_f7_evidence_types_agree_across_surfaces():
     with nothing checking.
     """
     declared = set(
-        (yaml.safe_load((GOVERNANCE / "guardrails.yml").read_text())
+        (shipped_view("guardrails.yml")
          .get("evidence_types") or {}))
-    assert declared, "guardrails.yml declares no evidence types"
-    # The frozen file cannot list a type the check set gained after it froze.
-    sys.path.insert(0, str(ROOT / "tests"))
-    from check_set_files import ADDED_AFTER_THE_FREEZE
-    declared |= ADDED_AFTER_THE_FREEZE["evidence_types"]
+    assert declared, "the check set declares no evidence types"
 
     schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text())
 
@@ -307,7 +304,7 @@ def test_trc_f7_evidence_types_agree_across_surfaces():
     for accepted in found:
         assert accepted == declared, (
             "governance and the task schema disagree about evidence types.\n"
-            f"  declared in guardrails.yml but not accepted by the schema: "
+            f"  declared in the check set but not accepted by the schema: "
             f"{sorted(declared - accepted)}\n"
             f"  accepted by the schema but not declared: "
             f"{sorted(accepted - declared)}")

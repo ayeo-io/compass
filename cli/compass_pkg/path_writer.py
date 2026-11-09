@@ -69,20 +69,6 @@ def checkpoints_for(evidence, autonomy, applies):
     return [STAGE_SPECIFY] if "scenario-approval" in evidence else []
 
 
-def live_resolved(task, task_dir):
-    """The configuration `approach evaluate --write` would commit now, for a run
-    that reads the governance files: a preview of an issue with no generation, or
-    an assessment given on the command line, in a project with no `compass.yml`.
-    A write commits the live configuration, which declares the `S17` strategy, so
-    a preview that read only the governance files would owe less than the write
-    stores."""
-    from compass_pkg import effective
-    from compass_pkg.project_settings import find_project_root
-    slug = os.path.basename(os.path.normpath(task_dir)) if task_dir else None
-    return effective.resolve_live(find_project_root(task_dir or os.getcwd()),
-                                  task, slug, task_dir).resolved
-
-
 def strategy_inputs(task, task_dir, resolved, expected):
     """`(state, reason, expected)` of the `S17` strategy for this write, or None
     when the write stores no block. As for an 8.x issue (`routing._acceptance_block`),

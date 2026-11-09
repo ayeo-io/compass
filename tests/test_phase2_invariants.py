@@ -28,6 +28,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
 sys.path.insert(0, str(ROOT / "tests"))
 from archive import archive_root, checkable_root  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 GOVERNANCE = ROOT / "governance"
 
@@ -178,13 +179,13 @@ EXPECTED_READING_KEYS = {
 
 
 def test_trc_f3_the_framework_should_grow_by_artifacts_and_checks_only():
-    g = yaml.safe_load((GOVERNANCE / "guardrails.yml").read_text())
+    g = shipped_view("guardrails.yml")
     ids = {x["id"] for x in g["defaults"]} | {x["id"] for x in g["spike_guardrails"]}
     ids |= {x["id"] for x in (g.get("project") or [])}
     assert ids == EXPECTED_GUARDRAIL_IDS, (
         f"the guardrail id set changed: {sorted(ids ^ EXPECTED_GUARDRAIL_IDS)}")
 
-    policy = yaml.safe_load((GOVERNANCE / "routing-policy.yml").read_text())
+    policy = shipped_view("routing-policy.yml")
     assert set(policy["assessment_vocabulary"]) == EXPECTED_READING_KEYS, (
         "the reading vocabulary changed")
 

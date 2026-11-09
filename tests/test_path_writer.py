@@ -24,6 +24,7 @@ CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
 from compass_pkg import evidence_required as er  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 #: `request` (#356) is first in the manifest's order, so it starts every delivery list.
 EVERY_ISSUE = ["request", "scenarios", "red-before-green", "suite-green",
@@ -97,7 +98,7 @@ def _assert_path_keys(manifest):
 def _expected(assessment):
     """What `evidence_required.evaluate` gives under the live default."""
     from compass_pkg.core import load_yaml
-    policy = load_yaml(str(ROOT / "governance" / "routing-policy.yml"))
+    policy = shipped_view("routing-policy.yml")
     return er.evaluate(assessment, policy)
 
 

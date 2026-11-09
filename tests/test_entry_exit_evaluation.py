@@ -147,7 +147,7 @@ def _view(root, monkeypatch, mutate=None, legacy=True):
     the legacy stages and lists of a stored 8.x generation (`_legacy_catalogue`)."""
     from compass_pkg import effective
     monkeypatch.chdir(root)
-    view = effective.view_or_legacy(None)
+    view = effective.effective_for(None)
     if mutate or legacy:
         resolved = copy.deepcopy(view.resolved)
         if legacy:

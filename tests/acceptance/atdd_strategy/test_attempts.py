@@ -201,8 +201,6 @@ def _quarantine(project, test):
     """Give the project its own governance, with `test` in `quarantine.yml`."""
     gov = project.root / "governance"
     gov.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copy(support.ROOT / "governance" / name, gov / name)
     (gov / "quarantine.yml").write_text(yaml.safe_dump({
         "version": "1.0.0",
         "quarantined": [{"test": test, "tracking_task": "fix-flaky-orders",

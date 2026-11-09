@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 from check_set_files import shipped  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 SIZES = ["atomic", "small", "medium", "large", "product"]
 ASSESS = ("--assessment", "risk=contained", "--assessment", "familiarity=brownfield-mapped")
@@ -28,8 +29,7 @@ ASSESS = ("--assessment", "risk=contained", "--assessment", "familiarity=brownfi
 def test_vr_b1_the_size_dimension_lists_medium_and_not_standard():
     dimensions = shipped("dimensions.yml")
     assert dimensions["dimensions"]["size"]["values"] == SIZES
-    view = yaml.safe_load((ROOT / "governance" / "routing-policy.yml")
-                          .read_text(encoding="utf-8"))
+    view = shipped_view("routing-policy.yml")
     assert view["assessment_vocabulary"]["size"] == SIZES
 
 

@@ -1,6 +1,6 @@
 """`compass approach evaluate --help` names the configuration it applies.
 
-The help said the command applies governance/routing-policy.yml. The code
+The help said the command applies routing-policy.yml. The code
 applies the issue's stored generation, or with --write the project's
 resolved configuration (the check set, tightened by compass.yml).
 
@@ -28,4 +28,4 @@ def test_help_names_the_configuration_it_applies():
     assert "stored generation" in text
     assert "compass.yml" in text
     assert "resolved configuration" in text
-    assert "applies governance/routing-policy.yml" not in text
+    assert "applies routing-policy.yml" not in text

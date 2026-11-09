@@ -24,7 +24,6 @@ components. Relations are ordered by the calling component.
 | From | To | Transport | Purpose | Criticality |
 |---|---|---|---|---|
 | `cli/compass` | `governance/check-set.yml` | file read | `compass approach evaluate` applies the routing rules of the check set at assess | high |
-| `cli/compass` | `governance/guardrails.yml`, `governance/routing-policy.yml` | file read | frozen 8.x views, read only for a project with its own copy of the governance files and no `compass.yml` | low |
 | `cli/compass` | `governance/strategies.md` | file read | strategy documentation consulted by CLI subcommands | medium |
 | `cli/compass` | `architecture/` | file read | `frame_load_architecture` reads all `*.md` files and `decisions/ADR-*.md` into `architecture-loaded.yml` | medium |
 | `cli/compass` | `.compass/work/` | file read/write | every subcommand (assess, check, tdd-red, tdd-green) reads and writes issue manifests under this directory | high |

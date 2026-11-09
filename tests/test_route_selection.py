@@ -11,7 +11,8 @@ approaches with one path (ADR-092), so these tests do not read the live
 default: a change to its approaches must not move a recorded route.
 
 `compass approach evaluate` now prints the path for a delivery assessment and
-keeps the approach only for a spike. So the tests of a delivery approach call
+keeps the approach only for a spike. The command reads the shipped check set:
+9.0.0 reads no project copy of the governance files (ADR-098). So the tests of a delivery approach call
 the evaluator in process, with the assessment read as the command reads it,
 and each test that ran the command has a path twin at the bottom: the same
 assessment through the command, and the evidence it owes now.
@@ -35,14 +36,6 @@ from compass_pkg import evidence_required as er
 from compass_pkg import routing
 from compass_pkg.core import ASSESSMENT_KEY_MAP
 from conftest import load_route_fixtures
-
-
-@pytest.fixture
-def project(project):
-    """The shared temporary project, with the 8.0.4 governance copy in place of
-    the copy of the live default that the shared fixture puts there."""
-    cb.add_governance_copy(project, source=cb.GOVERNANCE_8_0_4)
-    return project
 
 
 # --- happy-path: each fixture selects the documented delivery approach for
@@ -348,6 +341,9 @@ def test_route_fixture(run_cli, fixture):
 # delivery assessment prints `delivery` and the evidence it owes; the 8.x keys
 # of the approach (`stages`, `subtask_ceiling`, `max_worktrees`) are gone.
 
+#: The evidence of the acceptance strategy `S17` (`governance/strategies.md`).
+S17_EVIDENCE = ("outer-loop", "isolation", "layering")
+
 LIGHT = ["scenarios", "red-before-green", "suite-green", "correctness",
          "governance", "traceability"]
 STANDARD = LIGHT + ["regression", "security", "clarity", "definition-of-done"]
@@ -397,8 +393,13 @@ def test_the_command_prints_the_path_for_a_delivery_assessment(run_cli, name):
     data = _evaluate_cli(run_cli, readings)
     assert data["delivery_approach"] == "delivery"
     # Every delivery row also owes the request link, first in the manifest's order
-    # (#356), and the ship approval, last (#355).
-    assert data["evidence_required"] == ["request"] + owed + ["ship-approval"]
+    # (#356), and the ship approval, last (#355). The command reads the check set,
+    # which declares the acceptance strategy `S17`, so its evidence is owed too;
+    # the 8.0.4 copy these lists were written against declared none.
+    s17 = [t for t in data["evidence_required"] if t in S17_EVIDENCE]
+    assert s17 == [t for t in S17_EVIDENCE if t in s17]
+    assert [t for t in data["evidence_required"] if t not in S17_EVIDENCE] == \
+        ["request"] + owed + ["ship-approval"]
     assert [f["id"] for f in data["policy_rules_fired"]] == fired
     # The gates are derived from the evidence (ADR-092).
     path = er.evaluate(_as_read(readings), cb.policy_8_0_4())
@@ -406,20 +407,23 @@ def test_the_command_prints_the_path_for_a_delivery_assessment(run_cli, name):
     for key in ("stages", "subtask_ceiling", "max_worktrees"):
         assert key not in data, f"the path does not print {key!r}"
     if name == "brownfield-unmapped":
-        assert "behavior-mapping" in data["required_skills"]
+        # #360 merged the skill into `atdd`, which the check set names.
+        assert "atdd" in data["required_skills"]
 
 
 def test_the_command_prints_the_path_for_each_baseline_combination(run_cli):
     """Twin of test_existing_combinations_unchanged: the command prints
     `delivery` for each delivery row of the baseline, and a spike row as the
-    8.x evaluator routes it."""
+    8.x evaluator routes it over the check set the command reads."""
+    shipped = cb.shipped_policy()
     for entry in _baseline():
         old = _evaluate(entry["assessment"])
         data = _evaluate_cli(run_cli, entry["assessment"])
         if old["delivery_approach"] == "spike":
+            live = routing.evaluate_route(_as_read(entry["assessment"]), shipped)
             assert data["delivery_approach"] == "spike", entry["name"]
-            assert data["gates"] == old["gates"], entry["name"]
-            assert data["stages"] == old["stages"], entry["name"]
+            assert data["gates"] == old["gates"] == live["gates"], entry["name"]
+            assert data["stages"] == live["stages"], entry["name"]
         else:
             assert data["delivery_approach"] == "delivery", entry["name"]
             assert data["evidence_required"], entry["name"]

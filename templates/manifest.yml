@@ -33,7 +33,7 @@ created: "{{DATE}}"
 # `assessment` is JUDGMENT - the assess stage (an LLM or a human) produces it.
 # Everything below `assessment` is MECHANICAL - the evaluator
 # (`compass approach evaluate --write`) computes it deterministically from
-# `assessment` + routing-policy.yml.
+# `assessment` + the check set (governance/check-set.yml).
 assessment:
   risk: "{{trivial | contained | cross-cutting | critical}}"
   familiarity: "{{greenfield | brownfield-mapped | brownfield-unmapped}}"
@@ -66,7 +66,7 @@ policy_rules_fired: []       # filled by the evaluator - [{id, kind, rationale, 
 # a `test-run` entry; reviews and approvals are added by their stage/agent.
 # Gates below reference these entries by id - multiple gates can share one
 # piece of evidence, and `compass check` checks the *type* each gate
-# accepts. Types declared in governance/guardrails.yml.
+# accepts. Types declared in governance/check-set.yml.
 evidence: []
 #  - id: EV-001
 #    type: test-run
@@ -83,7 +83,7 @@ evidence: []
 # On `--write`, each seeded gate gets an `# accepts: [...]` comment. It
 # names the evidence types the gate accepts, so the author knows them
 # before running `compass check`.
-#   accepts (from guardrails.yml gate_evidence_requirements):
+#   accepts (from the `accepts:` of each gate in the check set):
 #     verify.correctness -> [test-run]
 #     verify.regression  -> [test-run]
 #     verify.governance  -> [command-output, manual-review, artifact]

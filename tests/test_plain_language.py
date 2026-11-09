@@ -330,10 +330,10 @@ def test_pl_d4_correction_rule_is_stated_as_a_checklist_item():
 
 def test_pl_c12_claims_gate_states_traceability_not_truth():
     """`TRC-C12` - the one gate whose name promises less than a reader hears."""
-    g = (REPO_ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8")
+    g = (REPO_ROOT / "governance" / "check-set.yml").read_text(encoding="utf-8")
     g_norm = " ".join(g.split()).lower()
     assert "traceability, not truth" in g_norm, (
-        "guardrails.yml does not say claim-traces-to-scenario checks "
+        "check-set.yml does not say claim-traces-to-scenario checks "
         "traceability rather than truth"
     )
     skill = _evidence_gates_text()
@@ -449,16 +449,17 @@ def test_pl_c9_derivation_failure_names_the_file():
     with pytest.raises(EmptyRegistry) as exc:
         gloss_registry(guardrails={}, strategies={}, codes={})
     msg = str(exc.value)
-    for named in ("guardrails.yml", "strategies.md", "codes"):
+    for named in ("check-set.yml", "strategies.md", "codes"):
         assert named in msg, (
             f"the failure does not name {named!r} as a source it derives from - "
             f"someone meeting this error has nowhere to look")
     assert "refuses to report a count of zero" in msg, (
         "the failure does not say why it refuses to report zero")
 
-    # Visible from the other end: each source says a check reads its structure.
+    # Visible from the other end: the source says a check reads its structure.
+    # The check set carries no such note: its bytes are pinned per version
+    # (`tests/fixtures/check-set-digests.yml`).
     for path, phrase in (
-        ("governance/guardrails.yml", "A CHECK DERIVES FROM THIS FILE'S STRUCTURE"),
         ("governance/terminology.yml", "A CHECK DERIVES FROM THIS BLOCK'S STRUCTURE"),
     ):
         text = (REPO_ROOT / path).read_text(encoding="utf-8")

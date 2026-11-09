@@ -11,21 +11,28 @@ set ([configuration.md](configuration.md)). So `policy lint` lints a file of
 settings, and `policy show` names the check set, its digest and the settings
 that tighten it.
 
-The code is `cli/compass_pkg/policy_cmd.py` (the two commands and the JSON
-report of the legacy lint), `cli/compass_pkg/governance.py` (the legacy lint)
-and `cli/compass_pkg/settings_lint.py` (the settings lint and the schema of
-`compass.yml`).
+The code is `cli/compass_pkg/policy_cmd.py` (the two commands),
+`cli/compass_pkg/settings_lint.py` (the settings lint and the schema of
+`compass.yml`) and `cli/compass_pkg/governance.py` (the step `compass ci` runs).
 
 ## What `compass policy lint` runs
 
 | Project | What it runs |
 |---|---|
-| No `compass.yml`, or a `compass.yml` that Compass does not read | The legacy lint of the project's governance files |
-| A root `compass.yml` that Compass reads, the framework's own repository included | The settings lint |
+| A root `compass.yml` that Compass reads, the framework's own repository included | The settings lint, and the lint of the project's own governance files |
+| No `compass.yml` Compass reads | The lint of the project's own governance files: the project has no settings |
+| No `compass.yml` Compass reads, and a copy of `routing-policy.yml` or `guardrails.yml` | A refusal with exit 2 (`governance-copy-removed`) |
 | `--file PATH` | The settings lint of that one file |
 
 A `compass.yml` is read when it is the only settings file, or when it has a
-top-level `schema:` key. `compass ci` calls the legacy lint directly.
+top-level `schema:` key. 9.0.0 does not read a copy of the governance files
+(ADR-098): such a project runs `compass policy migrate` on 8.x first, which
+writes its `compass.yml`.
+
+The lint of the project's own governance files checks the optional files of
+its `governance/` folder, read by path: `quarantine.yml`, `review-rules.yml`
+and `architecture-sources.yml`. Each fault is an `L-GOVERNANCE-FILE` error.
+`compass ci` runs the same lint as its first step.
 
 9.0.0 removed the drift report, which compared a governance copy with the
 framework's, and the `governance_drift` setting that made it fail (ADR-098).
@@ -48,19 +55,8 @@ check set:
 | `L-SETTING-INVALID` | error | A value of the wrong shape, a tighten-only setting that would not add to what an issue owes (a token outside the closed set, a project check that reuses a shipped id, a stage other than `build` or `ship`, a capability other than `entry-exit-evaluation`), or an assessment value the check set does not declare |
 | `L-IMPL-UNKNOWN` | error | After the tighten-only settings are applied, a check names an implementation the CLI does not hold (safety-contract guarantee 2) |
 | `L-PARENT-REMOVED` | error | `extends:` names a git parent. A team parent can hold checks this file does not show, so every command that resolves a policy refuses with exit 2 until it is deleted. Move the team's checks into the tighten-only settings, or stay on 8.x until the 9.0.0 upgrade command (#359) |
+| `L-GOVERNANCE-FILE` | error | A fault in `governance/quarantine.yml`, `review-rules.yml` or `architecture-sources.yml`, such as a quarantine entry with no `tracking_task`. The path names the file |
 | `L-SETTING-REMOVED` | warning | A key 9.0.0 removed. It is not read. The catalog keys `dimensions`, `stages`, `rules`, `checks`, `gates` and `vocabulary`, with every entry operation inside them, `extends: compass:default@<n>`, `preset`, `preset_index` and `approvers.project-waiver` (ADR-094); and the keys of ADR-090 to ADR-093 (`models`, `multiagent`, `living_spec`, `artifacts`, `approaches`, `prices`, `github_labels`, `readiness` and the readiness-only fields of `project`); and `governance_drift` (ADR-098). The message ends with what replaces the key, "Replacement: `<setting>`." or "Removed: nothing replaces it.", then "`compass migrate` rewrites it." when `compass migrate` handles the key. An `extends:` that pins the default below `@8` is still read for one thing: it keeps the acceptance strategy `S17` off, so its replacement is `acceptance_strategy: {state: off, reason: ...}` |
-
-## The legacy lint
-
-A project with no `compass.yml` and its own copy of the governance files gets
-the structural lint of that copy:
-
-| Code | Level | Meaning |
-|---|---|---|
-| `LEGACY-STRUCTURE` | error | A structural fault in the copied governance files |
-
-A `waived:` entry in the copy is not read: it only kept a rule out of the
-drift report.
 
 ## Options and exit codes
 
@@ -77,7 +73,7 @@ command line that names one fails to parse with one line that names ADR-094.
 |---|---|
 | 0 | Pass: no error. Warnings may be printed |
 | 1 | Fail: at least one error |
-| 2 | An input cannot be read |
+| 2 | An input cannot be read, or the project holds a governance copy and no `compass.yml` |
 
 Text output is `compass policy lint: PASS` or `compass policy lint: FAIL`,
 then one line per finding: `  - CODE [project] path: message`. A warning line
@@ -104,15 +100,15 @@ starts `  - warning CODE`.
 | Key | Type | Meaning |
 |---|---|---|
 | `schema` | integer | The version of this shape. It is 1 |
-| `mode` | `settings` or `legacy` | Which lint ran |
+| `mode` | `settings` | Which lint ran. 8.x also wrote `legacy`, for the lint of a governance copy, which 9.0.0 removed |
 | `result` | `pass` or `fail` | `fail` when `counts.errors` is above 0 |
-| `layers` | list | `project` for the settings lint; `legacy` for the legacy lint |
-| `stopped_after` | string or null | The legacy lint's stop, or null |
+| `layers` | list | `project` |
+| `stopped_after` | null | Kept for the 8.x shape |
 | `counts` | object | `errors` and `warnings`, both integers |
 | `findings` | list | Every finding, errors first, in file order |
 
 Each finding has the keys `code`, `level`, `layer`, `path`, `group`
-(`settings` or `legacy`), `message` and `detail` (null), in that order. An
+(`settings`), `message` and `detail` (null), in that order. An
 `L-SETTING-REMOVED` finding also has `replacement`, last: the settings that
 replace the key, joined with "or", or null when nothing replaces it. One
 table, `removed_parts.REPLACEMENTS`, gives the message and `replacement` for
@@ -141,12 +137,9 @@ its waivers. An issue assessed before 9.0.0 has no block, and the view says so.
 Without `--issue` no issue is read: there is no `COMPASS_ISSUE` or
 current-task fallback.
 
-In an unmigrated 5.x project (no `compass.yml`, a copied `governance/`), the
-view adds a notice that names the copy, which `compass approach evaluate`
-reads in place of the check set.
-
 Exit 0 on success. Exit 2 when `compass.yml` cannot be read or extends a git
-parent.
+parent, or when the project holds a governance copy and no `compass.yml`
+(`governance-copy-removed`).
 
 ## `compass policy show --json`
 

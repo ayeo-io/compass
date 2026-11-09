@@ -151,22 +151,3 @@ def test_au_5_each_hand_off_waits_only_when_listed(command):
     else:
         assert "`specify` checkpoint is\nlisted, wait for approval" in text, command
     assert "autonomy" in text, command
-
-
-def test_au_6_a_table_naming_another_stage_is_refused(project):
-    # The 8.0.4 copy keeps the regular row the table edits; the shipped default has
-    # only the delivery and spike rows since 9.0.0 (ADR-092).
-    import sys as _sys
-    _sys.path.insert(0, str(ROOT / "tests"))
-    import compat_baseline as cb
-    cb.add_governance_copy(project, source=cb.GOVERNANCE_8_0_4)
-    path = project / "governance" / "routing-policy.yml"
-    policy = yaml.safe_load(path.read_text())
-    policy["autonomy_checkpoints"]["balanced"]["regular"].append("breakdown")
-    path.write_text(yaml.safe_dump(policy, sort_keys=False))
-    lint = _run(project, "policy", "lint")
-    assert lint.returncode != 0, lint.stdout + lint.stderr
-    assert "breakdown" in lint.stdout + lint.stderr
-    r = _run(project, "approach", "evaluate", "--json",
-             *sum((["--assessment", f"{k}={v}"] for k, v in FEATURE.items()), []))
-    assert r.returncode != 0, r.stdout + r.stderr

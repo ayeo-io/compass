@@ -57,8 +57,6 @@ def _make_bare_project(tmp_path: Path) -> Path:
     gov_dst = project / "governance"
     gov_dst.mkdir(parents=True)
     gov_src = FRAMEWORK_ROOT / "governance"
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copyfile(gov_src / name, gov_dst / name)
     for md in gov_src.glob("*.md"):
         shutil.copyfile(md, gov_dst / md.name)
     (project / ".compass" / "work").mkdir(parents=True)

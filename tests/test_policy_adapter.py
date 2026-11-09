@@ -344,7 +344,8 @@ def _assessment(**kw):
 
 def test_ob_3_the_replays_spelling_follows_cores_tables_and_the_adapters_rule(
         monkeypatch):
-    from compass_pkg import core, legacy_adapter
+    import legacy_copy as legacy_adapter
+    from compass_pkg import core
     table = core._stage_key_renames()
     assert table, "core holds no retired stage name"
     for old, new in table.items():
@@ -530,7 +531,8 @@ def test_ob_8_a_second_importer_fails_the_rule(tmp_path):
 
 
 def test_ob_8_the_effect_names_are_the_inverse_of_the_adapters():
-    from compass_pkg import legacy_adapter, obligations
+    import legacy_copy as legacy_adapter
+    from compass_pkg import obligations
     assert obligations._LEGACY_EFFECT == {
         new: old for old, new in legacy_adapter.RENAMED_EFFECTS.items()}
 
@@ -589,7 +591,7 @@ def test_ob_1_the_shipped_orders_are_what_the_evaluator_assumed(preset_config):
 
 
 def test_ob_1_the_built_in_hit_policies_are_the_adapters(preset_config):
-    from compass_pkg import legacy_adapter
+    import legacy_copy as legacy_adapter
     built_in = _api("BUILT_IN_HIT")
     assert built_in == legacy_adapter.EFFECT_HITS
     assert _api("DEFAULT_HIT") == "collect"

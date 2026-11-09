@@ -20,13 +20,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 
 from compass_pkg.routing import evaluate_route  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 
 def test_ra_1_this_repository_runs_autonomously():
     config = yaml.safe_load((ROOT / "compass.yml").read_text(encoding="utf-8"))
     assert config.get("autonomy") == "autonomous"
-    policy = yaml.safe_load((ROOT / "governance" / "routing-policy.yml")
-                            .read_text(encoding="utf-8"))
+    policy = shipped_view("routing-policy.yml")
     readings = {"risk": "cross-cutting", "familiarity": "brownfield-mapped",
                 "size": "large", "goal": "delivery", "role": "engineer"}
     assert evaluate_route(readings, policy, config["autonomy"])["checkpoints"] == []

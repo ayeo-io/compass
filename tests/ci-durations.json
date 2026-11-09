@@ -216,8 +216,6 @@
   "tests/test_generation_store.py": 180.44,
   "tests/test_glossary_meaning_only.py": 8.2,
   "tests/test_go_command.py": 29.74,
-  "tests/test_governance_discovery.py": 0.01,
-  "tests/test_governance_drift.py": 4.52,
   "tests/test_governance_drift_noop.py": 6.39,
   "tests/test_green_digest_and_hook_scope.py": 7.17,
   "tests/test_guardrails_coverage_caveat.py": 0.01,

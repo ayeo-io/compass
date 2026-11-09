@@ -34,13 +34,8 @@ def _run_cli(*args: str, cwd: Path,
 
 
 def _setup_gov(tmp_path: Path) -> Path:
-    """Copy shipped governance into tmp_path."""
-    import shutil
-    gov_src = FRAMEWORK_ROOT / "governance"
-    gov_dst = tmp_path / "governance"
-    gov_dst.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(gov_src / "routing-policy.yml", gov_dst / "routing-policy.yml")
-    shutil.copyfile(gov_src / "guardrails.yml", gov_dst / "guardrails.yml")
+    """A project on the shipped check set. 9.0.0 reads no copy of the
+    governance files (ADR-098), so none is made."""
     (tmp_path / ".compass").mkdir(exist_ok=True)
     return tmp_path
 

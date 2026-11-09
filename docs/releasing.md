@@ -126,8 +126,8 @@ rows for `issue dashboard` and `issue labels sync` stay and each prints one line
 that names the new spelling.
 
 **What is kept until 9.0.0.** Old words, old approach names, copied 5.x
-governance (with the generated views `governance/routing-policy.yml` and
-`governance/guardrails.yml`) and `.compass/config.yml` (when `compass.yml` is
+governance (with the generated views `routing-policy.yml` and
+`guardrails.yml`) and `.compass/config.yml` (when `compass.yml` is
 absent) are read until 9.0.0, not 7.0.0. Only the command spellings end at 7.0.0
 (`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`).
 
@@ -186,7 +186,7 @@ copied governance and `.compass/config.yml`) are read in their old words until
   extends `compass:default@6`, and a project that sets nothing runs on the
   default. A 6.x release of the default never changes a value that 6.0.0 defines.
 - The shipped default is a preset directory, `governance/presets/default/`.
-  `governance/routing-policy.yml` and `governance/guardrails.yml` are views
+  `routing-policy.yml` and `guardrails.yml` are views
   generated from it, and they stay until 9.0.0 for the projects, the drift
   report and the tests that read them.
 - A layer can add, set, replace or remove an entry. The classifier compares a

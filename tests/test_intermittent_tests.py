@@ -596,15 +596,15 @@ class TestNoTrustedRerunInGuardrailsYml:
     """no-trusted-rerun must be in guardrails.yml checks and in `G4`."""
 
     def test_no_trusted_rerun_check_registered(self):
-        gr_path = FRAMEWORK_ROOT / "governance" / "guardrails.yml"
-        gr = yaml.safe_load(gr_path.read_text())
+        from check_set_files import view as shipped_view
+        gr = shipped_view("guardrails.yml")
         assert "no-trusted-rerun" in (gr.get("checks") or {}), (
             "guardrails.yml `checks:` must declare 'no-trusted-rerun'"
         )
 
     def test_no_trusted_rerun_attached_to_g4(self):
-        gr_path = FRAMEWORK_ROOT / "governance" / "guardrails.yml"
-        gr = yaml.safe_load(gr_path.read_text())
+        from check_set_files import view as shipped_view
+        gr = shipped_view("guardrails.yml")
         defaults = gr.get("defaults") or []
         g4 = next((g for g in defaults if g.get("id") == "G4"), None)
         assert g4 is not None, "G4 not found in guardrails.yml defaults"

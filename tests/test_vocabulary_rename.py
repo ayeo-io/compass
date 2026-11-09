@@ -214,7 +214,7 @@ def _cli_stage_keys():
     dict makes `command == key` structurally incapable of failing, so the
     assertion read as the rule and checked nothing.
 
-    NOT read from governance/routing-policy.yml: that file still declares the
+    NOT read from the 8.x `routing-policy.yml` (deleted in 9.0.0): that file declared the
     v1 keys (`frame`, `specify`, ...) and is migrated in its own slice. The
     manifest loader maps them forward, so what a manifest HOLDS is what matters
     here.

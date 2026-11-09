@@ -256,14 +256,11 @@ def test_a_broken_lessons_file_keeps_the_contract(project):
 
 
 def test_a_project_guardrail_id_is_refused(project):
-    gov = project / "governance"
-    gov.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        (gov / name).write_text((ROOT / "governance" / name).read_text(encoding="utf-8"),
-                                encoding="utf-8")
-    data = yaml.safe_load((gov / "guardrails.yml").read_text(encoding="utf-8"))
-    data["project"] = [{"id": "G77", "name": "Our own rule", "statement": "x"}]
-    (gov / "guardrails.yml").write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    # A project check adds a guardrail gate under its own id (ADR-094).
+    (project / "compass.yml").write_text(yaml.safe_dump({
+        "schema": 1, "project_checks": [{"id": "G77", "name": "Our own rule",
+                                         "command": "true", "stage": "ship"}]}),
+        encoding="utf-8")
     assert _add(project, "A docs change may skip G77.").returncode != 0
     assert _add(project, "A docs change may skip G78.").returncode == 0
 

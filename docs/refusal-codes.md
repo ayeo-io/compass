@@ -120,7 +120,7 @@ reason code and are not in the generated list.
 ### `governance-copy-removed`
 
 **Blocked:** {verb} in this project
-**Why:** governance/ holds copies of the two governance files and there is no compass.yml. Compass 9.0.0 does not read copied governance.
+**Why:** governance/ holds a copy of routing-policy.yml or guardrails.yml and there is no compass.yml. Compass 9.0.0 does not read copied governance.
 **Fix:** on Compass 8.x, run compass policy migrate to write compass.yml, then run compass migrate again. docs/upgrade-9-0-0.md lists the steps.
 
 ### `names-deleted-check`

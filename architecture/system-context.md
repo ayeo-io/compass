@@ -104,11 +104,10 @@ Logical surface: **strategies**
    `manifest.yml.assessment`.
 
 3. **A dropped or weakened guardrail is reported, not hidden.** No setting
-   can drop or weaken a guardrail of the check set. Only a project that kept
-   its own copy of `governance/guardrails.yml` from 5.x, and has no
-   `compass.yml`, can omit a default `G1`–`G5` entry; `compass policy lint`
-   and `compass check` name what is missing rather than counting it as
-   passing (`docs/safety-contract.md` guarantee 2). Adopters declare
+   can drop or weaken a guardrail of the check set. A project that kept its
+   own copy of the 8.x governance files from 5.x, and has no `compass.yml`,
+   is refused rather than run on the copy (`governance-copy-removed`,
+   ADR-098). Adopters declare
    architecture checks as `project_checks` in `compass.yml`, which run the
    generic `command-passes` check (see ADR-009); the `verify.architecture` gate is
    added by `RP-REQUIRE-003` and `RP-REQUIRE-004` when risk or labels

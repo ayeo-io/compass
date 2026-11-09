@@ -579,7 +579,7 @@ def meet_definition_of_done(body, root, slug=SLUG):
     from compass_pkg import effective, item_records
     folder = manifest_file(root, slug).parent
     ids = [check for check, _ in item_records.listed_checks(
-        effective.view_or_legacy(str(folder)), "dod")]
+        effective.effective_for(str(folder)), "dod")]
     (folder / "evidence").mkdir(exist_ok=True)
     (folder / "evidence" / "dod-review.txt").write_text("reviewed\n")
     body["evidence"] = (body.get("evidence") or []) + [

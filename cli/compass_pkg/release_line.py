@@ -62,10 +62,8 @@ def owes(task, task_dir):
         return False
     try:
         # A generation that is not a whole number, or not whole on disk, raises here.
-        view = effective.view_or_legacy(task_dir, manifest=task)
+        view = effective.effective_for(task_dir, manifest=task)
     except Exception:                                   # noqa: BLE001 - nothing to read, nothing owed
-        return False
-    if view is None:
         return False
     approaches = view.config.get("approaches")
     if not isinstance(approaches, dict):

@@ -503,7 +503,7 @@ conventions this repository holds itself to.
 
 The first two are checked by `tests/test_house_style.py`, and all three are
 strategies rather than guardrails. What separates them is what the check
-protects: the checks in `guardrails.yml` run against an adopting project's
+protects: the checks of the check set run against an adopting project's
 `manifest.yml` and `evidence/` and can block a ship, while
 `tests/test_house_style.py` is one of this repository's own source invariants.
 It never runs in an adopting project and never touches a gate.

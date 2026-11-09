@@ -16,9 +16,10 @@ settings of the project's `compass.yml` applied (`tighten`), resolved now
 setting and is not read, and an `extends:` that names a git parent is refused.
 An issue's own `config:` is not read: 9.0.0 has no issue layer. An 8.x issue
 keeps the layer its stored generation was committed with.
-A project with no `compass.yml` and its own copies of the two governance files
-has those files read through the legacy adapter in place of the check set, so
-what an issue is stored against is what ran before (until #359).
+A project with no `compass.yml` and its own copy of the governance files is
+refused (`governance-copy-removed`): 9.0.0 does not read the copy (ADR-098),
+and the project moves on 8.x with `compass policy migrate` first. A stored
+generation is still read as stored.
 
 Each generation commit also writes the manifest's `policy:` block: the check
 set's id, version and sha256, the sha256 of `compass.yml`, the tightenings, the
@@ -32,12 +33,11 @@ This module also builds the `generation.Resolution` a commit stores, and is
 the one place the existing modules reach the store through
 (`commit_generation`, `record_check_results`, `generation_report`).
 """
-# DEPENDENCY: standard library (copy, dataclasses, datetime, hashlib, os, re, subprocess);
+# DEPENDENCY: standard library (dataclasses, datetime, hashlib, os, re, subprocess);
 # compass_pkg.atomic_io, catalogue_spec, check_registry, check_set, core, generation,
-# legacy_adapter, obligations, project_settings, removed_parts, tighten, word_map.
+# obligations, project_settings, refusals, removed_parts, tighten.
 from __future__ import annotations
 
-import copy
 import datetime
 import hashlib
 import os
@@ -45,15 +45,13 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 
-from compass_pkg import (check_set, generation, legacy_adapter, project_settings,
-                         removed_parts, tighten, word_map)
+from compass_pkg import check_set, generation, project_settings, removed_parts, tighten
 from compass_pkg import obligations, status_words
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.atomic_io import digest
 from compass_pkg.check_registry import REGISTRY
-from compass_pkg.core import (AUTONOMY_VALUES, COMPASS_VERSION, FRAMEWORK_ROOT,
-                              GOVERNANCE_FILES, CompassError, load_manifest,
-                              load_yaml, reading_matches)
+from compass_pkg.core import (AUTONOMY_VALUES, COMPASS_VERSION, CompassError,
+                              load_manifest, reading_matches)
 from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import manifest_path
 
@@ -213,12 +211,6 @@ class EffectiveView:
         """The loop-ceiling rules in the shape the evaluator reads."""
         return list(self.evaluator_policy()["routing_guardrails"]["loop_ceilings"])
 
-    def from_governance_copy(self):
-        """True when the configuration was resolved over the project's own copies
-        of the two governance files, which can omit what the framework ships."""
-        parents = self.versions.get("parents") or []
-        return bool(parents) and parents[0].get("source") == "legacy"
-
     def known_ids(self):
         """The ids of the guardrails that apply to an approach that ships."""
         return {gate_id for gate_id, gate in (self.resolved.get("gates") or {}).items()
@@ -252,29 +244,28 @@ class EffectiveView:
 
 # --- live resolution ----------------------------------------------------------------
 
-def _holds_copy(root):
-    """True when the project keeps its own copies of the two governance files.
-    The framework's own repository does not: its files are frozen copies of
-    the 8.x default. Nothing is parsed."""
-    folder = os.path.join(root, "governance")
-    if os.path.realpath(folder) == os.path.realpath(os.path.join(FRAMEWORK_ROOT, "governance")):
+#: The two files a 5.x project copied into its `governance/` folder. 9.0.0 reads
+#: neither (ADR-098): a project that holds either one and no `compass.yml` is
+#: refused, so its own guardrails are never dropped without a word.
+COPIED_GOVERNANCE = ("routing-policy.yml", "guardrails.yml")
+
+
+def has_governance_copy(root):
+    """True when the project keeps a copy of either governance file and has no
+    `compass.yml` Compass reads. Nothing is parsed."""
+    if project_settings.compass_yml_counts(root):
         return False
-    return all(os.path.isfile(os.path.join(folder, name)) for name in GOVERNANCE_FILES)
-
-
-def _legacy_parent(root):
-    """`(doc, meta)` for a project that keeps its own copies of the two
-    governance files (`_holds_copy`), or None. `doc` is the copy in catalogue
-    form (`legacy_adapter.adapt`), with the check set's capabilities."""
-    if not _holds_copy(root):
-        return None
     folder = os.path.join(root, "governance")
-    policy = load_yaml(os.path.join(folder, "routing-policy.yml"))
-    guardrails = load_yaml(os.path.join(folder, "guardrails.yml"))
-    doc = legacy_adapter.adapt(policy, guardrails)
-    doc["capabilities"] = dict(check_set.load()["capabilities"])
-    return doc, {"id": "legacy", "version": str(policy.get("version", "")),
-                 "source": "legacy", "guardrails": guardrails}
+    return any(os.path.isfile(os.path.join(folder, name)) for name in COPIED_GOVERNANCE)
+
+
+def refuse_governance_copy(root, verb="this command"):
+    """Raise `CompassError` (`governance-copy-removed`, exit 2) for a project
+    with copied governance and no `compass.yml`. 8.x moves such a project with
+    `compass policy migrate`; 9.0.0 cannot read the copy."""
+    if has_governance_copy(root):
+        from compass_pkg import refusals
+        raise CompassError(refusals.render("governance-copy-removed", verb=verb))
 
 
 def _non_text_keys(doc, path=""):
@@ -292,245 +283,6 @@ def _non_text_keys(doc, path=""):
             found += _non_text_keys(item, f"{path}[{n}]")
     return found
 
-
-_ID = re.compile(spec.ID_PATTERN)
-#: The entry operations of the 8.x merge that change an entry below the layer. A
-#: copy is the whole configuration, so there is none for them to change.
-_CHANGES = ("set", "replace", "remove", "unlock")
-#: The operations that ride on an entry and are not read here: no lock or waiver
-#: exists in 9.0.0 (ADR-094). `locked` is kept where it is a field, as 8.x kept it.
-_IGNORED = ("locked", "waiver")
-
-
-def _legacy_enums():
-    """The closed set of each enumerated field, by catalogue and field."""
-    from compass_pkg import acceptance_strategy
-    return {
-        ("checks", "kind"): spec.CHECK_KINDS, ("checks", "severity"): spec.SEVERITIES,
-        ("checks", "on_skipped"): spec.ON_SKIPPED, ("checks", "locked"): spec.LOCKS,
-        ("gates", "kind"): spec.GATE_KINDS, ("gates", "locked"): spec.LOCKS,
-        ("dimensions", "type"): spec.DIMENSION_TYPES, ("dimensions", "tighter"): spec.TIGHTER,
-        ("approaches", "acceptance_strategy"): tuple(acceptance_strategy.ROUTINGS),
-    }
-
-
-def _is_type(value, expected):
-    if expected == "string":
-        return isinstance(value, str)
-    if expected == "list":
-        return isinstance(value, list)
-    if expected == "map":
-        return isinstance(value, dict)
-    if expected == "integer":
-        return isinstance(value, int) and not isinstance(value, bool)
-    if expected == "boolean":
-        return isinstance(value, bool)
-    if expected == "integer-or-null":
-        return value is None or (isinstance(value, int) and not isinstance(value, bool))
-    if expected == "boolean-or-hard":
-        return value is True or value == "hard"
-    return True
-
-
-def _when_problems(path, when, ordered):
-    """`at_least:` compares by order, so it needs an ordered dimension and a
-    threshold among its values; a misspelt threshold would match nothing."""
-    out = []
-    for key, value in when.items():
-        if key == "any_of" and isinstance(value, list):
-            for i, clause in enumerate(value):
-                if isinstance(clause, dict):
-                    out += _when_problems(f"{path}.any_of[{i}]", clause, ordered)
-        elif isinstance(value, dict) and "at_least" in value:
-            if key not in ordered:
-                out.append(f"{path}.{key}: at_least needs an ordered dimension, "
-                           f"and {key} is not one")
-            elif value["at_least"] not in ordered[key]:
-                out.append(f"{path}.{key}: at_least '{value['at_least']}' is not a "
-                           f"value of {key} ({', '.join(ordered[key])})")
-    return out
-
-
-def _legacy_value_problems(doc):
-    """Every malformed field value in an adapted copy, as text naming its key
-    path: a value of the wrong type, a value outside the closed set of its field,
-    an incomplete dimension, and an `at_least:` that cannot match. These are the
-    value checks the 8.x layer check ran on a copy before anything merged; the
-    entry checks are `_legacy_entry_problems`."""
-    enums = _legacy_enums()
-    ordered = {name: list(values) for name, values in spec.SHIPPED_ORDERS.items()}
-    for name, entry in ((doc.get("dimensions") or {}).items()
-                        if isinstance(doc.get("dimensions"), dict) else ()):
-        if isinstance(entry, dict) and entry.get("type") == "ordered-enum" \
-                and isinstance(entry.get("values"), list):
-            ordered[name] = list(entry["values"])
-    out = []
-    for catalogue in spec.CATALOGUES:
-        entries = doc.get(catalogue)
-        if not isinstance(entries, dict):
-            continue
-        fields = spec.FIELDS[catalogue]
-        for entry_id, entry in entries.items():
-            if not isinstance(entry, dict):
-                continue
-            path = f"{catalogue}.{entry_id}"
-            values = {k: v for k, v in entry.items() if k in fields}
-            for key, value in values.items():
-                expected = fields[key]["type"]
-                list_op = expected == "list" and isinstance(value, dict) \
-                    and set(value) <= {"add", "remove"}
-                map_op = expected == "map" and isinstance(value, dict)
-                if not (list_op or map_op or _is_type(value, expected)):
-                    out.append(f"{path}.{key}: expected {expected.replace('-', ' ')}, "
-                               f"found {value!r}")
-                    continue
-                allowed = enums.get((catalogue, key))
-                if allowed is not None and value not in allowed:
-                    out.append(f"{path}.{key}: '{value}' is not one of "
-                               f"{', '.join(str(a) for a in allowed)}")
-            if catalogue == "dimensions" and values.get("type") in spec.DIMENSION_TYPES:
-                kind = values["type"]
-                if kind in ("ordered-enum", "enum") and not isinstance(values.get("values"), list):
-                    out.append(f"{path}.values: an {kind} lists its values")
-                if kind == "ordered-enum" and values.get("tighter") not in spec.TIGHTER:
-                    out.append(f"{path}.tighter: an ordered-enum says which way is "
-                               f"stricter: {', '.join(spec.TIGHTER)}")
-                if kind == "set" and not isinstance(values.get("open"), bool):
-                    out.append(f"{path}.open: a set says whether it is open (true or false)")
-            elif catalogue == "dimensions" and any(k in values
-                                                   for k in ("values", "tighter", "open")):
-                out.append(f"{path}.type: a dimension names its type: "
-                           f"{', '.join(spec.DIMENSION_TYPES)}")
-            for key in ("when", "blocking_when"):
-                if isinstance(values.get(key), dict):
-                    out += _when_problems(f"{path}.{key}", values[key], ordered)
-            if catalogue == "rules" and isinstance(values.get("rules"), dict):
-                for rule_id, rule in values["rules"].items():
-                    if isinstance(rule, dict) and isinstance(rule.get("when"), dict):
-                        out += _when_problems(f"{path}.rules.{rule_id}.when",
-                                              rule["when"], ordered)
-    return out
-
-
-def _legacy_entry_problems(catalogue, entry_id, entry):
-    """What stops one adapted entry being added as it stands, as text that
-    names its key path. These are the faults the 8.x merge refused in a full
-    entry added to an empty configuration."""
-    path = f"{catalogue}.{entry_id}"
-    if not isinstance(entry_id, str) or not _ID.match(entry_id):
-        return [f"{path}: '{entry_id}' is not a valid id "
-                f"(a letter, then letters, digits, '.', '_' or '-')"]
-    if not isinstance(entry, dict):
-        return [f"{path}: expected a mapping"]
-    fields = spec.FIELDS[catalogue]
-    out = [f"{path}.{key}: a copy cannot use {key}" for key in entry if key in _CHANGES]
-    out += [f"{path}.{key}: not a field of {catalogue}" for key in entry
-            if key not in _CHANGES and key not in _IGNORED and key not in fields]
-    out += [f"{path}: a full entry is needed; missing {name}"
-            for name, field_spec in fields.items()
-            if field_spec["required"] and name not in entry]
-    for key, value in entry.items():
-        kind = fields.get(key, {}).get("merge")
-        if (catalogue, key) == ("stages", "mode"):
-            out.append(f"{path}.mode: mode is the issue layer's choice; a copy cannot set it")
-        elif isinstance(value, dict) and (
-                kind == "list" or (kind == "map" and value and set(value) <= {"set", "remove"})):
-            out.append(f"{path}.{key}: a copy writes the value itself, not an operation on it")
-    return out
-
-
-def _legacy_config(doc):
-    """`(config, provenance)` of an adapted copy. The copy is the whole
-    configuration, so each entry is added as it stands and nothing merges
-    (ADR-094). A gate placed at a legacy stage the copy does not declare is read
-    at the path stage that shows it (`removed_parts.with_mapped_stages`).
-    The provenance names the layer `legacy` and the operation
-    `add` for each entry and field, as the 8.x merge stored them, so a
-    generation committed from a copy keeps its stored shape. #359 deletes this
-    with the adapter."""
-    mapped, _ = word_map.map_layer(doc)
-    for key in mapped:
-        if key in spec.SETTINGS_KEYS:
-            raise CompassError(f"legacy: {key} is a settings key and belongs in the "
-                               f"project's own compass.yml, never in a parent (ADR-043)")
-    for where, key in _non_text_keys(mapped):
-        raise CompassError(f"legacy: {where}: {_non_text_key_message(key)} (L-KEY-NOT-TEXT)")
-    # A malformed value is refused before anything is added, as 8.x refused it.
-    problems = _legacy_value_problems(mapped)
-    if problems:
-        raise CompassError("legacy: " + "; ".join(problems))
-    # Two spellings of one check that disagree are refused, as the merge refused them.
-    errors = [f"{code} {path}: {message}"
-              for code, path, message in word_map.one_check_conflicts(mapped)]
-    mapped = removed_parts.with_mapped_stages(mapped, {})
-    config, prov = {}, {}
-    for catalogue in spec.CATALOGUES:
-        if catalogue not in mapped:
-            continue
-        entries = mapped[catalogue]
-        if not isinstance(entries, dict):
-            errors.append(f"{catalogue}: expected a mapping keyed by id")
-            continue
-        table = {}
-        for entry_id, entry in entries.items():
-            problems = _legacy_entry_problems(catalogue, entry_id, entry)
-            if problems:
-                errors += problems
-                continue
-            path = f"{catalogue}.{entry_id}"
-            fields = spec.FIELDS[catalogue]
-            table[entry_id] = {key: copy.deepcopy(value) for key, value in entry.items()
-                               if key in fields}
-            prov[path] = {"layer": "legacy", "operation": "add"}
-            for key in table[entry_id]:
-                prov[f"{path}.{key}"] = {"layer": "legacy", "operation": "add"}
-        if table:
-            config[catalogue] = table
-    if errors:
-        raise CompassError("legacy: " + "; ".join(errors))
-    return config, prov
-
-
-def _non_text_key_message(key):
-    """What YAML read a non-text key as, and how to write it as text."""
-    if key is None or isinstance(key, bool):
-        kind = "nothing (null)" if key is None else "a boolean"
-        example = {True: "on", False: "off", None: "null"}[key]
-    else:
-        kind = "a number" if isinstance(key, (int, float)) else f"a {type(key).__name__}"
-        example = str(key)
-    return (f"the key {key!r} is not text: YAML read it as {kind}. "
-            f"Quote it, for example \"{example}\":")
-
-
-def _legacy_digest(doc):
-    """The digest of an adapted copy's catalogue keys, as 8.x stored it."""
-    return digest({k: v for k, v in doc.items() if k in spec.LAYER_KEYS})
-
-
-def legacy_resolved(root):
-    """The resolved mapping of the project's own copy of the governance files,
-    whatever its `compass.yml` says. The compatibility contracts read it."""
-    legacy = _legacy_parent(os.path.abspath(root))
-    if legacy is None:
-        raise CompassError(f"{root} holds no copy of the governance files")
-    doc, meta = legacy
-    config, _ = _legacy_config(doc)
-    return _resolved(config, dict(doc.get("capabilities") or {}), "balanced",
-                     legacy_adapter.adapt_evidence_types(meta["guardrails"])["evidence_types"])
-
-
-GOVERNANCE_COPY_NOTICE = (
-    "  This unmigrated 5.x project has no compass.yml and runs on its own copy of "
-    "governance/. The rows below are the check set, not what compass approach "
-    "evaluate reads. Run compass policy migrate on 8.x to convert the copy; the "
-    "upgrade guide names the 9.0.0 settings.")
-
-
-def has_governance_copy(root):
-    """True when the project keeps its own copy of the two governance files
-    and has no `compass.yml` Compass reads, so `resolve_live` runs on the copy."""
-    return not project_settings.compass_yml_counts(root) and _holds_copy(root)
 
 
 def _autonomy(root):
@@ -583,23 +335,6 @@ def project_doc(root):
     return doc
 
 
-def _resolved(config, capabilities, autonomy, evidence_types):
-    """The mapping a generation's `resolved.yml` holds, from resolved catalogues."""
-    return {
-        "capabilities": capabilities,
-        # An 8.x issue layer could pick an approach and set ceilings, and its
-        # stored generation keeps them. With no issue layer the key is always
-        # empty; it stays so that a generation committed without a layer keeps
-        # the same resolved document, and a reassess commits no new one for it.
-        "approach": None,
-        "autonomy": autonomy,
-        # No lock exists to unlock (ADR-094); the key keeps the stored shape.
-        "conformance": {"status": "conformant", "unlocked": []},
-        **{name: config[name] for name in spec.CATALOGUES if name in config},
-        "evidence_types": evidence_types,
-    }
-
-
 def _implementations(checks):
     return {check["impl"]: REGISTRY[check["impl"]].version
             for check in (checks or {}).values()
@@ -621,76 +356,39 @@ def _refuse_lint_errors(doc, base):
             f"error(s) in all; run `compass policy lint` to see them)")
 
 
-def _gates_before_write(resolved):
-    """The check `generation.commit` runs before it writes a generation read
-    from a project's own copy of the governance files: every check a gate
-    names is one the copy declares. A project guardrail can name a check no
-    implementation runs, such as the `coverage-floor` example of 5.x; no
-    generation may store it, because `compass check` would read that gate from
-    the generation from then on. 8.x ran the layer lint here, which refused
-    it. A check the copy declares under a name 9.0.0 removed is accepted, as
-    8.x accepted it: `compass check` reports it as nothing to check."""
-    checks = resolved.get("checks") or {}
-    unknown = [f"gates.{gate_id}.checks: '{check}'"
-               for gate_id, gate in (resolved.get("gates") or {}).items()
-               if isinstance(gate, dict)
-               for check in gate.get("checks") or () if check not in checks]
-    if unknown:
-        raise CompassError(
-            "nothing was written: the governance copy names a check it does not "
-            "declare, which no implementation runs: " + "; ".join(unknown))
-
-
 def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, fetch=False):
     """The `generation.Resolution` of the project now: the check set with the
-    tighten-only settings of `compass.yml` applied, or, for a project with no
-    `compass.yml` and its own copy of the governance files, that copy. An
-    issue's `config:` is not read (ADR-094); `manifest` and `task_dir` are
-    accepted for the callers and not read. A file that cannot be read, a
-    `compass.yml` the settings lint refuses and a git parent in `extends:`
-    raise `CompassError` at once. A governance copy is checked only before a
-    generation is written (the result's `validate`, `_gates_before_write`),
-    so a read of it still reports each check it cannot run.
-    `validate` and `fetch` are accepted and not read: the lint always runs,
-    and nothing is fetched."""
+    tighten-only settings of `compass.yml` applied. An issue's `config:` is not
+    read (ADR-094); `manifest` and `task_dir` are accepted for the callers and
+    not read. A file that cannot be read, a `compass.yml` the settings lint
+    refuses, a git parent in `extends:` and a project with copied governance
+    and no `compass.yml` (`refuse_governance_copy`) raise `CompassError` at
+    once. `validate` and `fetch` are accepted and not read: the lint always
+    runs, and nothing is fetched."""
     root = os.path.abspath(root)
+    refuse_governance_copy(root)
     doc = project_doc(root)
     refuse_git_parent(doc)
     autonomy = _autonomy(root)
-    legacy = None if doc is not None else _legacy_parent(root)
-    if legacy:
-        legacy_doc, meta = legacy
-        config, prov = _legacy_config(legacy_doc)
-        resolved = _resolved(
-            config, dict(legacy_doc.get("capabilities") or {}), autonomy,
-            legacy_adapter.adapt_evidence_types(meta["guardrails"])["evidence_types"])
-        history = {path: {"steps": [{"layer": step["layer"], "op": step["operation"]}]}
-                   for path, step in prov.items()}
-        parent = {"ref": "legacy", "version": meta["version"],
-                  "digest": _legacy_digest(legacy_doc), "source": "legacy"}
-        tightened = {}
-    else:
-        # Read, not changed: `resolved` and `tighten.apply` copy what they return.
-        loaded = check_set.shared()
-        base = check_set.resolved(loaded, autonomy=autonomy)
-        if doc is not None:
-            _refuse_lint_errors(doc, base)
-        tightened = tighten.settings_of(doc)
-        # `base` is already a copy, so with nothing to apply it is the result:
-        # one copy per resolution, which `compass flow` does for every issue.
-        resolved = tighten.apply(base, tightened, loaded) if tightened else base
-        history = {}
-        parent = _shipped_parent(loaded, check_set.sha256())
+    # Read, not changed: `resolved` and `tighten.apply` copy what they return.
+    loaded = check_set.shared()
+    base = check_set.resolved(loaded, autonomy=autonomy)
+    if doc is not None:
+        _refuse_lint_errors(doc, base)
+    tightened = tighten.settings_of(doc)
+    # `base` is already a copy, so with nothing to apply it is the result:
+    # one copy per resolution, which `compass flow` does for every issue.
+    resolved = tighten.apply(base, tightened, loaded) if tightened else base
+    parent = _shipped_parent(loaded, check_set.sha256())
     project_path = os.path.join(root, project_settings.COMPASS_YML)
     versions = _versions(parent, tightened, _git_blob(project_path) if doc is not None
                          else None, doc is not None, resolved)
     return generation.Resolution(
         resolved=resolved,
-        provenance={"fields": history, "waivers": {}, "classification": {}},
+        provenance={"fields": {}, "waivers": {}, "classification": {}},
         versions=versions,
         records=[],
-        validate=(lambda: _gates_before_write(resolved)) if legacy else None,
-        details={"tightened": tightened, "legacy": bool(legacy)})
+        details={"tightened": tightened})
 
 
 def _shipped_parent(loaded, sha256):
@@ -723,16 +421,14 @@ def policy_block(root, resolution, resolved_digest):
     `resolution` (ADR-094): the check set and its sha256, the sha256 of
     `compass.yml` (None without one), the tighten-only settings applied as
     written, the autonomy, and the digest of the generation's `resolved.yml`.
-    A project that runs its own copy of the governance files names `legacy` and
-    no check set digest. The autonomy is the one input of `resolved.yml` that
+    The autonomy is the one input of `resolved.yml` that
     is not in `compass.yml`'s tightenings, so without it a missing folder could
     not be rebuilt (`restore_from_policy`, ADR-096 decision 5)."""
     details = resolution.details or {}
-    legacy = details.get("legacy")
     settings_path = os.path.join(root, project_settings.COMPASS_YML)
     return {
-        "check_set": "legacy" if legacy else check_set.ref(),
-        "check_set_sha256": None if legacy else check_set.sha256(),
+        "check_set": check_set.ref(),
+        "check_set_sha256": check_set.sha256(),
         "settings_sha256": (file_sha256(settings_path)
                             if project_settings.compass_yml_counts(root) else None),
         "tightened": dict(details.get("tightened") or {}),
@@ -749,11 +445,7 @@ def _policy_resolution(block, autonomy):
     block names, never the project's `compass.yml`: a settings change made
     since must not stop the rebuild, and the digest check catches any other
     difference."""
-    name = block.get("check_set")
-    if name == "legacy":
-        return None, ("the issue was resolved from the project's own copy of the "
-                      "governance files, which a rebuild does not read")
-    loaded, reason = check_set.held(name, block.get("check_set_sha256"))
+    loaded, reason = check_set.held(block.get("check_set"), block.get("check_set_sha256"))
     if loaded is None:
         return None, f"{reason}. Run that release, or restore the folder"
     tightened = block.get("tightened") or {}
@@ -833,19 +525,24 @@ def _live_view(task_dir, manifest, slug, start=None):
                          resolution.provenance)
 
 
-def effective_for(task_dir=None, manifest=None):
+def effective_for(task_dir=None, manifest=None, *, live=False, start=None):
     """The `EffectiveView` an issue runs against, or the project's live view
     for `task_dir=None`. See the module text for the three cases. `manifest`
-    is the issue's manifest when the caller already holds it; otherwise it is
-    read from the file."""
+    is the issue's manifest when the caller already holds it, so a render over
+    every issue does not parse each one again; otherwise it is read from the
+    file. With `live`, a stored generation is not read: the command is about
+    to commit the configuration as it is now. With no issue, `start` is the
+    directory whose project is meant (else the working directory). A live
+    view of a project with copied governance and no `compass.yml` is refused
+    (`resolve_live`)."""
     if task_dir is None:
-        return _live_view(None, None, None)
+        return _live_view(None, None, None, start)
     task_dir = os.fspath(task_dir)
     if manifest is None:
         manifest, _ = load_manifest(task_dir)
     slug = os.path.basename(os.path.normpath(task_dir))
     held = generation.number(manifest)
-    if held is None:
+    if held is None or live:
         return _live_view(task_dir, manifest, slug)
     if held == 0:
         raise CompassError(
@@ -854,40 +551,6 @@ def effective_for(task_dir=None, manifest=None):
     stored = _load(task_dir, held, manifest, any_major=status_words.is_closed(manifest))
     return EffectiveView("generation", slug, held, stored["resolved"], stored["versions"],
                          stored["provenance"])
-
-
-def _layered(root):
-    """Whether a project reads the check set: every project but one with its
-    own copy of the governance files and no `compass.yml` Compass reads
-    (ADR-094). The framework's own repository reads the check set too."""
-    return not has_governance_copy(root)
-
-
-def view_or_legacy(task_dir=None, live=False, start=None, manifest=None):
-    """The view a reader module reads, or None when it must read the governance
-    files as 5.6.0 did. That is the case only for an issue with no
-    `generation:` key (or no issue) in a project that keeps its own copy of
-    the governance files and has no `compass.yml`. Otherwise it is
-    `effective_for`: the stored generation, a live view of the check set, or a
-    refusal for generation 0 or a generation that is not whole. With `live`, a stored generation is not
-    read: the command is about to commit the configuration as it is now. With
-    no issue, `start` is the directory whose project is meant (else the
-    working directory). `manifest` is the issue's manifest when the caller
-    already holds it, so a render over every issue does not parse each one
-    again; otherwise it is read from the file."""
-    if task_dir is not None:
-        task_dir = os.fspath(task_dir)
-        if manifest is None:
-            manifest, _ = load_manifest(task_dir)
-        if generation.number(manifest) is not None and not live:
-            return effective_for(task_dir, manifest)
-    if not _layered(project_settings.find_project_root(task_dir or start or os.getcwd())):
-        return None
-    if live and task_dir is not None:
-        return _live_view(task_dir, manifest, os.path.basename(os.path.normpath(task_dir)))
-    if task_dir is None:
-        return _live_view(None, None, None, start)
-    return effective_for(task_dir, manifest)
 
 
 def commit_generation(task_dir, manifest, invalidated=None, render=None, *, stamp=None,

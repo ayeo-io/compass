@@ -2,15 +2,16 @@
 
 Compass is acceptance-test-driven development for Claude Code, with a record
 a reviewer can check. It lets a team under change control hand code changes
-to an AI agent and still show a reviewer, or an auditor, that the process was
-followed. The acceptance tests are the specification: the agent writes them
-first, and Compass refuses code edits until a failing run is on record. For
-each change, Compass records who asked, what was agreed, the failing run, the
-passing run, who approved and the commit that shipped. Each change leaves one
-plain file, `trail.md`, with a SHA-256 digest for each record. A reviewer
-checks it with `sha256sum -c`, without Compass installed. The
-[safety contract](safety-contract.md) states what each guarantee covers and
-where it stops.
+to an AI agent and still show a reviewer, or an auditor, that the process
+was followed. A person approves each change by reviewing its pull request,
+and Compass records that approval. The acceptance tests are the
+specification: the agent writes them first, and Compass refuses code edits
+until a failing run is on record. For each change, Compass records who
+asked, what was agreed, the failing run, the passing run, who approved and
+the commit that shipped. Each change leaves one plain file, `trail.md`, with
+a SHA-256 digest for each record. A reviewer checks it with `sha256sum -c`,
+without Compass installed. The [safety contract](safety-contract.md) states
+what each guarantee covers and where it stops.
 
 Five guardrails apply to all work that ships code, whatever the assessment:
 a recorded passing test run, acceptance criteria before code, code traced to

@@ -14,8 +14,9 @@
 
 Compass lets a team under change control hand code changes to an AI agent
 and still show a reviewer, or an auditor, that the process was followed. A
-reviewer of one change asks five questions. Compass keeps the answer to each
-on record:
+person approves each change by reviewing its pull request, and Compass
+records that approval. A reviewer of one change asks five questions. Compass
+keeps the answer to each on record:
 
 - **Who asked?** The link to the request, and who made it.
 - **What was agreed?** The scenarios. They are the acceptance tests, and the

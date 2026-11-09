@@ -21,21 +21,21 @@ and the things it does not claim.
   worktree's own pointer.
 - `/compass:assess --reassess` re-runs the evaluator and records the change in
   the manifest's `reassessments:` log.
-- Pass `--reason "..."` with it. `compass retro` aggregates those across issues
-  and reports whether assessment is systematically over- or under-sizing the
-  work.
+- Pass `--reason "..."` with it. The reason is kept in the `reassessments:`
+  log.
 - If you cannot yet state what would be delivered, that is a **spike**, and a
   spike is assessed like anything else.
-- `/compass:init` is optional and is not what creates the project. The five
-  entry points - `/compass:assess`, `/compass:intent`, `/compass:design`,
-  `/compass:position`, `/compass:consult` - run `compass init` first, which
-  creates `.compass/` for you if it is absent and says so.
-- It creates project state only, never `governance/`. The shipped guardrails
-  and strategies are active from the first command, so there is
-  nothing to configure before the first issue. `/compass:init` writes the
-  project's `compass.yml` (or runs `compass policy migrate` on a project that
-  has a `.compass/config.yml` or copied governance), and a project adds its own
-  governance there later.
+- `/compass:init` is optional and is not what creates the project.
+  `/compass:go`, `/compass:quick-fix` and `/compass:assess` run `compass init`
+  first, which creates `.compass/` for you if it is absent and says so.
+- It creates project state only, never `governance/`. The fixed check set is
+  active from the first command, so there is nothing to configure before the
+  first issue. `/compass:init` writes the project's `compass.yml`. A project
+  can only add to the check set there, with the tighten-only settings
+  (`docs/configuration.md`). A project with a `.compass/config.yml` or copied
+  governance must run `compass policy migrate` on Compass 8.x first.
+- A waiver excuses one check on one issue (`compass waiver add`). A person
+  approves it, as for any approval.
 
 ## Governance
 
@@ -44,15 +44,17 @@ and the things it does not claim.
 - When your recommendation and an instruction disagree, measure the disputed
   quantity and report the numbers before defending either position (`S11`).
   Report what you find even when it undercuts you.
-- `governance/routing-policy.yml` and `governance/guardrails.yml` are what the
-  CLI runs. The prose companions - `guardrails.md`, `routing-policy.md`,
+- `governance/check-set.yml` is what the CLI runs: one fixed set of checks,
+  gates and evidence types. Each issue records its id, version and sha256 in
+  the manifest's `policy:` block. The prose companions - `guardrails.md`, `routing-policy.md`,
   `strategies.md` - explain why. Read them when a question comes up. Read
   `strategies-rationale.md`, which holds the incidents behind the strategies,
   only when a rule looks arbitrary.
-- `compass check` runs `guardrails.yml` against the manifest and `evidence/`.
+- `compass check` runs the issue's check set against the manifest and
+  `evidence/`.
   `/compass:ship` and `compass quick-fix finish` call it.
 - Gate evidence is **typed** - a `{type, path}` record, not a bare path.
-  `guardrails.yml` says which types each gate accepts, so a mechanical gate
+  The check set says which types each gate accepts, so a mechanical gate
   cannot be cleared with a written note.
 - Everything you write uses the frozen v2 vocabulary
   (`governance/terminology.yml`, enforced by `tests/test_terminology.py`).
@@ -82,9 +84,9 @@ and the things it does not claim.
 
 ## The pipeline
 
-- Before shipping comes the **Definition of Done**. Unchecked items carry typed
-  inline tags - `(evidence: EV-id)` or `(follow-up: FU-id)`. A bare unchecked
-  box fails `compass check`.
+- Before shipping comes the **Definition of Done**. An open item must link to
+  an issue: `compass follow-up add FU-<id> --defers <item> --github
+  owner/repo#N --summary "..."`. An item with no record fails `compass check`.
 
 ## Commits and sign-off
 
@@ -102,17 +104,6 @@ These repeat three rules of `compass-contract.md` for this repository. A test
   `docs/compass/<date>-<slug>/`) stay untracked. Do not force-add them.
 - A lint fix never weakens an assertion; re-run affected tests.
 
-## Roles
-
-- Five roles, four of them non-engineering, each with its own entry point into
-  the pipeline.
-- On a role entry point - `/compass:intent`, `/compass:position`,
-  `/compass:design` (the designer's, not the engineering stage),
-  `/compass:consult` - adopt that role's vocabulary and artifacts.
-- Do not collapse a product owner's intake into an engineering issue. The
-  intake is upstream of the acceptance criteria, and the criteria must be
-  checked back against it.
-
 ## Where to look
 
 - `skills/compass-runtime/SKILL.md` - which skill to load with each stage, the
@@ -122,8 +113,8 @@ These repeat three rules of `compass-contract.md` for this repository. A test
   markers.
 - `governance/` and `architecture/` - at the project root, not under
   `.compass/`. Compass ships an `architecture/`: its own invariants and the
-  decision records behind the guardrails, the sizing model and the role
-  perspectives. Assess loads it, when present, into `architecture-loaded.yml`;
+  decision records behind the guardrails and the sizing model. Assess loads
+  it, when present, into `architecture-loaded.yml`;
   projects without one keep working.
 
 ## Owning docs

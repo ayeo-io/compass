@@ -1,7 +1,7 @@
 ---
 id: ADR-095
 title: Compass reads the ship approval from the merged pull request
-status: proposed
+status: accepted
 date: 2026-11-07
 supersedes: ''
 superseded_by: ''

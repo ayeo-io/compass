@@ -1,7 +1,7 @@
 ---
 id: ADR-097
 title: Resident text stays under 600 words and each refusal names its fix
-status: proposed
+status: accepted
 date: 2026-11-07
 supersedes: ''
 superseded_by: ''

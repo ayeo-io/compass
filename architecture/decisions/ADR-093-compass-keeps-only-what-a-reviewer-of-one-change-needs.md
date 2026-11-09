@@ -1,7 +1,7 @@
 ---
 id: ADR-093
 title: Compass keeps only what a reviewer of one change needs
-status: proposed
+status: accepted
 date: 2026-11-06
 supersedes: ''
 superseded_by: ''

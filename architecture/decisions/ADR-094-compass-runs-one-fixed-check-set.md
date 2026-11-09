@@ -1,7 +1,7 @@
 ---
 id: ADR-094
 title: Compass runs one fixed check set
-status: proposed
+status: accepted
 date: 2026-11-06
 supersedes: ''
 superseded_by: ''

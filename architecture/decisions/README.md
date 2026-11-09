@@ -132,12 +132,12 @@ Rules:
 | [ADR-090](ADR-090-compass-runs-in-one-session-with-no-stage-agents.md) | Compass runs in one session with no stage agents | accepted | with ADR-030, ADR-071, ADR-076 and ADR-078 |
 | [ADR-091](ADR-091-compass-needs-only-the-acceptance-criteria.md) | Compass needs only the acceptance criteria | accepted | with ADR-026, ADR-050, ADR-051, ADR-064, ADR-067 and ADR-090 |
 | [ADR-092](ADR-092-compass-runs-one-path-of-four-stages.md) | Compass runs one path of four stages and assess selects the evidence | accepted | with ADR-062, ADR-063, ADR-079, ADR-083, ADR-088, ADR-090 and ADR-091 |
-| [ADR-093](ADR-093-compass-keeps-only-what-a-reviewer-of-one-change-needs.md) | Compass keeps only what a reviewer of one change needs | proposed | with ADR-047, ADR-090, ADR-091 and ADR-092 |
-| [ADR-094](ADR-094-compass-runs-one-fixed-check-set.md) | Compass runs one fixed check set | proposed | supersedes in part, when accepted, ADR-010 (layers), ADR-033 (the classifier and locks), ADR-035 (`extends:`, floors and locks), ADR-037 (the classifier), ADR-039 (locks and entry waivers), ADR-042 (the preset directory), ADR-043 (git parent pins) and ADR-073; with ADR-036, ADR-038, ADR-090, ADR-091, ADR-092 and ADR-093 |
-| [ADR-095](ADR-095-compass-reads-the-ship-approval-from-the-merged-pull-request.md) | Compass reads the ship approval from the merged pull request | proposed | with ADR-066, ADR-069, ADR-077, ADR-089, ADR-092 and ADR-094 |
-| [ADR-096](ADR-096-the-issue-record-ships-with-the-code.md) | The issue record ships with the code | proposed | with ADR-089, ADR-094 and ADR-095 |
-| [ADR-097](ADR-097-resident-text-stays-under-600-words-and-each-refusal-names-its-fix.md) | Resident text stays under 600 words and each refusal names its fix | proposed | with ADR-091, ADR-093 and ADR-094 |
-| [ADR-098](ADR-098-compass-migrate-moves-an-8x-project-and-the-legacy-readers-end.md) | Compass migrate moves an 8.x project and the legacy readers end | proposed | with ADR-088, ADR-092, ADR-094, ADR-096 and ADR-097 |
+| [ADR-093](ADR-093-compass-keeps-only-what-a-reviewer-of-one-change-needs.md) | Compass keeps only what a reviewer of one change needs | accepted | with ADR-047, ADR-090, ADR-091 and ADR-092 |
+| [ADR-094](ADR-094-compass-runs-one-fixed-check-set.md) | Compass runs one fixed check set | accepted | supersedes in part ADR-010 (layers), ADR-033 (the classifier and locks), ADR-035 (`extends:`, floors and locks), ADR-037 (the classifier), ADR-039 (locks and entry waivers), ADR-042 (the preset directory), ADR-043 (git parent pins) and ADR-073; with ADR-036, ADR-038, ADR-090, ADR-091, ADR-092 and ADR-093 |
+| [ADR-095](ADR-095-compass-reads-the-ship-approval-from-the-merged-pull-request.md) | Compass reads the ship approval from the merged pull request | accepted | with ADR-066, ADR-069, ADR-077, ADR-089, ADR-092 and ADR-094 |
+| [ADR-096](ADR-096-the-issue-record-ships-with-the-code.md) | The issue record ships with the code | accepted | with ADR-089, ADR-094 and ADR-095 |
+| [ADR-097](ADR-097-resident-text-stays-under-600-words-and-each-refusal-names-its-fix.md) | Resident text stays under 600 words and each refusal names its fix | accepted | with ADR-091, ADR-093 and ADR-094 |
+| [ADR-098](ADR-098-compass-migrate-moves-an-8x-project-and-the-legacy-readers-end.md) | Compass migrate moves an 8.x project and the legacy readers end | accepted | with ADR-088, ADR-092, ADR-094, ADR-096 and ADR-097 |
 
 ## Principle → ADR mapping
 

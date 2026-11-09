@@ -1,7 +1,7 @@
 ---
 id: ADR-096
 title: The issue record ships with the code
-status: proposed
+status: accepted
 date: 2026-11-07
 supersedes: ''
 superseded_by: ''

@@ -1,7 +1,7 @@
 ---
 id: ADR-098
 title: Compass migrate moves an 8.x project and the legacy readers end
-status: proposed
+status: accepted
 date: 2026-11-07
 supersedes: ''
 superseded_by: ''

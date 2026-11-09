@@ -135,26 +135,29 @@ The measurement covers `compass check` only. The hook, `compass next`, `compass 
 
    `compass waiver add` refuses a deleted check, and the settings lint refuses such a `project_checks` id. No archived issue holds a waiver, and this repository's `compass.yml` holds no `project_checks`, so no archived verdict moves.
 
-9. **Two legacy readers are deleted now.** Each deletion step ends with the archive comparison at 0 changes.
+9. **The readers of typed input and of a copied file are deleted.** Typed input takes only the 9.0.0 names, and stored files keep reading as stored. Each deletion step ends with the archive comparison at 0 changes.
    - The drift report and the framework lint: `governance.governance_drift`, the drift lines of `compass approach evaluate`, and the legacy reports of `policy_cmd`. `compass policy lint` is the settings lint in every project, the framework's included. `governance_drift` becomes a removed setting.
-   - Old typed names and the role flags: the old names typed on the command line (the reassessment kind, the check id given to `evidence approve`, `evidence request` and `evidence review`, and the refusal code), the `old_names` rows and functions that only those read, the `shape_display` section of `cli/migrate-map.yml`, `quick-fix start --role` and `--justify role=`. A typed old name fails as any unknown name does. `retired.DIMENSIONS` stays, so the stored `assessment.role` readings still read.
-
-   Typed input takes only the 9.0.0 names, and stored files keep reading as stored (VD-043 decisions 8 and 9). So the old size `standard` typed on the command line (`routing.read_size`) and the `old_names` row of the refusal code are deleted too, and fail as any unknown value does. The readers of old words in a stored file stay (decision 10): the manifest half of `word_map`, the old-word mapping in `generation.load`, and the `old_names` rows that a stored record reads. Deleting them would change compatibility contract 3 or how 616 archived manifests and 73 archived stored generations read.
+   - Old typed names and the role flags: the old names typed on the command line (the reassessment kind, the check id given to `evidence approve`, `evidence request` and `evidence review`, the refusal code and the size `standard`), the `old_names` rows and functions that only those read, the `shape_display` section of `cli/migrate-map.yml`, `quick-fix start --role` and `--justify role=`. A typed old name fails as any unknown name does. `retired.DIMENSIONS` stays, so the stored `assessment.role` readings still read.
+   - Copied governance: the 8.0.4 copy reader (`legacy_adapter` and the copy half of `effective`) and the `None` answer of `view_or_legacy`. Every command that resolves the policy refuses a project that holds a copy of `governance/routing-policy.yml` or `governance/guardrails.yml` and no `compass.yml`, with exit 2 and `governance-copy-removed`. A stored generation is still read as stored.
+   - The generated views `governance/routing-policy.yml` and `governance/guardrails.yml`, their four schema files, `core.find_governance` and `GOVERNANCE_FILES`. The check set is the only machine-readable policy.
+   - The frozen presets `default@6` and `default@7` as shipped policy.
+   - The hook's fallback to `delivery-approach.md`. The manifest's `delivery_approach` key alone tells the hook that an approach is decided.
 
 10. **These readers stay, with the reason:**
     - `stable_ids.LEGACY_TO_PATH` and the readers of a legacy stage. All 616 archived manifests are 8.x, and `depends_on`, `--found-at` and `retro --lineage` values name legacy stages. ADR-092 added them in 9.0.0; the 2026-10-25 decision did not end them.
     - `compass issue migrate` and its 1.x readers. They are not on the 2026-10-25 list, and no archived manifest needs them. A 6.x project upgrades through 8.x, which runs them.
     - `generation.load`, the major refusal and `compass issue migrate --config`, because every stored generation needs them.
     - The legacy stage names of the checkpoint outcomes, so an old outcome still reads (ADR-092).
-    - `.compass/config.yml` when `compass.yml` is absent. 9.0.0 still reads it (open question 5). No archived issue and no file in this repository reads it, so keeping it changes no verdict. Stopping would add a hook refusal and change about 100 test files. `compass migrate` rewrites `compass.yml` only, and tells a project with only the old file that 9.0.0 still reads it.
+    - `.compass/config.yml` when `compass.yml` is absent. 9.0.0 still reads it (open question 5). No archived issue and no file in this repository reads it, so keeping it changes no verdict. `compass migrate` rewrites `compass.yml` only, and tells a project with only the old file that 9.0.0 still reads it.
     - The readers of old words in a stored file: the manifest half of `word_map` with the `values` and `friction_keys` sections of `cli/migrate-map.yml`, the old-word mapping in `generation.load`, and the `old_names` rows `reassessment_kind`, `check_id`, `skill`, `state_key` and `term`. 616 archived manifests and 73 archived stored generations hold those words, contract 3 reads them through `compass issue migrate`, and an 8.x `state.yml` stores the old state key. `term` is the other form of `catalog` that ADR-041 keeps. Each row says `removed_in: 10.0.0`, so `old_names.removal_problems` lists none of them in 9.x.
+    - The artifacts catalog that 8.0.4 shipped, as one data file, `governance/artifacts-8.0.4.yml`. A stored 8.x generation's entries are filled from it, `compass issue migrate` maps file names to kinds with it, and the `nfr-rows-resolved` check falls back to it.
+    - `acceptance_strategy.pinned_below`, which keeps `S17` off for a project whose `compass.yml` still names `extends: compass:default@6` or `@7`. It goes after the owner has moved this repository's `compass.yml` to `acceptance_strategy: off` (open question 6).
 
-11. **The other readers on the 2026-10-25 list wait for the owner.** Each changes what a compatibility contract asserts or a frozen file, so the owner decides (open questions 1 to 4, 6, 7 and 9):
-    - copied governance, the generated views, `find_governance` and the `None` answer of `view_or_legacy`. The legacy adapter would move into a test helper, and every command would refuse a governance copy with `governance-copy-removed`;
-    - the frozen presets `default@6` and `default@7`, and the `extends:` pin `pinned_below`;
-    - the hook's fallback to `delivery-approach.md`.
-
-    Until then they stay as they are, and the archive measurement shows they hold no `compass check` verdict.
+11. **The compatibility contracts follow the deletions, and no corpus or frozen digest changes.**
+    - Contracts 1 and 2 read the 8.0.4 and 5.6.0 copies through the test helper `tests/legacy_copy.py`, which holds the copy reader that left the CLI.
+    - Configuration C, the 5.6.0 copy, stays for contracts 1 and 2. It is retired for contracts 3 to 6, because 9.0.0 refuses that project.
+    - Each contract 4 entry whose outcome changes is listed in the tables of entries that changed in 9.0.0 (`tests/compat_commands.py`), with its new exit and, for a refusal, the text stderr must hold.
+    - The contract 5 builder writes the 9.0.0 file shapes: `compass.yml`, `initialized` in `.compass/state.yml` and `delivery_approach` in the manifest. Contract 5 also runs its corpus with the settings in `.compass/config.yml`, because 9.0.0 still reads that file.
 
 12. **The 9.0.0 upgrade guide is a new `upgrade-9-0-0.md` in `docs/`.** It follows the form of `docs/upgrade-8-0-0.md`, with these sections:
     1. Before you start: a project on 6.x or 7.x upgrades to 8.x and moves its settings there. Copy the issue records outside the project first.
@@ -180,44 +183,41 @@ The measurement covers `compass check` only. The hook, `compass next`, `compass 
 
 ## As built
 
-#359 was built on `v9` from commit 10da100f (this record, step 1) to the commit that adds this section. VD-037 decided what to build before the owner answers the open questions: steps 1, 2, 3, 4, 5, 7, part of step 9, 12 and 13. The decisions above hold, with the corrections below. Each point says how the build differs from, or adds to, the first text of this record.
+#359 was built on `v9` from commit 10da100f (this record, step 1) to the commit that adds this section. It was built in two rounds. The first built the steps that change no compatibility contract: 1, 2, 3, 4, 5, 7, the first part of 9, and 12. The owner then answered the open questions on 9 Nov 2026, and the second round built step 6, the rest of step 9, step 10 and step 11. Step 8 (stop reading `.compass/config.yml`) is not built: the owner kept the reader. The decisions above hold, with the details below.
 
 What shipped:
 
-- **Decision 1** is built in a new module, `migrate_9` (commit 89d95d38), with two refusal codes, `governance-copy-removed` and `git-parent-removed` (VD-038). A 1.x manifest or a generation that is not whole refuses that issue only. The run lists it under "refused", lists the other issues and exits 2. The settings half (commit ad97b20f) adds `--settings-only` and `--issues-only`. `--issue` runs the issues half only, so moving one issue never rewrites `compass.yml`, and `--issue` with `--settings-only` is refused (VD-039).
-- **Decision 2** is built as written, with four details (VD-038):
+- **Decision 1** is built in a new module, `migrate_9` (commit 89d95d38), with two refusal codes, `governance-copy-removed` and `git-parent-removed`. A 1.x manifest or a generation that is not whole refuses that issue only. The run lists it under "refused", lists the other issues and exits 2. The settings half (commit ad97b20f) adds `--settings-only` and `--issues-only`. `--issue` runs the issues half only, so moving one issue never rewrites `compass.yml`, and `--issue` with `--settings-only` is refused. A copy of either governance file is refused, not only a copy of both, because 9.0.0 reads neither.
+- **Decision 2** is built as written, with four details:
   - `compass migrate` asks for no justification of an assessed value, because it writes the assessment the issue already holds. `routing.cmd_route_evaluate` skips that refusal only when `compass migrate` calls it.
   - The `reassessments:` entry is of kind `policy-correction`: the assessment was right and the policy under it moved, so the entry does not read as a misread assessment.
-  - The acceptance-criteria entry keeps `status`, because the manifest schema needs it on every `artifacts:` entry. Decision 2's table now says so.
+  - The acceptance-criteria entry keeps `status`, because the manifest schema needs it on every `artifacts:` entry. Decision 2's table says so.
   - A spike keeps its approach and stage map, and an issue that holds `legacy:` is left as it is ("already moved by compass migrate").
 
   A dry run over a copy of this repository's archive lists the 15 open assessed issues. No agent ran `--apply` on this repository (open question 7).
-- **Decision 6** is built in a new module, `migrate_settings` (commit ad97b20f), with seven details (VD-039). `removed_parts.REPLACEMENTS` drives it, so a row a later step adds is migrated with no change to migrate. A removed key that holds a part no setting carries, such as `rules:` with `rules.caps`, is left whole with the edit to make; a left key does not change the exit code. A project check at a specify stage runs at build, the earliest stage a project check runs at. Only `compass.yml` is rewritten: decision 6's table no longer names `.compass/config.yml`, because 9.0.0 still reads that file (decision 10).
+- **Decision 6** is built in a new module, `migrate_settings` (commit ad97b20f). `removed_parts.REPLACEMENTS` drives it, so a row a later step adds is migrated with no change to migrate. A removed key that holds a part no setting carries, such as `rules:` with `rules.caps`, is left whole with the edit to make; a left key does not change the exit code. A project check at a specify stage runs at build, the earliest stage a project check runs at. Only `compass.yml` is rewritten: decision 6's table names no `.compass/config.yml`, because 9.0.0 still reads that file (decision 10).
 - **Decision 7** is built as written (commit 59799e72). `docs/configuration.md` holds the table of `REPLACEMENTS`, and `tests/test_lint_names_replacements.py` fails when it differs.
-- **Decision 8** is built as written (commit 11a3cf96). `DELETED_CHECKS` lives in `check_registry`, beside `REMOVED`. The archive comparison over 622 issue folders showed 0 changes.
-- **Decision 9**, the drift report (commit 395704ea). `governance.py` keeps only the structural lint of a governance copy (`legacy_structure` and `cmd_policy_lint`), because contract 4 (`policy-lint-copied`, `policy-lint-broken`) and `compass ci` read it until copied governance goes (open question 1). `governance_drift` is a removed setting; it stays a settings key for the settings-conflict check of an old `.compass/config.yml`. The tests that covered only the drift report were deleted with it.
-- **Decision 9**, old names and role flags (commit 41ee4476, VD-040). Only the typed old names, the `old_names` rows and functions nothing else reads, the `shape_display` section and the two role flags are deleted. The first text of this record said all of the retired-word half of `word_map` and all of `old_names` go; decision 9 now says what went, and decision 10 lists what stays.
-- **Decision 12** is built in `docs/upgrade-9-0-0.md`, with the sections it lists. `scripts/render-upgrade-guide.py` writes four tables between markers: the removed settings from `REPLACEMENTS`, the removed verbs and flags from `removed_parts.COMMANDS`, the removed slash commands, and the deleted checks from `DELETED_CHECKS`. `tests/test_upgrade_9_0_0_guide.py` fails when a table is stale, when a slash command that `v8.0.4` shipped is gone with no row, or when the two pages that show `REPLACEMENTS` disagree. The page also lists the parts that wait for the owner. `tests/test_documented_slash_commands_exist.py` skips the page, as it skips the release table of `docs/releasing.md`, and the new test checks every slash command the page names outside its table.
+- **Decision 8** is built as written (commit 11a3cf96). `DELETED_CHECKS` lives in `check_registry`, beside `REMOVED`.
+- **Decision 9**, in five commits:
+  - The drift report (commit 395704ea). `governance_drift` is a removed setting; it stays a settings key for the settings-conflict check of an old `.compass/config.yml`.
+  - Old typed names and the role flags (commits 41ee4476 and a7344333). `routing.read_size` is deleted, so `approach evaluate --assessment size=standard` and `quick-fix start --size standard` fail with exit 2, as any value outside the vocabulary does. The `refusal_code` row of `old_names` goes, because nothing reads it. `word_map.map_policy` and `word_map.one_check_conflicts` move into `tests/legacy_copy.py`: no CLI reader needs them, and `map_policy` changes none of the 232 stored generations of this repository's archive. `word_map.map_fixture`, which nothing read, goes.
+  - Copied governance and the generated views (commit 4da6f13e). `effective.has_governance_copy` and `effective.refuse_governance_copy` find and refuse a copy. `view_or_legacy` is folded into `effective_for(task_dir=None, manifest=None, *, live=False, start=None)`, with no compatibility name. Only a live read is refused; an issue with a stored generation reads it as stored. `compass policy lint`, `compass policy show` and `compass ci` call the refusal themselves, because they do not resolve. `compass policy lint` now lints the settings and the project's own `governance/quarantine.yml`, `review-rules.yml` and `architecture-sources.yml`, each fault an `L-GOVERNANCE-FILE` error, and `compass ci` runs that lint. `governance.py` holds only that lint. The `no-trusted-rerun` check reads `governance/quarantine.yml` by path. The `ABSENT from this project's governance` report of `compass check` goes, because it compared a copy that nothing reads. The manifest schema no longer describes `check_set: legacy` in `policy:`. The skills and help texts name the check set or `project_checks` in place of the deleted views (commits 0b11f518 and f104e57c).
+  - The frozen presets (commit 9fc3184c). The artifacts catalog of the `default@7` preset moves byte for byte to `governance/artifacts-8.0.4.yml`, which `artifact_kinds.shipped()` reads (decision 10). The other preset files move to `tests/fixtures/presets/default@6/` and `default@7/`, which no CLI code reads; the tests that use a preset as 8.x input read them there. `artifact_kinds.CATALOGUE_PRESET`, `terminology_cmd.CATALOGUE_PRESET`, the table of kinds in `docs/artifact-catalog.md` and the hidden `compass _derive-glossary --catalogue-out` flag go. `tests/test_frozen_files_unchanged.py` pins both fixture presets and the 8.0.4 catalog, and compares each byte for byte with the release that shipped it; the preset digest fixture and the test of the kept presets are deleted. `tests/fixtures/frozen-digests.yml` does not change.
+  - The hook fallback (commit 5bc774c4). The hook reads the manifest's `delivery_approach` key alone. An issue whose manifest has no key, or cannot be read, is refused a code edit with `no-delivery-approach`, even when it holds `delivery-approach.md`: allowing it would let code change on an issue whose record cannot be read. No archived issue holds the document without the key. No refusal text changed.
+
+  The archive comparison over 622 issue folders showed 0 changes after each of these commits.
+- **Decision 11** is built as written (commits 4da6f13e, 5bc774c4 and a7344333). #359 adds four contract 4 entries to `EXIT_CHANGED_IN_9_0_0` with exit 2 (`approach-evaluate-copied-governance`, `policy-lint-copied`, `policy-lint-broken` and `approach-evaluate-controlled-autonomy`) and moves `quick-fix-start-heavier` from exit 0 to exit 2. `REFUSED_IN_9_0_0` makes stderr name `governance-copy-removed` for the four governance-copy entries, and `OLD_WORD_REFUSED_IN_9_0_0` makes it name the refused size for the two entries that type `standard`. Contract 5 reads the recorded refusal code through a table of its own, not through `old_names`. The state `with-copied-governance` copies the packed 8.0.4 files, because the framework no longer ships the views. `compat_baseline.shipped_policy` returns the evaluator policy of the shipped check set.
+- **Decision 12** is built in `docs/upgrade-9-0-0.md`, with the sections it lists. `scripts/render-upgrade-guide.py` writes four tables between markers: the removed settings from `REPLACEMENTS`, the removed verbs and flags from `removed_parts.COMMANDS`, the removed slash commands, and the deleted checks from `DELETED_CHECKS`. `tests/test_upgrade_9_0_0_guide.py` fails when a table is stale, when a slash command that `v8.0.4` shipped is gone with no row, or when the two pages that show `REPLACEMENTS` disagree. `tests/test_documented_slash_commands_exist.py` skips the page, as it skips the release table of `docs/releasing.md`, and the new test checks every slash command the page names outside its table.
 - **Decision 13** is built as written. The support line is in the guide, in "Supported versions" of `SECURITY.md` and in "What changes at 9.0.0" of `docs/releasing.md`, and the new test checks all three. The release commit adds the date.
-- **Open question 18**: `governance/terminology.yml` gains `legacy-record`, at version `2.0.0-pre30`. It holds no term for the drift report or the generated views, so none is removed. The `old_names` row `term` stays: the accepted vocabulary decision (ADR-041) keeps `catalogue` as the other form of `catalog`, and `tests/test_terminology.py` (`TRC-069`) checks it.
+- **Open question 18**: `governance/terminology.yml` gains `legacy-record`. It holds no term for the drift report or the generated views, so none is removed. The `old_names` row `term` stays: the accepted vocabulary decision (ADR-041) keeps `catalogue` as the other form of `catalog`, and `tests/test_terminology.py` (`TRC-069`) checks it. The glossary marks that form with the end release the row holds.
 
-What was kept, and why:
+Kept on purpose, and why:
 
-- The manifest half of `word_map`, with the `values` and `friction_keys` sections of `cli/migrate-map.yml`. Contract 3 runs `compass issue migrate` over an archive sample, which rewrites old manifest words through `word_map.map_manifest`; without that half, `issue lint` exits 1 instead of 0 on 16 of those issues. Contract 5 stores `define: full` (VD-040).
-- `routing.read_size` until #359 step 9 deleted it (VD-043 decision 9). Contract 4's regular issue, which stores `size: standard`, still reads; the two entries that type `standard` on a project 9.0.0 reads exit 2 and are listed in `EXIT_CHANGED_IN_9_0_0`.
-- The old-word mapping in `generation.load`. 73 archived stored generations hold an old check id or skill name. Without the mapping they would read in their stored words.
-- The copied-governance reader, its word mapping and the structural lint of a copy, until copied governance goes (open questions 1 to 3).
-- The `old_names` rows `reassessment_kind`, `check_id`, `skill`, `state_key` and `term`, each marked `removed_in: 10.0.0`, so `old_names.removal_problems("9.0.0")` lists none. The `refusal_code` row went with step 9: no stored file holds a refusal code.
-- `.compass/config.yml` when `compass.yml` is absent (open question 5, VD-037).
-
-What waits for the owner:
-
-- Step 6: delete copied governance, the generated views, `find_governance` and the legacy adapter, and move the adapter into the test helper `legacy_copy` (open questions 1 to 3).
-- Step 10: delete the frozen presets and the `extends:` pin `pinned_below` (open questions 6 and 9).
-- Step 11: delete the hook's fallback to `delivery-approach.md` (open question 4).
-- The rest of step 9: the readers of old words in a stored file, listed above. They need open question 13 reversed or contracts 3, 4 and 5 changed, and the owner's acceptance that 73 archived generations read in their stored words.
-- Step 8 is dropped while open question 5 stays answered no.
-- Open question 7: `compass migrate` on this repository's settings and its 15 assessed open issues is the owner's to run.
+- The copied-governance reader and its word mapping (`adapt`, `map_policy`, `one_check_conflicts`) live only in `tests/legacy_copy.py`. Contracts 1 and 2 use it through `tests/compat_baseline.py`, and the tests that compare a result with an 8.x copy import it. No CLI code imports it.
+- The frozen presets live only as test fixtures in `tests/fixtures/presets/`, plus the one data file `governance/artifacts-8.0.4.yml` that kept CLI readers need.
+- The readers of old words in a stored file, listed in decision 10. Without the manifest half of `word_map`, `issue lint` exits 1 instead of 0 on 16 issues of contract 3's archive sample. Without the mapping in `generation.load`, 73 archived stored generations would read in their stored words.
+- `.compass/config.yml` when `compass.yml` is absent. The owner kept the reader in 9.x, so step 8 and the refusal code `settings-file-moved` are not built.
+- `acceptance_strategy.pinned_below`, with its callers in `acceptance_strategy`, `path_writer`, `routing` and `settings_lint`, until the owner edits this repository's `compass.yml` (open question 6).
 
 ## Alternatives considered
 
@@ -231,8 +231,10 @@ What waits for the owner:
 | Show a deleted check as nothing to check, with a warning | It changes nothing for a project that names one | The issue says `compass check` refuses until it is gone |
 | Let a governance copy with no `compass.yml` pass in silence | Nothing breaks at once | The project's own guardrails would stop applying without a word; a git parent is refused for the same reason (ADR-094) |
 | Delete `LEGACY_TO_PATH` and the legacy-stage readers | They read old stage names | All 616 archived manifests read through them |
-| Delete every legacy reader now | The archive measurement shows none holds a verdict | Copied governance, the frozen presets, the pin and the hook fallback change compatibility contracts or frozen files, which the owner decides |
-| Stop reading `.compass/config.yml` now | The 2026-10-25 decision ends it at 9.0.0 | No archived issue or file here reads it; stopping adds a hook refusal and about 100 test changes before the owner answers the contract questions |
+| Delete the readers of old words in a stored file too | The 2026-10-25 decision ends old words at 9.0.0 | 616 archived manifests and 73 stored generations hold them, and contract 3 reads them through `compass issue migrate` |
+| Retire contracts 1 and 2 with the copy reader | 9.0.0 routes no delivery approach for a new issue | `evidence_required` would lose the test that it owes the gates 8.0.4 routed |
+| Delete the 8.x artifacts catalog with the presets | Nothing ships the presets as policy | Contracts 1 and 2, `compass issue migrate` and the `nfr-rows-resolved` fallback read it |
+| Stop reading `.compass/config.yml` now | The 2026-10-25 decision ends it at 9.0.0 | No archived issue or file here reads it; stopping adds a hook refusal and about 100 test changes |
 | Name a calendar date in the support line now | A reader can plan against a date | The release date is not known; the release commit adds it |
 
 ## Consequences
@@ -242,40 +244,42 @@ What changes for a user:
 - `compass migrate` moves an 8.x project to 9.0.0 without a hand edit of each issue, and shows the change first.
 - An open 8.x issue becomes a path issue and keeps its evidence, approvals, gates and outcomes. Its 8.x records stay readable under `legacy:`.
 - An issue whose records show a green with no red before it shows at Build, not at Ship, and the output says which scenario holds it.
-- `compass policy lint` says what replaces each removed key.
+- `compass policy lint` says what replaces each removed key, and lints the project's own optional governance files.
 - `compass check` refuses while a project check or an open waiver names a deleted check, and names the fix.
+- A project with a copy of `routing-policy.yml` or `guardrails.yml` and no `compass.yml` is refused by every command that reads the policy. It runs `compass policy migrate` on 8.x first.
+- A code edit on an issue whose manifest has no `delivery_approach` key, or cannot be read, is refused with `no-delivery-approach`.
 - `compass policy lint` reports no drift. The `governance_drift` setting is removed.
-- A typed old name, `quick-fix start --role` and `--justify role=` are refused as unknown.
+- A typed old name, the size `standard` typed on the command line, `quick-fix start --role` and `--justify role=` are refused as unknown.
 - 8.x gets security fixes only, for 90 days after 9.0.0 is released.
 
 What stays:
 
-- Every archived `compass check` verdict. The comparison runs after each deletion step and must show 0 changes.
+- Every archived `compass check` verdict. The comparison ran after each deletion step and showed 0 changes.
 - `governance/check-set.yml` and `generation.RESOLVER_VERSION`. No check is added or removed, and a stored generation is read as stored.
-- Contracts 1 to 5, their corpora and `tests/fixtures/frozen-digests.yml`, until the owner answers open questions 1 to 4.
+- The corpora of contracts 1 to 5 and `tests/fixtures/frozen-digests.yml`. The contracts pass with configuration C retired for contracts 3 to 6 and the changed contract 4 entries listed (decision 11).
 - `S17` stays off for this repository until the owner edits `compass.yml` or runs `compass migrate --apply --settings-only`.
 
 What a project must do:
 
-- Upgrade to 8.x first if it is on 6.x or 7.x.
+- Upgrade to 8.x first if it is on 6.x or 7.x, and move copied governance into `compass.yml` there.
 - Run `compass migrate`, read the diff, and run it again with `--apply`.
 - Give a request link and a requester for each issue it lists.
 - Remove any waiver or project check that names a deleted check.
 
 ## Open questions
 
-Questions 1 to 4, 6, 7 and 9 are the owner's. Each changes a compatibility contract, the owner's files or what a user sees. This change does not build them. Each states the default the build plan proposes.
+The owner answered questions 1 to 4, 6, 7 and 9 on 9 Nov 2026. Each answer is built, except the last step of question 6, which waits for the owner's edit of this repository's `compass.yml`.
 
-1. **How do contracts 1 and 2 read the 8.0.4 copy once the adapter leaves the CLI?** Proposed: the adapter and the copy resolution move into a new test helper, `legacy_copy`, used only by contracts 1 and 2 and the tests that compare with 8.0.4. No pin changes. The other answer retires contracts 1 and 2, because 9.0.0 routes no delivery approach for a new issue.
-2. **Does configuration C, the 5.6.0 copy, stay?** Proposed: it stays for contracts 1 and 2, through the helper. It is retired for contracts 3, 4 and 5, because a 9.0.0 CLI would refuse a project with copied governance.
-3. **Which contract 4 entries change, and how are they recorded?** Proposed: the four governance-copy entries go into the lists of entries that changed in 9.0.0, with their new exit codes, as ADR-094 did. The corpus and its digest do not change.
-4. **Does the contract 5 builder write the 9.0.0 file shapes?** Proposed: yes. It writes `compass.yml` in place of `.compass/config.yml`, `initialized` in the state file and a `delivery_approach` key in the manifest. The corpus does not change. The other answer keeps the hook fallback for contract 5.
-5. **Does 9.0.0 stop reading `.compass/config.yml`?** Decided: no, not now (decision 10). The reader stays in 9.0.0. The build plan's default was to stop reading it.
-6. **When does `S17` change for a pinned project, this repository included?** Proposed: `pinned_below` is deleted after the owner moves this repository's `compass.yml` to `acceptance_strategy: off`. A pinned project that does not run `compass migrate` gets `S17` at its next assess, and its lint names the replacement. The other answer keeps `pinned_below` in 9.x.
-7. **Is `compass migrate` run over this repository's archive and settings?** Proposed: the settings, yes, by the owner. For each of the 15 assessed open issues the owner chooses to finish, abandon or migrate it. No agent runs `compass migrate --apply` on this repository. Nothing here needs those issues migrated, because no deleted reader holds a verdict.
+1. **How do contracts 1 and 2 read the 8.0.4 copy once the adapter leaves the CLI?** Decided: through the test helper `tests/legacy_copy.py`, which only tests import (decision 11). No pin changes.
+2. **Does configuration C, the 5.6.0 copy, stay?** Decided: it stays for contracts 1 and 2, through the helper, and is retired for contracts 3 to 6, because a 9.0.0 CLI refuses a project with copied governance (decision 11).
+3. **Which contract 4 entries change, and how are they recorded?** Decided: each entry that changes is in `EXIT_CHANGED_IN_9_0_0` or `PHRASE_CHANGED_IN_9_0_0`, and a refused entry also names the text stderr must hold (decision 11). The corpus and its digest do not change.
+4. **Does the contract 5 builder write the 9.0.0 file shapes?** Decided: yes. It writes `compass.yml`, `initialized` in the state file and a `delivery_approach` key in the manifest, and the hook fallback is deleted (decisions 9 and 11). The corpus does not change.
+5. **Does 9.0.0 stop reading `.compass/config.yml`?** Decided: no (decision 10). The reader stays in 9.0.0. The build plan's default was to stop reading it.
+6. **When does `S17` change for a pinned project, this repository included?** Decided: `pinned_below` and its callers are deleted after the owner has moved this repository's `compass.yml` from `extends: compass:default@6` to `acceptance_strategy: {state: off, reason: ...}`. Until then `pinned_below` stays (decision 10). A pinned project that does not run `compass migrate` gets `S17` at its next assess once it goes, and its lint names the replacement. **Open:** the deletion of `pinned_below` waits for that edit.
+7. **Is `compass migrate` run over this repository's archive and settings?** Decided: the owner applies the settings half on this repository. The 15 assessed open issues are not migrated now; the owner decides each when it is next worked on. No agent runs `compass migrate --apply` on this repository. A dry run on a scratch copy is a release check.
 8. **What does "moves an issue to Specify or Ship" mean?** Decided: the issue becomes a path issue and its stage follows its records (decision 3).
-9. **Do the frozen presets go?** Proposed: yes. Only `artifact_kinds.entry` (2 archived issues, no verdict change) and `compass _derive-glossary` read them. `tests/test_frozen_files_unchanged.py` lists `default@6` as frozen, so the deletion changes that test. The other answer keeps them as data with no reader.
-10. **Does a governance copy with no `compass.yml` get a refusal or silence?** Decided: a refusal with exit 2. `compass migrate` refuses it now (decision 1). Every other command refuses it with `governance-copy-removed` once copied governance is deleted (open question 1).
+9. **Do the frozen presets go?** Decided: they leave the product (decision 9). The artifacts catalog that 8.0.4 shipped stays as `governance/artifacts-8.0.4.yml`, because kept readers need it (decision 10). The other preset files become test fixtures, and `tests/test_frozen_files_unchanged.py` pins them at their new paths with no change to `frozen-digests.yml`.
+10. **Does a governance copy with no `compass.yml` get a refusal or silence?** Decided: a refusal with exit 2, `governance-copy-removed`, from `compass migrate` and from every command that reads the policy (decision 9).
 11. **Where do `stages` and the other dropped keys go?** Decided: under `legacy:` (decision 2).
 12. **Do `LEGACY_TO_PATH` and the legacy-stage readers go?** Decided: no (decision 10).
 13. **Do the 1.x readers of `compass issue migrate` go?** Decided: no (decision 10). Their removal is a separate change with its own archive run.
@@ -283,13 +287,12 @@ Questions 1 to 4, 6, 7 and 9 are the owner's. Each changes a compatibility contr
 15. **How is `compass.yml` rewritten?** Decided: a line edit that keeps comments, checked by the lint before it is written (decision 6).
 16. **Does `compass migrate` prompt for the request link?** Decided: no (decision 5).
 17. **Does the support line name a date?** Decided: "for 90 days after 9.0.0 is released"; the release commit adds the date (decision 13).
-18. **Names.** Decided: the verb `compass migrate`, the manifest key `legacy`, the refusal codes `names-deleted-check` and `governance-copy-removed`, the table `removed_parts.REPLACEMENTS`, the set `DELETED_CHECKS` and the test helper `legacy_copy`. The refusal code `git-parent-removed` names a git parent that `compass migrate` refuses (VD-038). `governance/terminology.yml` gains the term `legacy-record`. The refusal code `settings-file-moved` is not used while `.compass/config.yml` is read.
+18. **Names.** Decided: the verb `compass migrate`, the manifest key `legacy`, the refusal codes `names-deleted-check`, `governance-copy-removed` and `git-parent-removed`, the table `removed_parts.REPLACEMENTS`, the set `DELETED_CHECKS` and the test helper `tests/legacy_copy.py`. `governance/terminology.yml` gains the term `legacy-record`. The refusal code `settings-file-moved` is not used while `.compass/config.yml` is read.
 
 ## References
 
 - ayeo-io/compass-delivery#359 [Add compass migrate and the 9.0.0 upgrade guide] and its parent, #345 [Reposition Compass 9.0.0 as an ATDD framework with a proof trail].
 - `governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`, `docs/upgrade-7-0-0.md`, `docs/upgrade-8-0-0.md`.
 - ADR-088 (a red before each green), ADR-090, ADR-091, ADR-092 (the path and `LEGACY_TO_PATH`), ADR-093, ADR-094 (the fixed check set, the frozen presets and the pin), ADR-096 (the committed record and the request link), ADR-097 (the kept `old_names` row and hook fallback).
-- `cli/compass_pkg/path_writer.py`, `cli/compass_pkg/removed_parts.py`, `cli/compass_pkg/settings_lint.py`, `cli/compass_pkg/check_registry.py`, `cli/compass_pkg/stable_ids.py`, `cli/compass_pkg/acceptance_strategy.py`, `cli/compass_pkg/legacy_adapter.py`, `cli/compass_pkg/word_map.py`, `cli/compass_pkg/old_names.py`, `cli/compass_pkg/governance.py`, `cli/compass_pkg/project_settings.py`, `hooks/py/pre_tool_route_probe.py`, `cli/migrate-map.yml`, `SECURITY.md`, `docs/releasing.md`.
-- `tests/compat_baseline.py`, `tests/compat_commands.py`, `tests/compat_hook.py`, `tests/test_compat_configurations.py`, `tests/test_frozen_files_unchanged.py`.
-- `cli/compass_pkg/migrate_9.py`, `cli/compass_pkg/migrate_settings.py`, `docs/upgrade-9-0-0.md` and `scripts/render-upgrade-guide.py`, written by this change. The test helper `legacy_copy` is not written; it waits for open question 1.
+- `cli/compass_pkg/migrate_9.py`, `cli/compass_pkg/migrate_settings.py`, `cli/compass_pkg/path_writer.py`, `cli/compass_pkg/removed_parts.py`, `cli/compass_pkg/settings_lint.py`, `cli/compass_pkg/check_registry.py`, `cli/compass_pkg/effective.py`, `cli/compass_pkg/governance.py`, `cli/compass_pkg/stable_ids.py`, `cli/compass_pkg/acceptance_strategy.py`, `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/word_map.py`, `cli/compass_pkg/old_names.py`, `cli/compass_pkg/project_settings.py`, `hooks/py/pre_tool_route_probe.py`, `cli/migrate-map.yml`, `governance/artifacts-8.0.4.yml`, `SECURITY.md`, `docs/releasing.md`, `docs/upgrade-9-0-0.md`, `scripts/render-upgrade-guide.py`.
+- `tests/legacy_copy.py`, `tests/compat_baseline.py`, `tests/compat_commands.py`, `tests/compat_hook.py`, `tests/test_compat_configurations.py`, `tests/test_frozen_files_unchanged.py`, `tests/fixtures/presets/`.

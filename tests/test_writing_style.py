@@ -2150,20 +2150,6 @@ _REMOVED_IN_9_0_0 = frozenset({
     "cli/compass_pkg/legacy_adapter.py", "tests/test_governance_drift.py",
     "tests/test_governance_discovery.py", "tests/fixtures/governance-content-hashes.json",
 })
-#: Paths 9.0.0 removed that this repository's `compass.yml` still names, keyed by
-#: the path. An agent may not edit `compass.yml`; the owner deletes its readiness
-#: commands and their comment (ADR-093). `test_pbw_a8_the_compass_yml_exemption_is_
-#: still_needed` fails once the file stops naming a path, so the entry goes too.
-_NAMED_BY_COMPASS_YML_UNTIL_THE_OWNER_EDITS = frozenset({
-    "docs/readiness.md", "tests/test_project_readiness.py",
-})
-#: Paths 9.0.0 removed that this repository's `CLAUDE.md` still names. An agent
-#: may not edit `CLAUDE.md`; the owner rewrites its Governance bullets, which name
-#: the two generated views (ADR-098). `test_pbw_a8_the_claude_md_exemption_is_
-#: still_needed` fails once the file stops naming a path, so the entry goes too.
-_NAMED_BY_CLAUDE_MD_UNTIL_THE_OWNER_EDITS = frozenset({
-    "governance/routing-policy.yml", "governance/guardrails.yml",
-})
 # A sample decision record under `templates/architecture/decisions/` is a
 # decision record too.
 _DECISION_RECORD_FOLDERS = ("architecture/decisions/", "governance/decisions/",
@@ -2197,10 +2183,6 @@ def _find_missing_reference(span: ProseSpan) -> list[Finding]:
             continue
         if path in _REMOVED_IN_9_0_0 and span.path.startswith(_DECISION_RECORD_FOLDERS):
             continue
-        if span.path == "compass.yml" and path in _NAMED_BY_COMPASS_YML_UNTIL_THE_OWNER_EDITS:
-            continue
-        if span.path == "CLAUDE.md" and path in _NAMED_BY_CLAUDE_MD_UNTIL_THE_OWNER_EDITS:
-            continue
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
         if (not (REPO_ROOT / path).exists()
@@ -2208,26 +2190,6 @@ def _find_missing_reference(span: ProseSpan) -> list[Finding]:
             findings.append(Finding(
                 span.path, span.line, f'named path "{path}" does not exist'))
     return findings
-
-
-def test_pbw_a8_the_compass_yml_exemption_is_still_needed():
-    text = (REPO_ROOT / "compass.yml").read_text(encoding="utf-8")
-    for path in _NAMED_BY_COMPASS_YML_UNTIL_THE_OWNER_EDITS:
-        assert path in text, f"compass.yml no longer names {path}; remove its exemption"
-        assert not (REPO_ROOT / path).exists(), path
-    # The exemption is for `compass.yml` only: another file is still reported.
-    other = ProseSpan("docs/x.md", 1, "See `docs/readiness.md`.", "markdown")
-    assert _find_missing_reference(other)
-
-
-def test_pbw_a8_the_claude_md_exemption_is_still_needed():
-    text = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    for path in _NAMED_BY_CLAUDE_MD_UNTIL_THE_OWNER_EDITS:
-        assert path in text, f"CLAUDE.md no longer names {path}; remove its exemption"
-        assert not (REPO_ROOT / path).exists(), path
-    # The exemption is for `CLAUDE.md` only: another file is still reported.
-    other = ProseSpan("docs/x.md", 1, "See `governance/guardrails.yml`.", "markdown")
-    assert _find_missing_reference(other)
 
 
 def _exists_in_own_example(file_path: str, path: str) -> bool:

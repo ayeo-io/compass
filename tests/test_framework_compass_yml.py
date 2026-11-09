@@ -2,8 +2,8 @@
 settings keys and its owner only.
 
 The framework repository is also a Compass project. Its governance files are
-the set every adopter gets, so its `compass.yml` extends the shipped default
-and holds settings keys and `owner` only: no catalogue key, no waiver, no
+the set every adopter gets, so its `compass.yml` holds settings keys and
+`owner` only: no catalogue key, no waiver, no
 unlock, no capability and no approvers list. `owner` names who confirms
 decisions and approves waivers, and changes no check, gate or rule. Its issues
 then run the shipped default unchanged, which keeps its delivery record valid
@@ -15,8 +15,8 @@ override, so the repository met the readiness floor while it ran autonomous;
 any other catalogue key or readiness entry still fails here. 9.0.0 removed the
 readiness floor and stopped reading the override and the readiness commands
 (ADR-093), and 9.0.0 removed the drift report that read `governance_drift`
-(ADR-098). The file keeps them until the owner deletes them, and lint names
-each with the warning `L-SETTING-REMOVED`; the tests below hold both.
+(ADR-098). The owner deleted them from the file (commit af632567), so lint
+names no `L-SETTING-REMOVED` warning; the tests below hold that.
 
 Scenario ids: IDR-5 and IDR-6, in the acceptance criteria of the issue
 `init-docs-release`; OWN-1, in the issue `compass-yml-owner`. The IDR-5 test
@@ -34,9 +34,10 @@ from compass_pkg import project_settings  # noqa: E402
 from compass_pkg.atomic_io import load_yaml_strict  # noqa: E402
 from compass_pkg.catalogue_spec import CATALOGUES, SETTINGS_KEYS  # noqa: E402
 
-# `schema` and `extends` make the file a layer, and `owner` names who confirms
-# decisions. Everything else must be a settings key.
-ALLOWED = set(SETTINGS_KEYS) | {"schema", "extends", "owner"}
+# `schema` makes the file a settings file, and `owner` names who confirms
+# decisions. Everything else must be a settings key. `extends:` is a removed
+# setting since 9.0.0 (ADR-094), so the file must not hold it.
+ALLOWED = set(SETTINGS_KEYS) | {"schema", "owner"}
 # Layer keys that are not settings and not catalogues, and that this
 # repository's file must not declare either. `owner` is allowed: it names who
 # confirms decisions and approves issue waivers, and changes no check, gate or
@@ -44,22 +45,11 @@ ALLOWED = set(SETTINGS_KEYS) | {"schema", "extends", "owner"}
 FORBIDDEN_LAYER_KEYS = {"waiver", "waived", "unlock", "capabilities", "approvers"}
 
 
-# The one catalogue override this repository may hold: the readiness test
-# signal times the micro suite (governance decision
-# 2026-10-13-this-repository-declares-readiness-commands). Any other
-# `readiness` value is reported like any other catalogue key. It is in map
-# form, so it sets `command` and keeps the shipped `limit_seconds`; the plain
-# map `{"params": {"command": ...}}` is reported too.
-READINESS_OVERRIDE = {"tests-declared-and-under-two-minutes":
-                      {"set": {"params": {"set": {"command": "test_micro_command"}}}}}
-
-
 def disallowed_keys(doc):
     """The top-level keys of `doc` that a file of settings keys and owner may
     not hold."""
-    return sorted(k for k in doc if (k not in ALLOWED or k in CATALOGUES
-                                     or k in FORBIDDEN_LAYER_KEYS)
-                  and not (k == "readiness" and doc[k] == READINESS_OVERRIDE))
+    return sorted(k for k in doc if k not in ALLOWED or k in CATALOGUES
+                  or k in FORBIDDEN_LAYER_KEYS)
 
 
 def test_idr_5_the_checker_reports_a_planted_catalogue_key():
@@ -80,11 +70,12 @@ def test_own_1_compass_yml_names_its_owner():
         assert disallowed_keys({"schema": 1, key: {}}) == [key]
 
 
-def test_idr_5_compass_yml_holds_settings_keys_only_and_extends_the_default():
+def test_idr_5_compass_yml_holds_settings_keys_only():
     doc = load_yaml_strict(str(ROOT / "compass.yml"))
     assert doc["schema"] == 1
-    assert doc["extends"] == "compass:default@6"
+    assert "extends" not in doc
     assert disallowed_keys(doc) == []
+    assert disallowed_keys({"schema": 1, "extends": "compass:default@8"}) == ["extends"]
 
 
 def test_idr_5_the_old_settings_file_and_the_shipped_project_file_are_gone():
@@ -98,7 +89,7 @@ def test_idr_5_the_settings_the_old_file_held_are_read_from_compass_yml():
     settings = project_settings.settings(str(ROOT))
     assert settings["autonomy"] == "autonomous"
     assert settings["adoption"] == "enforced"
-    assert settings["governance_drift"] == "advisory"
+    assert settings["acceptance_strategy"]["state"] in ("off", False)
     assert settings["project"]["test_command"] == "pytest -q"
     assert settings["project"]["name"] == "Compass (framework)"
     assert "multiagent" not in settings   # removed in 9.0.0 (ADR-090)
@@ -123,27 +114,12 @@ def test_idr_6_the_self_check_requires_compass_yml_not_the_old_file():
     assert ".compass/config.yml" not in text
 
 
-def test_readiness_override_is_the_only_catalogue_key_allowed():
-    # The exemption is the one value, not the key: any other readiness entry,
-    # or the override beside any other catalogue key, is still reported.
-    doc = load_yaml_strict(str(ROOT / "compass.yml"))
-    assert doc["readiness"] == READINESS_OVERRIDE
-    assert disallowed_keys({"schema": 1, "readiness": READINESS_OVERRIDE}) == []
-    changed = {"tests-declared-and-under-two-minutes":
-               {"set": {"required_for_autonomous": False}}}
-    assert disallowed_keys({"schema": 1, "readiness": changed}) == ["readiness"]
-    extra = dict(READINESS_OVERRIDE, **{"codeowners-present": {"remove": True}})
-    assert disallowed_keys({"schema": 1, "readiness": extra}) == ["readiness"]
-    assert disallowed_keys({"schema": 1, "readiness": READINESS_OVERRIDE,
-                            "checks": {}}) == ["checks"]
-
-
-def test_readiness_commands_are_declared_and_allowed():
+def test_project_commands_are_allowed_and_the_readiness_commands_are_gone():
     settings = project_settings.settings(str(ROOT))
     assert settings["allow_project_commands"] is True
     project = settings["project"]
-    assert project["build_command"] == "python3 -m compileall -q cli"
-    assert project["lint_command"] == "bash scripts/validate.sh --quiet"
+    # 9.0.0 does not read the readiness commands (ADR-093); the owner deleted them.
+    assert "build_command" not in project and "lint_command" not in project
     assert project["test_micro_command"].startswith("pytest -q ")
     # It must not run readiness itself, or the timed command recurses.
     assert "test_project_readiness" not in project["test_micro_command"]
@@ -157,15 +133,13 @@ TIMED = "tests-declared-and-under-two-minutes"
 PLAIN_MAP_OVERRIDE = {TIMED: {"set": {"params": {"command": "test_micro_command"}}}}
 
 
-def test_roa_12_the_override_is_in_map_form_and_keeps_limit_seconds():
+def test_roa_12_the_file_holds_no_readiness_override():
     # 9.0.0 no longer resolves the override into a readiness catalogue: the
-    # merge leaves a project's `readiness:` out (ADR-093). The file's shape is
-    # still held, so nothing else can be added under the key.
+    # merge leaves a project's `readiness:` out (ADR-093), and the owner deleted
+    # it from this file. Any `readiness:` value is reported.
     doc = load_yaml_strict(str(ROOT / "compass.yml"))
     assert doc["autonomy"] == "autonomous"
-    assert doc["readiness"] == {
-        TIMED: {"set": {"params": {"set": {"command": "test_micro_command"}}}}}
-    assert disallowed_keys({"schema": 1, "readiness": doc["readiness"]}) == []
+    assert "readiness" not in doc
     assert disallowed_keys({"schema": 1, "readiness": PLAIN_MAP_OVERRIDE}) == ["readiness"]
 
 
@@ -179,15 +153,6 @@ def _lint(file=None):
     return SimpleNamespace(findings=found, errors=[f for f in found if f.level == "error"])
 
 
-#: The settings this repository's file still holds that 9.0.0 no longer reads
-#: (ADR-093), `extends:` (ADR-094; its pin below @8 still keeps `S17` off
-#: until #359) and `governance_drift` (ADR-098, which removed the drift
-#: report). Lint names each once with `L-SETTING-REMOVED`, until the owner
-#: deletes them from `compass.yml`.
-REMOVED_SETTINGS = {"extends", "readiness", "project.build_command", "project.lint_command",
-                    "governance_drift"}
-
-
 def _removed_warnings(result):
     return sorted(f.path for f in result.findings
                   if f.code == "L-SETTING-REMOVED" and f.level == "warning")
@@ -197,19 +162,19 @@ def test_roa_13_compass_yml_passes_the_write_time_lint(tmp_path):
     import yaml
     result = _lint()
     assert result.errors == [], [(e.code, e.path, e.message) for e in result.errors]
-    # The removed settings are warnings, one each, and nothing else is removed.
-    assert _removed_warnings(result) == sorted(REMOVED_SETTINGS)
+    # The file holds no setting 9.0.0 removed.
+    assert _removed_warnings(result) == []
 
     # A plain-map override was refused as incomparable while the merge read a
     # project's `readiness:`. Since 9.0.0 the merge leaves it out, so its value
-    # is not checked: it is one more `L-SETTING-REMOVED` warning, never an error.
+    # is not checked: it is an `L-SETTING-REMOVED` warning, never an error.
     doc = load_yaml_strict(str(ROOT / "compass.yml"))
     doc["readiness"] = PLAIN_MAP_OVERRIDE
     planted = tmp_path / "compass.yml"
     planted.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
     result = _lint(file=str(planted))
     assert result.errors == [], [(e.code, e.path, e.message) for e in result.errors]
-    assert _removed_warnings(result) == sorted(REMOVED_SETTINGS)
+    assert _removed_warnings(result) == ["readiness"]
 
 
 def test_test_micro_command_is_kept_and_not_named_by_lint():

@@ -93,7 +93,7 @@ What breaks for a user:
 - `compass board`, `compass flow --html`, `compass issue github sync`, `compass retro`, `compass readiness`, `compass init --readiness`, `compass rework-scan`, `compass issue friction`, `compass intent ingest` and `compass follow-up add --target` fail to parse, with a line naming ADR-093.
 - GitHub labels are no longer written. `compass issue link set` still keeps the issue's link.
 - Nothing refuses an assess under `autonomy: autonomous` on a project with no readiness record. The guardrails (`G1` to `G5`) and the owner sign-off still apply.
-- A project `compass.yml` that sets `readiness:`, `github_labels`, `prices` or a readiness-only `project.*` field gets an `L-SETTING-REMOVED` warning. This repository's `compass.yml` sets `readiness:`, `project.build_command` and `project.lint_command`, and warns until the owner removes them.
+- A project `compass.yml` that sets `readiness:`, `github_labels`, `prices` or a readiness-only `project.*` field gets an `L-SETTING-REMOVED` warning. This repository's `compass.yml` set `readiness:`, `project.build_command` and `project.lint_command`, and warned until the owner removed them (commit af632567).
 - `compass flow --json` has no `friction` key.
 - A quick-fix slug or a scenario title that names an id in a project's `evals/` folder is no longer refused.
 - Each session's contract loses the friction rule, and the pre-tool hook writes no manifest.
@@ -144,8 +144,8 @@ Questions 1 to 19 are answered as #354 built them. Questions 20 to 22 are still 
 17. **Do the five role templates go?** Built: yes (ADR-091 open question 1).
 18. **Do the slug and title guards keep their eval clauses?** Built: no. A project's `evals/` folder is not a Compass concept once the harness leaves. The path and public-copy rules stay (ADR-091 open question 7). The slug check had no other rule, so it goes with its two calls.
 19. **Do the readiness-only `project.*` commands get a lint warning?** Built: yes, through `SETTING_FIELDS`, and the merge keeps them.
-20. **When does the owner remove this repository's readiness settings?** Open. The build does not change configuration, so the owner must edit `compass.yml`. Until the owner deletes the `readiness:` block, `project.build_command`, `project.lint_command` and the comments that name the readiness floor and its doc, `compass policy lint` warns three times. When the owner deletes them, `test_pbw_a8_the_compass_yml_exemption_is_still_needed` fails, and its exemption in `tests/test_writing_style.py` must go in the same change.
-21. **When does the owner edit `CLAUDE.md`?** Open. It still names `compass retro` (the "Assessment" section) and the four role entry points (the `compass init` paragraph and the "Roles" section). `test_documented_slash_commands_exist.py` and `test_documented_commands_exist.py` fail until it changes.
+20. **When does the owner remove this repository's readiness settings?** Decided: the owner deleted the `readiness:` block, `project.build_command`, `project.lint_command` and the comments that named the readiness floor (commit af632567). `compass policy lint` names no removed setting in this repository's `compass.yml`, and the exemption in `tests/test_writing_style.py` is gone.
+21. **When does the owner edit `CLAUDE.md`?** Decided: the owner edited it (commit af632567). It no longer names `compass retro` or the four role entry points, and `test_documented_slash_commands_exist.py` and `test_documented_commands_exist.py` pass.
 22. **Does sdd-bench gain the four harness checks that did not move?** Open. The build deleted four checks of the harness with `evals/`, and the eight test files in the sdd-bench `tools/tests` folder do not hold them:
     - `RN-4`: a rival condition without the names key is skipped, and the conditions are codes;
     - the color case: the harness reads pytest outcomes and counts through ANSI color;

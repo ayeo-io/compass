@@ -51,7 +51,8 @@ def _project(slug: str = "framed", *, route: bool = True, red: bool = False,
     task_dir.mkdir(parents=True)
     (root / ".compass" / "current-task").write_text(slug, encoding="utf-8")
     if route:
-        (task_dir / "delivery-approach.md").write_text("# Route\n\nroute: standard\n", encoding="utf-8")
+        # The manifest's `delivery_approach` key alone records the approach (#359).
+        (task_dir / "manifest.yml").write_text("delivery_approach: standard\n", encoding="utf-8")
     if red:
         write_red_record(task_dir)
     if spike:

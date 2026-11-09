@@ -9,7 +9,10 @@ for the same reason as before.
 The corpus in `tests/fixtures/compat/contract-5-hook.yml` was captured once
 from the 5.6.0 hook by `tests/compat_hook.py`. This test runs every entry
 against the hook as it is now and compares the exit status, the refusal code
-and any recorded phrase. The corpus is never regenerated from new code: a
+and any recorded phrase. The builder writes each project in the 9.0.0 shape
+(`compass.yml`, `initialized` in the state file, and `delivery_approach` in
+the manifest); a second run puts the settings back into the 8.x
+`.compass/config.yml`, which 9.x still reads. The corpus is never regenerated from new code: a
 regenerated corpus would agree with whatever the new code does, and the
 contract would then check nothing.
 
@@ -60,33 +63,33 @@ def test_contract_5_can_fail_when_code_globs_is_dropped(install):
     """Proves the comparison above can fail. The recorded entry blocks an
     edit only because `enforcement.code_globs` names `packaging/**`. With
     that key removed, as a migration that lost it would, the same call must
-    give a different decision from the one recorded."""
+    give a different decision from the one recorded. A hook that read only
+    the old file would also allow the edit, so this fails for it too."""
     hook_root, base = install
     entry = next(e for e in ENTRIES if e["id"] == "edit-glob-dir-match-no-red")
     assert entry["decision"] == "block"
 
     def drop_globs(project):
-        (project / ".compass" / "config.yml").write_text(
-            "version: 1.0.0\nmode: enforced\n")
+        (project / "compass.yml").write_text("schema: 1\nadoption: enforced\n")
 
     exit_code, _code, _out, _err = compat_hook.run_entry(
         hook_root, base, entry, mutate=drop_globs)
     assert exit_code != entry["exit"]
 
 
-# SH-7: the same corpus, for a project that keeps its settings in `compass.yml`
-# and the state file. The recorded decisions are unchanged: the move
-# must not change what the hook allows or refuses.
+# SH-7 and VD-037: the same corpus, for a project that still keeps its settings
+# and its state in the 8.x `.compass/config.yml`. 9.x reads that file, so the
+# recorded decisions must hold for it as well.
 
 #: A state whose settings file cannot be read at all cannot be moved.
 _NOT_MOVABLE = {"config-unreadable"}
 
 
 def move_settings(project):
-    """Turn the project's `.compass/config.yml` into what a migrated project
-    holds: the settings in `compass.yml` (`mode` renamed `adoption`), and
-    `initialised` and `records_signed_since` in the state file. A file
-    that does not parse is moved whole, so it stays broken."""
+    """Turn the project's `.compass/config.yml` into what an 8.x migration
+    wrote: the settings in `compass.yml` (`mode` renamed `adoption`), and the
+    state keys, as stored, in the state file. A file that does not parse is
+    moved whole, so it stays broken."""
     import yaml
 
     old = project / ".compass" / "config.yml"
@@ -101,7 +104,7 @@ def move_settings(project):
     if not isinstance(data, dict):
         (project / "compass.yml").write_text(text)
         return
-    state = {k: data.pop(k) for k in ("initialised", "records_signed_since")
+    state = {k: data.pop(k) for k in (compat_hook._OLD_STATE_KEY, "records_signed_since")
              if k in data}
     if "mode" in data:
         data["adoption"] = data.pop("mode")
@@ -117,10 +120,10 @@ MOVABLE = [e for e in ENTRIES if e["state"] not in _NOT_MOVABLE]
 
 
 @pytest.mark.parametrize("entry", MOVABLE, ids=[e["id"] for e in MOVABLE])
-def test_contract_5_decides_the_same_with_settings_in_compass_yml(install, entry):
+def test_contract_5_decides_the_same_with_settings_in_old_config_yml(install, entry):
     hook_root, base = install
     exit_code, code, _out, err = compat_hook.run_entry(
-        hook_root, base, entry, mutate=move_settings)
+        hook_root, base, entry, mutate=compat_hook.to_old_config)
     assert (exit_code, code) == (entry["exit"], compat_hook.recorded_code(entry)), err
     if "stderr_contains" in entry:
         assert entry["stderr_contains"] in err
@@ -128,61 +131,99 @@ def test_contract_5_decides_the_same_with_settings_in_compass_yml(install, entry
         assert entry["stderr_excludes"] not in err
 
 
-def test_contract_5_every_moved_compass_yml_carries_the_schema_marker(install):
+def test_contract_5_the_old_config_run_has_no_9_0_0_files(install):
+    """The run above tests the old file only if the builder's `compass.yml`
+    and state file are gone after `to_old_config`."""
+    hook_root, base = install
+    seen = []
+
+    def convert_and_look(project):
+        compat_hook.to_old_config(project)
+        seen.append(((project / "compass.yml").exists(),
+                     (project / ".compass" / "state.yml").exists(),
+                     (project / ".compass" / "config.yml").exists()))
+
+    for entry in MOVABLE:
+        if entry["state"] != "not-opted-in":
+            compat_hook.run_entry(hook_root, base, entry, mutate=convert_and_look)
+    assert seen and set(seen) == {(False, False, True)}
+
+
+def test_contract_5_the_old_config_run_can_fail_when_the_hook_ignores_it(install):
+    """A hook that read only `compass.yml` would allow the glob entry once the
+    settings were back in the old file without their globs."""
+    hook_root, base = install
+    entry = next(e for e in ENTRIES if e["id"] == "edit-glob-dir-match-no-red")
+
+    def old_file_without_globs(project):
+        compat_hook.to_old_config(project)
+        (project / ".compass" / "config.yml").write_text(
+            "version: 1.0.0\nmode: enforced\n")
+
+    exit_code, _code, _out, _err = compat_hook.run_entry(
+        hook_root, base, entry, mutate=old_file_without_globs)
+    assert exit_code != entry["exit"]
+
+
+def test_contract_5_every_built_compass_yml_carries_the_schema_marker(install):
     """Migration writes `schema:` into each `compass.yml` it creates, because
     that key is how a project holding both files tells Compass's file from
-    another product's. The conversion above stands in for migration, so it
-    must write the key, or the corpus would not test what migration makes.
-    A file that does not parse is moved whole and has no key to check."""
+    another product's. The builder stands in for a 9.0.0 project, so it must
+    write the key, or the corpus would not test what such a project holds.
+    A file that does not parse is written whole and has no key to check."""
     import yaml
 
     hook_root, base = install
     seen = []
 
-    def move_and_record(project):
-        move_settings(project)
-        moved = project / "compass.yml"
-        if moved.exists():
+    def record(project):
+        built = project / "compass.yml"
+        if built.exists():
             try:
-                seen.append(yaml.safe_load(moved.read_text()))
+                seen.append(yaml.safe_load(built.read_text()))
             except yaml.YAMLError:
                 pass
 
     for entry in MOVABLE:
-        compat_hook.run_entry(hook_root, base, entry, mutate=move_and_record)
-    moved = [data for data in seen if isinstance(data, dict)]
-    assert moved, "no entry moved a settings file"
-    assert [d for d in moved if "schema" not in d] == []
+        compat_hook.run_entry(hook_root, base, entry, mutate=record)
+    built = [data for data in seen if isinstance(data, dict)]
+    assert built, "no entry built a settings file"
+    assert [d for d in built if "schema" not in d] == []
 
 
-def test_contract_5_the_moved_corpus_can_fail_when_the_hook_ignores_compass_yml(
-        install):
-    """A hook that read only the old file would allow the glob entry once the
-    settings had moved, so the moved run above would then differ."""
-    hook_root, base = install
-    entry = next(e for e in ENTRIES if e["id"] == "edit-glob-dir-match-no-red")
+def test_contract_5_the_no_approach_state_alone_lacks_the_approach_key(tmp_path):
+    """The hook reads the manifest's `delivery_approach` key alone, so the
+    `no-approach` entry refuses only because its state leaves the key out,
+    and every other state with an issue writes it."""
+    import yaml
 
-    def move_and_forget_the_globs(project):
-        move_settings(project)
-        (project / "compass.yml").write_text("adoption: enforced\n")
-
-    exit_code, _code, _out, _err = compat_hook.run_entry(
-        hook_root, base, entry, mutate=move_and_forget_the_globs)
-    assert exit_code != entry["exit"]
+    seen = {}
+    for state in compat_hook.STATES:
+        project, _outside = compat_hook.build(state, tmp_path)
+        manifest = project / ".compass" / "work" / compat_hook.SLUG / "manifest.yml"
+        if manifest.exists():
+            seen[state] = "delivery_approach" in yaml.safe_load(manifest.read_text())
+        built = project / "compass.yml"
+        if built.exists():
+            built.chmod(0o644)
+    assert seen and seen == {state: state != "no-approach" for state in seen}
+    assert seen["no-approach"] is False
 
 
 # --- the refusal code is US spelling, the recorded pin is not -------------------
 
 #: The entries that record the old refusal code. The code pin stays as 5.6.0
-#: wrote it; the comparison reads it through the old-names table.
+#: wrote it; the comparison reads it through `compat_hook.RENAMED_CODES`.
 _OLD_CODE_ENTRIES = [e for e in ENTRIES
                      if compat_hook.recorded_code(e) != e["code"]]
 
 
 def _empty_overlay(project):
-    """Configuration B: the settings sit in an empty `compass.yml`, the state
-    in the old file."""
-    (project / "compass.yml").write_text("schema: 1\n")
+    """Configuration B: the settings and the state in the old file, beside an
+    empty `compass.yml`."""
+    compat_hook.to_old_config(project)
+    if (project / ".compass").exists():
+        (project / "compass.yml").write_text("schema: 1\n")
 
 
 def _migrated(project):
@@ -195,6 +236,7 @@ def _migrated(project):
 
     import yaml
 
+    compat_hook.to_old_config(project)
     old = project / ".compass" / "config.yml"
     if old.exists():
         legacy = project / ".compass" / "legacy"
@@ -213,9 +255,11 @@ def _migrated(project):
         path.write_text(yaml.safe_dump(data, sort_keys=False))
 
 
-#: Configuration A (the 5.6.0 file as recorded) and C (the settings moved into
-#: `compass.yml` and the state file, as migration moves them).
-_CONFIGS = {"A": None, "B": _empty_overlay, "C": move_settings, "D": _migrated}
+#: A (the 9.0.0 files the builder writes), the 8.x `.compass/config.yml`
+#: alone, B (that file beside an empty `compass.yml`) and D (the files an 8.x
+#: migration wrote).
+_CONFIGS = {"A": None, "old": compat_hook.to_old_config, "B": _empty_overlay,
+            "D": _migrated}
 
 
 def test_trc_058_the_old_code_is_read_under_every_configuration(install):
@@ -233,8 +277,6 @@ def test_trc_058_the_old_code_is_read_under_every_configuration(install):
 def test_trc_058(install, monkeypatch):
     """Every recorded exit code and refusal code matches, and the comparison
     fails when the old code is no longer in the table."""
-    from compass_pkg import old_names
-
     hook_root, base = install
     for entry in ENTRIES:
         if entry["state"] in compat_hook.NEEDS_NON_ROOT and os.geteuid() == 0:
@@ -242,11 +284,9 @@ def test_trc_058(install, monkeypatch):
         exit_code, code, _out, err = compat_hook.run_entry(hook_root, base, entry)
         assert (exit_code, code) == (entry["exit"], compat_hook.recorded_code(entry)), (
             entry["id"], err)
-    # Remove the row from a copy of the table: the recorded code is then no
-    # longer read as the current one, so the comparison reports the difference.
-    planted = {k: dict(v) for k, v in old_names._FALLBACK.items()}
-    planted["refusal_code"] = {}
-    monkeypatch.setattr(old_names, "_READ", lambda name, fallback: planted)
+    # Empty the table: the recorded code is then no longer read as the current
+    # one, so the comparison reports the difference.
+    monkeypatch.setattr(compat_hook, "RENAMED_CODES", {})
     entry = _OLD_CODE_ENTRIES[0]
     exit_code, code, _out, _err = compat_hook.run_entry(hook_root, base, entry)
     assert (exit_code, code) != (entry["exit"], compat_hook.recorded_code(entry))

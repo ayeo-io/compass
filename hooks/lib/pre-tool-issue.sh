@@ -480,11 +480,11 @@ fi
 TASK_SLUG="$(basename "$TASK_DIR")"
 
 # The delivery approach must be decided - code work without a computed
-# approach is process laundering. The manifest's `delivery_approach` key is the
-# record: 9.0.0 writes no delivery-approach.md (ADR-091), and an issue assessed
-# before then holds the key too. The probe reads it in Python, the same reader
-# `compass next` uses - a second implementation in bash is how the two halves
-# stop agreeing.
+# approach is process laundering. The manifest's `delivery_approach` key alone
+# decides: 9.0.0 writes no delivery-approach.md (ADR-091), and a document an
+# 8.x issue registered does not count, because an issue assessed on 8.x holds
+# the key too. The probe reads it in Python, the same reader `compass next`
+# uses - a second implementation in bash is how the two halves stop agreeing.
 #
 # The answer is printed and the status only says whether the reader ran, so a
 # crash cannot read as "no record" - that would send the user to re-assess

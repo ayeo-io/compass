@@ -45,7 +45,6 @@ def _project(*, specify="full", scenarios=0, red=True, spike=False,
     task_dir = root / ".compass" / "work" / "t"
     task_dir.mkdir(parents=True)
     (root / ".compass" / "current-task").write_text("t\n")
-    (task_dir / "delivery-approach.md").write_text("# Route\n")
     if red:
         write_red_record(task_dir)
     if spike:
@@ -162,13 +161,20 @@ def test_scn_b2_a_test_file_is_still_editable():
 ])
 def test_scn_f1_an_unreadable_spine_does_not_block(kwargs, label):
     """This check reads a file the hook did not need before. If it cannot be
-    read the hook must fall back to its earlier behaviour, not invent a block -
-    a false block on unreadable state trains people to bypass the hook."""
+    read, `G2` must not invent a block - a false block on unreadable state
+    trains people to bypass the hook. The hook still refuses, because the
+    manifest's `delivery_approach` key alone records the approach (#359) and
+    an unreadable manifest records none; that refusal, not `G2`, is the one
+    the person sees."""
     project = _project(specify="full", scenarios=0, red=True, **kwargs)
     try:
         result = _run(project)
-        assert result.returncode == 0, (
-            f"blocked because of {label}:\n{result.stdout}{result.stderr}")
+        assert result.returncode == 2, (
+            f"allowed with {label}:\n{result.stdout}{result.stderr}")
+        assert result.stderr.rstrip().endswith("[no-delivery-approach]"), (
+            f"refused for another reason with {label}:\n{result.stderr}")
+        assert "acceptance-before-code" not in result.stderr, (
+            f"G2 blocked because of {label}:\n{result.stderr}")
     finally:
         shutil.rmtree(project, ignore_errors=True)
 
@@ -197,7 +203,6 @@ def _project_v2(*, define="full", scenarios=0, red=True):
     task_dir = root / ".compass" / "work" / "t"
     task_dir.mkdir(parents=True)
     (root / ".compass" / "current-task").write_text("t\n")
-    (task_dir / "delivery-approach.md").write_text("# Delivery approach\n")
     if red:
         write_red_record(task_dir)
     (task_dir / "manifest.yml").write_text(yaml.safe_dump({

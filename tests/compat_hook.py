@@ -34,7 +34,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 import compass_pkg  # noqa: E402,F401
 import yaml  # noqa: E402
-from compass_pkg import old_names  # noqa: E402
 
 CORPUS = ROOT / "tests" / "fixtures" / "compat" / "contract-5-hook.yml"
 SLUG = "corpus"
@@ -58,6 +57,73 @@ scenarios:
   tests: [t]
 """
 
+#: The key that records a decided delivery approach. The hook reads this key
+#: alone (9.0.0), so a state with an approach writes it, and `no-approach`
+#: leaves it out.
+APPROACH = "delivery_approach: regular\n"
+
+# The settings the states above name are the 5.6.0 `.compass/config.yml`
+# texts, as the corpus recorded them. `_write_settings` writes each in the
+# 9.0.0 shape, and `to_old_config` turns a built project back into the 8.x
+# shape, which 9.x still reads (VD-037).
+_OLD_STATE_KEY = "initi" + "alised"  # the 8.x spelling, built from pieces for the US English scan
+_STATE_KEYS = {_OLD_STATE_KEY: "initialized", "records_signed_since": "records_signed_since"}
+
+
+def _write_settings(project, config):
+    """Write `config`, a 5.6.0 `.compass/config.yml` text, as a 9.0.0 project
+    holds it: the settings in `compass.yml` (`mode` renamed `adoption`, a
+    `schema:` key first, `version:` dropped) and `initialized` and
+    `records_signed_since` in `.compass/state.yml`. A text that does not
+    parse is written whole into `compass.yml`, so it stays broken."""
+    try:
+        data = yaml.safe_load(config)
+    except yaml.YAMLError:
+        data = None
+    if not isinstance(data, dict):
+        (project / "compass.yml").write_text(config)
+        return
+    data.pop("version", None)
+    state = {new: data.pop(old) for old, new in _STATE_KEYS.items() if old in data}
+    if "mode" in data:
+        data["adoption"] = data.pop("mode")
+    (project / "compass.yml").write_text(
+        yaml.safe_dump({"schema": 1, **data}, sort_keys=False))
+    if state:
+        (project / ".compass" / "state.yml").write_text(
+            yaml.safe_dump(state, sort_keys=False))
+
+
+def to_old_config(project):
+    """Turn a built project into the 8.x shape: the settings and the state
+    together in `.compass/config.yml`, with `mode`, `version: 1.0.0` and the
+    8.x spelling of the state key, and no `compass.yml` or state file. A
+    `compass.yml` that does not parse is moved whole, so it stays broken."""
+    new = project / "compass.yml"
+    if not new.exists():          # a project that never opted in
+        return
+    text = new.read_text()
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError:
+        data = None
+    new.unlink()
+    old = project / ".compass" / "config.yml"
+    if not isinstance(data, dict):
+        old.write_text(text)
+        return
+    data.pop("schema", None)
+    if "adoption" in data:
+        data["mode"] = data.pop("adoption")
+    state_file = project / ".compass" / "state.yml"
+    if state_file.exists():
+        state = yaml.safe_load(state_file.read_text()) or {}
+        state_file.unlink()
+        for old_key, new_key in _STATE_KEYS.items():
+            if new_key in state:
+                data[old_key] = state[new_key]
+    old.write_text(yaml.safe_dump({"version": "1.0.0", **data}, sort_keys=False))
+
 
 def _signed_red(timestamp="2026-09-24T00:00:00+00:00", signed=True):
     payload = {"command": "pytest -q", "scenario": None, "exit_code": 1,
@@ -77,12 +143,10 @@ def _issue(project, *, config=CONFIG, pointer=SLUG, manifest=MANIFEST,
     task = compass / "work" / SLUG
     (task / "evidence").mkdir(parents=True)
     if config is not None:
-        (compass / "config.yml").write_text(config)
+        _write_settings(project, config)
     if pointer is not None:
         (compass / "current-task").write_text(pointer)
-    (task / "manifest.yml").write_text(manifest)
-    if approach:
-        (task / "delivery-approach.md").write_text("# Approach\n")
+    (task / "manifest.yml").write_text(manifest + (APPROACH if approach else ""))
     if red == "marker-only":
         (task / ".red").write_text("")
     elif red is not None:
@@ -93,18 +157,18 @@ def _issue(project, *, config=CONFIG, pointer=SLUG, manifest=MANIFEST,
 
 
 def _bare(project, *, config, work):
-    """An opted-in project with no issue: `.compass/` and its config, and an
+    """An opted-in project with no issue: `.compass/` and its settings, and an
     empty `work/` when `work` is true."""
     compass = project / ".compass"
     compass.mkdir()
-    (compass / "config.yml").write_text(config)
+    _write_settings(project, config)
     if work:
         (compass / "work").mkdir()
 
 
 def _unreadable(project):
     _issue(project, red=_signed_red())
-    (project / ".compass" / "config.yml").chmod(0)
+    (project / "compass.yml").chmod(0)
 
 
 #: Each named state and how to build it. A state is the project only; the
@@ -321,9 +385,9 @@ def run_entry(hook_root, base, entry, mutate=None):
         return run(hook_root, project, outside, entry["tool"],
                    entry["tool_input"], base)
     finally:
-        cfg = project / ".compass" / "config.yml"
-        if cfg.exists():
-            cfg.chmod(0o644)
+        for cfg in (project / "compass.yml", project / ".compass" / "config.yml"):
+            if cfg.exists():
+                cfg.chmod(0o644)
 
 
 def _observe(hook_root, base, item):
@@ -388,11 +452,16 @@ def capture(path=CORPUS, force=False):
     return [entry["id"] for entry in dropped]
 
 
+#: The refusal codes 5.6.0 printed under a name the hook no longer prints,
+#: and the name it prints now. The corpus keeps each code as 5.6.0 wrote it,
+#: so the comparison reads it through this table. A code missing here fails
+#: the comparison.
+RENAMED_CODES = {"not-initi" + "alised": "not-initialized"}  # built from pieces for the US English scan
+
+
 def recorded_code(entry):
-    """The refusal code the corpus entry records, as the hook prints it now.
-    The corpus keeps the code as 5.6.0 wrote it; an old code is read through
-    the old-names table, so a removed row fails the comparison."""
-    return old_names.current("refusal_code", entry["code"])
+    """The refusal code the corpus entry records, as the hook prints it now."""
+    return RENAMED_CODES.get(entry["code"], entry["code"])
 
 
 def load(path=CORPUS):

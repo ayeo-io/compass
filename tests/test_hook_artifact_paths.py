@@ -235,3 +235,14 @@ def test_the_hook_reads_the_approach_from_the_manifest(tmp_path):
     manifest.write_text(yaml.safe_dump(body), encoding="utf-8")
     r = _pre_tool(project)
     assert r.returncode != 0 and "assess" in r.stderr, r.stderr
+
+
+def test_a_registered_approach_document_without_the_key_does_not_decide(tmp_path):
+    """The manifest's `delivery_approach` key alone decides (#359): a
+    registered delivery-approach.md no longer stands in for it, so an issue
+    that holds the document and not the key is blocked."""
+    project = _no_approach(_project(tmp_path, documents=True, register=True))
+    assert (tmp_path / DOCS_REL / "delivery-approach.md").is_file()
+    r = _pre_tool(project)
+    assert r.returncode != 0, r.stderr
+    assert "[no-delivery-approach]" in r.stderr, r.stderr

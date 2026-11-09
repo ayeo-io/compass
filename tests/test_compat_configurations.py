@@ -38,7 +38,7 @@ import yaml
 import compat_baseline as cb
 import compat_commands as cc
 import compat_hook
-from test_compat_contract_5 import _NOT_MOVABLE, move_settings
+from test_compat_contract_5 import _NOT_MOVABLE
 
 BC = ("B", "C")
 ALL = BC  # A has its own files, and contracts 1 and 2 there read the 8.0.4 copy
@@ -268,38 +268,36 @@ def test_contract_4_under_the_configuration_can_fail(projects, kind):
 import test_compat_contract_5 as c5  # noqa: E402
 
 MOVABLE = [e for e in c5.ENTRIES if e["state"] not in _NOT_MOVABLE]
+#: Contract 5 runs B only: C is retired for it (VD-043 decision 2).
+C5_KINDS = ("B",)
 
 
 def with_configuration(kind, fault=None):
     """A mutation for a hook corpus project. B holds the settings in a
-    `compass.yml` that extends the default; C keeps `.compass/config.yml` and
-    adds the 5.6.0 governance copy beside it."""
+    `compass.yml` that extends the default. C, the 5.6.0 governance copy, is
+    retired for contract 5, because 9.0.0 refuses that project (VD-043
+    decision 2)."""
+    assert kind == "B", kind
+
     def mutate(project):
         if not (project / ".compass").exists():
             return          # a project that never opted in
-        if kind == "B":
-            move_settings(project)
-            moved = project / "compass.yml"
-            try:
-                data = yaml.safe_load(moved.read_text()) if moved.exists() else None
-            except yaml.YAMLError:
-                data = None     # a file that does not parse stays as moved
-            if isinstance(data, dict):
-                moved.write_text(yaml.safe_dump(
-                    {"schema": 1, "extends": "compass:default@6",
-                     **{k: v for k, v in data.items() if k != "schema"}},
-                    sort_keys=False))
-                if fault == "drop-settings":
-                    moved.write_text("schema: 1\nextends: compass:default@6\n")
-        else:
-            cb.add_governance_copy(project)
+        built = project / "compass.yml"
+        try:
+            data = yaml.safe_load(built.read_text()) if built.exists() else None
+        except yaml.YAMLError:
+            data = None     # a file that does not parse stays as built
+        if isinstance(data, dict):
+            built.write_text(yaml.safe_dump(
+                {"schema": 1, "extends": "compass:default@6",
+                 **{k: v for k, v in data.items() if k != "schema"}},
+                sort_keys=False))
             if fault == "drop-settings":
-                (project / ".compass" / "config.yml").write_text(
-                    "version: 1.0.0\nmode: enforced\n")
+                built.write_text("schema: 1\nextends: compass:default@6\n")
     return mutate
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", C5_KINDS)
 @pytest.mark.parametrize("entry", MOVABLE, ids=[e["id"] for e in MOVABLE])
 def test_contract_5_decides_as_recorded_under(c5_install, entry, kind):
     if entry["state"] in compat_hook.NEEDS_NON_ROOT and os.geteuid() == 0:
@@ -314,7 +312,7 @@ def test_contract_5_decides_as_recorded_under(c5_install, entry, kind):
         assert entry["stderr_excludes"] not in err
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", C5_KINDS)
 def test_contract_5_under_the_configuration_can_fail(c5_install, kind):
     hook_root, base = c5_install
     entry = next(e for e in c5.ENTRIES if e["id"] == "edit-glob-dir-match-no-red")

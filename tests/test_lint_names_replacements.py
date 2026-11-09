@@ -7,7 +7,7 @@ the message ends "Replacement: `<setting>`." or "Removed: nothing replaces
 it.", then "`compass migrate` rewrites it." when migrate handles the key, and
 `--json` gives the same settings in a `replacement` field. A pin of
 `extends: compass:default@6` or `@7` is replaced by `acceptance_strategy:
-off`, because the pin is what keeps the acceptance strategy `S17` off; a pin
+off`, because the pin kept the acceptance strategy `S17` off in 8.x; a pin
 of `@8` or later is removed.
 """
 from __future__ import annotations

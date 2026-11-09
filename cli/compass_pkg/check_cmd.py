@@ -709,7 +709,7 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
         # it was assessed under (ADR-006).
         if check in acceptance_strategy.CHECKS and acceptance_strategy.stored(task) is None:
             if check == acceptance_strategy.CHECK:
-                run.note("  " + acceptance_strategy.notice(task_dir))
+                run.note("  " + acceptance_strategy.NOTICE)
             continue
         # Only an issue whose stored `evidence_required` lists the token owes the ship
         # approval, so an issue assessed before the token gains no row (#355).

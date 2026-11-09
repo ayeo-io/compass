@@ -264,16 +264,12 @@ _(none yet - the shipped default guardrails apply as-is)_
     `--json`, the notice "four-layer acceptance strategy (`S17`): does not
     apply - this issue was assessed before the strategy shipped", so its rows
     and exit code are those of the release it was assessed under.
-  - An issue in a project whose `compass.yml` extends the shipped default at
-    major 6 or 7 also holds no block; its notice names the `extends:` value.
   - `compass check` refuses, with exit 2, a project whose
-    `acceptance_strategy` setting cannot be read, before any check runs. In
-    a project pinned at major 6 or 7 the strategy never reads the setting,
-    but `compass.yml` must still pass its schema check: `compass policy
-    lint`, `compass approach evaluate --write` and `compass check` on an
-    issue not yet assessed refuse a bad value. `compass check` on an assessed
-    issue reads the configuration stored with the issue and does not refuse
-    it.
+    `acceptance_strategy` setting cannot be read, before any check runs.
+    `compass policy lint`, `compass approach evaluate --write` and `compass
+    check` on an issue not yet assessed refuse a bad value. `compass check`
+    on an assessed issue reads the configuration stored with the issue and
+    does not refuse it.
 - **`outer-loop-recorded`** is the outer-loop check of the four-layer
   acceptance strategy (`S17`, ADR-080). It declares `severity: blocking` and
   `on_skipped: not-applicable`, and sits in no gate and not in the spike's
@@ -559,11 +555,10 @@ Each generation commit writes the manifest's `policy:` block
 content of the set: the catalogue names, the stage-mode ranks and the
 references.
 
-`acceptance_strategy.pinned_below` still reads `extends: compass:default@6` or
-`@7`, which is otherwise a removed setting: such a pin keeps `S17` off until
-`compass migrate` writes `acceptance_strategy: off` in its place (ADR-094 open
-question 7). The reader goes once this repository's `compass.yml` no longer pins
-`@6` (ADR-098 open question 6).
+`extends: compass:default@6` or `@7` is a removed setting like any other
+`extends:`. It no longer keeps `S17` off, so a project that did not run
+`compass migrate` gets `S17` at its next assess, and its lint names
+`acceptance_strategy: off` as the replacement (ADR-098 open question 6).
 
 ## A deleted check
 

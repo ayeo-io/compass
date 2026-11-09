@@ -72,9 +72,8 @@ def checkpoints_for(evidence, autonomy, applies):
 def strategy_inputs(task, task_dir, resolved, expected):
     """`(state, reason, expected)` of the `S17` strategy for this write, or None
     when the write stores no block. As for an 8.x issue (`routing._acceptance_block`),
-    no block is stored for a project pinned before the strategy, for a
-    configuration that does not declare it, or on a re-assess of an issue assessed
-    before it shipped (ADR-006). Then the strategy owes nothing on the issue.
+    no block is stored for a configuration that does not declare it, or on a
+    re-assess of an issue assessed before it shipped (ADR-006). Then the strategy owes nothing on the issue.
     With no manifest (an assessment given on the command line) it is what a new
     issue in the working directory's project would get."""
     from compass_pkg import acceptance_strategy
@@ -83,8 +82,7 @@ def strategy_inputs(task, task_dir, resolved, expected):
     held = acceptance_strategy.stored(task)
     before = bool(task.get("delivery_approach")) or bool(task.get("evaluated_assessment"))
     project = find_project_root(task_dir or os.getcwd())
-    if ((before and held is None) or acceptance_strategy.pinned_below(project)
-            or not acceptance_strategy.declared(resolved)):
+    if (before and held is None) or not acceptance_strategy.declared(resolved):
         return None
     state, reason = acceptance_strategy.setting(project)
     return state, reason, expected or (held or {}).get("expected_acceptance") or "none"

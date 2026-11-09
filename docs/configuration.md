@@ -417,11 +417,9 @@ Quote `"on"` and `"off"`: YAML reads them unquoted as true and false, which
 Compass also accepts. Unset means on. `off` needs a reason that is not blank.
 Any other value makes `compass approach evaluate` and `compass check` exit 2
 with a message that names the key, the file and the accepted values, and
-`compass policy lint` reports it in `compass.yml`. In a project pinned at
-`compass:default@6` or `@7` the strategy never reads the value, but
-`compass.yml` must still pass its schema check. `compass policy lint`,
+`compass policy lint` reports it in `compass.yml`. `compass policy lint`,
 `compass approach evaluate --write` and `compass check` on an issue not yet
-assessed refuse a bad value there. `compass check` on an assessed issue reads
+assessed refuse a bad value. `compass check` on an assessed issue reads
 the configuration stored with the issue, so it does not refuse it. The
 setting needs no
 owner's approval: the manifest's `acceptance_strategy` block shows the choice. It takes effect for an issue at its next
@@ -557,7 +555,8 @@ conversion. `tests/test_migrate_settings.py` walks every row of the table.
 `extends:` has a row for each pin of the shipped default:
 
 - `extends@6` is a pin at `@6` or below, and `extends@7` a pin at `@7`. The
-  pin keeps the acceptance strategy `S17` off, so `acceptance_strategy: off`
+  pin kept the acceptance strategy `S17` off in 8.x. 9.0.0 does not read it,
+  so the project gets `S17` at its next assess, and `acceptance_strategy: off`
   replaces it.
 - `extends@8` is a pin at `@8` or later, or no pin. Nothing replaces it.
 - `extends` is any other value.

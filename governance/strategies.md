@@ -150,10 +150,11 @@ commands write; it never reads project code.
 - **Issue waiver.** One issue steps off through an issue waiver of the
   strategy's checks, with a reason, approved by the project's owner
   (ADR-039). Its findings then report as advice.
-- **Older issues and pinned projects.** An issue assessed before the
-  strategy shipped has no stored applicability, so the strategy never applies
-  to it (ADR-006). Nor does it apply in a project whose `compass.yml` extends
-  the shipped default at major 6 or 7: the strategy ships from major 8.
+- **Older issues.** An issue assessed before the strategy shipped has no
+  stored applicability, so the strategy never applies to it (ADR-006). An
+  `extends:` pin at major 6 or 7 no longer keeps a project out: 9.0.0 does not
+  read it, and `compass migrate` writes `acceptance_strategy: off` in its
+  place.
 - **The loop.** `compass tdd-red` and `compass tdd-green` record the loop
   with `--loop outer|inner`. The `next:` line names the loop each step needs:
   the outer loop first on an in-scope issue. `compass quick-fix finish` takes the same flag. On an

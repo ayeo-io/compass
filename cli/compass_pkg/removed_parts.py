@@ -255,8 +255,9 @@ CAPABILITIES: dict = {
 
 
 #: The `extends:` value `compass migrate` replaces with `acceptance_strategy: off`.
-#: A pin of the shipped default below @8 keeps `S17` off (ADR-094 open question 7),
-#: so the setting that keeps it off replaces the pin (ADR-098 decision 7).
+#: A pin of the shipped default below @8 kept `S17` off in 8.x, and 9.0.0 does not
+#: read it, so the setting that keeps `S17` off replaces the pin (ADR-098
+#: decision 7 and open question 6).
 STRATEGY_OFF = "acceptance_strategy: {state: off, reason: ...}"
 
 #: What replaces each removed `compass.yml` key, keyed as `compass policy lint`

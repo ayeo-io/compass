@@ -318,15 +318,6 @@ def _git_parent(extends):
     return isinstance(ref, str) and ref.startswith(removed_parts.GIT_PARENT_SCHEME)
 
 
-def _pinned_below(extends):
-    """True when `extends:` pins the shipped default below the first major that
-    carries the acceptance strategy (`acceptance_strategy.pinned_below`)."""
-    from compass_pkg import acceptance_strategy
-    ref = extends.get("from") if isinstance(extends, dict) else extends
-    found = re.fullmatch(r"compass:default@(\d+)", ref) if isinstance(ref, str) else None
-    return bool(found) and int(found.group(1)) < acceptance_strategy.FIRST_MAJOR
-
-
 def _removed_findings(doc):
     out = []
     for key, what in REMOVED.items():
@@ -344,12 +335,12 @@ def _removed_findings(doc):
                               f"{removed_parts.GIT_PARENT_FIX}"))
             continue
         reason = REASON
-        if key == "extends" and _pinned_below(held):
-            # ADR-094 open question 7: the pin keeps the owner decision of
-            # 2026-10-30 until `compass migrate` writes `acceptance_strategy: off`
-            # in its place (ADR-098 decision 6).
-            reason = (f"{REASON}; only its pin below @8 is read, and it keeps the "
-                      f"acceptance strategy `S17` off")
+        if key == "extends" and removed_parts.extends_row(held) in ("extends@6", "extends@7"):
+            # A pin below @8 kept `S17` off in 8.x. 9.0.0 does not read it, so the
+            # project gets `S17` at its next assess unless it sets the replacement
+            # (ADR-098 open question 6).
+            reason = (f"{REASON}; a pin below @8 no longer keeps the acceptance "
+                      f"strategy `S17` off")
         out.append(Finding("L-SETTING-REMOVED", "warning", key,
                            removed_parts.removed_message(key, what, ADR, reason, held),
                            removed_parts.replacement_text(key, held)))

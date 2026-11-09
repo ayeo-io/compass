@@ -7,7 +7,7 @@ marks as migrated, and writes the tighten-only setting that carries what the
 key asked for, where one does:
 
 - `extends: compass:default@6` or `@7` becomes `acceptance_strategy: {state:
-  off, reason: ...}`, so `S17` stays off (ADR-094 open question 7), unless the
+  off, reason: ...}`, so `S17` stays off as the pin kept it in 8.x, unless the
   file already sets `acceptance_strategy`;
 - the labels a `gates.G5` entry adds to `when.labels_any` become
   `signoff_labels`;

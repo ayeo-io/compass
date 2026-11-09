@@ -661,10 +661,6 @@ def _acceptance_block(task, task_dir, resolution, result, args, evaluated_before
     held = acceptance_strategy.stored(task)
     if evaluated_before and held is None:
         return None
-    # A project pinned to a shipped major before the strategy keeps today's
-    # process: no block, so no check row (decided by jed72, 2026-10-30).
-    if acceptance_strategy.pinned_below(find_project_root(task_dir)):
-        return None
     resolved = resolution.resolved if resolution is not None else resolved
     if not acceptance_strategy.declared(resolved):
         return None

@@ -174,7 +174,7 @@ def test_trc_a6_the_record_quick_fix_start_writes_shows_the_line(tmp_path):
     assert code == 0, out + err
     task_dir = project.root / ".compass" / "work" / "docs"
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
-    line = _strategy_line(support.strategy_line(manifest, task_dir))
+    line = _strategy_line(support.strategy_line(manifest))
     assert "(`S17`): does not apply - acceptance of kind validation" in line, line
     # The light evidence row keeps the routing the quick fix had (ADR-092 decision 3).
     assert manifest["delivery_approach"] == "delivery", manifest
@@ -341,24 +341,23 @@ def test_trc_a22():
 
 # --- `TRC-A23` -----------------------------------------------------------------------------
 
-@pytest.mark.parametrize("major, applies", [(6, False), (7, False), (8, True)])
-def test_trc_a23(tmp_path, major, applies):
-    """A project pinned to an earlier major does not get the strategy."""
+@pytest.mark.parametrize("major", [6, 7, 8])
+def test_trc_a23(tmp_path, major):
+    """A project that still names `extends: compass:default@<major>` gets the
+    strategy. 9.0.0 does not read `extends:`, so a pin before @8 no longer keeps
+    `S17` off; `compass migrate` writes `acceptance_strategy: off` in its place
+    (ADR-098 open question 6)."""
     project = support.Project(tmp_path / "repo")
     project.setting(None, extends=f"compass:default@{major}")
     issue = project.issue("change")
     code, out, err = issue.assess()
     assert code == 0, out + err
-    assert ("acceptance_strategy" in issue.manifest()) is applies
+    assert "acceptance_strategy" in issue.manifest()
     issue.red()
     code, document = issue.check()
-    assert bool([c for c in document["checks"] if c["name"] == CHECK]) is applies
+    assert [c for c in document["checks"] if c["name"] == CHECK]
     line = _strategy_line(issue.approach_record())
-    if applies:
-        assert "(`S17`): applies - " in line, line
-    else:
-        assert f"project extends compass:default@{major}, before the strategy" in line, line
-        assert "assessed before the strategy shipped" not in line, line
+    assert "(`S17`): applies - " in line, line
 
 
 # --- `TRC-A24` -----------------------------------------------------------------------------
@@ -420,9 +419,8 @@ def test_trc_a13_an_empty_key_is_refused(tmp_path):
 
 
 def test_trc_a23_a_pinned_compass_yml_still_passes_its_schema(tmp_path):
-    """The strategy ignores the setting in a pinned project, but `compass.yml`
-    must still pass its schema check, so an issue with no stored configuration
-    is refused (`TRC-A23`)."""
+    """`compass.yml` must pass its schema check whatever `extends:` names, so an
+    issue with no stored configuration is refused (`TRC-A23`)."""
     project = support.Project(tmp_path / "repo")
     issue = project.issue("change")
     (project.root / "compass.yml").write_text(
@@ -431,12 +429,14 @@ def test_trc_a23_a_pinned_compass_yml_still_passes_its_schema(tmp_path):
     assert code == 2 and "acceptance_strategy" in out + err, out + err
 
 
-def test_trc_a23_a_bad_setting_does_not_stop_a_pinned_project(tmp_path):
-    """The strategy's setting is not read in a project pinned before it (`TRC-A23`)."""
+def test_trc_a23_a_pinned_project_reads_its_setting(tmp_path):
+    """A project that names `extends: compass:default@7` reads the strategy's
+    setting like any other project, so `off` with a reason keeps it off (`TRC-A23`)."""
     project = support.Project(tmp_path / "repo")
+    project.setting({"state": "off", "reason": "kept off from 8.x"},
+                    extends="compass:default@7")
     issue = project.issue("change")
-    project.setting(None, extends="compass:default@7")
-    assert issue.assess()[0] == 0
-    (project.root / "compass.yml").write_text(
-        "schema: 1\nextends: compass:default@7\nacceptance_strategy: maybe\n", encoding="utf-8")
-    assert issue.run("check", "--issue", "change")[0] != 2
+    code, out, err = issue.assess()
+    assert code == 0, out + err
+    held = issue.manifest()["acceptance_strategy"]
+    assert held["state"] == "off" and held["why"] == "kept off from 8.x", held

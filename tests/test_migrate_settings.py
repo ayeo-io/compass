@@ -8,7 +8,6 @@ anything is written.
 """
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 import sys
@@ -264,10 +263,11 @@ def test_the_dry_run_prints_the_diff_and_writes_nothing(tmp_path):
 
 def test_apply_writes_and_a_second_run_has_nothing_to_do(tmp_path):
     root = _project(tmp_path, "schema: 1\nextends: compass:default@7\nmodels: {}\n")
-    assert acceptance_strategy.pinned_below(str(root)) == "compass:default@7"
+    # 9.0.0 does not read the pin, so `S17` is on until migrate writes the setting.
+    assert acceptance_strategy.setting(str(root)) == ("on", None)
     done = _run(root, "--settings-only", "--apply")
     assert done.returncode == 0, done.stdout + done.stderr
-    assert acceptance_strategy.pinned_below(str(root)) is None
+    assert "extends" not in yaml.safe_load((root / "compass.yml").read_text(encoding="utf-8"))
     state, reason = acceptance_strategy.setting(str(root))
     assert state == "off" and "compass:default@7" in reason
     again = _run(root, "--settings-only")
@@ -327,30 +327,19 @@ def test_an_old_settings_file_is_left_because_9_0_0_still_reads_it(tmp_path):
 # --- this repository ------------------------------------------------------------------
 
 def test_this_repository_compass_yml_keeps_s17_off(tmp_path):
-    """A copy of this repository's `compass.yml`: migrate deletes the pin, the
-    readiness override and the two readiness commands, adds
-    `acceptance_strategy: off`, and keeps every other setting."""
+    """A copy of this repository's `compass.yml`: the owner moved it to 9.0.0
+    (commit af632567), so migrate has nothing to do, `S17` stays off through
+    `acceptance_strategy: off`, and the lint names no removed setting."""
     root = tmp_path / "proj"
     (root / ".compass").mkdir(parents=True)
     shutil.copy(ROOT / "compass.yml", root / "compass.yml")
-    before = yaml.safe_load((root / "compass.yml").read_text())
-    done = _run(root, "--settings-only", "--apply")
+    before = (root / "compass.yml").read_bytes()
+    done = _run(root, "--settings-only")
     assert done.returncode == 0, done.stdout + done.stderr
-    after = yaml.safe_load((root / "compass.yml").read_text())
-    gone = {"extends", "readiness"} | {
-        k for k in ("governance_drift", "living_spec", "multiagent")
-        if k in removed_parts.REPLACEMENTS and k in before}
-    assert set(before) - set(after) == gone
-    for key in ("owner", "language", "adoption", "autonomy", "enforcement",
-                "allow_project_commands", "record"):
-        assert after[key] == before[key], key
-    assert set(before["project"]) - set(after["project"]) == {"build_command",
-                                                               "lint_command"}
-    for field in ("name", "test_command", "test_micro_command"):
-        assert after["project"][field] == before["project"][field]
+    assert "holds no key 9.0.0 removed" in done.stdout, done.stdout
+    assert (root / "compass.yml").read_bytes() == before
     assert acceptance_strategy.setting(str(root))[0] == "off"
     lint = subprocess.run([sys.executable, str(CLI), "policy", "lint"], cwd=root,
                           capture_output=True, text=True, timeout=120)
     assert lint.returncode == 0, lint.stdout + lint.stderr
     assert "L-SETTING-REMOVED" not in lint.stdout, lint.stdout
-    assert os.path.getsize(root / "compass.yml") > 0

@@ -506,9 +506,8 @@ the assessment the issue already holds.
   `balanced` and `autonomous` list nothing, except `specify` where
   `scenario-approval` is owed.
 - **The strategy block.** It is stored on the same terms as for an 8.x issue:
-  not for a project pinned before the strategy, not where the configuration
-  does not declare it, and not on a re-assess of an issue assessed before it
-  shipped. Where no block is stored, the `S17` tokens are not owed.
+  not where the configuration does not declare it, and not on a re-assess of
+  an issue assessed before it shipped. Where no block is stored, the `S17` tokens are not owed.
 - **A spike** writes its stage map, its gate and its checkpoints, and no
   `evidence_required`, so no reader takes it for a path issue. Like a path
   issue, it writes no `subtask_ceiling:`, `max_worktrees:` or

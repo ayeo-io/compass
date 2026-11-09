@@ -22,7 +22,7 @@ delivery-approach record shows, the advisory check
 
 Compass reads records here, never project code.
 """
-# DEPENDENCY: standard library (json, os, re); compass_pkg.check_results,
+# DEPENDENCY: standard library (json, os); compass_pkg.check_results,
 # core, project_settings and red_first, and inside functions
 # next_cmd and next_step. It imports no command
 # module and no check module at load time, so a check module can import it.
@@ -30,11 +30,10 @@ from __future__ import annotations
 
 import json
 import os
-import re
 
 from compass_pkg import project_settings
 from compass_pkg.check_results import NOTHING_TO_CHECK
-from compass_pkg.core import CompassError, load_yaml
+from compass_pkg.core import CompassError
 from compass_pkg.red_first import ACCEPTANCE_KINDS, is_record_name, load_record
 
 #: The settings key and the manifest key.
@@ -85,8 +84,8 @@ def setting(project_root):
     on, without a word."""
     held = project_settings.lenient(project_root)
     # Only a missing key means on: a key with no value is refused, as the lint
-    # refuses it. A project pinned before the strategy never reads the setting.
-    if KEY not in held or pinned_below(project_root):
+    # refuses it.
+    if KEY not in held:
         return "on", None
     value = held[KEY]
     state = _state(value.get("state")) if isinstance(value, dict) else None
@@ -142,44 +141,11 @@ def approach_routing(resolved, approach):
     return "on" if body.get("ships", True) is not False else "suspended"
 
 
-#: The first major of the shipped default that carries the strategy.
+#: The first major of the shipped default that carries the strategy. 9.0.0 reads
+#: `extends:` as a removed setting at any major, so a pin at @6 or @7 no longer
+#: keeps a project out of the strategy; `compass migrate` writes
+#: `acceptance_strategy: off` in its place (ADR-098 open question 6).
 FIRST_MAJOR = 8
-#: `extends: compass:<name>@<major>`. 9.0.0 reads `extends:` as a removed setting
-#: (ADR-094), but the pin still keeps a project on @6 or @7 out of the strategy
-#: until `compass migrate` writes `acceptance_strategy: off` in its place (ADR-094
-#: open question 7). This reader goes once the owner has moved this repository's
-#: `compass.yml` off its @6 pin (ADR-098 open question 6).
-_SHIPPED_PIN = re.compile(r"^compass:([a-z][a-z0-9-]*)@(\d+)$")
-
-
-def pinned_below(project_root):
-    """The `extends:` value when the project's `compass.yml` pins the shipped
-    default at a major before `FIRST_MAJOR`, else None. Resolution always reads
-    the check set, whatever major `extends:` names, so the pin is what keeps
-    a project on @6 or @7 out of the strategy (decided by jed72, 2026-10-30). A
-    project with no `compass.yml`, no `extends:` or a git parent names no
-    shipped major, so it is not pinned below."""
-    if not project_settings.compass_yml_counts(project_root):
-        return None
-    try:
-        doc = load_yaml(os.path.join(project_root, project_settings.COMPASS_YML))
-    except (CompassError, AttributeError, TypeError, ValueError):
-        return None
-    value = (doc or {}).get("extends") if isinstance(doc, dict) else None
-    if isinstance(value, dict):
-        value = value.get("from")
-    found = _SHIPPED_PIN.match(value) if isinstance(value, str) else None
-    if not found:
-        return None
-    return value if found.group(1) == "default" and int(found.group(2)) < FIRST_MAJOR else None
-
-
-def notice(task_dir):
-    """The notice `compass check` gives an issue with no stored block."""
-    pinned = pinned_below(_project_root(task_dir))
-    if pinned:
-        return f"{NAME}: does not apply - the project extends {pinned}, before the strategy"
-    return NOTICE
 
 
 def declared(resolved):
@@ -220,14 +186,10 @@ def stored(task):
     return value if isinstance(value, dict) else None
 
 
-def line(task, task_dir=None):
-    """The applicability line of the delivery-approach record. With the issue
-    folder it gives the pin reason for a pinned project, as `notice` does."""
+def line(task):
+    """The applicability line of the delivery-approach record."""
     held = stored(task)
     if held is None:
-        pinned = pinned_below(_project_root(task_dir)) if task_dir else None
-        if pinned:
-            return f"The {NAME} does not apply: the project extends {pinned}, before the strategy."
         return f"The {NAME} does not apply: {OLDER}."
     if held.get("state") == "off":
         status = "off for this project"

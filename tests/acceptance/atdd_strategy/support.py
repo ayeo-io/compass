@@ -174,7 +174,7 @@ class Issue:
         """The acceptance-strategy line the issue's records give. Before 9.0.0 a render
         wrote it into the delivery-approach record; 9.0.0 renders nothing (ADR-091), and
         `compass approach evaluate --write` prints the same line."""
-        return strategy_line(self.manifest(), self.dir)
+        return strategy_line(self.manifest())
 
 
 def rows(document):
@@ -370,9 +370,9 @@ def refusal(stderr):
     return stderr.split("\n  command:", 1)[0].strip()
 
 
-def strategy_line(manifest, task_dir):
+def strategy_line(manifest):
     """`acceptance_strategy.line`, the one function every reader of the line calls."""
     sys.path.insert(0, str(ROOT / "cli"))
     import compass_pkg  # noqa: F401  (the bundled PyYAML first)
     from compass_pkg import acceptance_strategy
-    return acceptance_strategy.line(manifest, str(task_dir))
+    return acceptance_strategy.line(manifest)

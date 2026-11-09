@@ -68,13 +68,13 @@ GATE_ADDED = "gate '{gate}' added to the approach's gate set"
 
 
 #: The framework-owned table of removed review gates, each with the release that
-#: removed it. A frozen preset, a stored generation or copied governance can still
+#: removed it. A stored generation or copied governance can still
 #: name one; it owes nothing, as a removed check owes nothing
 #: (`check_registry.REMOVED`). The evaluator leaves it out of the gate set, so a new
 #: issue never gets a gate that nothing can clear, and a rule whose only effect was
 #: to add it does not fire. `verify.analyze` accepted only the evidence
-#: `compass analyze` wrote, and 9.0.0 removes that command (ADR-091). Frozen presets
-#: still hold `RP-REQUIRE-001` and `RP-REQUIRE-002`, which add it.
+#: `compass analyze` wrote, and 9.0.0 removes that command (ADR-091). Stored 8.x
+#: generations still hold `RP-REQUIRE-001` and `RP-REQUIRE-002`, which add it.
 REMOVED_GATES = {GATE_VERIFY_ANALYZE: "9.0.0"}
 
 _GATE_ADDED_RE = re.compile("^" + re.escape(GATE_ADDED).replace(r"\{gate\}", "(.+?)") + "$")

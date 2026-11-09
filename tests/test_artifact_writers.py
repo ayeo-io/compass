@@ -142,9 +142,9 @@ def test_trc_b2_no_human_document_still_claims_the_work_directory():
     import yaml
 
     # The live default declares no kind since 9.0.0 (ADR-091); the templates are the
-    # kinds of the last shipped catalogue, which the frozen 7.0.0 preset holds.
-    kinds = set(yaml.safe_load((ROOT / "governance" / "presets" / "default@7" /
-                                "artifacts.yml").read_text(encoding="utf-8"))["artifacts"])
+    # kinds of the last shipped catalogue, the one 8.0.4 shipped.
+    kinds = set(yaml.safe_load((ROOT / "governance" / "artifacts-8.0.4.yml")
+                               .read_text(encoding="utf-8"))["artifacts"])
     stale = []
     for name in sorted(_human_documents()):
         head = (ROOT / "templates" / name).read_text(encoding="utf-8")[:400]

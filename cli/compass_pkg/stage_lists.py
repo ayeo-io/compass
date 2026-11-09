@@ -268,7 +268,7 @@ def owed_by_stages(modes):
 
 def owes(approach_name, approach, modes):
     """`(approach, kinds)`: the checklist documents the approach owes. A configuration that
-    declares the approach's `artifacts:` map, as a stored generation or a frozen preset
+    declares the approach's `artifacts:` map, as a stored generation
     does, is read as before; one with no map owes by the issue's stage modes, or the
     approach's own when the issue records none."""
     if "artifacts" in approach:

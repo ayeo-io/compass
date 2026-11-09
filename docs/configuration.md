@@ -261,9 +261,8 @@ repository, and the shipped default declares an empty `readiness:` catalog,
 as ADR-091 did for `artifacts:`. A project's `readiness:` stays valid, so a
 file that holds it keeps working. It is read as if absent, and its value is
 not checked. `compass policy lint` names it with
-`L-SETTING-REMOVED`. Delete it from `compass.yml`. A frozen preset
-(`default@6`, `default@7`) and an issue's stored generation keep the catalog
-they were written with, and lint still reads it. A
+`L-SETTING-REMOVED`. Delete it from `compass.yml`. An issue's stored
+generation keeps the catalog it was written with, and lint still reads it. A
 `.compass/readiness.yml` left in a checkout is not read.
 
 ### `governance_drift`
@@ -304,9 +303,10 @@ check set does not declare stops no command, and its value is not checked.
 `compass policy lint` names the key with `L-SETTING-REMOVED`. Delete it from
 `compass.yml`.
 
-A frozen preset (`default@6`, `default@7`) keeps its approaches, stages, caps
-and lists as data, and an issue's stored generation keeps the configuration
-it was assessed with. Resolution reads only the check set, whatever major
+An issue's stored generation keeps the configuration it was assessed with:
+the 8.x approaches, stages, caps and lists. 9.0.0 ships no 8.x preset; the
+`default@6` and `default@7` folders are test fixtures. Resolution reads only
+the check set, whatever major
 `extends:` names (decided 2026-10-30), so a project that extends
 `compass:default@6` or `@7` gets the path; `compass policy lint` names
 `extends:` with `L-SETTING-REMOVED`.

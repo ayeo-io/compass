@@ -26,7 +26,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 from check_set_files import shipped  # noqa: E402
 CLI = ROOT / "cli" / "compass"
-PRESETS = ROOT / "governance" / "presets"
+# The 8.x presets, kept as test data (VD-055).
+PRESETS = ROOT / "tests" / "fixtures" / "presets"
 sys.path.insert(0, str(ROOT / "cli"))
 
 
@@ -145,7 +146,7 @@ def _default_6_policy():
     read through the retired-word tables, as a stored generation is read."""
     from compass_pkg import catalogue_spec, word_map
     from compass_pkg.obligations import policy_adapter
-    folder = ROOT / "governance" / "presets" / "default@6"
+    folder = ROOT / "tests" / "fixtures" / "presets" / "default@6"
     config = word_map.map_layer({
         name: (yaml.safe_load((folder / f"{name}.yml").read_text(encoding="utf-8"))
                or {}).get(name) or {}
@@ -356,7 +357,8 @@ def test_artifact_freshness_left_off_gets_no_finding():
 def test_the_live_default_declares_no_artifact_freshness():
     preset = shipped("preset.yml")
     assert "artifact-freshness" not in (preset.get("capabilities") or {}), preset
-    # A frozen preset still declares it, so the catalogue keeps the name valid.
+    # An 8.x preset declares it, as a stored generation does, so the catalogue
+    # keeps the name valid.
     from compass_pkg import catalogue_spec
     assert "artifact-freshness" in catalogue_spec.CAPABILITIES
     for frozen in ("default@6", "default@7"):
@@ -793,15 +795,6 @@ def test_a_project_artifacts_key_is_named_by_lint():
     assert [f.path for f in found] == ["artifacts"], [(f.code, f.path) for f in report.findings]
     assert found[0].level == "warning"
     assert "removed in 9.0.0" in found[0].message and "ADR-091" in found[0].message
-
-
-def test_frozen_presets_still_declare_their_catalogue():
-    for frozen in ("default@6", "default@7"):
-        folder = ROOT / "governance" / "presets" / frozen
-        catalogue = yaml.safe_load((folder / "artifacts.yml").read_text(encoding="utf-8"))
-        assert "acceptance-criteria" in catalogue["artifacts"], frozen
-        approaches = yaml.safe_load((folder / "approaches.yml").read_text(encoding="utf-8"))
-        assert "artifacts" in approaches["approaches"]["regular"], frozen
 
 
 def test_a_stored_entry_is_filled_from_the_last_shipped_catalogue():

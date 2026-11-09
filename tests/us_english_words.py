@@ -113,7 +113,9 @@ NOT_NEEDED = "<exemption not needed>"
 EXCLUDED = (
     "governance/decisions/",
     "architecture/decisions/",
-    "governance/presets/default@6",
+    "tests/fixtures/presets/default@6",
+    "tests/fixtures/presets/default@7",
+    "governance/artifacts-8.0.4.yml",
     "governance/shipped-releases.tar.xz",
     "tests/fixtures/compat/",
     "cli/vendor",

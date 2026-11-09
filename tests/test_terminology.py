@@ -1700,13 +1700,6 @@ def test_vc5_every_vocabulary_catalogue_in_the_repository_is_clean():
     surfaces = _terminology()["scan"]["vocabulary_surfaces"]
     hits = _vocabulary_catalogue_hits(REPO_ROOT, surfaces)
     assert not hits, _report(hits, "A display name or alias holds a banned term.")
-    if (REPO_ROOT / "governance" / "presets").exists():
-        # Once the shipped preset lands it holds a vocabulary file. If the
-        # scan finds none, discovery is broken and this test would pass empty.
-        assert _vocabulary_files(REPO_ROOT, surfaces), (
-            "governance/presets/ exists but no vocabulary catalogue was found "
-            "under the scan's vocabulary surfaces"
-        )
 
 
 def test_pl_c11_strategies_prose_is_not_path_exempt():

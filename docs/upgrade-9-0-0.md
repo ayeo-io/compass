@@ -296,6 +296,7 @@ The refusal names each item with the edit that clears it, or `compass waiver wit
 | Waivers that the 8.x settings migration wrote | ended with the configuration layers that held them (ADR-094). |
 | `--justify role=` and `quick-fix start --role` | ended. A stored role reading in an assessment still reads. |
 | The pre-tool hook reading `delivery-approach.md` for an issue whose manifest has no `delivery_approach` key | ended. The key alone decides, and an issue without it is refused with `no-delivery-approach`. No archived issue holds the document without the key. |
+| The frozen presets `default@6` and `default@7` | ended as shipped files. Resolution reads only the check set, whatever major `extends:` names. The artifacts catalog 8.0.4 shipped stays as `governance/artifacts-8.0.4.yml`, because a stored 8.x generation, `compass issue migrate` and the `nfr-rows-resolved` check read it. |
 
 These readers were never on that list, and they stay:
 
@@ -310,7 +311,6 @@ ADR-098 is proposed. These parts wait for the owner's decision, because each cha
 
 - whether every command refuses a project with copied governance files and no `compass.yml`, and the generated views and the legacy adapter are deleted (ADR-098 open questions 1 to 3);
 - when the `extends:` pin of `compass:default@6` or `@7` stops keeping the acceptance strategy `S17` off for a project that did not run `compass migrate` (open question 6);
-- whether the frozen presets `default@6` and `default@7` are deleted (open question 9);
 - whether the old words in a stored manifest or generation stop being read.
 
 ## The record

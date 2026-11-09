@@ -191,28 +191,6 @@ def test_the_drift_guard_catches_a_stale_page(tmp_path):
     )
 
 
-def test_the_catalogue_table_is_derived_from_the_frozen_7_catalogue(tmp_path):
-    """`docs/artifact-catalog.md` says its table of kinds records the frozen
-    `default@7` catalogue. The live default declares no kind since 9.0.0
-    (ADR-091), so a generator that read it would write an empty table."""
-    out = tmp_path / "artifact-catalog.md"
-    result = subprocess.run(
-        [sys.executable, str(CLI), "_derive-glossary", "--internal",
-         "--out", str(tmp_path / "glossary.md"), "--catalogue-out", str(out)],
-        cwd=ROOT, capture_output=True, text=True, timeout=120,
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
-    fresh = out.read_text(encoding="utf-8")
-    committed = (ROOT / "docs" / "artifact-catalog.md").read_text(encoding="utf-8")
-    assert fresh == committed, (
-        "docs/artifact-catalog.md is stale: re-run `compass _derive-glossary --internal`")
-    frozen = yaml.safe_load((ROOT / "governance" / "presets" / "default@7" /
-                             "artifacts.yml").read_text(encoding="utf-8"))["artifacts"]
-    assert frozen, "the frozen default@7 catalogue declares no kind"
-    for kind, entry in frozen.items():
-        assert f"| `{kind}` | `{entry['file']}` | `{entry['stage']}` |" in fresh, kind
-
-
 def test_the_cli_renders_a_code():
     one = subprocess.run(
         [sys.executable, str(CLI), "terminology", "TRC"],

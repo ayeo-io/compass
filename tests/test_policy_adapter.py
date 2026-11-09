@@ -116,7 +116,7 @@ def _preset_config(folder="default"):
     holds them: each file adds its own catalogue, so nothing merges."""
     import yaml
     from compass_pkg import catalogue_spec
-    preset = ROOT / "governance" / "presets" / folder
+    preset = ROOT / "tests" / "fixtures" / "presets" / folder
     config = {}
     for name in catalogue_spec.CATALOGUES:
         part = yaml.safe_load((preset / f"{name}.yml").read_text(encoding="utf-8"))

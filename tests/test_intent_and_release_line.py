@@ -936,11 +936,14 @@ def test_irl_21_key_and_verb_documented(tmp_path):
                    "names the issue"):
         assert phrase in doc, phrase
 
-    catalogue = (ROOT / "docs" / "artifact-catalog.md").read_text().splitlines()
-    assert "- `intent`, lightweight: Problem; Desired outcome; Success signals; Non-goals" \
-        in catalogue
-    report = next(line for line in catalogue if line.startswith("- `verification-report`,"))
-    assert "Decisions taken for the user; Release line; Gate" in report, report
+    # The catalogue 8.0.4 shipped holds the headings; `docs/artifact-catalog.md`
+    # lists no table of kinds since 9.0.0 deleted the frozen presets.
+    catalogue = yaml.safe_load((ROOT / "governance" / "artifacts-8.0.4.yml")
+                               .read_text())["artifacts"]
+    assert catalogue["intent"]["sections"]["lightweight"] == [
+        "Problem", "Desired outcome", "Success signals", "Non-goals"]
+    report = catalogue["verification-report"]["sections"]["thorough"]
+    assert report[-3:] == ["Decisions taken for the user", "Release line", "Gate"], report
 
     records = sorted(ADR.glob("ADR-065-*.md"))
     assert len(records) == 1, records
@@ -1054,9 +1057,9 @@ def test_irl_31_merge_keeps_both_features():
     from compass_pkg import rendered_blocks
     for kind in ("release-line", "document-header", "dependencies", *KINDS_BEFORE):
         assert kind in rendered_blocks.KINDS, kind
-    # The live default declares no document kind since 9.0.0 (ADR-091); the frozen
-    # 7.0.0 preset keeps the report's headings.
-    frozen = ROOT / "governance" / "presets" / "default@7" / "artifacts.yml"
+    # The live default declares no document kind since 9.0.0 (ADR-091); the
+    # catalogue 8.0.4 shipped keeps the report's headings.
+    frozen = ROOT / "governance" / "artifacts-8.0.4.yml"
     sections = yaml.safe_load(frozen.read_text())["artifacts"][
         "verification-report"]["sections"]["thorough"]
     assert sections[-3:] == ["Decisions taken for the user", "Release line", "Gate"], sections

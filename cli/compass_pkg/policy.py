@@ -85,7 +85,7 @@ def _jsonschema_errors(instance, schema_name):
 # or `feature` and `initiative` before 5 October 2026) is read as its
 # current one, so an older project policy keeps working.
 # `delivery` is the shipped default's own (ADR-092); the other five are the 8.x
-# approaches, which a frozen preset or a stored generation still names.
+# approaches, which a stored generation still names.
 CHECKPOINT_ROUTES = (APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_SPIKE,
                      APPROACH_DELIVERY)
 

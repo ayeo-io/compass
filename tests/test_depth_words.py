@@ -24,7 +24,7 @@ PRESET = None
 # approaches name since 9.0.0 (ADR-092). The renamed words are in use in the
 # frozen `default@7` preset and the 8.0.4 views, so their presence is read there,
 # and the live preset and views are held to hold no old word.
-FROZEN = ROOT / "governance" / "presets" / "default@7"
+FROZEN = ROOT / "tests" / "fixtures" / "presets" / "default@7"
 POLICY_VIEW = ROOT / "governance" / "routing-policy.yml"
 
 OLD_WORDS = {"full", "light", "full-plus-backfill"}

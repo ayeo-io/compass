@@ -9,9 +9,8 @@ APPROACH_FULL = "full"
 APPROACH_DELIVERY = "delivery"
 # The approaches the default preset declares (ADR-092): the spike and the path.
 APPROACH_IDS = (APPROACH_SPIKE, APPROACH_DELIVERY)
-# The five approaches of the 8.x presets. A frozen preset (`default@6`,
-# `default@7`), a stored generation and copied governance declare them, and an
-# issue assessed before 9.0.0 records one of them.
+# The five approaches of the 8.x presets. A stored generation and copied
+# governance declare them, and an issue assessed before 9.0.0 records one.
 LEGACY_APPROACH_IDS = (APPROACH_SPIKE, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_HOTFIX,
                        APPROACH_FULL)
 
@@ -90,7 +89,7 @@ GATE_IDS = (GATE_G1, GATE_G2, GATE_G3, GATE_G4, GATE_G5, GATE_S1, GATE_S2,
             GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY, GATE_VERIFY_CLAIMS,
             GATE_VERIFY_CLARITY, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ARCHITECTURE)
 # 9.0.0 removed this gate with `compass analyze` (ADR-091). The live default does
-# not declare it; an older manifest, a frozen preset and a stored generation do.
+# not declare it; an older manifest and a stored generation do.
 GATE_VERIFY_ANALYZE = "verify.analyze"
 REMOVED_GATE_IDS = (GATE_VERIFY_ANALYZE,)
 

@@ -199,8 +199,8 @@ DELETED_CHECKS: frozenset[str] = frozenset(REMOVED) | frozenset(READY_CHECKS)
 # `READINESS` (imported above) holds the readiness signal implementations
 # (ADR-059). They are not checks: they are in neither `REGISTRY` nor `CHECK_FNS`,
 # so `compass check` cannot run one. Nothing runs one since 9.0.0 (ADR-093); lint
-# and the classifier still read the signals a frozen preset or a stored
-# generation declares.
+# and the classifier still read the signals a stored 8.x generation
+# declares.
 
 # Derived, so a check cannot be run without being registered.
 CHECK_FNS: dict[str, Callable] = {n: e.fn for n, e in REGISTRY.items()}

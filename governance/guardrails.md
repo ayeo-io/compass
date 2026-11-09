@@ -239,7 +239,7 @@ _(none yet - the shipped default guardrails apply as-is)_
        list the section at the depth the spec is registered at. A generation
        that declares no entry for the spec, as the live default does since
        9.0.0 (ADR-091), is read through the last shipped catalogue,
-       `default@7`, which lists it at both depths.
+       `governance/artifacts-8.0.4.yml`, which lists it at both depths.
   - A spike runs it and reads `nothing to check`, because it writes no spec.
 - **Removed in 9.0.0** (ADR-091): `artifacts-approved`, `contracts-declared`,
   `design-within-word-ceiling` and `borrowed-documents-answered` read documents

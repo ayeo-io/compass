@@ -234,12 +234,16 @@ def test_trc_063():
     assert words.scan_source("governance/decisions2/x.md", "the behaviour\n", "text") != []
     assert words.scan_source("governance/presets/default/x.yml", "the behaviour\n",
                              "text") != []
+    assert words.scan_source("tests/fixtures/presets/default@8/x.yml", "the behaviour\n",
+                             "text") != []
 
 
 def test_trc_063_a_group_walk_skips_the_excluded_folders(tmp_path):
     for prefix in words.EXCLUDED:
         target = tmp_path / prefix
-        if prefix.endswith("/") or prefix in ("cli/vendor", "governance/presets/default@6"):
+        if prefix.endswith("/") or prefix in (
+                "cli/vendor", "tests/fixtures/presets/default@6",
+                "tests/fixtures/presets/default@7"):
             target.mkdir(parents=True, exist_ok=True)
             target = target / "planted.py"
         target.parent.mkdir(parents=True, exist_ok=True)

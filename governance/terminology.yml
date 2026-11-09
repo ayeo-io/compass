@@ -344,8 +344,8 @@ terms:
       counted from the visible text only: rendered blocks and HTML comments
       did not count. The check `design-within-word-ceiling` refused a
       technical design over 1.5 times its limit until 9.0.0 removed the check
-      and the live catalog (ADR-091). A frozen preset and a stored generation
-      still hold the limits.
+      and the live catalog (ADR-091). A stored generation
+      still holds the limits.
     related: [lld, design-doc]
   adr:
     means: >
@@ -402,16 +402,16 @@ terms:
     means: >
       The one line in an artifact's catalog entry that says who reads the
       document and what the reader decides from it.
-      9.0.0 removed the catalog from the live default (ADR-091); a frozen
-      preset and a stored generation still hold it.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [delivery-approach, technical-design]
   stands-for:
     means: >
       The name the industry uses for the kind of document an artifact is,
       such as `hld` for the technical design. It is a field of the artifact's
       catalog entry.
-      9.0.0 removed the catalog from the live default (ADR-091); a frozen
-      preset and a stored generation still hold it.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [audience, technical-design]
   sections:
     means: >
@@ -420,16 +420,16 @@ terms:
       of the artifact's catalog entry. A document that is one rendered block
       has an empty list. The acceptance criteria are read through the last
       shipped catalog when the configuration declares none.
-      9.0.0 removed the catalog from the live default (ADR-091); a frozen
-      preset and a stored generation still hold it.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [audience, rendered-block]
   required-when:
     means: >
       A condition in an artifact's catalog entry. The document is owed only
       when the condition holds. The one condition was a minimum number of
       subtasks, so the distribution map was owed from two subtasks.
-      9.0.0 removed the catalog from the live default (ADR-091); a frozen
-      preset and a stored generation still hold it.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [audience, delivery-approach]
   review-round:
     means: >
@@ -451,8 +451,8 @@ terms:
       documents of no kind, such as `README.md` and the review briefs. The
       migrate leaves them in place, and `compass issue lint` does not report
       them.
-      9.0.0 removed the catalog from the live default (ADR-091); a frozen
-      preset and a stored generation still hold it.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [audience, sections]
   check:
     means: >
@@ -842,8 +842,8 @@ terms:
       A named, versioned parent layer. Until 9.0.0 Compass shipped one,
       `default`, which a project named with `extends:`. 9.0.0 removed the live
       preset (ADR-094): the check set replaces it, and `extends:` is a
-      removed setting. The frozen `default@6` and `default@7` stay as data
-      that old issues read.
+      removed setting. An issue assessed under a preset keeps it in its
+      stored generation.
     related: [layer, overlay, check-set]
   generation:
     means: >
@@ -916,8 +916,8 @@ terms:
       and exits 0", that the `readiness` verb measured until 9.0.0 removed the
       verb (ADR-093). An entry of the `readiness` catalog, it was either
       `present` or `absent` with a one-line reason. The shipped default
-      declares an empty catalog; a frozen preset and a stored generation
-      still declare their signals.
+      declares an empty catalog; a stored generation
+      still declares its signals.
     related: [readiness-floor, readiness-record, catalog]
   readiness-floor:
     means: >

@@ -1127,31 +1127,6 @@ def _u5_yaml(path):
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
-def _u5_code(path):
-    """The lines of a preset file that are not comments."""
-    return "\n".join(line for line in path.read_text(encoding="utf-8").splitlines()
-                     if not line.lstrip().startswith("#"))
-
-
-def _u5_derive(tmp_path):
-    """`(glossary, catalogue document)` of a fresh generation in a copy of the files the
-    generator reads."""
-    mini = tmp_path / "mini"
-    for rel in ("governance/terminology.yml", "governance/presets/default@7/artifacts.yml",
-                "docs/glossary.md", "docs/artifact-catalog.md"):
-        target = mini / rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text((ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
-    (mini / ".compass").mkdir()
-    out = tmp_path / "fresh"
-    code, text, err = _cli(mini, "_derive-glossary", "--internal", "--root", str(mini),
-                           "--out", str(out / "glossary.md"),
-                           "--catalogue-out", str(out / "artifact-catalog.md"))
-    assert code == 0, text + err
-    return ((out / "glossary.md").read_text(encoding="utf-8"),
-            (out / "artifact-catalog.md").read_text(encoding="utf-8"))
-
-
 def test_dss_32_own_issue_passes_both_checks():
     # The issue's work folder is untracked, so CI never has it, and both checks decline on
     # a closed issue. The lasting proof of this scenario is the recorded command output.

@@ -31,7 +31,7 @@ from check_set_files import shipped  # noqa: E402
 #: The shipped default: the check set since 9.0.0 (ADR-094), which replaced the
 #: preset directory `governance/presets/default/`.
 PRESET = None
-FROZEN = ROOT / "governance" / "presets" / "default@7"
+FROZEN = ROOT / "tests" / "fixtures" / "presets" / "default@7"
 CAPABILITY = "entry-exit-evaluation"
 
 READY_IDS = [

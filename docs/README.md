@@ -70,7 +70,7 @@ same commit.
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
 | `cli/compass_pkg/release_notes.py`, `cli/compass_pkg/shipped_issues.py` | `docs/release-notes.md` |
 | `cli/compass_pkg/project_settings.py`, `cli/compass_pkg/tighten.py`, `cli/compass_pkg/settings_lint.py`, `cli/compass_pkg/catalogue_spec.py`, `schemas/compass.schema.json`, `tests/test_tighten.py`, `tests/test_settings_lint.py`, `cli/compass_pkg/init_cmd.py` | `docs/configuration.md` |
-| `cli/compass_pkg/legacy_adapter.py`, `governance/presets/default@6/`, `governance/presets/default@7/`, `tests/fixtures/preset-digests.yml` | `governance/routing-policy.md` |
+| `cli/compass_pkg/legacy_adapter.py`, `tests/fixtures/presets/default@6/`, `tests/fixtures/presets/default@7/` | `governance/routing-policy.md` |
 | `cli/compass_pkg/stable_ids.py`, `cli/compass_pkg/gate_status.py`, `tests/test_stable_ids.py` | `architecture/decisions/ADR-040-stable-ids-live-in-one-module.md` |
 | `cli/compass_pkg/path_stages.py`, `cli/compass_pkg/path_readers.py`, `tests/test_path_stages.py`, `tests/test_path_checks.py` | `architecture/decisions/ADR-092-compass-runs-one-path-of-four-stages.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
@@ -80,7 +80,7 @@ same commit.
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
 | `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |
 | `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/item_records.py`, `cli/compass_pkg/follow_up_cmd.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approvals.py`, `cli/compass_pkg/approval_requests.py`, `cli/compass_pkg/prompt_approval.py`, `cli/compass_pkg/delegations.py`, `cli/compass_pkg/delegation_tickets.py`, `cli/compass_pkg/worktree_lookup.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
-| `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/justifications.py`, `templates/*.md` | `docs/artifact-catalog.md` |
+| `cli/compass_pkg/artifact_kinds.py`, `governance/artifacts-8.0.4.yml`, `cli/compass_pkg/justifications.py`, `templates/*.md` | `docs/artifact-catalog.md` |
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
 | `cli/compass_pkg/waiver_records.py`, `cli/compass_pkg/waiver_cmd.py`, `tests/test_waiver_records.py` | `docs/waivers.md` |
 | `cli/compass_pkg/check_set.py`, `governance/check-set.yml`, `tests/fixtures/check-set-digests.yml`, `tests/test_check_set_content.py` | `governance/guardrails.md` |

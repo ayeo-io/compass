@@ -29,7 +29,7 @@ STAGES = STAGE_IDS
 def _columns(shapes):
     """The stage columns of a policy: the four path stages when its approaches
     name only those (the shipped default since ADR-092), else the eight legacy
-    stages a frozen preset or copied governance declares."""
+    stages a stored 8.x generation or copied governance declares."""
     used = {s for shape in shapes.values() if isinstance(shape, dict)
             for s in (shape.get("stages") or {})}
     return PATH_STAGE_IDS if used and used <= set(PATH_STAGE_IDS) else STAGES

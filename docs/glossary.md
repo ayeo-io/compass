@@ -206,7 +206,7 @@ The four-dimension judgment the assess stage produces - risk, familiarity, size 
 
 ### audience
 
-The one line in an artifact's catalog entry that says who reads the document and what the reader decides from it. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
+The one line in an artifact's catalog entry that says who reads the document and what the reader decides from it. 9.0.0 removed the catalog from the live default (ADR-091); a stored generation still holds it.
 
 **Related:** `delivery-approach`, `technical-design`
 
@@ -570,7 +570,7 @@ A release checkpoint, not a level in the work hierarchy: a coherent bundle of de
 
 ### not-an-artifact-list
 
-The file names and patterns in an issue's documents folder that are documents of no kind, such as `README.md` and the review briefs. The migrate leaves them in place, and `compass issue lint` does not report them. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
+The file names and patterns in an issue's documents folder that are documents of no kind, such as `README.md` and the review briefs. The migrate leaves them in place, and `compass issue lint` does not report them. 9.0.0 removed the catalog from the live default (ADR-091); a stored generation still holds it.
 
 **Related:** `audience`, `sections`
 
@@ -650,7 +650,7 @@ The evidence type of an approving review of the merged pull request, by a person
 
 ### preset
 
-A named, versioned parent layer. Until 9.0.0 Compass shipped one, `default`, which a project named with `extends:`. 9.0.0 removed the live preset (ADR-094): the check set replaces it, and `extends:` is a removed setting. The frozen `default@6` and `default@7` stay as data that old issues read.
+A named, versioned parent layer. Until 9.0.0 Compass shipped one, `default`, which a project named with `extends:`. 9.0.0 removed the live preset (ADR-094): the check set replaces it, and `extends:` is a removed setting. An issue assessed under a preset keeps it in its stored generation.
 
 **Related:** `layer`, `overlay`, `check-set`
 
@@ -692,7 +692,7 @@ The per-checkout file, `.compass/readiness.yml`, that the `readiness` verb wrote
 
 ### readiness-signal
 
-One binary fact about a repository, such as "a lint command is declared and exits 0", that the `readiness` verb measured until 9.0.0 removed the verb (ADR-093). An entry of the `readiness` catalog, it was either `present` or `absent` with a one-line reason. The shipped default declares an empty catalog; a frozen preset and a stored generation still declare their signals.
+One binary fact about a repository, such as "a lint command is declared and exits 0", that the `readiness` verb measured until 9.0.0 removed the verb (ADR-093). An entry of the `readiness` catalog, it was either `present` or `absent` with a one-line reason. The shipped default declares an empty catalog; a stored generation still declares its signals.
 
 **Related:** `readiness-floor`, `readiness-record`, `catalog`
 
@@ -728,7 +728,7 @@ The manifest's `request:` record: a link to what asked for the change (an `https
 
 ### required-when
 
-A condition in an artifact's catalog entry. The document is owed only when the condition holds. The one condition was a minimum number of subtasks, so the distribution map was owed from two subtasks. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
+A condition in an artifact's catalog entry. The document is owed only when the condition holds. The one condition was a minimum number of subtasks, so the distribution map was owed from two subtasks. 9.0.0 removed the catalog from the live default (ADR-091); a stored generation still holds it.
 
 **Related:** `audience`, `delivery-approach`
 
@@ -788,7 +788,7 @@ The manifest's `scenario_freeze` block, written by the first `compass tdd-red` o
 
 ### sections
 
-The headings of an artifact's document, in order, for each depth the document can be written at (`lightweight` and `thorough`). It is a field of the artifact's catalog entry. A document that is one rendered block has an empty list. The acceptance criteria are read through the last shipped catalog when the configuration declares none. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
+The headings of an artifact's document, in order, for each depth the document can be written at (`lightweight` and `thorough`). It is a field of the artifact's catalog entry. A document that is one rendered block has an empty list. The acceptance criteria are read through the last shipped catalog when the configuration declares none. 9.0.0 removed the catalog from the live default (ADR-091); a stored generation still holds it.
 
 **Related:** `audience`, `rendered-block`
 
@@ -848,7 +848,7 @@ How a stage runs for an issue, such as `collapsed`. It is the `mode` field of a 
 
 ### stands-for
 
-The name the industry uses for the kind of document an artifact is, such as `hld` for the technical design. It is a field of the artifact's catalog entry. 9.0.0 removed the catalog from the live default (ADR-091); a frozen preset and a stored generation still hold it.
+The name the industry uses for the kind of document an artifact is, such as `hld` for the technical design. It is a field of the artifact's catalog entry. 9.0.0 removed the catalog from the live default (ADR-091); a stored generation still holds it.
 
 **Related:** `audience`, `technical-design`
 
@@ -934,7 +934,7 @@ An excuse of one check on one issue, with a reason and a person's approval (ADR-
 
 ### word_ceiling
 
-The word limit a document kind carried in the artifacts catalog, per depth, such as 4,000 words for a thorough technical design. Words were counted from the visible text only: rendered blocks and HTML comments did not count. The check `design-within-word-ceiling` refused a technical design over 1.5 times its limit until 9.0.0 removed the check and the live catalog (ADR-091). A frozen preset and a stored generation still hold the limits.
+The word limit a document kind carried in the artifacts catalog, per depth, such as 4,000 words for a thorough technical design. Words were counted from the visible text only: rendered blocks and HTML comments did not count. The check `design-within-word-ceiling` refused a technical design over 1.5 times its limit until 9.0.0 removed the check and the live catalog (ADR-091). A stored generation still holds the limits.
 
 **Related:** `lld`, `design-doc`
 

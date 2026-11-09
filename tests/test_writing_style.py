@@ -1095,39 +1095,39 @@ _register(Rule(
         Exemption("governance/check-set.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the check set copies the text from the preset."),
-        # The kept default@6 folder is a byte-identical copy of the live
-        # default at the v6.1.0 tag, so it carries the same four lines and
+        # The test fixture default@6 is a byte-identical copy of the live
+        # default at the v6.1.0 tag (VD-055), so it carries the same four lines and
         # the same reasons. The copy must not change, so each line is
         # exempted here, not edited.
-        Exemption("governance/presets/default@6/checks.yml", "compass bdd verify",
+        Exemption("tests/fixtures/presets/default@6/checks.yml", "compass bdd verify",
                    "compass bdd verify is a CLI verb, not the plain verb; the "
                    "folder is a frozen copy of the v6.1.0 default preset."),
-        Exemption("governance/presets/default@6/checks.yml", "attempts: <int>",
+        Exemption("tests/fixtures/presets/default@6/checks.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the folder is a frozen copy of the v6.1.0 "
                    "default preset."),
-        Exemption("governance/presets/default@6/evidence-types.yml", "attempts: <int>",
+        Exemption("tests/fixtures/presets/default@6/evidence-types.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the folder is a frozen copy of the v6.1.0 "
                    "default preset."),
-        Exemption("governance/presets/default@6/vocabulary.yml", "verify",
+        Exemption("tests/fixtures/presets/default@6/vocabulary.yml", "verify",
                    "the display name of the verify stage, not the verb; the "
                    "folder is a frozen copy of the v6.1.0 default preset."),
-        # The kept default@7 folder is a byte-identical copy of the live default
-        # at the v8.0.4 tag, the last release of major 7: the same four lines,
+        # The test fixture default@7 is a byte-identical copy of the live default
+        # at the v8.0.4 tag (VD-055), the last release of major 7: the same four lines,
         # the same reasons, and the copy must not change.
-        Exemption("governance/presets/default@7/checks.yml", "compass bdd verify",
+        Exemption("tests/fixtures/presets/default@7/checks.yml", "compass bdd verify",
                    "compass bdd verify is a CLI verb, not the plain verb; the "
                    "folder is a frozen copy of the v8.0.4 default preset."),
-        Exemption("governance/presets/default@7/checks.yml", "attempts: <int>",
+        Exemption("tests/fixtures/presets/default@7/checks.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the folder is a frozen copy of the v8.0.4 "
                    "default preset."),
-        Exemption("governance/presets/default@7/evidence-types.yml", "attempts: <int>",
+        Exemption("tests/fixtures/presets/default@7/evidence-types.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the folder is a frozen copy of the v8.0.4 "
                    "default preset."),
-        Exemption("governance/presets/default@7/vocabulary.yml", "verify",
+        Exemption("tests/fixtures/presets/default@7/vocabulary.yml", "verify",
                    "the display name of the verify stage, not the verb; the "
                    "folder is a frozen copy of the v8.0.4 default preset."),
         # The stored configuration of an issue compass 8.0.4 assessed, kept as
@@ -2150,6 +2150,10 @@ _REMOVED_IN_9_0_0 = frozenset({
     "tests/test_waivers.py", "tests/test_vocabulary.py", "tests/parent_fixtures.py",
     "tests/classifier_fixtures.py", "tests/waiver_fixtures.py",
     "tests/fixtures/classifier-json-example.json",
+    # The pins of the frozen presets, which moved into
+    # tests/test_frozen_files_unchanged.py when the presets became test fixtures
+    # (#359 step 10). ADR-094 names the file and is not edited.
+    "tests/fixtures/preset-digests.yml",
 })
 #: Paths 9.0.0 removed that this repository's `compass.yml` still names, keyed by
 #: the path. An agent may not edit `compass.yml`; the owner deletes its readiness
@@ -2164,10 +2168,12 @@ _DECISION_RECORD_FOLDERS = ("architecture/decisions/", "governance/decisions/",
                             "templates/architecture/decisions/",
                             "docs/compass/", "examples/", "docs/upgrade-",
                             "tests/test_public_surface_truth.py",
-                            # The frozen presets are kept byte for byte as the
-                            # release that shipped them (ADR-094), headers included.
-                            "governance/presets/default@6/",
-                            "governance/presets/default@7/")
+                            # The frozen presets and the 8.0.4 catalogue are kept
+                            # byte for byte as the release that shipped them
+                            # (ADR-094, VD-055), headers included.
+                            "tests/fixtures/presets/default@6/",
+                            "tests/fixtures/presets/default@7/",
+                            "governance/artifacts-8.0.4.yml")
 
 
 def test_pbw_a8_only_the_exact_runtime_record_path_may_be_missing():

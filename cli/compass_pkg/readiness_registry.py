@@ -7,10 +7,9 @@ the values a parameter may take.
 
 Since 9.0.0 nothing runs a readiness signal: `compass readiness` and the
 readiness floor are gone (ADR-093), and the shipped default declares an empty
-`readiness:` catalogue. A frozen preset (`default@6`, `default@7`) and a stored
-generation still declare one, so `compass policy lint` (`M-READINESS-IMPL`,
-`M-READINESS-PARAM`) and the classifier read this table
-to judge it.
+`readiness:` catalogue. A stored 8.x generation still declares one, so
+`compass policy lint` (`M-READINESS-IMPL`, `M-READINESS-PARAM`) and the
+classifier read this table to judge it.
 
 This is a leaf module: it imports the standard library only.
 `check_registry.READINESS` is this table, so an implementation is looked up in

@@ -276,7 +276,11 @@ copied governance and `.compass/config.yml`) are read in their old words until
 release after it keeps a preset folder: a stored generation holds its own
 resolved policy, and `tests/fixtures/check-set-digests.yml` pins each version
 of `governance/check-set.yml`. The two folders kept before then,
-`default@6` and `default@7`, stay as data, frozen. Until 9.0.0 the rule was:
+`default@6` and `default@7`, left the product in 9.0.0 and are test fixtures
+under `tests/fixtures/presets/`. The artifacts catalog 8.0.4 shipped stays
+as `governance/artifacts-8.0.4.yml`, because the CLI still reads it.
+`tests/test_frozen_files_unchanged.py` pins all three and compares them byte
+for byte with the release that shipped them. Until 9.0.0 the rule was:
 
 A release that moves the shipped default to a new major (`default@7` after
 `default@6`) must keep the previous major's preset files in
@@ -288,10 +292,7 @@ same file. The copy is frozen, so do not edit it. A project on v6.0.1, which shi
 because no record stores what an approval saw. The live default wins for
 its own major. The live preset takes the new major's version at the first change to it after
 the previous major ships, not at the release: from then on the live preset and the
-kept copy no longer share a pin. The old pins stay in
-`tests/fixtures/preset-digests.yml`. `tests/test_kept_presets.py` fails when a
-kept folder does not match its pinned digest or when an earlier pinned major is
-not kept.
+kept copy no longer share a pin.
 
 ### What changed at 5.0.0
 

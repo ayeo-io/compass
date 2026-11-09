@@ -27,7 +27,7 @@ from test_framework_compass_yml import disallowed_keys  # noqa: E402
 
 REAL_GIT = "/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin"
 PARENT_RULE = "belongs in the project's own compass.yml, never in a parent (ADR-043)"
-PRESETS = ROOT / "governance" / "presets"
+PRESETS = ROOT / "tests" / "fixtures" / "presets"
 
 
 def _run(cwd, *argv, extra_env=None):

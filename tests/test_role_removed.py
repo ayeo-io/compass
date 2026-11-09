@@ -36,7 +36,7 @@ PRESET = None
 # The live default declares no document, approach map or artifact rule since 9.0.0
 # (ADR-091). The 7.0.0 preset is frozen with them, and a stored generation still
 # reads them, so the tests of the artifact rules read that preset.
-FROZEN = ROOT / "governance" / "presets" / "default@7"
+FROZEN = ROOT / "tests" / "fixtures" / "presets" / "default@7"
 VIEW = ROOT / "governance" / "routing-policy.yml"
 NOT_READ = "role is no longer an assessment dimension"
 

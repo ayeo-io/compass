@@ -263,7 +263,6 @@
   "tests/test_issue_link.py": 3.73,
   "tests/test_issue_reference_rule.py": 0.01,
   "tests/test_judged_checks.py": 223.69,
-  "tests/test_kept_presets.py": 1.45,
   "tests/test_land_commit.py": 0.79,
   "tests/test_land_commit_from_pr.py": 7.0,
   "tests/test_land_commit_from_record.py": 1.71,

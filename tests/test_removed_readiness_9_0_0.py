@@ -81,13 +81,6 @@ def test_the_shipped_default_declares_no_readiness_signal():
     assert not [k for k in vocabulary["vocabulary"] if k.startswith("readiness.")]
 
 
-@pytest.mark.parametrize("preset", ["default@6", "default@7"])
-def test_a_frozen_preset_keeps_its_readiness_catalogue(preset):
-    doc = yaml.safe_load((ROOT / "governance" / "presets" / preset / "readiness.yml")
-                         .read_text(encoding="utf-8"))
-    assert "tests-declared-and-under-two-minutes" in doc["readiness"]
-
-
 # --- a project that still holds the removed settings ----------------------------------
 
 def _project(tmp_path, **more):

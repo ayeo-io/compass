@@ -74,8 +74,8 @@ def owes(task, task_dir):
     if is_path_issue(task):
         # A path issue has no approach entry (ADR-092 decision 2). It owes a line
         # when the configuration sets the field on any approach that ships, as
-        # every 8.x delivery approach did, so a frozen preset from before the
-        # field still owes none.
+        # every 8.x delivery approach did, so a stored generation from before
+        # the field still owes none.
         from compass_pkg.stable_ids import APPROACH_SPIKE
         return any(isinstance(body, dict) and body.get("release_line") is True
                    for name, body in approaches.items() if name != APPROACH_SPIKE)

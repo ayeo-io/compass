@@ -30,7 +30,7 @@ in a project to see that project's own policy and autonomy setting. It renders
 the effective configuration, the check set `governance/check-set.yml` with the
 settings of `compass.yml` (ADR-094), and the page says so. Only a project with
 its own copy of the governance files and no `compass.yml` gets the page from
-its `governance/routing-policy.yml`, as before. A policy drawn on the eight legacy stages, such as a frozen preset or
+its `governance/routing-policy.yml`, as before. A policy drawn on the eight legacy stages, such as a stored 8.x generation or
 copied 8.x governance, also shows each approach's subtask ceiling; the four-stage
 path has none (ADR-092 decision 11).
 
@@ -69,8 +69,8 @@ sign-off whatever the size.
 ### `caps` - not shipped since 9.0.0
 
 The one cap, `RP-CAP-001`, limited a critical change to one worktree. 9.0.0
-makes no worktree (ADR-090) and ships no caps (ADR-092). A frozen preset or a
-stored generation still declares it; a project file that sets the caps rule
+makes no worktree (ADR-090) and ships no caps (ADR-092). A stored generation
+still declares it; a project file that sets the caps rule
 set is merged without it and `compass policy lint` names it
 (`L-SETTING-REMOVED`).
 
@@ -82,8 +82,7 @@ approach, can drop one.
 
 A gate a release removed owes nothing. 9.0.0 removed the gate
 `verify.analyze` with the command that wrote its evidence (ADR-091).
-`routing.REMOVED_GATES` lists it. A frozen preset (`default@6`, `default@7`),
-a stored generation or copied governance can still hold the rules
+`routing.REMOVED_GATES` lists it. A stored generation or copied governance can still hold the rules
 `RP-REQUIRE-001` and `RP-REQUIRE-002`, which add it. The evaluator leaves a
 removed gate out of every gate set it writes or prints. A rule whose only
 effect was to add one does not fire. A manifest written before 9.0.0 that
@@ -96,7 +95,7 @@ so a pending `verify.analyze` does not keep the issue from landing.
 A rule of this set reads the condition `artifacts_any`, the documents of the
 issue. Since 9.0.0 no command reads which documents an issue has (ADR-091), so
 a rule that names a document does not fire, and a document on disk adds no
-gate and blocks no stage. A frozen preset or a stored generation can still
+gate and blocks no stage. A stored generation can still
 hold such a rule; it is read and does not fire. A stored 6.x
 generation keeps its `role_rules` until the issue is re-assessed, and a
 project's copied 6.x governance keeps them until `compass policy migrate` on 8.x runs.
@@ -118,7 +117,7 @@ The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 - **artifact_rules** - none from 9.0.0. `RP-ART-001` (a `positioning.md` added
   `verify.claims`) and `RP-ART-002` (an `intent.md` gated Plan) went with the
   documents (ADR-091): no command reads which documents an issue has on disk.
-  The frozen presets `default@6` and `default@7` still declare them.
+  A stored 8.x generation still declares them.
 
 `G5` (a human signs off on the irreversible) holds through the evidence rows:
 a change labelled with an irreversible surface owes `human-approval`, the
@@ -178,7 +177,7 @@ approval.
 | delivery | assess, specify | none | none |
 | spike | assess | none | none |
 
-A frozen preset (`default@6`, `default@7`) and a stored generation keep the
+A stored generation keeps the
 8.x rows, which an issue assessed before 9.0.0 reads:
 
 | Approach | controlled | balanced | autonomous |
@@ -314,7 +313,7 @@ generated text with a banner that says so, and only the legacy readers read
 them. `cli/compass_pkg/legacy_adapter.py` still converts a project's own copy
 of the two files into catalogue form, until #359.
 
-Each artifact of a frozen preset's `artifacts.yml` names the stage that owns it with `stage:`
+Each artifact of the 8.x catalogue (`governance/artifacts-8.0.4.yml`) names the stage that owns it with `stage:`
 (`architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md`).
 A stage command that writes a later record approves the artifacts of earlier
 stages. An artifact with no `stage` is owned by ship. The check
@@ -341,8 +340,7 @@ the spike entry, which ships nothing, reads `suspended`. The project setting
 `acceptance_strategy` turns the whole strategy off with a reason and no
 approval. `compass approach evaluate
 --write` stores the issue's applicability from it, as the strategy's entry in
-`governance/strategies.md` says. The 7.0.0 preset is kept, byte for byte as v8.0.4 shipped it, in
-`governance/presets/default@7/` as data; resolution reads
+`governance/strategies.md` says. 9.0.0 ships no 8.x preset; resolution reads
 only the check set, whatever major a project's `extends:` names. So the pin
 decides instead: a project whose `compass.yml` extends `compass:default@6` or
 `@7` stores no applicability at assess and gets no row from the strategy's
@@ -357,9 +355,11 @@ settings key is the one way to turn the strategy off (decided by jed72,
 - A change to the defaults is a change to `governance/check-set.yml`, with a
   raised `version` and a new pin in `tests/fixtures/check-set-digests.yml`
   (`governance/guardrails.md`).
-- `tests/fixtures/preset-digests.yml` pins a digest for each file of the two
-  frozen presets, and `tests/test_kept_presets.py` fails when a kept folder
-  differs from its pins.
+- The 8.x presets `default@6` and `default@7` are test fixtures under
+  `tests/fixtures/presets/`, and `governance/artifacts-8.0.4.yml` keeps the
+  catalogue 8.0.4 shipped, which the CLI still reads.
+  `tests/test_frozen_files_unchanged.py` pins each of them and compares them
+  byte for byte with the release that shipped them.
 - The mutation-proof register test reads the checks from the check set.
 
 The check set also holds checks of kind `human`: the seven Definition of Done
@@ -368,7 +368,7 @@ verification report to hold them (ADR-091), and
 `tests/test_ready_and_done_data.py` fails when a statement names a removed
 document. The `build` stage's `exit` list holds them. The four-stage path owes
 no Definition of Ready (ADR-092), so the shipped default declares none of its
-seven checks; the frozen presets keep them in their `plan` entry list, where a
+seven checks; the 8.x presets kept them in their `plan` entry list, where a
 stored generation still reads them. Each check needs the capability
 `entry-exit-evaluation`, which is off by default, so `compass check` does
 not run them and the two views do not name them (a legacy `checks:` entry
@@ -615,8 +615,8 @@ knows, and for a `ships` value that differs from the one it assumes. These
 three guards go when the evaluator takes the catalogue form.
 
 One replay ties the adapter to the evaluator, in `tests/test_policy_adapter.py`,
-and has a planted fault that makes it fail: the adapted frozen `default@7`
-preset gives the 1,200 assessments of the compatibility baseline, their label
+and has a planted fault that makes it fail: the adapted `default@7`
+preset (a test fixture) gives the 1,200 assessments of the compatibility baseline, their label
 subsets and the archive assessments the approach the 8.0.4 policy gives them.
 The two values the catalogues spell differently differ in spelling only: a
 document is its id (`intent`, not `intent.md`) and a stage is its current name

@@ -87,7 +87,7 @@ def test_a_removed_key_with_a_bad_value_gives_only_the_removed_warning(tmp_path,
 def test_a_frozen_preset_still_loads_with_its_approaches_and_stages(frozen):
     import yaml
     from compass_pkg import catalogue_spec, word_map
-    folder = ROOT / "governance" / "presets" / frozen
+    folder = ROOT / "tests" / "fixtures" / "presets" / frozen
     # Read through the retired-word tables, as a stored generation is read.
     config = word_map.map_layer({
         name: (yaml.safe_load((folder / f"{name}.yml").read_text(encoding="utf-8"))

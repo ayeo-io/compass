@@ -309,12 +309,8 @@ def _u5_overlay(check_id: str, severity: str = "advisory", waiver: bool = False)
 
 def test_trc_047():
     import tempfile
-    # `default@7` names the check by its new id, in the catalogue and in the entry
-    # list of the stage; `default@6` keeps the old id (TRC-049). The shipped default
-    # holds no Definition of Ready since 9.0.0 (ADR-092), under either id.
-    for name in ("checks.yml", "stages.yml"):
-        text = (ROOT / "governance" / "presets" / "default@7" / name).read_text(encoding="utf-8")
-        assert NEW_CHECK in text and OLD_CHECK not in text, name
+    # The shipped default holds no Definition of Ready since 9.0.0 (ADR-092),
+    # under either id.
     live = (ROOT / "governance" / "check-set.yml").read_text(encoding="utf-8")
     assert NEW_CHECK not in live and OLD_CHECK not in live
     for check_id in (NEW_CHECK, OLD_CHECK):
@@ -384,19 +380,6 @@ def test_trc_049():
         # The live preset is resolved whatever major extends names, and it holds
         # no Definition of Ready (ADR-092).
         assert OLD_CHECK not in shown and NEW_CHECK not in shown
-    # The frozen 6 files still name the old id, and their digests are unchanged.
-    frozen = (ROOT / "governance" / "presets" / "default@6" / "checks.yml").read_text(
-        encoding="utf-8")
-    assert OLD_CHECK in frozen
-    from compass_pkg import atomic_io
-    folder = ROOT / "governance" / "presets" / "default@6"
-    parsed = {p.name: yaml.safe_load(p.read_text(encoding="utf-8"))
-              for p in sorted(folder.glob("*.yml"))}
-    pinned = yaml.safe_load((ROOT / "tests" / "fixtures" / "preset-digests.yml")
-                            .read_text(encoding="utf-8"))["default@6.0.0"]
-    assert atomic_io.digest(parsed) == pinned["preset"]
-    for name, doc in parsed.items():
-        assert atomic_io.digest(doc) == pinned["files"][name], name
 
 
 # --- The state key and the refusal code ---------------------------------------

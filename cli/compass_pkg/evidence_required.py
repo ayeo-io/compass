@@ -14,7 +14,7 @@ skills its floors ask for (`require_skill`), its advisory strategies, and the
 two tighten-only settings the policy can carry (`signoff_labels`, read as more
 `G5` labels, and `require_evidence`, read as more tokens). This
 module never reads the configuration's approaches, shapes, stage modes or
-caps, so a frozen preset or copied governance that still declares them gives
+caps, so a stored 8.x generation or copied governance that still declares them gives
 the same evidence as the live default.
 
 The rows reproduce the gate sets 8.0.4 owed: `tests/test_evidence_required.py`

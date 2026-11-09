@@ -62,11 +62,11 @@ SHIPPED_KINDS = {
 SIX_FIELDS = ("stage", "owner", "audience", "stands_for", "sections", "depends_on")
 
 #: The live default declares no document kind since 9.0.0 (ADR-091), and nothing can
-#: change the catalogue since 9.0.0 (ADR-094). The 7.0.0 preset is frozen with the
-#: catalogue these scenarios checked, and a stored generation is filled from it, so
-#: the catalogue is read from that preset. The scenarios of a parent's change to it
+#: change the catalogue since 9.0.0 (ADR-094). The 7.0.0 preset, kept as a test
+#: fixture (VD-055), holds the catalogue these scenarios checked, and a stored
+#: generation is filled from the same catalogue, so it is read from that preset. The scenarios of a parent's change to it
 #: (the lint of a team parent, the merge and the classifier) went with the layers.
-FROZEN = ROOT / "governance" / "presets" / "default@7"
+FROZEN = ROOT / "tests" / "fixtures" / "presets" / "default@7"
 
 
 def _frozen_doc():
@@ -327,16 +327,6 @@ def test_acf_8(tmp_path):
     found = _heading_problems(copy, catalogue)
     assert any("acceptance-criteria thorough" in p and "out of order" in p
                for p in found), found
-
-
-def _derive(root, tmp_path, name):
-    out = tmp_path / name
-    code, text, err = _cli(root, "_derive-glossary", "--internal", "--root", str(root),
-                           "--out", str(out / "glossary.md"),
-                           "--catalogue-out", str(out / "artifact-catalog.md"))
-    assert code == 0, text + err
-    return (out / "glossary.md").read_text(encoding="utf-8"), (
-        out / "artifact-catalog.md").read_text(encoding="utf-8")
 
 
 # --- group C: the registry, rounds, the home of a document and issue lint ----------

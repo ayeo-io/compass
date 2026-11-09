@@ -79,7 +79,7 @@ def test_si_1_the_constants_equal_the_default_preset():
     # issue records (ADR-092). The five 8.x approaches keep their constants, which
     # the frozen presets, stored generations and old manifests name.
     assert ids.APPROACH_DELIVERY in approaches
-    frozen = list(yaml.safe_load((ROOT / "governance" / "presets" / "default@7" / "approaches.yml")
+    frozen = list(yaml.safe_load((ROOT / "tests" / "fixtures" / "presets" / "default@7" / "approaches.yml")
                                  .read_text(encoding="utf-8"))["approaches"])
     assert list(ids.LEGACY_APPROACH_IDS) == frozen
     assert {v for k, v in vars(ids).items() if k.startswith("APPROACH_") and isinstance(v, str)} \
@@ -89,7 +89,7 @@ def test_si_1_the_constants_equal_the_default_preset():
     # The preset declares the four path stages; the legacy ones keep their
     # constants, which the frozen presets and old manifests name.
     assert list(ids.PATH_STAGE_IDS) == stages
-    legacy = list(yaml.safe_load((ROOT / "governance" / "presets" / "default@7" / "stages.yml")
+    legacy = list(yaml.safe_load((ROOT / "tests" / "fixtures" / "presets" / "default@7" / "stages.yml")
                                  .read_text(encoding="utf-8"))["stages"])
     assert list(ids.STAGE_IDS) == legacy
     assert ids.LEGACY_STAGE_IDS is ids.STAGE_IDS

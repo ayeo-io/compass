@@ -2,7 +2,7 @@
 
 **Removed in 9.0.0 (ADR-091).** Compass 9.0.0 needs and checks one document, `acceptance-criteria.md`, so it has no artifact catalogue. The shipped default declares an empty `artifacts:` map, and a project `artifacts:` key is left out of the merge and named by `compass policy lint` (`L-SETTING-REMOVED`). Compass writes, registers and renders no other document; a team can keep its own notes. The commands that printed a skeleton and registered a document are removed.
 
-The rest of this page records the catalogue as the frozen presets `default@6` and `default@7` still declare it, because archived issues and their stored generations read it. `nfr-rows-resolved` reads the sections of the acceptance criteria from `default@7`. The table of kinds at the end is generated from that catalogue.
+The rest of this page records the catalogue as 8.x declared it, because archived issues and their stored generations read it. The catalogue 8.0.4 shipped is kept byte for byte as `governance/artifacts-8.0.4.yml`. `artifact_kinds.shipped()` reads it to fill the missing fields of a stored entry, `compass issue migrate` reads it to map file names to kinds, and `nfr-rows-resolved` reads the sections of the acceptance criteria from it when a stored generation declares none.
 
 ## The fields of a kind
 
@@ -25,7 +25,7 @@ The rest of this page records the catalogue as the frozen presets `default@6` an
 
 `compass issue template show <kind> [--depth D]` prints the skeleton of a kind. The catalogue entry gives the header and the headings, and `templates/<kind>.md` gives the prose under each heading.
 
-- The header is a `document-header` block of six lines (see `docs/rendered-blocks.md`): the issue and approach, the stage and owner, the status, the date, what the document reads and the audience line. `template show` prints the kind's real stage, owner and audience, the issue's slug when one is selected, and a `{{...}}` placeholder for the rest. The home path and the traditional name are not in the header; the table below and the glossary hold them.
+- The header is a `document-header` block of six lines (see `docs/rendered-blocks.md`): the issue and approach, the stage and owner, the status, the date, what the document reads and the audience line. `template show` prints the kind's real stage, owner and audience, the issue's slug when one is selected, and a `{{...}}` placeholder for the rest. The home path and the traditional name are not in the header; `governance/artifacts-8.0.4.yml` holds them.
 - The headings are `sections[<depth>]`, in order. A heading carries no number. The reading order is the list order, and a reader finds a section by its name.
 - With no `--depth`, the depth is the one the issue registers the kind at, else `thorough`.
 - A kind with no template prints its headings with no prose, after a `document-header` block. `verification-note` has no header block.
@@ -133,61 +133,3 @@ Before 9.0.0 the delivery-approach template held four rendered blocks in place o
 ## The quick-fix record
 
 `compass quick-fix start` writes the delivery-approach record with its own short headings: Assessment, Policy rules fired, Acceptance strategy, Advice, Intent, Scenario and De-scope ledger. After the title the record holds a `document-header` block. Under Assessment it holds an `assessment` block, under Policy rules fired a `policy-rules` block and under Acceptance strategy an `acceptance-strategy` block, all filled by the render. The record has no `**Approach:**` line, because the header block names the approach. A record written before the blocks existed keeps its tables. They are not an ordered subset of the thorough headings. `sections.lightweight` describes the record a hotfix or a spike writes from the template.
-
-## The kinds
-
-The table below is generated from the catalogue by `compass _derive-glossary`, which also writes the per-kind entries of `docs/glossary.md`. A test compares both files with a fresh generation. Change a kind in `artifacts.yml`, then regenerate.
-
-<!-- compass:catalogue-table -->
-
-| Kind | File | Stage | Owner | Traditional name | Who reads it |
-|---|---|---|---|---|---|
-| `delivery-approach` | `delivery-approach.md` | `assess` | router | project-plan | Anyone joining the issue reads it to see how much process the work gets and why. |
-| `verification-note` | `verification-note.md` | `verify` | verifier | test-summary | The person who ships a quick fix reads it to see the scenario, its test and the gates on one screen. |
-| `acceptance-criteria` | `acceptance-criteria.md` | `define` | spec-author | requirements | Every role reads it to agree the behavior that will be built, and the builder turns each scenario into a test. |
-| `technical-design` | `technical-design.md` | `plan` | planner | hld | A reviewer reads it to challenge the design before code is written. |
-| `low-level-design` | `low-level-design/<unit>.md` | `plan` | planner | lld | The builder of one work unit reads it for the signatures, contracts, files and tests that unit owns. |
-| `distribution-map` | `distribution-map.md` | `breakdown` | planner | work-breakdown | The orchestrator reads it to decide how many worktrees to start and which scenarios each one owns. |
-| `verification-report` | `verification-report.md` | `verify` | verifier | test-report | The person who ships reads it to decide whether the evidence supports landing the change. |
-| `intent` | `intent.md` | `assess` | product-owner | prd | The product owner and the spec author read it to agree which problem is solved and which outcome counts as success. |
-| `requirements-review` | `requirements-review.md` | `refine` | spec-author | requirements-review | The planner and the person who asked read it to confirm every open question is settled before design starts. |
-| `threat-model` | `threat-model.md` | `plan` | planner | threat-model | A security reviewer reads it to judge whether the risks to data and access are handled before the change lands. |
-| `rollback-plan` | `rollback-plan.md` | `plan` | planner | rollback-plan | The person who runs a release reads it to know how to undo the change and whether that was rehearsed. |
-| `launch-readiness` | `launch-readiness.md` | `verify` | product-marketer | release-readiness-review | The marketer and the person who ships read it to decide whether every public claim is backed by a passing scenario. |
-| `ui-contract` | `ui-contract.md` | `define` | designer | ui-specification | The builder and the spec author read it to build the screens and states the designer specified. |
-| `bug-report` | `bug-report.md` | `assess` | spec-author | bug-report | The assessor and the builder read it to reproduce the defect and size the fix. |
-| `architecture-notes` | `architecture-notes.md` | `define` | architect | architecture-review | The spec author and the planner read it to keep the design inside the system's invariants. |
-| `positioning` | `positioning.md` | `define` | product-marketer | positioning-statement | The marketer and the reviewer of claims read it to keep every public message tied to a scenario. |
-| `product-owner-review` | `product-owner-review.md` | `plan` | product-owner | stakeholder-review | The planner reads it to confirm the design still delivers the intent before implementation starts. |
-| `review` | `review-<n>.md` | `verify` | reviewer | review-record | The builder and the person who ships read each round to decide what must change before the work passes. |
-| `spike-conclusion` | `spike-conclusion.md` | `verify` | builder | spike-report | The person who decides reads it to discard, graduate or defer the spike. |
-
-Headings of each kind, in order:
-
-- `delivery-approach`, thorough: The assessment; The composed candidate; Policy rules that fired; The final delivery approach; The de-scope ledger; Owed follow-ups; Human overrides; Confirmation
-- `delivery-approach`, lightweight: The assessment; Policy rules that fired; The final delivery approach; The de-scope ledger
-- `verification-note`, lightweight: no heading (one rendered block)
-- `acceptance-criteria`, thorough: Summary; Intent links; Scenario group <letter> - <name>; Failure-mode scenarios; Non-functional requirements; Coverage ledger
-- `acceptance-criteria`, lightweight: Summary; Intent links; Scenario group <letter> - <name>; Non-functional requirements; Coverage ledger
-- `technical-design`, thorough: Approach; Design decisions (ADR-style); Data and interfaces; Verification plan; Risks and dependencies; Governance check; Work units; Gate
-- `technical-design`, lightweight: Approach; Design decisions (ADR-style); Data and interfaces; Verification plan; Risks and dependencies; Governance check; Gate
-- `low-level-design`, thorough: Signatures; Contracts; File-level plan; Tests this unit writes
-- `distribution-map`, thorough: Work units; Independence analysis; Scenario-group → subtask mapping; Proposed worktree orchestration; The cap that applies; Gate
-- `distribution-map`, lightweight: Work units; Independence analysis; Scenario-group → subtask mapping; Gate
-- `verification-report`, thorough: Scenario acceptance results; Test suite evidence; Review dimensions; Gate decision; Failure modes de-scoped at define; Decisions taken for the user; Release line; Gate
-- `intent`, thorough: Problem; Desired outcome; Success signals; Constraints; Non-goals; Internal FAQ; Affected roles; Intent-fidelity check (filled at the pre-plan gate)
-- `intent`, lightweight: Problem; Desired outcome; Success signals; Non-goals
-- `requirements-review`, thorough: Self-QA of the spec; Governance QA of the spec; Ambiguity ledger; Gate
-- `requirements-review`, lightweight: Self-QA of the spec; Ambiguity ledger; Gate
-- `threat-model`, thorough: What are we working on?; What can go wrong?; What are we going to do about it?; Did we do a good enough job?
-- `rollback-plan`, thorough: What breaks; How we go back; When this was last rehearsed
-- `launch-readiness`, thorough: Claims-to-scenarios traceability checklist; What is checked vs. not; Voice & positioning check; Go / No-Go
-- `ui-contract`, thorough: Surface; States; Interaction scenarios; Accessibility commitments; Handoff to define
-- `bug-report`, thorough: Observed behavior; Expected behavior; Reproduction steps; Impact
-- `architecture-notes`, thorough: System under change; Invariants to preserve; Boundary risks; Candidate decision records; Recommendations; Items for a person to decide; Notes for the planner
-- `positioning`, thorough: Audience; Value proposition; Press release (working-backwards); Messaging - claims and their backing scenarios; Customer & internal FAQ; Honesty policy check (voice & positioning strategies); Handoff
-- `product-owner-review`, thorough: Verdict; Success signals and measures; Scope beyond the intent; Findings; Product strategies; Needs a decision; Hand-back to the plan stage
-- `review`, thorough: Scope; Verdict; Blocking; Not blocking; Security; Probes
-- `spike-conclusion`, thorough: Question; What we learned; Decision; What this spike did not decide
-
-<!-- /compass:catalogue-table -->

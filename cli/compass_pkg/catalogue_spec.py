@@ -183,7 +183,7 @@ APPROVER_KINDS = ("waiver", "issue-waiver", "project-waiver")
 
 # Named switches for new blocking behaviour, off in the shipped default.
 # `artifact-freshness` was removed in 9.0.0 (ADR-091) and is not read; it stays
-# valid because default@6, default@7 and stored generations declare it.
+# valid because stored 8.x generations declare it.
 CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 
 # Top-level keys of a layer file (ADR-043).

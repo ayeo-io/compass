@@ -102,8 +102,8 @@ stale, contradictory strategies is its own kind of mess. So:
 | `quarantine.yml` | Records of intermittent tests explicitly quarantined with a tracking issue | Pairs with the `no-trusted-rerun` rule on evidence-not-assertion (see `strategies.md` `S5`) |
 
 The framework ships these with sane, active defaults. A project that does
-nothing runs on them as they are. A new project's `/compass:init` copies
-nothing. Editing is accretion, not a precondition.
+nothing runs on them as they are. A new project's
+`/compass:init` copies nothing. Editing is accretion, not a precondition.
 
 ## A project that copied governance under 5.x
 

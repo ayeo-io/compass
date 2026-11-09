@@ -20,7 +20,10 @@ def test_rwp_7_a_forced_stage_names_thorough(run_cli):
                 "--assessment", "goal=delivery")
     assert r.returncode == 0, r
     assert "(RP-FLOOR-002, floor)" in r.stdout, r.stdout
-    assert "skill 'behavior-mapping' required" in r.stdout, r.stdout
+    # #360 merged the skill into `atdd`, which the check set names. The shared
+    # project fixture no longer copies the frozen view, which still named
+    # `behavior-mapping` (ADR-098), so the command reads the check set.
+    assert "skill 'atdd' required" in r.stdout, r.stdout
     assert "forced to thorough" not in r.stdout, r.stdout
     assert "full-weight" not in r.stdout, r.stdout
 

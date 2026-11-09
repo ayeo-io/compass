@@ -105,7 +105,7 @@ def test_TRC_074_the_agent_s_tools_cannot_reach_the_common_store_from_a_linked(t
         _git(main, "commit", "-q", "-m", "x")
         work = holder / "w"
         _git(main, "worktree", "add", "-q", str(work))
-        task = _make_compass_project(work, "feature", with_route_md=True)
+        task = _make_compass_project(work, "feature", with_approach=True)
         write_red_record(task)
         target = main / ".compass" / "delegations" / "DL-1.yml"
         target.parent.mkdir(parents=True, exist_ok=True)

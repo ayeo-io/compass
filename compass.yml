@@ -14,11 +14,11 @@
 
 schema: 1
 
-# The four-layer acceptance strategy (S17) stays off here, as it was under
+# The four-layer acceptance strategy (`S17`) stays off here, as it was under
 # the old extends: compass:default@6 pin. Turning it on is a separate decision.
 acceptance_strategy:
   state: off
-  reason: "kept off from 8.x; turning S17 on for this repository is a separate decision"
+  reason: "kept off from 8.x; turning `S17` on for this repository is a separate decision"
 
 # Who confirms the decisions agents take for the maintainer and approves an
 # issue's waiver. It changes no check, gate or rule, so this repository still

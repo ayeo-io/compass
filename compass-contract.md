@@ -2,16 +2,17 @@
 
 **Start an issue before you change a file.** When someone describes work to
 build, change or fix, run `/compass:assess` first, even if they never typed
-it. Only conversation is exempt. If `.compass/current-task` names an open
-issue, carry on with it. **One request is one issue.** Do not open a second
-issue for follow-on work in the same request; add it to this one.
+it. Only conversation is exempt. **One request is one issue.** Never start a
+second issue for follow-on work or feedback in the same request; add it to
+this one.
 
-**The path is three commands**, each alone in its Bash call:
-`compass quick-fix start`, then `compass quick-fix finish -m "<message>" --
-<test command>` once the tests and code are written, then `compass
-ship-commit` when the person asks for a commit. Each prints `next:`; do what
-it says. Between start and finish, write tests and code and run the tests
-directly. Compass writes the record itself: never edit `.compass/`.
+**The path is two commands**, each alone in its Bash call: `compass quick-fix
+start`, then `compass quick-fix finish -m "<message>" -- <test command>` once
+the tests and code are written. `finish` writes the record and commits,
+unless a person's approval is owed: then stop, and run it again after the
+approval. After feedback, edit and run `finish` again. Each command prints
+`next:` or `done:`; do what it says, and do not check its commit again.
+Never edit `.compass/`.
 
 **Five guardrails:**
 1. Every change lands with a test that fails without it.
@@ -26,9 +27,9 @@ approve for the person: ask them to type `/compass:approve <n>` and stop.
 Approve yourself only under a delegation naming you. Never create, extend or
 revoke a delegation.
 
-**Commit only what you mean to.** `compass ship-commit` stages the changed
-files and the record; do not `git add` anything under `.compass/` yourself.
-Check the commit's files and author. A lint fix never weakens an assertion.
+**Commits.** `finish` stages the changed files and the record; do not `git
+add` anything under `.compass/` yourself, and do not push unless asked. A
+lint fix never weakens an assertion.
 
 **Write for a person in the spirit of ASD-STE100.** Lead with the point. If
 they are lost, re-pitch.

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Play the agent's part of the lean path with no model, and check the record.
 
-This is the proof for the experiment branch `exp-lean`. For two cases, an
-unlabeled change and a `personal-data` change, it:
+This is the proof for the experiment branch `exp-lean`. For an unlabeled
+change and a `personal-data` change, it:
 
 1. makes a small Python package with a pytest suite in a new git repository
    with a bare `origin`;
@@ -20,8 +20,12 @@ approval of the labeled case, to show the hook refuses the first.
 Usage:
   python3 scripts/exp-lean-e2e.py [--checker PATH] [--keep]
 
-Exit status: 0 when both records pass all six checks and each case used at
-most five `compass` commands.
+A third case lands a change and then takes three rounds of feedback that
+edit the same test file, with a second `start` for the same request in
+between. It must leave one issue, and each round is one `compass` command.
+
+Exit status: 0 when every record passes all six checks and each of the first
+two cases used at most five `compass` commands.
 """
 from __future__ import annotations
 
@@ -215,12 +219,79 @@ def case_unlabeled(folder, checker):
     agent.compass("quick-fix", "finish", "-m", "Add a percentage discount to the total (#7)",
                   "--", *PYTEST)
     person_approves(repo)
-    print("  [person] That is what I asked for. Commit it on a new branch.")
-    sh(["git", "switch", "-q", "-c", "discount-7"], repo)
-    print("$ git switch -c discount-7")
-    agent.compass("ship-commit")
-    squash_merge(repo, "discount-7", REQUEST_NUMBER + 1)
+    # The same finish again: with the approval on record it commits, on a new
+    # branch named after the issue, because HEAD was on the default branch.
+    out = agent.compass("quick-fix", "finish", "-m",
+                        "Add a percentage discount to the total (#7)", "--", *PYTEST)
+    expect_committed(repo, out, "discount")
+    squash_merge(repo, "discount", REQUEST_NUMBER + 1)
     print(f"  [person] merged pull request #{REQUEST_NUMBER + 1} into main")
+    return agent, check_record(repo, checker)
+
+
+def expect_committed(repo, out, branch):
+    """The hand-off after a commit says what a session otherwise checks by hand."""
+    for wanted in ("checked and committed", f"on branch {branch}", "working tree clean",
+                   "done: nothing more to run"):
+        if wanted not in out:
+            sys.exit(f"FAILED: the hand-off does not say {wanted!r}")
+    if len(out.strip().splitlines()) > 11:
+        sys.exit("FAILED: the hand-off is 12 lines or more")
+    if sh(["git", "status", "--porcelain", "--", "."], repo).stdout.replace(
+            "?? .compass/state.yml\n", "").strip():
+        sys.exit("FAILED: git status is not clean after the commit")
+
+
+def feedback_round(repo, agent, number, message):
+    """A round of feedback: the same test file and the code change, then one finish."""
+    with (repo / "shop" / "orders.py").open("a") as fh:
+        fh.write(f"\n\ndef discounted_{number}(prices):\n"
+                 f"    return discounted(prices, {number})\n")
+    with (repo / "tests" / "test_discount.py").open("a") as fh:
+        fh.write(f"\n\ndef test_round_{number}():\n"
+                 f"    from shop.orders import discounted_{number}\n"
+                 f"    assert discounted_{number}([100]) == {100 - number}\n")
+    # A test run leaves `.coverage` behind; it must not be traced or reported.
+    (repo / ".coverage").write_text("run data\n")
+    print(f"  [person] feedback {number}: (the agent edits tests/test_discount.py and the code)")
+    out = agent.compass("quick-fix", "finish", "-m", message, "--", *PYTEST)
+    expect_committed(repo, out, "discount")
+    listed = sh(["git", "ls-files"], repo).stdout
+    if ".coverage" in listed:
+        sys.exit("FAILED: .coverage was committed")
+
+
+def case_feedback(folder, checker):
+    print("\n=== case (c): land, then three rounds of feedback on the same request ===")
+    repo = make_repo(folder)
+    agent = Agent(repo)
+    request = f"https://github.com/{REQUEST_REPO}/issues/{REQUEST_NUMBER}"
+    agent.compass("quick-fix", "start", "discount",
+                  "--intent", "An order total can take a percentage discount",
+                  "--request", request, "--requester", REQUESTER)
+    write_discount(repo)
+    finish = ("quick-fix", "finish", "-m", "Add a percentage discount to the total (#7)",
+              "--", *PYTEST)
+    agent.compass(*finish)
+    person_approves(repo)
+    expect_committed(repo, agent.compass(*finish), "discount")
+    first = len(agent.commands)
+    feedback_round(repo, agent, 10, "Add a fixed ten percent discount (#7)")
+    # A second start for the same request, with a new slug, makes no new issue.
+    out = agent.compass("quick-fix", "start", "discount-follow-up",
+                        "--intent", "A fixed twenty percent discount",
+                        "--request", f"{REQUEST_REPO}#{REQUEST_NUMBER}")
+    if "No new issue was made" not in out:
+        sys.exit("FAILED: a second start for the same request did not go back to the issue")
+    feedback_round(repo, agent, 20, "Add a fixed twenty percent discount (#7)")
+    feedback_round(repo, agent, 30, "Add a fixed thirty percent discount (#7)")
+    issues = sorted(p.name for p in (repo / ".compass" / "work").iterdir() if p.is_dir())
+    print(f"  issues under .compass/work/: {issues}")
+    if issues != ["discount"]:
+        sys.exit("FAILED: more than one issue exists for one request")
+    squash_merge(repo, "discount", REQUEST_NUMBER + 1)
+    print(f"  [person] merged pull request #{REQUEST_NUMBER + 1} into main")
+    print(f"  first landing: {first} compass command(s); each feedback round: 1")
     return agent, check_record(repo, checker)
 
 
@@ -278,7 +349,8 @@ def main():
     holder = Path(tempfile.mkdtemp(prefix="exp-lean-e2e-"))
     failed = False
     try:
-        for name, case in (("unlabeled", case_unlabeled), ("personal-data", case_labeled)):
+        for name, case in (("unlabeled", case_unlabeled), ("personal-data", case_labeled),
+                           ("feedback", case_feedback)):
             folder = holder / name
             folder.mkdir()
             agent, code = case(folder, args.checker)
@@ -286,7 +358,7 @@ def main():
                   f"check_record exit {code}")
             for command in agent.commands:
                 print(f"    {command}")
-            failed = failed or code != 0 or len(agent.commands) > 5
+            failed = failed or code != 0 or (name != "feedback" and len(agent.commands) > 5)
     finally:
         if args.keep:
             print(f"kept: {holder}")

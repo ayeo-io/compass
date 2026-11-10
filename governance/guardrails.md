@@ -417,7 +417,9 @@ _(none yet - the shipped default guardrails apply as-is)_
   - It passes on a `pr-approval` record for the pull request the manifest
     links, or on a `human-approval` record with `ship:` given for this issue
     and its generation that no `approval-withdrawal` names. A sign-off of
-    guardrail `G5` does not count: it is given at specify, before code exists.
+    guardrail `G5` does not count: it approves the irreversible change, and
+    can come before the code is reviewed. `G5` is checked at ship, before the
+    change lands; the approval before code is the `specify` checkpoint.
     The pass names the approver, the time and the record, and says when the
     review approved an earlier commit than the merged head. `compass issue
     link set --pr <n>` writes the `pr-approval` records after the merge: one

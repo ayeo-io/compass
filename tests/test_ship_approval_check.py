@@ -191,7 +191,7 @@ def test_a_withdrawn_typed_approval_does_not_count(tmp_path):
 
 
 def test_a_g5_signoff_does_not_count_as_the_ship_approval(tmp_path):
-    """VD-029: a `G5` sign-off is given at specify, before code exists."""
+    """VD-029: a `G5` sign-off approves the irreversible change, not the review."""
     passed, detail = _verdict(_task(pull_request=dict(MERGED), evidence=[_g5_signoff()]),
                               tmp_path)
     assert passed is False, detail

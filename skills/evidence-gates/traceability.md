@@ -1,7 +1,6 @@
 # Traceability
 
-**The traceability guardrail** keeps two chains, on every delivery issue,
-updated *as you go* - not reconstructed at the end:
+**The traceability guardrail** keeps two chains, on every delivery issue:
 
 ```
 code → scenario → intent
@@ -34,24 +33,15 @@ and that is a no-pass at ship.
   true. The manifest's `claims:` is the ledger, and the
   `claim-traces-to-scenario` check reads it.
 
-## How to maintain it continuously
+## How it is kept
 
-The discipline is *continuous*, and that is the whole craft - a chain rebuilt
-at the end is a chain that was guessed.
-
-- **At specify** - the Spec Author tags each scenario with its intent reference
-  as the scenario is written. The upper half of the chain exists before any
-  code does.
-- **At build** - the Builder records the scenario each unit serves *as the unit
-  is written* - a comment, a test name, a commit message convention, whatever
-  the project uses. The link is made at the moment the code is made, when the
-  reason is still in your head. Recovering it later is archaeology.
-- **Alongside specify and ship** - the Marketing Perspective adds a `claim → scenario` entry
-  to the manifest's `claims:` as each claim is drafted. A claim with no entry is not
-  yet a shippable claim.
-- **At ship** - the Reviewer runs `traceability` as a review dimension: walk
-  the chains, find the breaks. It is on every delivery issue because it is
-  the traceability guardrail in review form.
+- **code → scenario.** `compass quick-fix finish` reads the changed files
+  from git and traces each one to the scenarios of the issue.
+- **scenario → intent.** Write each scenario for the intent the issue was
+  started with. Give it the next `TRC-` id.
+- **claim → scenario.** The Marketing Perspective adds a `claim → scenario`
+  entry to the manifest's `claims:` as each claim is drafted. A claim with no
+  entry is not yet a shippable claim.
 
 ## What a break looks like - and what to do
 
@@ -82,14 +72,11 @@ reconstructing anything:
 - *What breaks if we change this scenario?* - walk down to every unit of code
   and every claim that traces to it.
 
-That is why it is maintained continuously and on every delivery issue, including
-the lightest change and the hotfix. The audit trail is not a document you write; it is a
-property the chain *has* - but only if every link was made when the work was.
+That is why it is kept on every delivery issue, including the lightest
+change and the hotfix.
 
 ## Anti-patterns
 
-- **End-of-issue reconstruction** - building the chain at ship
-  from memory. You are guessing, and the guesses look exactly like real links.
 - **The decorative reference** - a scenario tag that points vaguely at a feature
   rather than precisely at a scenario. Precision is what makes the walk work.
 - **Letting a hotfix skip it** - "we were in a hurry." The reproduction test

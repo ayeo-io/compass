@@ -56,8 +56,7 @@ You stop being able to attribute the result, and both changes stay in the code.
 
 **Write the regression test first, watch it go red, then fix it.**
 
-This is the same red-green discipline the implement stage already runs (`compass tdd-red`,
-then `compass tdd-green`) - see `tdd-discipline`. It matters more here, not
+This is the red-green discipline of `tdd-discipline`. It matters more here, not
 less: a bug fixed without a test that failed for the bug's reason is a bug you
 cannot prove you fixed, and one that returns without anyone noticing.
 

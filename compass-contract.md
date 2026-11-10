@@ -8,11 +8,10 @@ this one.
 
 **The path is two commands**, each alone in its Bash call: `compass quick-fix
 start`, then `compass quick-fix finish -m "<message>" -- <test command>` once
-the tests and code are written. `finish` writes the record and commits,
-unless a person's approval is owed: then stop, and run it again after the
-approval. After feedback, edit and run `finish` again. Each command prints
-`next:` or `done:`; do what it says, and do not check its commit again.
-Never edit `.compass/`.
+tests and code are written. `finish` writes the record and commits. When
+it asks for a person's approval, stop. After feedback, edit and run `finish`
+again. Each command prints `next:` or `done:`; do what it says, and do not
+check its commit again. Never edit `.compass/`.
 
 **Five guardrails:**
 1. Every change lands with a test that fails without it.
@@ -22,10 +21,10 @@ Never edit `.compass/`.
 5. A person approves anything irreversible.
 
 **Approvals.** For the labels `auth`, `payments`, `personal-data` and
-`migrations`, a person approves the scenarios before any code edit. Never
-approve for the person: ask them to type `/compass:approve <n>` and stop.
-Approve yourself only under a delegation naming you. Never create, extend or
-revoke a delegation.
+`migrations`, a label the project adds, and `critical` risk, a person approves
+the scenarios before any code edit. Never approve for the person: ask them to
+type `/compass:approve <n>` and stop. Approve yourself only under a
+delegation naming you. Never create, extend or revoke a delegation.
 
 **Commits.** `finish` stages the changed files and the record; do not `git
 add` anything under `.compass/` yourself, and do not push unless asked. A

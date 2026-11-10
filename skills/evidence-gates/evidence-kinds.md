@@ -8,12 +8,11 @@ A deployment pipeline distinguishes stages by what they test and how fast
 they test it - commit, acceptance, release, production. Compass maps onto
 two of those stages and explicitly stays out of the rest.
 
-**The commit stage** is the `.red`/`tdd-green` loop - the fastest-failing
-checks the pipeline has. `compass tdd-red` records a failing test; `compass tdd-green` records a
-passing suite. These are fast, isolated, developer-feedback cycles. Evidence
-here is `test-run`; it is the closest feedback loop in the pipeline. The
-pre-tool hook enforces the ordering (the TDD strategy); the evidence-not-assertion guardrail enforces
-that the evidence is real, not asserted.
+**The commit stage** is the red and the green that `compass quick-fix
+finish` records: the change's tests fail on a copy of the base commit and
+pass on the working tree. Evidence here is `test-run`. The
+evidence-not-assertion guardrail enforces that the evidence is real, not
+asserted.
 
 **The acceptance/releasability stage** is `verify.correctness` - the checks
 that decide whether the work is releasable. This is the gate that says *yes, this behavior is

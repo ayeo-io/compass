@@ -133,7 +133,7 @@ Confirm the design is consistent with the issue's `evidence_required` list
    followed, or departed-and-recorded, or departed-silently (flag it).
 4. Walk 3 - the evidence - confirm the design assumes no less evidence than
    the issue owes, and that each strategy departure is recorded.
-5. Record all three results with `compass evidence add` and show them in the
+5. Show all three results in the
    report to the person, with the guardrail findings and the
    strategy assessment **visibly separate** - evidence on one side, judgment
    on the other.

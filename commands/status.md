@@ -96,9 +96,9 @@ Here the internal details *are* what the reader wants. Report:
   nearest reference shape, the three scored dimensions, and any policy
   rule that fired.
 - **Stage** - from `compass next --issue <slug>`, which reads the records
-  and names one of the four stages: assess, specify (the scenarios and
-  their tests), build (the red and green records) or ship (the gates, the
-  review and the commit). It also prints the next command. An issue
+  and names one of the four stages: assess, specify (the scenarios a
+  person approves before code), build (the tests and the code) or ship (the
+  record, the approval and the commit). It also prints the next step. An issue
   assessed before the path shows its old stage as the path stage it maps
   to.
 - **Gates** - from `manifest.yml`'s `gates:`. Run

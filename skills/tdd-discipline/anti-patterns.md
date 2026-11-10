@@ -5,8 +5,8 @@ Read when something has gone wrong, not while it is going right.
 ## Anti-patterns
 
 - **Green-first, test-after.** Writing the code, then a test that happens to
-  pass. The test never proved anything; it only documented what the code
-  already did. This is the single thing the hook exists to prevent.
+  pass. Unless the test fails without the change, it proves nothing; it only
+  documents what the code already did.
 - **The assertion-free test.** A test that runs the code but asserts nothing,
   or asserts something trivially true. It is green without testing anything.
 - **The test that never went red.** If you did not watch it fail, you do not

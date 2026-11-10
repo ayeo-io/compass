@@ -13,11 +13,12 @@ Adopters declare each architecture check in `project_checks` of
 `compass.yml`, with a `command` that exits 0 on pass
 (`docs/configuration.md`). The gate:
 
-- is advisory by default;
-- is promoted to blocking by routing floors `RP-REQUIRE-003` (risk ∈
-  {cross-cutting, critical}) and `RP-REQUIRE-004` (labels ∈ irreversible
-  domains) - conditional gate promotion through floors
-  (`architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md`);
+- is owed only where the project's settings add it: the token
+  `architecture` in `require_evidence`, or a floor of the project's own that
+  adds the gate. The shipped floors `RP-REQUIRE-003` and `RP-REQUIRE-004`
+  add no gate to an issue assessed on 9.0.0
+  (`architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md`
+  holds the floor mechanism);
 - clears without checking anything when no project guardrails declare
   `command-passes`: a project that has not yet declared any architecture
   checks sees no behavioral change

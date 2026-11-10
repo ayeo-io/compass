@@ -1,9 +1,8 @@
 # The full assess procedure
 
-Read by `/compass:assess` when the change is not a small one an engineer
-is making, for a spike, or on `--reassess`. The light path stays in
-`commands/assess.md`: `compass quick-fix start` assesses a change of any size
-in one call.
+Read by `/compass:assess` for a spike, or on `--reassess`. A delivery issue
+starts with `compass quick-fix start` (`commands/assess.md`), which assesses
+a change of any size in one call.
 
 Assess is the first of the four stages of the path (`approaches/path.md`),
 and every issue runs it. It reads the three scored dimensions - that is
@@ -111,8 +110,7 @@ force; if it is still a spike, leave the marker in place.
    rather than guessing. When size is unsure, estimate *up*. Note:
    **exploration goal** - "I cannot state this well enough to deliver it
    yet" - selects a **spike**, and **live-defect urgency** - something is
-   broken for users now - is the hotfix setting, which adds
-   `reproduce-first` to the evidence. Write these into the manifest's `assessment:` block. The assessment
+   broken for users now - is the hotfix setting. Write these into the manifest's `assessment:` block. The assessment
    is the only part of the computation that is judgment - everything below
    is mechanism.
    Apply `auth`, `payments`, `personal-data` or `migrations` whenever the
@@ -127,12 +125,7 @@ force; if it is still a spike, leave the marker in place.
    <dimension>="<why>"` with one `--justify` for each assessed dimension (a
    changed value on a re-run needs a new one; an unchanged value keeps its
    line). The CLI records them under the manifest's `justifications:` key
-   and refuses a new or changed value that has none. Add
-   `--expected-acceptance validation` or `--expected-acceptance refactor`
-   when the change has no behavior a client can observe (a config or docs
-   change, a refactor that keeps behavior); leave it out otherwise. The first
-   write stores whether the four-layer acceptance strategy (`S17`) applies,
-   and `compass approach show` shows it. It applies
+   and refuses a new or changed value that has none. It applies
    the configuration in force to the assessment: it matches one evidence
    row, adds what the labels, the risk and the configuration add, and
    writes `delivery_approach` (`delivery`, or `spike`), `evidence_required`,
@@ -173,9 +166,7 @@ force; if it is still a spike, leave the marker in place.
    Immovable gates and floors cannot be overridden; changing one means a
    reviewed change to the project's `compass.yml` (`docs/configuration.md`),
    not overriding one issue's evidence. A loosening needs a waiver that the
-   project's owner approves. Under `/compass:go`, the evidence line it already showed is
-   the confirmation: do not stop to wait for one, but act on an override
-   whenever the person gives it.
+   project's owner approves.
    Wait for the confirmation only if `assess` is in the manifest's
    `checkpoints:`, which the project's `autonomy` setting in
    `compass.yml` decides (or `.compass/config.yml` in a project without
@@ -187,8 +178,7 @@ force; if it is still a spike, leave the marker in place.
    runs `compass evidence approve --checkpoint assess --approver <name> --role
    <role>` at a terminal, which records the answer. An issue assessed before
    outcomes were recorded is not judged: both commands refuse it and write
-   nothing, so say so and go on. `/compass:go` does not wait here even when
-   `assess` is listed.
+   nothing, so say so and go on.
 
 ## Voice
 
@@ -202,5 +192,4 @@ you are entering. See `skills/compass-runtime/writing-voice.md`.
 `delivery_approach`, `evidence_required` and `gates`; every dimension has a
 justification; `.compass/current-task` points at the slug. On a spike, the
 `.compass/work/<issue-slug>/.spike` marker exists. Then follow the `next:`
-line that `compass next` prints: on a delivery issue it names the first
-Specify step, and on a spike the first step that explores.
+line that `compass next` prints.

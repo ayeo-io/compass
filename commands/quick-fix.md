@@ -18,10 +18,11 @@ feedback in the same request; add it to this one.
      --request <issue URL or owner/repo#N> --requester "<who asked>"
    ```
 
-   Add `--labels <label,...>` only for `auth`, `payments`, `personal-data`
-   or `migrations`.
+   Add `--labels <label,...>` only for `auth`, `payments`, `personal-data`,
+   `migrations` or a label the project adds, and `--risk "critical - <why>"`
+   only for critical risk.
 
-2. Only with one of those labels: write every scenario in the
+2. Only with one of those: write every scenario in the
    `acceptance-criteria.md` that `start` names, each in the form of the first
    one, with the next `TRC-` id. Run `compass evidence request --checkpoint
    specify`, ask the person to type `/compass:approve <n>`, and stop. Code
@@ -36,11 +37,10 @@ feedback in the same request; add it to this one.
    compass quick-fix finish -m "<commit message>" -- <test command>
    ```
 
-   It writes the whole record. If a person's approval is owed, it asks:
-   stop, and after the approval run it again. Otherwise it commits, on a new
-   branch if you are on the default one, and reports the commit. Do not
-   check that commit again with `git` or `compass`.
+   It writes the whole record. When its `next:` line asks for a person's
+   approval, stop. It commits once a person has approved, on a new branch if
+   you are on the default one. Do not check that commit again.
 
-5. After feedback on a landed change, edit and run `finish` again.
+5. After feedback, edit and run `finish` again, once.
 
 `compass ship-commit` also commits a checked change, on the branch you are on.

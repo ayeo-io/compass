@@ -9,27 +9,23 @@ from the configuration's side; this is the reading that goes with the skill.
 The four stages are the same for every delivery issue, so the CLI computes
 no stage weights. It computes the `evidence_required` list:
 
-- **One row matches.** The light row for an atomic or small change with
-  trivial or contained risk; the defect row for an atomic or small fix under
-  `urgency: live-defect`; the standard row for every other delivery
-  assessment. A `G5` label or critical risk always takes the standard row.
-- **The additions apply on top.** `architecture` for cross-cutting or
-  critical risk or a `G5` label; `scenario-approval` (the person approves
-  the scenarios at specify) for a `G5` label or critical risk;
-  `human-approval` (the `G5` sign-off at ship) for a `G5` label;
-  `reproduce-first` under `urgency: live-defect`.
-- **The four-layer acceptance strategy (`S17`)** adds `outer-loop`,
-  `isolation` and `layering` as the row's routing owes them, unless the
-  change has no behavior a client can observe (`--expected-acceptance
-  validation` or `refactor`).
-- **The configuration adds** the gate of each floor that matches, each
-  immovable gate and project guardrail, and the skill a floor asks for.
+- **One row matches every delivery issue** (`RP-EVID-COMMON`): `request`,
+  `scenarios`, `red-before-green`, `suite-green`, `correctness`,
+  `governance`, `traceability` and `ship-approval`. Risk, familiarity, size
+  and urgency add no review and no record.
+- **Two additions apply on top, each a person's approval.**
+  `scenario-approval` (the person approves the scenarios at specify) for a
+  `G5` label or critical risk; `human-approval` (the `G5` sign-off) for a
+  `G5` label.
+- **The configuration adds** the tokens of each `require_evidence` rule that
+  matches, the gate of each floor of the project's own, each immovable gate
+  and project guardrail, and the skill a floor asks for. The records of the
+  four-layer acceptance strategy (`S17`) are owed only where a rule adds
+  `outer-loop`, `isolation` or `layering`.
 
 `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`, "The evidence rows", holds the exact
 conditions and tokens (an unmigrated 5.x project is refused until it
-migrates). Each gate is a review dimension; which ones a row
-owes is in "The review dimensions by row" in
-`approaches/composition-reference.md`.
+migrates).
 
 The configuration also names advisory strategies, such as "when size is
 unclear, estimate up". A strategy is a starting point, not a verdict:

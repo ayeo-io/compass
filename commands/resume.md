@@ -34,16 +34,11 @@ written so that nobody has to work out the process again.
    An issue assessed before the path shows its old stage as the path stage
    it maps to. Note any owed follow-up.
 5. **Report, then continue.** State plainly: the delivery approach, the
-   current stage, the next command to run, and any blocker or owed
-   follow-up. Then continue as `/compass:go` does from its step 4: run each
-   `next:` command, and stop only where one says to wait for a person.
-6. **The finish is one command.** When only the red, the fix and the three
-   immovable gates are left, write the failing test and run
-   `compass tdd-red --scenario <id> -- <test command>`, write the fix, then
-   run `compass quick-fix finish -m "<message>" --no-commit -- <test
-   command>`. It traces the changed files, runs the check and passes the
-   three gates, even for an issue another session started. Do not pass
-   the gates by hand.
+   current stage, the next step, and any blocker or owed follow-up. Then do
+   what the `next:` line says, and stop where it says to wait for a person.
+6. **The finish is one command.** Write the tests and the code that are
+   left, then run `compass quick-fix finish -m "<message>" -- <test
+   command>`. It writes the whole record. Do not pass the gates by hand.
 
 ## When the records do not answer the question
 

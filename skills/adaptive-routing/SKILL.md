@@ -15,10 +15,9 @@ stages: assess, specify, build and ship (`approaches/path.md`). What you
 compute is the evidence the change owes before it ships. The assessment has
 three scored dimensions (`risk`, `familiarity`, `size`), two switches
 (`goal`, `urgency`) and any domain labels. The three scored dimensions are
-three independent questions. The CLI matches one evidence row from them,
-and the switches and labels add to it: `goal: exploration` selects the
-spike, `urgency: live-defect` is the hotfix setting, and a domain label adds
-gates and sign-offs. The configuration in force can add evidence, never
+three independent questions. Every delivery issue owes the same evidence: the
+ratings add no review and no record. `goal: exploration` selects the spike,
+and a `G5` label or critical risk adds a person's approval. The configuration in force can add evidence, never
 remove it. Its prose is in
 `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md` (an unmigrated 5.x
 project is refused until it migrates).
@@ -74,8 +73,7 @@ treat a project without a `compass.yml` as missing a prerequisite.
 
 **The switches** - *`goal` and `urgency` are read, not scored.* Either can
 be left out. `goal: exploration` selects the spike; `urgency: live-defect`
-is the hotfix setting, which adds `reproduce-first` and, on an atomic or
-small fix, selects the defect row. Set it only for something broken for
+is the hotfix setting, and adds no evidence. Set it only for something broken for
 users now. Each switch you set still needs a `--justify`. Domain labels need
 none.
 
@@ -113,9 +111,8 @@ fired.
 
 The path has no stage modes, so there is no stage to collapse or skip and
 no de-scope ledger to write, and the path writes no `devlog.md` (ADR-092).
-What a light change leaves out is the
-evidence it does not owe, and the `evidence_required` list in the manifest
-is the record of that. `compass approach show` prints it on one line.
+The `evidence_required` list in the manifest is the record of what the
+change owes. `compass approach show` prints it on one line.
 
 ### Anti-patterns
 

@@ -4,11 +4,14 @@ Reference: read the checklist for the dimension you are applying, not all of the
 
 ## The review-dimension checklists
 
-Which dimensions apply is set by the evidence row assess selects (see "The review dimensions by row" in `approaches/composition-reference.md`).
-`correctness`, `governance`, `traceability` are on every delivery issue - the
-default guardrails in review form. The additions and the configuration can add; they
-can never remove those or an `immovable_gate`. (Spike runs none of these - it
-ships nothing, so it has only its own gate, `spike.conclude`.)
+`correctness`, `governance` and `traceability` are on every delivery issue -
+the default guardrails in review form - and `compass quick-fix finish` passes
+their gates from the test records and the output of `compass check`.
+`regression`, `security`, `clarity` and `architecture` are owed only where
+the project's settings add them (`require_evidence` in `compass.yml`).
+Settings can add; they can never remove the first three or an
+`immovable_gate`. (Spike runs none of these - it ships nothing, so it has
+only its own gate, `spike.conclude`.)
 
 **correctness** - Does the change do what the scenarios describe? Is the green
 genuine, or green-by-skipped-test? Do the acceptance scenarios actually exercise
@@ -17,8 +20,8 @@ the new behavior, not just run near it?
 **governance** - Two distinct checks under one dimension, and keeping them
 distinct *is* the check:
 - *Guardrails (checked with evidence).* Does the change clear every applicable
-  guardrail - the five shipped defaults and any project guardrails? Each is cleared with the
-  verifier's artifacts, never a claim. A failed guardrail is a no-pass; a
+  guardrail - the five shipped defaults and any project guardrails? Each is cleared with
+  recorded evidence, never a claim. A failed guardrail is a no-pass; a
   guardrail beats any strategy. See the `governance-check` skill.
 - *Strategies (assessed as judgment).* Did the work follow the applicable
   default and project strategies - and where it departed, is the departure
@@ -41,18 +44,17 @@ owning doc in the same commit, or says why the doc still holds.
 When the work has more than one unit, check each unit and then the *combined*
 result at ship time - each unit green does not imply the combination is green.
 
-**security** - On the standard and defect rows, scaled to risk; off on the
-light row unless the configuration added it. OWASP floor;
+**security** - Owed only where the settings add it. OWASP floor;
 dependency-CVE scan where a project security guardrail needs it; evidence is
 scan output, not "looks fine."
 
-**clarity** - Is the code and are its tests legible to the next person - names,
-structure, no surprising control flow? On the standard row; off on the
-light and defect rows. This is also where the writing-voice tells
+**clarity** - Owed only where the settings add it. Is the code and are its
+tests legible to the next person - names, structure, no surprising control
+flow? This is also where the writing-voice tells
 named in `skills/compass-runtime/writing-voice.md` are judged - does the
 artifact communicate a decision, or does it narrate the pipeline? Run
 `scripts/voice-tells.py` over the issue's artifacts for the three tells a fixed string can find; a hit is a note and a conversation, never an automatic gate failure.
-This check applies to every issue - the calibration sample it is read
+The calibration sample it is read
 against is named in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` (`S8`; an
 unmigrated 5.x project is refused until it migrates).
 

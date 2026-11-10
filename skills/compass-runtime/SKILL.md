@@ -1,6 +1,6 @@
 ---
 name: compass-runtime
-description: Which skill each stage loads and where issue state lives. Load when an issue begins.
+description: Where issue state lives and which skill helps with what. Load when a `next:` line does not answer the question.
 ---
 
 # Compass - the stage map
@@ -18,38 +18,38 @@ not.
 ## The stages and their commands
 
 Every delivery issue runs one path of four stages: assess, specify, build and
-ship (ADR-092, `approaches/path.md`). The stages have no commands of their
-own. One command runs the path, and a `next:` line names each step.
+ship (ADR-092, `approaches/path.md`). Two commands run the path, and a
+`next:` line names each step.
 
 | Stage | What runs it | What it writes |
 |---|---|---|
-| Assess | `compass quick-fix start`, or `/compass:assess` for the full procedure, `--reassess` and the spike | the assessment, the request link, `evidence_required` (the evidence the change owes), the gates and the checkpoints |
-| Specify | `compass scenario add`, `compass scenario tests set` | the scenarios in `acceptance-criteria.md` and the test each one names |
-| Build | `compass tdd-red`, then the code, then `compass tdd-green` | the red and green records, and the outer-loop, isolation and layering records where the four-layer strategy (`S17`) applies |
-| Ship | `compass quick-fix finish` or `/compass:ship`, then `compass ship-commit` | the gate evidence, the commit with the issue's record and `trail.md`, and after the merge the ship approval |
+| Assess | `compass quick-fix start`; `/compass:assess` for a spike and `--reassess` | the assessment, the request link, `evidence_required` (the evidence the change owes), the gates and the first scenario |
+| Specify | the session, only where a person approves the scenarios before code | the scenarios in `acceptance-criteria.md`, and the request for the `specify` approval |
+| Build | the session: the tests and the code | no record |
+| Ship | `compass quick-fix finish` | the scenarios and the changed files it reads, the red and green records, the three gates, the request for the ship approval, then the commit with the issue's record and `trail.md` |
 
-- `/compass:go` runs the whole path in one session. It assesses with
-  `compass quick-fix start`, shows `compass approach show`, then follows the
-  `next:` line until `compass check` passes. It stops only where a `next:`
-  line says to wait for a person.
-- `/compass:quick-fix` is its short form, for a change the person already
-  knows is small: start, red, finish.
-- `/compass:assess` holds the light path. The full procedure (steps 1 to 7
-  and the gate) is in `approaches/assess-procedure.md`, for a change that is
-  not small, a spike and `--reassess`.
-- `/compass:ship` passes the gates with evidence and commits;
+- `/compass:go`, `/compass:quick-fix` and `/compass:assess` teach the same
+  two commands. `/compass:assess` also starts a spike and holds `--reassess`
+  (`approaches/assess-procedure.md`).
+- `/compass:ship` covers the commit and the ship approval;
   `/compass:resume` continues an issue from its state on disk.
 
-**Follow the `next:` line.** Every verb that writes a record of a path issue
-ends its text output with `next: <command>`, and `compass next` prints the
-issue's stage and that line at any time:
+**The older record commands** - `compass tdd-red`, `tdd-green`, `scenario
+add`, `changed-file add`, `evidence add` and `gate pass` - still work. A
+project needs them only when its settings add evidence (`require_evidence`
+in `compass.yml`): `finish` then names each added item on a `next:` line.
+`compass tdd-red` is also the only way to record that a test was written
+before the code.
+
+**Follow the `next:` line.** `start` and `finish` end with `next:` or
+`done:`, and `compass next` prints the issue's stage and its `next:` line at
+any time:
 
 ```text
-Build [gate: verify.correctness] | next: compass tdd-red --loop outer --scenario TRC-001 -- <acceptance test command>
+Build [gate: verify.correctness] | next: write the tests and the code, then compass quick-fix finish -m "<commit message>" -- <test command>
 ```
 
-Run the command it names. At ship it names the commit:
-`compass ship-commit --issue <slug> -m "<message>" --release-note "<plain text>"`.
+Do what it says.
 
 A spike runs assess, build (explore) and ship (conclude): `approaches/spike.md`.
 
@@ -62,13 +62,6 @@ and `--apply` writes them (`docs/upgrade-9-0-0.md`). The aliases were removed
 at 7.0.0, so an old command spelling exits 2; `docs/upgrade-7-0-0.md` lists
 each one beside its new spelling, and `compass --help` lists the verbs now.
 
-**The binding decides the filename.** `compass tdd-red --scenario <id>` and
-`compass tdd-green --scenario <id>` write `evidence/red-<id>.json` and
-`evidence/green-<id>.json`; a run with no `--scenario` writes
-`evidence/red.json` and `evidence/green.json`. With `--loop outer` the name
-ends `.outer.json`, so an inner-loop record does not replace it (ADR-082).
-One scenario's record cannot overwrite another's.
-
 ## The request link and the ship approval
 
 - **The request link.** Assess records what asked for the change and who
@@ -76,33 +69,30 @@ One scenario's record cannot overwrite another's.
   Without them the check `request-recorded` fails; `compass next` names the
   command that records them.
 - **The ship approval.** One person approves each change, and the agent
-  cannot give it. After the merge, `compass issue link set --pr <n>` reads it
-  from an approving review by a person who is not the author. With no such
-  review, run `compass evidence request --ship` and stop for
-  `/compass:approve`. No landing waits for it.
+  cannot give it. `finish` writes the request and the person types
+  `/compass:approve <n>`. Or, after the merge, `compass issue link set --pr
+  <n>` reads it from an approving review by a person who is not the author.
 
-## Which skill, per stage
+## Which skill helps
 
-This session runs every stage; Compass starts no stage agent (ADR-090).
+This session runs every stage; Compass starts no stage agent (ADR-090). A
+change needs no skill. Load one when it helps:
 
-- **Assess** - load the `adaptive-routing` skill.
-- **Specify** - load `atdd`. Every change uses its scenarios part. On
-  `brownfield-unmapped` code, do its behavior mapping part first. When the
-  change needs a design a reviewer can argue with, load `governance-check`
-  (how to write the design down and check it against the check set).
-- **Build** - load `tdd-discipline`; build the units in turn.
-- **Ship** - load `evidence-gates`, and `receiving-code-review` when
-  answering a review's comments.
-- **A change to behavior a real client can observe** - the four-layer part of
-  `atdd`: stage 1 at specify, stage 2 at build and stage 3 at ship. Each ends
-  at that stage's checkpoint, whose request lists its review questions. No
-  stage or gate moves. Not for a refactor.
-- **An unexpected test failure while building** - load `systematic-debugging`,
-  and after three failed fixes re-assess rather than try a fourth.
-- **A brief or an idea with no acceptance criteria yet** - load
-  `intent-interview`, which draws the intent out before any scenario.
-- `evidence-gates` carries `traceability.md`, read whenever an artifact is
-  written.
+- `adaptive-routing` - rating risk, familiarity and size for a spike or a
+  re-assessment.
+- `atdd` - scenarios and acceptance tests for behavior a real client can
+  observe. It is guidance: no check of it runs unless the project's settings
+  add one.
+- `tdd-discipline` - writing the test first, and a change with no natural
+  failing test.
+- `evidence-gates` - what counts as evidence, when the project's settings
+  add a review.
+- `governance-check` - a change that needs a design a reviewer can argue
+  with.
+- `receiving-code-review` - answering a review's comments.
+- `systematic-debugging` - an unexpected test failure. After three failed
+  fixes re-assess rather than try a fourth.
+- `intent-interview` - a brief or an idea with no acceptance criteria yet.
 
 No session edits `manifest.yml` by hand: a `compass` verb writes it.
 
@@ -143,21 +133,16 @@ In `docs/compass/<created>-<issue-slug>/`, `<created>` is the manifest's
 them (ADR-091).
 
 **The record mode** decides whether the issue's record ships with the code
-(ADR-096, `docs/delivery-record.md`). By default it is committed:
-`compass ship-commit` stages the issue folder and its documents folder with
-the code. It is kept out when `compass.yml` says so, when git ignores the
-folder or outside git; then `compass record sync` can copy it elsewhere.
-Never stage `.compass/` yourself. `compass record commit` commits the fields
-the merge adds, and the `next:` line names it.
+(ADR-096, `docs/delivery-record.md`). By default it is committed: the commit
+that `finish` or `compass ship-commit` makes holds the issue folder and its
+documents folder with the code. It is kept out when `compass.yml` says so,
+when git ignores the folder or outside git; then `compass record sync` can
+copy it elsewhere. Never stage `.compass/` yourself. `compass record commit`
+commits the fields the merge adds, and the `next:` line names it.
 
-**The release line.** A change that ships owes the manifest's `release_note`,
-given with `--release-note "<text written for a user>"`. A landing without
-one is refused (`docs/release-line.md`).
-
-**The scenario freeze.** The first `compass tdd-red` writes the manifest's
-`scenario_freeze` (the spec's digest and the scenario ids). Where the issue
-owes `scenario-approval`, the red is refused until a person answers at
-specify (`docs/checkpoints.md`).
+**The release line.** A change that ships owes the manifest's `release_note`.
+`finish` takes it from `--release-note "<text written for a user>"`, or from
+the first line of the commit message (`docs/release-line.md`).
 
 **A waiver** excuses one check on one issue: `compass waiver add --check <id>
 --reason "..."`, then `compass evidence request --waiver W-<n>`, and stop. Only

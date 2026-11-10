@@ -29,8 +29,7 @@ quality in.
 - **Cherry-picked output** - pasting the one green line and not the summary that
   shows three skips.
 - **Stale evidence** - output from a run before the last change.
-- **The judgment-free pass** - Reviewer signing off without the Verifier's
-  artifacts, on the change "looking fine."
+- **The judgment-free pass** - passing a gate with no record, on the change
+  "looking fine."
 - **Deadline as a dimension** - letting "we need to ship" stand in for a real
-  check. The hotfix setting adds evidence (`reproduce-first`); it never
-  removes a gate.
+  check. Urgency never removes a gate.

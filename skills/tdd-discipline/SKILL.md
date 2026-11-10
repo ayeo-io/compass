@@ -1,29 +1,22 @@
 ---
 name: tdd-discipline
-description: The red-green-refactor cycle, and what to do with no natural failing test. Load at build.
+description: The red-green-refactor cycle, and what to do with no natural failing test. Load when you write a test first.
 ---
 
 # TDD Discipline
 
-**TDD is a strategy, not a guardrail** - and keeping that relationship
-straight is the whole point.
+**TDD is a strategy, not a guardrail.**
 
-- **The guardrail is tested-before-ship** - hard, checkable, universal. No
-  code reaches `main` without a passing automated test it traces to. It is
-  checked at build and at ship, with evidence. It never adapts and it
-  has no exception.
-- **TDD is the strategy** - red-before-green, the strong, shipped-on
-  default way to satisfy that guardrail on every delivery issue. But it
-  is a strategy, which means it has exactly one suspension: a **spike**
-  turns it off (see below). The *outcome* (the tested change) is
-  non-negotiable; the *ritual* (red-first) is the default method,
-  suspendable in one defined place.
-
-This is the distinction that keeps Compass from applying full process to
-every change: a one-character typo fix still goes red first; what the
-assessment adapts is how much
-*surface* the tests cover, and on a spike, whether the ritual runs at all.
-What no assessment adapts is the outcome.
+- **The guardrail is tested-before-ship.** Every change lands with a test
+  that fails without it. `compass quick-fix finish` checks it: the change's
+  tests must fail on a copy of the base commit and pass on the working tree.
+  It never adapts.
+- **TDD is the strategy** - red-before-green, the default way to meet that
+  guardrail. Compass does not check the order of the work: the red that
+  `finish` records shows that the tests fail without the change, not that
+  they were written first. `compass tdd-red -- <test command>`, run before
+  the code, is the only way to record that. The strategy has one
+  suspension: a **spike** turns it off (see below).
 
 ## Approach-awareness: suspended on a spike
 
@@ -40,11 +33,6 @@ usually rewritten under TDD, sometimes kept and tested afterwards. The strategy
 is suspended; the guardrail is only *deferred to graduation*, never
 skipped.
 
-On every delivery issue - the four-stage path, whatever evidence it owes -
-the TDD strategy applies. Red comes first. It is on the lightest change, and
-it is on the hotfix under time pressure, where the reproduction's red comes
-before anything else (`reproduce-first`).
-
 ## The cycle
 
 **Red → Green → Refactor**, one scenario at a time.
@@ -52,13 +40,7 @@ before anything else (`reproduce-first`).
 1. **Red.** Write a test for the next behavior and watch it fail *for the
    right reason*. A test that fails because of a typo is not a red - it has
    not yet described the behavior. The failure message should read like the
-   absence of the feature. One case is still a red although pytest cannot
-   collect the test: the test imports a module of this project that is not
-   written yet. `compass tdd-red` records it as an **import red** when the
-   module's top-level package already exists as a Python package within
-   three levels of the project root. For a new top-level package, create its
-   directory first. Any other collection error is refused, and so is a run
-   in which pytest's report shows no failed test, whatever its exit code.
+   absence of the feature.
 2. **Green.** Write the smallest correct code that makes the test pass. Not the
    most elegant, not the most general - the smallest *correct*. Generality is
    earned in refactor, under a green suite.
@@ -81,33 +63,18 @@ the step was too big.
   skill spells it out: scenario, DSL, driver, unit tests. The scenario runs
   through the DSL and a driver as the outer loop; the code behind the driver
   is built here, one unit test at a time.
-- Build adds no scenario the specification does not state. Specify settles
-  each implied failure mode with the person or descopes it, so a case you
-  think is missing goes back to the person, not into the suite.
 - One red at a time. A wall of failing tests written up front is not TDD; it is
   a test plan. Take them one behavior at a time so each green is a real,
   isolated step.
 
-## Working under the pre-tool hook
+## The pre-tool hook
 
-`hooks/pre-tool.sh` enforces the red-before-green strategy mechanically: it will
-**block a code edit that has no corresponding failing test.** It is the TDD
-strategy enforced by a hook, in service of the guardrail. It is also
-**approach-aware**: it reads a `.compass/work/<task>/.spike` marker file
-and does **not** block on a spike, because the TDD strategy is suspended
-there.
-
-- If the hook blocks you on delivery work, the correct response is to go
-  write the failing test, not to find a path past the hook.
-- Disabling, bypassing, or tricking the hook where it applies is breaking
-  the TDD strategy - and on delivery work that is how the guardrail gets
-  quietly broken. There is no deadline and no convenience that licenses
-  it.
-- The hook checks for a *failing* test, so the natural workflow already
-  satisfies it: write the red, see it fail, then edit the code.
-- On a spike the hook is silent by design - that is the strategy being
-  suspended, not the hook being bypassed. The safety comes from the fact
-  that nothing ships from a spike, not from the hook.
+On a delivery issue `hooks/pre-tool.sh` needs no failing test before a code
+edit, because `finish` proves the red. It refuses a code edit while the
+scenarios wait for a person's approval (`code-before-approval`). The
+response is to ask for the approval, not to find a path past the hook. It
+reads a `.compass/work/<task>/.spike` marker file and does **not** block on
+a spike, because the TDD strategy is suspended there.
 
 ## When the change has no natural red
 

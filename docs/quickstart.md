@@ -85,15 +85,16 @@ Either way, what you have installed is three layers:
 `docs/methodology.md` §11 and `docs/portability.md` describe the layers in
 full; you do not need them to continue.
 
-Know this before you start: the `pre-tool.sh` hook enforces the red-before-green
-TDD strategy. In a project that uses Compass (it has a `.compass/` folder,
+Know this before you start: the `pre-tool.sh` hook guards code edits. In a
+project that uses Compass (it has a `.compass/` folder,
 which the first Compass command creates), the hook refuses an Edit or Write
-to a recognized code file when no failing test is on record for the current
-issue - exit code 2, edit denied. It detects writes made through the shell in
-common forms only ([safety contract](safety-contract.md#shell-write-detection-is-best-effort)). That is not a bug to work around; it is
-the TDD strategy, enforced by the hook, serving the tested-before-ship
-guardrail (tested before it lands). On a **spike** the TDD strategy is
-suspended and the hook does not block. The
+to a recognized code file when the current issue has no scenario, or when
+its scenarios wait for a person's approval - exit code 2, edit denied. On an
+issue assessed before 9.0.0 it also refuses the edit when no failing test is
+on record. It detects writes made through the shell in
+common forms only ([safety contract](safety-contract.md#shell-write-detection-is-best-effort)). That is not a bug to work around; it serves
+the guardrail that acceptance criteria exist before the code. On a **spike**
+the hook does not block. The
 rest of this document is, in part, how to work with the hook rather than
 against it.
 
@@ -148,8 +149,9 @@ delivery issue runs the same four stages, in order: **assess**, **specify**,
 /compass:go "Add rate limiting to the public API"
 ```
 
-`/compass:assess` does the assessment alone, and the `next:` lines take you
-from there. Either way the session follows the same steps.
+The session runs two `compass` commands: `compass quick-fix start` opens the
+issue, and `compass quick-fix finish` writes its record (ADR-099). The
+`next:` line of each says what comes next.
 
 ### Assess
 
@@ -181,41 +183,41 @@ issue is active.
 
 Then the CLI computes the rest. It applies the project's policy (the fixed
 check set, with the tighten-only settings of `compass.yml`) to the
-assessment, picks the first evidence row
-that matches and adds what the risk and labels add. It writes
+assessment. Every delivery issue owes the same evidence row, and a `G5`
+label, critical risk or a `require_evidence` rule of the project adds to it.
+It writes
 `delivery_approach: delivery`, `evidence_required` (the evidence the change
 owes before it ships) and the `gates` derived from it into `manifest.yml`.
-For this issue that is **the standard evidence row, which owes the
-regression, security and clarity reviews and the Definition of Done, with the
-architecture review added because risk is cross-cutting**. The session shows
-you the three lines of `compass approach show` before it edits any file:
+For this issue that is **the common evidence row and nothing more**: the
+risk, the size and the label `public-api` add no review and no record. The
+session shows you the three lines of `compass approach show` before it edits
+any file:
 
 ```text
 Approach: delivery (risk cross-cutting, familiarity brownfield-mapped, size medium) - does not stop to wait for you
-Evidence: request, scenarios, red-before-green, suite-green, correctness, governance, traceability, regression, security, clarity, architecture, outer-loop, isolation, layering, definition-of-done, ship-approval
-Writes: .compass/work/add-rate-limiting/ and docs/compass/2026-11-07-add-rate-limiting/
+Evidence: request, scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
+Writes: .compass/work/add-rate-limiting/ and docs/compass/2026-11-10-add-rate-limiting/
 ```
 
 The same assessment and resolved configuration give this exact evidence on
 any machine with the same Compass version - it is no longer something an
 agent decides without a written record
 ([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
-`outer-loop`, `isolation` and `layering` are owed by the four-layer
-acceptance strategy (`S17`), because the change is behavior a real client can
-observe.
+The four-layer acceptance strategy (`S17`) is guidance here: its records are
+owed only where a `require_evidence` rule adds them.
 
 The session waits for you only at the checkpoints the project's `autonomy`
 setting lists, and the first line of `compass approach show` says whether it
 does. The default is `balanced`: under `balanced` a delivery issue goes on
 and does not wait, unless its scenarios owe a person's approval (a `G5` label,
 such as `payments`, or critical risk), and then it waits at specify:
-`compass tdd-red` refuses until a person answers. The same
+the pre-tool hook refuses a code edit until a person answers. The same
 holds under `autonomous`. A stricter project can set `controlled`: under
 `controlled` it waits at assess and specify, and also at build and ship where
 the four-layer acceptance strategy applies. Read the three lines. If an
-assessment value is wrong, correct it with `/compass:assess --reassess
---reason "..."`, which recomputes the evidence and logs the change in the
-manifest's `reassessments:` list.
+assessment value is wrong, correct it with `compass approach evaluate
+--write --reason "..."` and the new `--assessment` values, which recomputes
+the evidence and logs the change in the manifest's `reassessments:` list.
 
 ### Specify
 
@@ -224,12 +226,9 @@ the Given/When/Then scenarios for the rate limiter: the happy path (a client
 under the limit is served), the realistic edge cases (a client at exactly the
 limit; the limit window resetting) and the failure modes that matter (a
 client over the limit gets a 429 response, not a dropped connection). Each
-scenario has a traceability id, links to an intent and declares the test that
-checks it:
-
-```
-compass scenario add TRC-002 --intent INT-1 --test tests/test_limiter.py::test_at_limit
-```
+scenario is a `### Scenario:` heading with a traceability id on the line
+below it, such as `<!-- traceability id: TRC-002 · serves: INT-1 -->`, and
+`compass quick-fix finish` reads each one from the file.
 
 The session also asks which input classes and failure modes the intent
 implies that no scenario covers. Each one becomes a scenario, or is recorded
@@ -247,73 +246,69 @@ a decision record beside the code, not in a Compass document.
 
 ### Build
 
-This is where the hook matters. The session works one scenario at a time,
-and runs the cycle through the CLI:
+The session writes the tests and the code, and runs the tests directly. No
+`compass` command comes between `start` and `finish`:
 
-1. **Red.** Write the failing test for the scenario. Then run
-   `compass tdd-red --scenario TRC-001 -- <test cmd>`: the CLI runs the test,
-   *asserts it actually fails*, writes the red record, and only then writes
-   the `.red` marker. If the test passes, `tdd-red` refuses - there is no red
-   to record. The CLI writes the marker only after a real failure, but a file
-   can be created by hand, so the hook also reads the red record and refuses
-   the edit when it is missing.
-2. **Green.** Now edit the production code. The `pre-tool.sh` hook sees the
-   `.red` marker and the red record, and allows the edit. Write the smallest
-   correct change, then run `compass tdd-green --scenario TRC-001 -- <test cmd>`:
-   the CLI asserts the test now passes, writes the green record, and clears
-   the `.red` marker.
-
-   **Where the record lands.** The binding decides the filename. Recorded
-   `--scenario TRC-x`, the run writes `evidence/green-TRC-x.json`; with no
-   binding it writes `evidence/green.json`. With `--loop outer` the file name
-   ends in `.outer.json` instead of `.json`. Only that one file is written, so
-   recording one scenario never overwrites a record another gate is citing,
-   and an inner-loop record never replaces an outer-loop one.
+1. **Tests.** Write a test for each scenario. It must fail without the
+   change: `finish` checks that.
+2. **Code.** Write the smallest correct change. The pre-tool hook does not
+   need a failing run on record first. It refuses a code edit only while the
+   issue has no scenario, or while its scenarios wait for a person's
+   approval.
 3. **Refactor** under a green suite.
 
-Where the four-layer acceptance strategy applies, the acceptance test runs
-as the outer loop: `compass tdd-red --loop outer` first, and
-`compass tdd-green --loop outer --candidate <build id>|local --client api|web|cli`
-last, so the green says what it ran against and through. The isolation proof
-(`compass isolation record`) and the layering record
-(`compass layering record`) follow, where they are owed.
-
-If you skip red, the hook blocks you with a message telling you exactly what to
-do. The fix is always the same: go write the test, then `compass tdd-red`.
+`compass tdd-red` and `compass tdd-green` still work, and a project that
+wants a record of the order of the work runs them: a red recorded with
+`compass tdd-red` is the only proof that a test was written before the code.
+Where a `require_evidence` rule adds the records of the four-layer
+acceptance strategy, `finish` names the command for each one.
 
 ### Ship
 
 ```
-/compass:ship
+compass quick-fix finish -m "Add rate limiting to the public API (#42)" -- python3 -m pytest -q
 ```
 
-Ship passes the gates with evidence. The session runs the suites and the
-review in this session and pastes the actual command output - "the tests
-pass" is the run, not the sentence. It applies the review dimensions the
-evidence list names: `correctness`, `governance` and `traceability` on every
-issue; `regression`, `security` and `clarity` on the standard row; and
-`architecture` because risk is cross-cutting. Each one passes its gate with
-evidence attached, and that evidence is **typed** - a `{type, path}` record,
-such as `test-run`, `command-output`, `human-approval` or `artifact`, and
-the check set says which types each gate accepts, so a mechanical gate
-cannot be cleared with a written note.
+`finish` writes the whole record in one call:
 
-`compass quick-fix finish` runs the suite, records it and passes the three
-gates every issue owes. While anything else is owed, it refuses with exit 1
-before it writes anything, and prints one `next:` line for each owed item.
-`compass check` runs the checks of the issue's policy against
-`manifest.yml` and `evidence/` - every scenario lists a test, the recorded
-suite passed, every changed file traces to a scenario, every `pass` gate has
-resolving evidence. Under the default `adoption: enforced`, the issue does
-not close while anything fails.
+- It reads the scenarios from `acceptance-criteria.md` and the changed files
+  from git.
+- It runs the test command on a copy of the commit the issue started from,
+  with the test files of the change laid over it. The run must fail. Then it
+  runs the command on the working tree, where it must pass. The red record
+  says `proved_on: base-copy`: it shows that the tests fail without the
+  change, not the order of the work (`docs/base-copy.md` in the repository).
+- It runs `compass check` and passes the three gates every issue owes:
+  `verify.correctness`, `verify.governance` and `verify.traceability`. The
+  evidence of each gate is **typed** - a `{type, path}` record, such as
+  `test-run` or `command-output`, and the check set says which types each
+  gate accepts, so a mechanical gate cannot be cleared with a written note.
+- It writes the request for your approval and stops:
 
-The session commits only when you ask. Until then it passes `--no-commit`,
-and the last line names the traced files to stage. Then
-`compass ship-commit --issue add-rate-limiting -m "<message>" --release-note "<release line>"`
-commits on the current branch and closes the issue. By default the same
-commit holds the issue's record: `ship-commit` stages
-`.compass/work/add-rate-limiting/` and the documents folder itself, and
-writes `trail.md` there first. `trail.md` says who asked, what was agreed,
+```text
+compass quick-fix finish: 'add-rate-limiting' checked. Nothing is committed.
+  red      : the tests fail on the base commit 36308154 (exit 1), with 1 test file(s) of the change
+  green    : the tests pass on the working tree
+  scenarios: TRC-001, TRC-002 (1 read from the acceptance criteria)
+  files    : 3 traced from git
+next: stop and ask the person to type /compass:approve 1 (the ship approval). Nothing else to run until then. After the approval, run the same finish again: it commits.
+```
+
+Where a `require_evidence` rule of the project adds evidence, `finish`
+writes its own record, prints one `next:` line for each added item, commits
+nothing and exits 1. `compass check` runs the checks of the issue's policy
+against `manifest.yml` and `evidence/` - the recorded suite passed, every
+changed file traces to a scenario, every `pass` gate has resolving evidence.
+Under the default `adoption: enforced`, `finish` does not commit while
+anything fails.
+
+You type `/compass:approve 1`. The session runs the same `finish` again, and
+it commits the code and the issue's record. When the checkout is on the
+default branch, the commit goes on a new branch named after the issue. With
+`--no-commit`, `finish` leaves the commit to
+`compass ship-commit --issue add-rate-limiting`. By default the same
+commit holds the issue's record: `.compass/work/add-rate-limiting/` and the
+documents folder, with `trail.md`. `trail.md` says who asked, what was agreed,
 the red and green of each scenario, who approved and what shipped, with a
 `sha256sum` line for each file it names, so a reviewer checks it from the
 repository root without Compass:
@@ -322,19 +317,21 @@ repository root without Compass:
 grep -E '^[0-9a-f]{64}  ' .compass/work/add-rate-limiting/trail.md | sha256sum -c -
 ```
 
+The approval covers the change you saw. When the code or the tests change
+afterwards, one more `finish` proves the red and the green again, commits,
+and writes a new request. `compass check` fails the `ship-approval-present`
+row until you approve the new state.
+
 A project whose `compass.yml` sets
 `record.commit: false`, or names a `record.remote` and does not set
 `record.commit`, keeps the record out of the commit. `docs/delivery-record.md` in the
 repository describes both modes.
 
-Every delivery issue also owes `ship-approval`: one person's approval of the
-change at ship (ADR-095). It does not hold up the commit. After the pull
-request merges, `compass issue link set --pr <n> --issue add-rate-limiting`
+The approval (`ship-approval`, ADR-095) is also read from the pull request.
+After the pull request merges,
+`compass issue link set --pr <n> --issue add-rate-limiting`
 reads its reviews with `gh` and records a review that approves it, by a
-person who is not its author, as a `pr-approval` record. With no such review,
-or no GitHub, the session asks with `compass evidence request --ship` and
-stops, and you type `/compass:approve`. `compass check` fails the
-`ship-approval-present` row only when the pull request merged with neither.
+person who is not its author, as a `pr-approval` record.
 An agent cannot approve the pull request for you: the pre-tool hook refuses
 `gh pr review --approve`. When the record ships with the code, the merge
 fields come after the landing commit: `compass record commit --issue
@@ -426,7 +423,7 @@ Claude Code passes in `COLUMNS`, and assumes 80 columns when it is not set.
 passed, and the one command to run next.
 
 ```text
-Build [gate: verify.correctness] | next: compass tdd-red --scenario TRC-001 -- <test command>
+Build [gate: verify.correctness] | next: write the tests and the code, then compass quick-fix finish -m "<commit message>" -- <test command>
 ```
 
 The stage is a stage of the path (ADR-092): assess, specify, build or
@@ -447,35 +444,26 @@ matches (`cli/compass_pkg/next_step.py`):
 | The records show | `next:` |
 |---|---|
 | `request` owed, the link or the requester not recorded | `compass issue link set --issue <slug> --request <url> --requester <name>` |
-| no scenario | `compass scenario add TRC-001 --intent <intent id> --test <path::name>` |
-| a scenario with no test | `compass scenario tests set <id> --test <path::name>` |
-| a path issue's spec fails `nfr-rows-resolved` | fill the Non-functional requirements rows of the spec named |
-| `scenario-approval` owed, no outcome | `compass evidence request --checkpoint specify`, then stop for `/compass:approve` |
-| `S17` applies, no outer-loop red | `compass tdd-red --loop outer --scenario <id> -- <acceptance test command>`; where `layering` is owed, write the layering test and `git add` it first |
-| a scenario with no red | `compass tdd-red --scenario <id> -- <test command>` |
-| `S17` applies, no outer-loop green | `compass tdd-green --loop outer --scenario <id> --candidate <build id>\|local --client api\|web\|cli -- <acceptance test command>` |
-| a red with no green | `compass tdd-green --scenario <id> -- <test command>` |
-| `isolation` owed | `compass isolation record --candidate <the green's> --client <the green's> --parallel "..." --repeat "... {tests}"` |
-| `layering` owed | `compass layering record --test-path <path> -- <layering test command>` |
-| a Definition of Done item open | `compass evidence add <EV-id> --type <type> --path <path> --meets <item>` |
-| a gate not passed (on a path issue, not one of the three immovable gates) | `compass gate pass <gate> --evidence <EV-id>` |
-| `human-approval` owed | `compass evidence request --check human-approval-present` |
-| a listed checkpoint with no outcome | `compass evidence request --checkpoint <stage>`, then stop for `/compass:approve` |
-| a path issue with only the three immovable gates pending | `compass quick-fix finish -m "<commit message>" --no-commit -- <test command>` |
-| every gate passes | `compass check`, then `git add -- <the traced files>`, then `compass ship-commit --issue <slug> -m "<message>"`, with `--release-note "<release line>"` when the issue owes a release line and holds none. This is the command the `commit :` line of `compass quick-fix finish --no-commit` names. Without `--issue` the commit holds only the staged code: no record lands and the issue is not marked done. When the record is committed with the code, the line leaves out the traced files under the issue folder and the documents folder, because `compass ship-commit` stages them |
+| `scenario-approval` owed, no outcome and no request | write the scenarios in acceptance-criteria.md, then `compass evidence request --checkpoint specify`, then stop for `/compass:approve` |
+| `scenario-approval` owed, a request pending | stop: the scenarios wait for the person's approval. Ask them to type `/compass:approve <n>` |
+| a gate not passed, or no green | write the tests and the code, then `compass quick-fix finish -m "<commit message>" -- <test command>` |
+| a request for the ship approval or the `G5` sign-off pending | stop and ask the person to type `/compass:approve <n>`. After the approval, run the same `finish` again: it commits |
+| the same, after a change that differs from the one approved | stop and ask the person to type `/compass:approve <n>`. Nothing else to run now |
+| `human-approval` owed, none on record and no request | `compass quick-fix finish -m "<commit message>" -- <test command>`, which asks for the `G5` sign-off |
+| every approval on record, the issue open | `compass quick-fix finish -m "<commit message>" -- <test command>` (it commits), or `compass ship-commit` on the branch the person names |
 | landed, `ship-approval` owed, none on record | `compass issue link set --pr <n> --issue <slug>` after the merge, or `compass evidence request --ship`, then stop for `/compass:approve`; only the second once the merge is recorded |
 | landed with its record committed with the code, and the issue folder holds a change git has not committed (the merge fields `compass issue link set --pr` wrote) | `compass record commit --issue <slug>` |
+
+An issue assessed before 9.0.0 keeps the rows of its older record: a scenario
+with no test, `compass tdd-red` and `compass tdd-green` for each scenario,
+the `S17` records its `acceptance_strategy` block names, each open Definition
+of Done item and each gate not passed.
 
 What a path issue owes comes from its `evidence_required` list. The request
 comes first, so assess records who asked and the link to the request
 (`compass quick-fix start --request <url> --requester <name>` does it in the
 same call). It is not a stop: the check `request-recorded` fails until both are
-recorded, and a waiver a person approves excuses it and ends the row. The
-requirement rows and the layering test come before the red because the spec
-and the staged test files are part of the tree the outer-loop green, the
-isolation proof and the layering record are bound to;
-`compass quick-fix start` fills them with a reason only for a change that owes
-no Definition of Done. An issue
+recorded, and a waiver a person approves excuses it and ends the row. An issue
 assessed before the path owes the `S17` records its `acceptance_strategy` block
 names, and the Definition of Done when its verify stage is `thorough`. A spike
 first names `compass evidence add EV-SPIKE --type spike-conclusion`, then
@@ -490,11 +478,10 @@ output with the same line, `next: <command>`: `compass scenario add`,
 `evidence add`, `changed-file add`, `isolation record`, `layering record`,
 `evidence approve` and `quick-fix start` and `finish`. `--json` and `--quiet`
 output do not change, and an issue assessed before the path prints no such
-line. `compass quick-fix finish` on a path issue refuses with exit 1, before it
-writes anything, while the issue owes anything but the three immovable gates
-and the green it records, and prints one `next:` line for each owed item. With
-`--no-commit` it leaves the change unstaged, so its last line names the traced
-files to stage before `compass ship-commit`. Every new assessment is a path
+line. While a path issue owes evidence that a `require_evidence` rule added,
+`compass quick-fix finish` writes its own record, prints one `next:` line for
+each added item, commits nothing and exits 1. With
+`--no-commit` it leaves the commit to `compass ship-commit`. Every new assessment is a path
 issue (`governance/routing-policy.md`, "The path writer").
 
 ## See the path in your terminal
@@ -506,8 +493,8 @@ rail, with the current stage marked:
 delivery · fix-retry-header
 Assess ✓ → Specify ✓ → Build ● → Ship ○
 
-Build [gate: verify.correctness] | next: compass tdd-red --loop outer --scenario
-TRC-001 -- <acceptance test command>
+Build [gate: verify.correctness] | next: write the tests and the code, then
+compass quick-fix finish -m "<commit message>" -- <test command>
 ```
 
 Piped output, and any run inside Claude Code, keeps the plain one-line form.

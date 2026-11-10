@@ -64,8 +64,8 @@ compass evidence request   ask a person for an approval; the request names the f
 compass evidence approve   record a person's approval of a human check, the sign-off on an irreversible change (--guardrail), the decisions agents took (--decisions), a checkpoint hand-off (--checkpoint) or the change at ship (--ship)
 compass evidence review    record a judgment against a judged check
 compass terminology        what a term means here, from the frozen vocabulary
-compass quick-fix start    assess and record a change of any size, with its first scenario, in one call
-compass quick-fix finish   trace, check and gate a change in one call; refuses while other evidence is owed
+compass quick-fix start    open the issue for a change of any size, in one call
+compass quick-fix finish   write the record of the change in one call: the red on a copy of the base commit, the green, the check; commit once a person has approved
 compass decision record    write a settled product decision; the decider comes from git
 compass decision list      each decision's date, slug and outcome, newest first
 compass decision show      print one decision

@@ -27,6 +27,12 @@ has on disk are not an input (ADR-091). The same inputs produce the same approac
 Without `--write` it reads the configuration stored at the last evaluation;
 with `--write`, the current one.
 
+From 9.0.0 every delivery issue owes the same evidence (ADR-099). Risk, size,
+familiarity and urgency add no review and no record. A label of guarantee 5,
+a label in the project's `signoff_labels` and critical risk add a person's
+approval, and a project's `require_evidence` setting adds the evidence it
+names.
+
 ### 2. A declared guardrail cannot silently become advice
 
 Every declared guardrail must map to an implemented CLI check. Policy linting
@@ -42,8 +48,24 @@ Compass will not clear a required mechanical gate with narrative assurance.
 Evidence is registered by id and type, and each gate declares which evidence
 types it accepts.
 
+From 9.0.0 Compass writes the evidence of a delivery issue itself (ADR-099).
+`compass quick-fix finish` reads the scenarios from the acceptance criteria
+and the changed files from git, runs the tests and writes the red and green
+records, and passes the three gates every issue has (`verify.correctness`,
+`verify.governance` and `verify.traceability`) from those records and the
+output of `compass check`. The session writes no evidence by hand.
+
+In a record that `finish` made, red before green means that the tests fail
+without the change. `finish` runs the test command on a copy of the commit
+the issue started from, with the test files of the change laid over it, and
+the command must fail there. It then runs the command on the working tree,
+where it must pass. The red record says `proved_on: base-copy` and names the
+base commit (`docs/base-copy.md`). The limits are under "What the record of
+a 9.0.0 issue does not claim" below.
+
 Follow-ups are recorded explicitly. On a path issue each one links to the
-GitHub issue that tracks the work, and an open Definition of Done item is met
+GitHub issue that tracks the work, and an open Definition of Done item, where
+a project's settings make the issue owe the Definition of Done, is met
 only by such a follow-up. On an issue assessed before 9.0.0 each one must be
 resolved before Compass completes the shipping workflow.
 
@@ -67,13 +89,32 @@ Human approvals are needed for an issue labeled:
 
 The evidence records the approver, role, decision, time, scope and conditions.
 
-From 7.0.0, critical risk on its own does not need an approval. Critical-risk
-code that carries none of the four labels can be reverted at merge, and CI,
-review and the other guardrails still gate it. Assess names the four labels
-when risk is critical and none is set. A project adds labels to the trigger
-with the tighten-only setting `signoff_labels` in its `compass.yml`, and no
-setting can loosen the trigger (ADR-094).
+From 7.0.0, critical risk on its own does not need this sign-off.
+Critical-risk code that carries none of the four labels can be reverted at
+merge, and CI, review and the other guardrails still gate it. A project adds
+labels to the trigger with the tighten-only setting `signoff_labels` in its
+`compass.yml`, and no setting can loosen the trigger (ADR-094).
 An issue assessed before 7.0.0 keeps the trigger stored with it.
+
+From 9.0.0 a person also approves the scenarios before any code edit
+(ADR-099). This holds for an issue with one of the four labels, with a label
+in `signoff_labels`, or with critical risk. The session writes the scenarios
+in the acceptance criteria, asks with `compass evidence request --checkpoint
+specify` and stops. Until a person has answered, the pre-tool hook refuses a
+code edit with the code `code-before-approval`, and `compass quick-fix
+finish` refuses to write the record.
+
+An approval covers the change the person saw (ADR-099). `compass quick-fix
+finish` writes a digest of the code and test files of the change in the
+manifest (`change_sha256`). The request for the sign-off or the ship approval
+holds that digest, and so does the approval record. When the code or the
+tests change afterwards, the next `finish` writes a new request, and `compass
+check` fails `human-approval-present` and `ship-approval-present` until a
+person approves the new state. The earlier record stays on record and no
+longer counts. The ship approval can also be read from the approving review
+of the merged pull request, which is given after the change stopped moving.
+An approval record with no digest, and an issue whose record was not written
+by `finish`, are not compared with the change.
 
 Only a `human-approval` record given for guardrail `G5` meets this approval. A
 record that names another subject - a `check`, `waiver`, `checkpoint`,
@@ -736,8 +777,11 @@ Teams must keep their normal CI controls.
 `compass quick-fix start` records which files were already changed or
 untracked, and which directories held no tracked file. It keeps that
 record inside the git directory, where nothing is committed. `compass
-quick-fix finish` refuses any of those files the agent did not trace, and
-lists the files it commits. It does not guard three cases:
+quick-fix finish` reads the change from git: each path that differs from the
+commit the issue started from, and each untracked path git does not ignore.
+It leaves out a path that was already changed or untracked at `start`, and
+names it on a `left out :` line. The files a test run leaves, such as
+`.coverage`, are never part of the change. It does not guard three cases:
 
 - a file created after `start` is taken as the change's, whoever made it;
 - the start record is not checked for tampering: an edited record changes
@@ -745,18 +789,16 @@ lists the files it commits. It does not guard three cases:
 - an issue with no start record, such as one begun before `start` wrote
   one, commits a tracked file changed before the fix began.
 
-Two more cases follow from how `finish` decides. A test the scenario
-declares is committed even if it changed before `start`, because the
-scenario names it. And an issue started before the record moved into the
-git directory kept a digest record beside its manifest, which is
-committed with the issue's records.
+One more case follows from how `finish` decides. A path traced by hand with
+`compass changed-file add` is part of the change even if it changed before
+`start`.
 
 9.0.0 derives no living spec and writes no project index (ADR-091), so
 `finish` traces a change to the living spec like any other file, and
 `ship-commit` refuses a staged project index, the `README.md` of the
 `docs/compass/` folder, as out of scope.
 
-Read the file list `finish` prints before you push.
+Read the `committed:` and `left out :` lines `finish` prints before you push.
 
 ### Compass enforces nothing in a project that has not opted in
 
@@ -819,8 +861,10 @@ step, as a Python failure there does.
 
 ### The red marker is checked against its record, and a record can still be written by hand
 
-The pre-tool hook refuses a code edit unless a failing test is on record for
-the issue. The hook reads the red record beside the marker -
+On an issue assessed before 9.0.0, the pre-tool hook refuses a code edit
+unless a failing test is on record for the issue. A 9.0.0 delivery issue
+needs no failing test before a code edit, because `compass quick-fix finish`
+proves the red itself (ADR-099). The hook reads the red record beside the marker -
 `evidence/red*.json` - and checks its `content_digest`; an empty marker
 unlocks nothing.
 
@@ -855,7 +899,10 @@ scenarios and its manifest has none.
 
 - On a path issue (one whose manifest records `evidence_required`, ADR-092)
   every issue owes scenarios, so the hook refuses the edit with
-  `no-scenario`, which names `compass scenario add`.
+  `no-scenario`, which names `compass scenario add`. `compass quick-fix
+  start` writes the first scenario, so an issue it opened has one. Where the
+  scenarios owe a person's approval (guarantee 5), the hook refuses the edit
+  with `code-before-approval` until a person has given it.
 - On an issue assessed before 9.0.0 the rule is unchanged: only `define:
   thorough` owes scenarios before code, and the refusal is
   `no-acceptance-criteria`. A hotfix and a spike are exempt by their modes.
@@ -865,8 +912,8 @@ The hook counts the manifest's `scenarios:` entries and reads nothing else. It
 does not check that a scenario has an intent or a test, or that it describes the
 change; `compass check` judges those (`G2` and `G3`). This check does not
 refuse an edit when the manifest cannot be read: a false refusal on unreadable
-state teaches people to bypass the hook. The red check that runs after it
-still applies.
+state teaches people to bypass the hook. On an issue assessed before 9.0.0
+the red check that runs after it still applies.
 
 ### A dependency between issues is read from this checkout, and a fault never blocks
 
@@ -939,8 +986,8 @@ other exits are stated here.
 
 ### An Edit that changes only comments of Python or YAML needs no failing test
 
-The pre-tool hook refuses an Edit of production code unless a failing test is
-on record. A comment cannot change what code does, so an Edit of a `.py`,
+On an issue assessed before 9.0.0, the pre-tool hook refuses an Edit of
+production code unless a failing test is on record. A comment cannot change what code does, so an Edit of a `.py`,
 `.yml` or `.yaml` file that changes only comments, docstrings or layout runs
 with no failing test and no assessed issue. The hook proves this from the file
 on disk and never from the text of the Edit: it reads the file once, applies
@@ -1436,6 +1483,28 @@ check set, so `compass check` and `compass approach show` print no conformance
 line. A waiver excuses one check on one issue and is shown on that check's
 row; the checks of guarantee 5 are never waived.
 
+### What the record of a 9.0.0 issue does not claim
+
+**The order of the work.** A red that `compass quick-fix finish` proved shows
+that the tests fail on the base commit and pass with the change. It does not
+show that a test was written before the code. A red recorded earlier with
+`compass tdd-red` still counts, and is the only proof of that order.
+
+**A review, by default.** A 9.0.0 delivery issue owes no review gate but the
+three every issue has. The regression, security, clarity and architecture
+reviews, the Definition of Done, the reproduction of a live defect before
+anything else, and the records of the four-layer acceptance strategy (`S17`)
+are owed only where a project adds their tokens with `require_evidence`
+(`docs/configuration.md`).
+
+**A trace by scenario.** `finish` traces every changed file to every scenario
+of the issue. A trace of one file to one scenario exists only where the
+session recorded it with `compass changed-file add`.
+
+**A true red, where the base copy has a limit.** A test that needs untracked
+build output fails on the base copy for that reason, and `finish` records
+the failure as the red (`docs/base-copy.md`).
+
 ### Compass is adaptable, not universal
 
 The shipped policies are a starting point. Teams can add strategies and
@@ -1447,9 +1516,9 @@ project guardrails, provided they preserve this contract.
 |---|---|
 | 1 (deterministic routing) | `compass approach evaluate` over assessment and policy |
 | 2 (implemented guardrails) | `compass policy lint` and `compass check` |
-| 3 (typed evidence) | Gate type declarations plus the issue evidence registry |
+| 3 (typed evidence) | Gate type declarations plus the issue evidence registry; `compass quick-fix finish` writes the records |
 | 4 (spike containment) | Routing conflict checks and spike invariants |
-| 5 (human approval) | Structured `human-approval` evidence given for guardrail `G5`, checked before ship |
+| 5 (human approval) | Structured `human-approval` evidence given for guardrail `G5`, checked before ship; the `specify` approval before code; the digest of the change on each approval |
 | 6 (process-integrity CI) | `compass ci` |
 | 7 (resumable state) | the manifest (`templates/manifest.yml`), its artifacts and evidence under `.compass/` |
 

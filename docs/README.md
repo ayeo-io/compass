@@ -7,7 +7,7 @@ the table does not exist, and when a doc in this folder is not listed.
 ## Start here
 
 - [index.md](index.md) - the documentation site's home page, at https://docs.ayeo.io/compass/.
-- [five-minutes.md](five-minutes.md) - one small change from assessment to a reviewable result.
+- [five-minutes.md](five-minutes.md) - one small change from the request to a commit that holds the code and its record, in two commands.
 - [quickstart.md](quickstart.md) - from an empty machine to a finished first issue, and the status line and the rail.
 - [glossary.md](glossary.md) - every word and id prefix Compass uses.
 - [cli.md](cli.md) - the CLI reference: one line per verb, and how the slash commands call them.
@@ -22,6 +22,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - `artifact-catalogue.md` - the old name of the artifact catalog page, kept so a link to it opens the new page.
 - [delivery-record.md](delivery-record.md) - the record mode, `trail.md` and `compass trail`, and `compass record`: the delivery record kept in its own repository.
 - [checkpoints.md](checkpoints.md) - checkpoint outcomes and the `checkpoint-approval` record: their shapes, the two commands that write them, the landing refusal, and where `compass issue diagnose` and the delivery record show them.
+- [base-copy.md](base-copy.md) - the copy of the base commit on which `compass quick-fix finish` shows that the tests fail without the change: what `proved_on: base-copy` means, the limits, and the setting `project.base_copy_links`.
 - [release-line.md](release-line.md) - the release line each shipping issue records: the `release_note` key, the three commands that write it, the texts they refuse, when a landing refuses an issue with none, and where the line is shown.
 - [release-notes.md](release-notes.md) - `compass release notes --since <ref>`: which completed issues it lists against a git reference, the order, the two closing count lines, and what it never writes.
 - [github-links.md](github-links.md) - `compass issue link set`: an issue's link to its GitHub issue and its pull request, how `land_commit` follows the merge, how `gh` is run, and the limits.
@@ -93,6 +94,7 @@ same commit.
 | `cli/compass_pkg/loop_ceilings.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/evidence_required.py`, `cli/compass_pkg/path_writer.py`, `tests/fixtures/compat/v8.0.4-governance.tgz`, `tests/test_path_writer.py`, `tests/test_quick_fix_path.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/record.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/record_mode.py`, `cli/compass_pkg/trail.py`, `cli/compass_pkg/committed_landing.py`, `tests/test_record_mode.py`, `tests/test_ship_commit_commits_the_record.py`, `tests/test_record_commit.py` | `docs/delivery-record.md` |
+| `cli/compass_pkg/lean.py`, `cli/compass_pkg/finish_record.py` | `docs/base-copy.md` |
 | `cli/compass_pkg/checkpoint_outcomes.py` | `docs/checkpoints.md` |
 | `cli/compass_pkg/issue_link.py`, `cli/compass_pkg/github_links.py`, `cli/compass_pkg/pull_request_link.py`, `cli/compass_pkg/landing.py`, `tests/fake_gh.py` | `docs/github-links.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |

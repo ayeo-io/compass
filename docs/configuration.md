@@ -90,7 +90,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 |---|---|---|---|
 | `adoption` (`mode` in `.compass/config.yml`) | Whether a failed check blocks | `enforced`, `advisory` | `enforced` |
 | `autonomy` | How often a session stops for a person | `controlled`, `balanced`, `autonomous` | `balanced` |
-| `project` | The project's name and commands | `name`, `test_command`, `test_micro_command`, `bdd_run_command`; six readiness keys that 9.0.0 no longer reads (see `project` below) | none |
+| `project` | The project's name and commands, and the untracked paths the base copy links | `name`, `test_command`, `test_micro_command`, `bdd_run_command`, `base_copy_links`; six readiness keys that 9.0.0 no longer reads (see `project` below) | none |
 | `enforcement` | Extra paths the pre-tool hook guards | `code_globs`: a list of patterns | none |
 | `record` | Where the delivery record is kept, and whether each issue's record is committed with its code | `remote`, `paths`, `names_key`, `commit` | no record repository; the record is committed |
 | `prices` | Removed in 9.0.0 and not read (see `prices` below) | - | - |
@@ -119,8 +119,9 @@ than these two reads as `enforced`.
 ### `autonomy`
 
 How often a session stops to wait for a person at a checkpoint, the end of a
-stage of the path: confirming the assessment, approving the scenarios, and
-the stage 2 and 3 reviews of the four-layer acceptance strategy (`S17`).
+stage of the path: confirming the assessment, approving the scenarios, and,
+where the four-layer acceptance strategy (`S17`) applies to the issue, its
+stage 2 and 3 reviews.
 Assess writes the checkpoints of each issue to its manifest, and `compass
 approach show` shows the answer for an issue. No value changes a gate,
 evidence, the pre-tool hook or `compass check`.
@@ -146,6 +147,18 @@ changed how often a session stops would give no sign.
   after `--`, and refuse without it.
 - `test_micro_command`: used before `test_command` for those two commands.
 - `bdd_run_command`: the command the `compass bdd` run step uses when none is given.
+- `base_copy_links`: a list of untracked paths, each relative to the project
+  root, that `compass quick-fix finish` links into the copy of the base
+  commit on which it shows that the tests fail without the change. Name
+  build output or generated files the tests need. `node_modules`, `.venv`
+  and `venv` are linked without it. The default is none. `finish` refuses a
+  path that is absolute or leaves the project. See `docs/base-copy.md`.
+
+  ```yaml
+  project:
+    base_copy_links:
+      - build
+  ```
 - `lint_command`, `format_check_command`, `build_command`, `typecheck_command`,
   `secret_scan` and `structured_logging`: removed in 9.0.0 (ADR-093) and not
   read. Only the `readiness` verb read them, and it is gone. Each stays valid,
@@ -154,7 +167,8 @@ changed how often a session stops would give no sign.
   `compass.yml`.
 
 `compass tdd-red` and `compass tdd-green` read `test_micro_command` and
-`test_command` only.
+`test_command` only. `compass quick-fix finish` takes its test command after
+`--`.
 
 ### `enforcement`
 
@@ -427,12 +441,24 @@ owner's approval: the manifest's `acceptance_strategy` block shows the choice. I
 changed setting as advice. The setting is read from `compass.yml`, or
 `.compass/config.yml` when `compass.yml` is absent or has no `schema:`.
 
-The check set holds the strategy, as the shipped default did from major 8. A project whose
-`compass.yml` extends `compass:default@6` or `compass:default@7` does not get
-it: assess stores no applicability and `compass check` adds no row for it. A
-project with no `compass.yml` or no `extends:` runs on the check set and gets
-it. The setting is the one way to turn the strategy off: no other setting can
-suspend it on an approach that ships.
+The check set holds the strategy. By default a delivery issue owes no record
+of it (ADR-099): assess stores the routing `guidance`, the `atdd` skill is
+advice, and no check of the strategy runs. The records are owed only where a
+`require_evidence` rule adds one of the strategy's tokens, and the tokens
+set the routing:
+
+| Token added | Routing | What the routing needs |
+|---|---|---|
+| `outer-loop` | `existing-dsl` | the outer-loop records alone |
+| `isolation` | `existing-dsl-isolation` | the isolation proof |
+| `layering` | `on` | the full strategy |
+
+When a rule adds more than one, `layering` decides before `isolation`, and
+`isolation` before `outer-loop`.
+
+With `state: "off"` the strategy does not apply to any issue, whatever a
+`require_evidence` rule adds. The setting is the one way to turn the
+strategy off: no other setting can suspend it on an approach that ships.
 
 ## Tighten-only settings
 
@@ -472,13 +498,21 @@ capabilities:
 ### `signoff_labels`
 
 Each label owes what `auth`, `payments`, `personal-data` and `migrations`
-owe: the `G5` sign-off (`human-approval`), a person's approval of the
-scenarios (`scenario-approval`), the architecture review and the standard
-evidence row. The labels join the `when` of gate `G5`. An exploration issue
+owe: a person's approval of the scenarios before any code edit
+(`scenario-approval`) and the `G5` sign-off (`human-approval`). The labels join the `when` of gate `G5`. An exploration issue
 with one of them is refused, as for a shipped label. A shipped label cannot be
 taken away.
 
 ### `require_evidence`
+
+By default every delivery issue owes the same evidence: `request`,
+`scenarios`, `red-before-green`, `suite-green`, `correctness`, `governance`,
+`traceability` and `ship-approval` (ADR-099). A `G5` label adds
+`scenario-approval` and `human-approval`, and critical risk adds
+`scenario-approval`. No other token is owed unless a rule here adds it: not
+the reviews `regression`, `security`, `clarity` and `architecture`, not
+`definition-of-done`, not `reproduce-first`, and not the `S17` tokens
+`outer-loop`, `isolation` and `layering` (see `acceptance_strategy` above).
 
 Each rule adds evidence tokens to a delivery issue whose assessment matches
 `when`:
@@ -496,6 +530,11 @@ Each rule adds evidence tokens to a delivery issue whose assessment matches
 
 The rules fire as `RP-SETTING-1`, `RP-SETTING-2` and so on, in file order. A
 spike owes none of them, because it ships nothing.
+
+`compass quick-fix finish` does not write the evidence a rule adds. It
+writes its own record, prints one `next:` line for each added item, commits
+nothing and exits 1. The session records each item, then runs the same
+`finish` again.
 
 ### `agent_review`
 
@@ -556,8 +595,8 @@ conversion. `tests/test_migrate_settings.py` walks every row of the table.
 
 - `extends@6` is a pin at `@6` or below, and `extends@7` a pin at `@7`. The
   pin kept the acceptance strategy `S17` off in 8.x. 9.0.0 does not read it,
-  so the project gets `S17` at its next assess, and `acceptance_strategy: off`
-  replaces it.
+  and `acceptance_strategy: off` replaces it. From 9.0.0 the strategy owes no
+  record unless a `require_evidence` rule adds one of its tokens.
 - `extends@8` is a pin at `@8` or later, or no pin. Nothing replaces it.
 - `extends` is any other value.
 

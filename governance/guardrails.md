@@ -443,8 +443,10 @@ _(none yet - the shipped default guardrails apply as-is)_
   the run. A waiver nobody approved changes nothing and is named in a notice.
   `human-approval-present`, `ship-approval-present` and the rows of guardrail
   `G5` are never waived. `docs/waivers.md` has the details.
-- **The pre-tool hook** enforces red-before-green in service of `G1`. It is
-  approach-aware and does not block on a spike.
+- **The pre-tool hook** refuses a code edit while the issue has no scenario,
+  or while its scenarios wait for a person's approval, in service of `G2`.
+  On an issue assessed before 9.0.0 it also enforces red-before-green in
+  service of `G1`. It is approach-aware and does not block on a spike.
 - **The review at the `verify` stage**, run in the issue's own session (ADR-090), for the
   parts that remain judgement. Each is recorded with its evidence (`compass evidence add`).
 - **`compass approach evaluate`** at Assess applies the routing rules

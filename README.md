@@ -14,19 +14,24 @@
 
 Compass lets a team under change control hand code changes to an AI agent
 and still show a reviewer, or an auditor, that the process was followed. A
-person approves each change by reviewing its pull request, and Compass
-records that approval. A reviewer of one change asks five questions. Compass
-keeps the answer to each on record:
+person approves each change, and Compass records that approval. A reviewer
+of one change asks five questions. Compass keeps the answer to each on
+record:
 
 - **Who asked?** The link to the request, and who made it.
-- **What was agreed?** The scenarios. They are the acceptance tests, and the
-  agent writes them before the code.
-- **Did each test fail, then pass?** The failing run, then the passing run,
-  of each scenario. Compass refuses code edits until a failing run is on
-  record ([safety contract](docs/safety-contract.md)).
-- **Who approved?** One person approves each change at ship. Compass reads
-  that approval from the merged pull request: an approving review by someone
-  other than its author. Without one, the person types `/compass:approve`.
+- **What was agreed?** The scenarios, in the change's acceptance criteria.
+  For a change labeled `auth`, `payments`, `personal-data` or `migrations`,
+  or with critical risk, a person approves them before any code edit.
+- **Do the tests fail without the change, and pass with it?** Compass runs
+  them on a copy of the commit the change started from, where they must
+  fail, and on the working tree, where they must pass. This does not show
+  that a test was written before the code
+  ([docs/base-copy.md](docs/base-copy.md)).
+- **Who approved?** One person approves each change. The person types
+  `/compass:approve` when Compass asks, or Compass reads the approval from
+  the merged pull request: an approving review by someone other than its
+  author. An approval covers the change the person saw. After a later
+  change, Compass asks again.
 - **What shipped?** The commit and the pull request.
 
 Each change leaves one plain file, `trail.md`, with a SHA-256 digest for each
@@ -42,8 +47,8 @@ audit.
 
 ## What one change leaves
 
-`compass ship-commit` writes `trail.md` into the change's record when the
-change lands, and `compass trail` writes it again on demand. It answers the
+Compass writes `trail.md` into the change's record when it commits the
+change, and `compass trail` writes it again on demand. It answers the
 five questions in six sections, with red and green apart:
 
 1. Who asked
@@ -101,21 +106,23 @@ Describe the work:
 /compass:go "Add rate limiting to the public API"
 ```
 
-`/compass:go` assesses the change, shows the plan in three lines and runs the
-four stages:
+The session runs two `compass` commands
+([docs/five-minutes.md](docs/five-minutes.md)):
 
-1. **Assess** records the risk, familiarity and size of the change, and the
-   evidence it owes before it ships.
-2. **Specify** writes the scenarios as acceptance tests
-   ([docs/writing-specs-and-plans.md](docs/writing-specs-and-plans.md)).
-3. **Build** records a failing run of each test before the code, and a
-   passing run after it.
-4. **Ship** checks the evidence with `/compass:ship`, commits the change and
-   writes `trail.md`.
+1. `compass quick-fix start` opens the issue. It records the request, who
+   asked, the first scenario and the evidence the change owes.
+2. The session writes the scenarios
+   ([docs/writing-specs-and-plans.md](docs/writing-specs-and-plans.md)), the
+   tests and the code, and runs the tests directly.
+3. `compass quick-fix finish` writes the record. It reads the scenarios and
+   the changed files, shows that the tests fail without the change and pass
+   with it, runs `compass check` and asks for your approval.
+4. After you approve, the same `finish` commits the change and its record,
+   with `trail.md`, on a branch.
 
-Each step prints a `next:` line with the one command to run next. When the
-change reaches a checkpoint that waits for a person, the session stops and
-shows a request. You answer in the same session:
+Each command prints a `next:` line with the one step that comes next. When
+the change waits for a person, the session stops and shows a request. You
+answer in the same session:
 
 ```text
 /compass:approve
@@ -143,28 +150,28 @@ security scanning, builds or deployment checks.
 
 ## What Compass changes
 
-Compass chooses the evidence each change owes from its assessment of risk,
-familiarity and size. Every change owes a link to the request and who asked,
-scenarios, a failing test before each passing one, a green suite, three
-reviews and one person's approval at ship
-([safety contract](docs/safety-contract.md)). The rest depends on the work:
+Compass chooses the evidence each change owes from its assessment and the
+project's settings. Every change that ships owes the same evidence: a link to the request and
+who asked, scenarios, tests that fail without the change and pass with it, a
+green suite, three gates that Compass passes from those records, and one
+person's approval ([safety contract](docs/safety-contract.md)). Risk, size,
+familiarity and urgency add no review and no record. Three things add to it:
 
-| Work | Evidence Compass adds |
+| Work | What Compass adds |
 |---|---|
-| **Small, low risk** | Nothing more. One clear scenario, a focused change and evidence that it works. |
-| **Larger or riskier** | The regression, security and clarity reviews and the Definition of Done. Cross-cutting or critical risk adds the architecture review. |
-| **Live defect** | The setting `urgency: live-defect`: reproduce first, fix safely, then do the follow-up work skipped for speed. |
-| **`auth`, `payments`, `personal-data` or `migrations`** | A person approves the scenarios before the code: the first failing test waits for it. A person also signs off before the change ships. |
+| **`auth`, `payments`, `personal-data` or `migrations`, or a label the project adds** | A person approves the scenarios before any code edit, and signs off before the change lands. |
+| **Critical risk** | A person approves the scenarios before any code edit. |
+| **A project's `require_evidence` setting** | The evidence it names, such as the security review or the Definition of Done ([docs/configuration.md](docs/configuration.md)). |
 | **Spike** | Time-boxed exploration, off the path. Record the learning; ship nothing directly. |
 
 <p align="center">
-  <img src="assets/compass-explainer.svg" alt="Three sliders for risk, familiarity and size feed a policy. As the work changes from a typo fix to a live defect to a payments rewrite, the evidence each of the four stages judges grows from the light row to the standard row, dots mark the stages where a person decides, and five guardrail lines stay the same." width="960">
+  <img src="assets/compass-explainer.svg" alt="Three sliders for risk, familiarity and size feed a policy, which gives the evidence each of the four stages judges. Dots mark the stages where a person decides, and five guardrail lines stay the same." width="960">
 </p>
 
 Five guardrails apply to all work that ships code, whatever the assessment:
-a recorded passing test run, acceptance criteria before code, code traced to
-a criterion, typed evidence rather than a written claim, and a person's
-approval for a change labeled `auth`, `payments`, `personal-data` or
+a test that fails without the change, acceptance criteria before code, code
+traced to a criterion, typed evidence rather than a written claim, and a
+person's approval for a change labeled `auth`, `payments`, `personal-data` or
 `migrations`. `compass check` fails on a breach under enforced adoption.
 Every project runs one fixed check set: a project can add checks of its own,
 report failures without blocking while it tries Compass, or excuse one check
@@ -185,12 +192,14 @@ same evidence, every time
   An agent records one only under a delegation you made, and a program
   running as your own user account is not stopped
   ([safety contract](docs/safety-contract.md#5-irreversible-work-needs-recorded-human-approval)).
-- **A person approves each change at ship.** Compass reads the approval from
-  the merged pull request: a review that approves it, by a person who is not
-  its author, read by `compass issue link set --pr <n>` after the merge.
-  Without one, you type `/compass:approve` after `compass evidence request
-  --ship`. The pre-tool hook refuses an agent's `gh pr review --approve`, and
-  no landing waits for the approval
+- **A person approves each change.** `compass quick-fix finish` writes the
+  request, and commits after you type `/compass:approve`. The approval names
+  a digest of the change. When the code or the tests change afterwards,
+  `finish` asks again, and `compass check` fails until you approve the new
+  state. Compass also reads the approval from the merged pull request: a
+  review that approves it, by a person who is not its author, read by
+  `compass issue link set --pr <n>` after the merge. The pre-tool hook
+  refuses an agent's `gh pr review --approve`
   ([docs/github-links.md](docs/github-links.md)).
 - **You set the bounds of a delegation.** A bare `/compass:delegate` lets the
   agents of this session approve for you on every issue, until
@@ -211,8 +220,8 @@ same evidence, every time
 Each issue's documents are in `docs/compass/<created>-<issue>/`; its
 manifest, evidence and markers are in `.compass/work/<issue>/`. Another
 session can resume from that record without the chat history. By default the
-record ships in the same commit as the code: `compass ship-commit` stages it,
-and leaves out the per-checkout files such as generations and lock files. A
+record ships in the same commit as the code: `compass quick-fix finish` and
+`compass ship-commit` stage it, and leave out the per-checkout files such as generations and lock files. A
 project that sets `record.commit: false`, or names a `record:` remote and
 does not set `record.commit`, keeps the record out of its commits
 ([docs/delivery-record.md](docs/delivery-record.md)). `compass flow` lists
@@ -234,7 +243,8 @@ full account is in [docs/security.md](docs/security.md).
   only when `compass.yml` names a `record:` remote, and it redacts
   credentials.
 - **Runs** commands on your machine: the test command you give `compass
-  tdd-red`, `compass tdd-green` and `compass quick-fix finish`, and, when
+  tdd-red`, `compass tdd-green` and `compass quick-fix finish`, which also
+  runs it in a temporary copy of the commit the change started from, and, when
   `allow_project_commands` is true, your project's own checks declared
   under `project_checks` in `compass.yml`;
   also git in your repository, and the CLI itself from the plugin's hooks.

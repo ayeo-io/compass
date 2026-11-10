@@ -67,14 +67,13 @@ fixed in code and have no modes (ADR-092).
 |---|---|
 | Assess | Score the dimensions and compute the evidence the change owes. |
 | Specify | State observable behavior as scenarios, each with the test that proves it. |
-| Build | For each scenario, record a failing test, write the code, then record a passing test. |
-| Ship | Review the change, pass each gate with typed evidence, and commit. |
+| Build | Write the tests and the code. `compass quick-fix finish` then shows that the tests fail without the change and pass with it. |
+| Ship | `finish` passes each gate with typed evidence, a person approves the change, and `finish` commits. |
 
-`/compass:go` runs the path in one session, and `/compass:quick-fix` is its
-short form for a change the person already knows is small. `/compass:assess`
-runs the assessment alone, and `/compass:ship` holds the review and the
-commit. Every call that writes a record prints a `next:` line with the one
-command to run next.
+`/compass:go`, `/compass:quick-fix` and `/compass:assess` run the path in one
+session with two commands: `compass quick-fix start` opens the issue, and
+`compass quick-fix finish` writes the record (ADR-099). Every call that
+writes a record prints a `next:` line with the one step that comes next.
 
 What changes from one change to the next is the evidence each stage judges,
 not which stages run. Assessment always runs for delivery or exploration work
@@ -82,25 +81,22 @@ that will change files.
 
 ## 4. The evidence rows
 
-The kit picks one evidence row, first match wins, then adds evidence on top
-(`approaches/path.md`):
+Every delivery issue owes one evidence row, `RP-EVID-COMMON`
+(`governance/routing-policy.md`, "The evidence rows"). Risk, size,
+familiarity and urgency add no review and no record (ADR-099):
 
 | Row | When | What it owes |
 |---|---|---|
-| Light | Atomic or small, trivial or contained risk, no hotfix setting, no `G5` label | The request link and who asked, scenarios, a red before each green, a green suite, the correctness, governance and traceability reviews, and a person's approval at ship. |
-| Defect | Atomic or small, under the hotfix setting, not critical, no `G5` label | The light row, plus the regression and security reviews and the Definition of Done. |
-| Standard | Every other delivery assessment | The light row, plus the regression, security and clarity reviews and the Definition of Done. |
+| Common | Every delivery assessment | The request link and who asked, scenarios, tests that fail without the change and pass with it, a green suite, the correctness, governance and traceability gates, and a person's approval of the change. |
 
 On top of the row:
 
-- cross-cutting or critical risk, or a `G5` label, adds the architecture
-  review;
 - a `G5` label or critical risk adds a person's approval of the scenarios,
-  which the first red waits for;
-- a `G5` label adds a person's sign-off before the change ships;
-- the hotfix setting, `urgency: live-defect`, adds a reproduction first; and
-- the four-layer acceptance strategy (`S17`) adds its outer-loop, isolation
-  and layering records where it applies.
+  which every code edit waits for;
+- a `G5` label adds a person's sign-off before the change lands; and
+- a project's `require_evidence` setting adds the evidence it names: a
+  review, the Definition of Done, a reproduction first for a live defect, or
+  the records of the four-layer acceptance strategy (`S17`).
 
 A spike (`goal: exploration`) is not on the path. It explores, concludes,
 and ships nothing.
@@ -111,13 +107,14 @@ Assess records it with `--request` and `--requester`. The check
 `request-recorded` fails until both are on record, and nothing refuses for
 it.
 
-The approval at ship (`ship-approval`, ADR-095) is read from the merged pull
-request: a review that approves it, by a person who is not its author. With
-no such review, a person gives it by typing `/compass:approve`. It never
-holds up a landing, and a `G5` sign-off does not count for it, because that
-sign-off is given before the code exists.
+A person gives the approval of the change (`ship-approval`, ADR-095) by
+typing `/compass:approve` when `compass quick-fix finish` asks, and `finish`
+commits after it. The approval covers the change the person saw: after a
+later change `finish` asks again (ADR-099). The approval is also read from
+the merged pull request: a review that approves it, by a person who is not
+its author. A `G5` sign-off does not count for it.
 
-The first red on a path issue also freezes the scenarios: the manifest
+The red on a path issue also freezes the scenarios: the manifest
 records the spec's digest and the scenario ids, and `compass check` says when
 the spec changed since.
 

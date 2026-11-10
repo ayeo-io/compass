@@ -3,10 +3,10 @@
 Compass is acceptance-test-driven development for Claude Code, with a record
 a reviewer can check. It lets a team under change control hand code changes
 to an AI agent and still show a reviewer, or an auditor, that the process
-was followed. A person approves each change by reviewing its pull request,
-and Compass records that approval. The acceptance tests are the
-specification: the agent writes them first, and Compass refuses code edits
-until a failing run is on record. For each change, Compass records who
+was followed. A person approves each change, and Compass records that
+approval. Compass writes the record of a change itself: it runs the tests on
+a copy of the commit the change started from, where they must fail, and on
+the working tree, where they must pass. For each change, Compass records who
 asked, what was agreed, the failing run, the passing run, who approved and
 the commit that shipped. Each change leaves one plain file, `trail.md`, with
 a SHA-256 digest for each record. A reviewer checks it with `sha256sum -c`,
@@ -14,7 +14,7 @@ without Compass installed. The [safety contract](safety-contract.md) states
 what each guarantee covers and where it stops.
 
 Five guardrails apply to all work that ships code, whatever the assessment:
-a recorded passing test run, acceptance criteria before code, code traced to
+a test that fails without the change, acceptance criteria before code, code traced to
 a criterion, typed evidence rather than a written claim, and a person's
 approval for a change labelled `auth`, `payments`, `personal-data` or
 `migrations`. A project can add checks of its own, report failures without
@@ -24,7 +24,7 @@ waiver a person approves. The person's approval cannot be waived
 
 ## Start here
 
-- [Five minutes](five-minutes.md) - one small change, from assessment to a reviewable result.
+- [Five minutes](five-minutes.md) - one small change in two commands, from the request to a commit that holds the code and its record.
 - [Quickstart](quickstart.md) - from an empty machine to a finished first issue.
 - [Install check](install-smoke-test.md) - confirm an install works.
 - [Configuration](configuration.md) - project settings live in one file, `compass.yml`; a setting can only add to the check set, and `compass policy show` prints the check set and its digest.

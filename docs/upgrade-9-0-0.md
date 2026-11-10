@@ -125,6 +125,89 @@ It refuses one issue, and lists it under "refused", when the issue has a 1.x man
 4. Make each edit listed under "settings left for you to edit", then run `compass migrate` again.
 5. Run each `compass issue link set` command the report lists.
 
+## A change takes two commands, and what it owes
+
+In 9.0.0 Compass writes the record of a change itself (`architecture/decisions/ADR-099-compass-keeps-the-record-itself-and-a-change-takes-two-commands.md`). A session runs two commands:
+
+1. `compass quick-fix start <slug> --intent "..." --request <URL or owner/repo#N> --requester "<who>"` opens the issue.
+2. `compass quick-fix finish -m "<message>" -- <test command>` writes the whole record: the scenarios from the acceptance criteria, the changed files from git, the red and the green, the output of `compass check` and the three gates. It then asks for each approval a person owes, and commits once a person has approved.
+
+Between the two the session writes tests and code and runs the tests directly. The commands `compass tdd-red`, `compass tdd-green`, `compass scenario add`, `compass changed-file add`, `compass evidence add` and `compass gate pass` still work, and a record they wrote still reads and checks. A 9.0.0 delivery issue does not need them.
+
+### What no longer applies by default
+
+Every delivery issue owes the same evidence: the request link, the scenarios, the red before the green, a green suite, the three gates `verify.correctness`, `verify.governance` and `verify.traceability`, and the ship approval. Risk, size, familiarity and urgency add no review and no record. A 9.0.0 issue does not owe these unless the project adds them:
+
+| Not owed by default | Its `require_evidence` token |
+|---|---|
+| the review gate `verify.regression` | `regression` |
+| the review gate `verify.security` | `security` |
+| the review gate `verify.clarity` | `clarity` |
+| the review gate `verify.architecture`, for cross-cutting or critical risk and for a `G5` label | `architecture` |
+| the Definition of Done | `definition-of-done` |
+| the reproduction of a live defect before anything else | `reproduce-first` |
+| the outer-loop records of the four-layer acceptance strategy `S17` | `outer-loop` |
+| the isolation proof of `S17` | `isolation` |
+| the layering record of `S17` | `layering` |
+
+The pre-tool hook no longer refuses a code edit on a 9.0.0 delivery issue for a missing failing test. `compass check` passes on less evidence than in 8.x.
+
+Two approvals by a person stay, and one is new for critical risk:
+
+- An issue labeled `auth`, `payments`, `personal-data` or `migrations`, or with a label in `signoff_labels`, owes a person's approval of the scenarios before any code edit, and the `G5` sign-off before it lands.
+- An issue with `critical` risk owes a person's approval of the scenarios before any code edit.
+
+The session asks with `compass evidence request --checkpoint specify` and stops. Until a person has approved, the pre-tool hook refuses a code edit with the code `code-before-approval`.
+
+### Getting a check back
+
+Add its token with `require_evidence` in `compass.yml` (`docs/configuration.md`). This example brings back the security and architecture reviews for cross-cutting and critical risk, and the Definition of Done for every issue:
+
+```yaml
+require_evidence:
+  - when: {risk: [cross-cutting, critical]}
+    add: [security, architecture]
+  - add: [definition-of-done]
+```
+
+An issue that owes an added item pays for it in commands. `finish` writes its own record, prints one `next:` line for each added item, commits nothing and exits 1. The session records each item with the older commands, then runs the same `finish` again:
+
+```
+compass quick-fix finish: 'r' is checked, but it owes 1 item(s) that the project's settings add. Nothing is committed.
+next: compass gate pass verify.security --evidence <EV-id>
+next: then run the same finish again
+```
+
+A token of `S17` also sets the routing of the strategy for the issue: `outer-loop` gives `existing-dsl`, `isolation` gives `existing-dsl-isolation` and `layering` gives `on`. With none of them the routing is `guidance`: the `atdd` skill is advice and no check of the strategy runs.
+
+### What `proved_on: base-copy` means
+
+`finish` proves the red itself. It copies the commit the issue started from to a temporary directory, lays the test files of the change over it and runs the test command there. The command must fail. The red record then says `proved_on: base-copy` and names the `base_commit`.
+
+That record shows that the tests fail without the change. It does not show that a test was written before the code. A red recorded earlier with `compass tdd-red` still counts, and is the only proof of that order. `docs/base-copy.md` states the limits: tests that need untracked build output, an editable install of the project, and tests that pass without the change.
+
+### Approvals record a digest and are asked for again after a change
+
+`finish` writes `change_sha256` in the manifest: a digest of the code and test files of the change. The request for the ship approval or the `G5` sign-off holds it, and so does the approval record. When the code or the tests change after an approval:
+
+- the next `finish` proves the red and the green again and commits on the branch;
+- it writes a new request and ends with `next: stop: the change differs from the one approved. Ask the person to type /compass:approve <n> (the ship approval). Nothing else to run now.`;
+- `compass check` fails `ship-approval-present`, and `human-approval-present` on a labeled issue, until a person approves the new state.
+
+The earlier approval record stays on record. `ship-approval-present` also passes when `compass issue link set --pr <n>` reads the approving review of the merged pull request (ADR-095). An approval record with no digest keeps the meaning it had before 9.0.0: it is not compared with the change.
+
+### The new setting `project.base_copy_links`
+
+The copy of the base commit holds tracked files only, with `node_modules`, `.venv` and `venv` linked in from the working tree. A project whose tests need another untracked path, such as build output, names it:
+
+```yaml
+project:
+  base_copy_links:
+    - build
+```
+
+`docs/base-copy.md` and `docs/configuration.md` describe the setting.
+
 ## Removed settings
 
 9.0.0 reads none of these `compass.yml` keys. Each stays valid YAML, and `compass policy lint` warns about each with `L-SETTING-REMOVED` and names its replacement. "rewrites it" means `compass migrate` deletes the key and writes the replacement for you. "no" means you edit the file: `compass migrate` leaves the key and names the edit. `docs/configuration.md` explains each replacement setting.
@@ -168,7 +251,7 @@ It refuses one issue, and lists it under "refused", when the issue has a 1.x man
 
 ## Removed slash commands
 
-9.0.0 runs every change on one path, assess, specify, build and ship, through `/compass:go` (ADR-092). A removed slash command has no stub file. `/compass:flow` is still shipped.
+9.0.0 runs every change on one path, assess, specify, build and ship, through `/compass:go` (ADR-092). `/compass:go`, `/compass:assess` and `/compass:quick-fix` teach the same two commands (ADR-099). A removed slash command has no stub file. `/compass:flow` is still shipped.
 
 <!-- compass:upgrade-slash-table -->
 | Removed | Use instead | Decision |
@@ -297,7 +380,7 @@ The refusal names each item with the edit that clears it, or `compass waiver wit
 | Waivers that the 8.x settings migration wrote | ended with the configuration layers that held them (ADR-094). |
 | `--justify role=` and `quick-fix start --role` | ended. A stored role reading in an assessment still reads. |
 | The pre-tool hook reading `delivery-approach.md` for an issue whose manifest has no `delivery_approach` key | ended. The key alone decides, and an issue without it is refused with `no-delivery-approach`. No archived issue holds the document without the key. |
-| An `extends:` pin of `compass:default@6` or `@7` keeping the acceptance strategy `S17` off | ended. A project that did not run `compass migrate` gets `S17` at its next assess. `compass policy lint` names the replacement, `acceptance_strategy: {state: off, reason: ...}`. |
+| An `extends:` pin of `compass:default@6` or `@7` keeping the acceptance strategy `S17` off | ended. From 9.0.0 the strategy owes no record unless a `require_evidence` setting adds one of its tokens, so the end of the pin adds no check by default. `compass policy lint` names the replacement, `acceptance_strategy: {state: off, reason: ...}`. |
 | The frozen presets `default@6` and `default@7` | ended as shipped files. Resolution reads only the check set, whatever major `extends:` names. The artifacts catalog 8.0.4 shipped stays as `governance/artifacts-8.0.4.yml`, because a stored 8.x generation, `compass issue migrate` and the `nfr-rows-resolved` check read it. |
 
 These readers were never on that list, and they stay:

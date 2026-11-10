@@ -60,11 +60,10 @@ A floor says: "when the context looks like X, the work also needs Y." Before
 9.0.0 a floor could also force the delivery approach to be at least a given
 weight. Since 9.0.0 every delivery issue runs the one four-stage path
 (ADR-092), and the evidence rows below decide what it owes from the
-assessment, so the shipped floors only ask for a skill or add a gate. Domain
+assessment, so a floor only asks for a skill or adds a gate. Domain
 risk still overrides the raw dimension assessment: a one-line auth change
-reads as `atomic`, and the evidence row for a `G5` label owes the
-architecture review, a person's approval of the scenarios and the human
-sign-off whatever the size.
+reads as `atomic`, and a `G5` label owes a person's approval of the
+scenarios and the human sign-off whatever the size.
 
 ### `caps` - not shipped since 9.0.0
 
@@ -105,8 +104,10 @@ The shipped defaults (see `governance/check-set.yml` for the live, id-tagged set
   or more, with cross-cutting or critical risk, or with one of the four domain
   labels → the `atdd` skill is required, for its behavior mapping (below
   that, `RP-ADV-002` gives the skill as advice); `RP-REQUIRE-003` cross-cutting or critical risk
-  and `RP-REQUIRE-004` one of the four domain labels → the gate
-  `verify.architecture`. `RP-FLOOR-001` and `RP-FLOOR-003`, whose only effect
+  and `RP-REQUIRE-004` one of the four domain labels name the gate
+  `verify.architecture`, and add nothing to a 9.0.0 issue: the check set
+  keeps them for the 8.x evaluator and compatibility contract 1 (ADR-099
+  decision 9). `RP-FLOOR-001` and `RP-FLOOR-003`, whose only effect
   was a minimum approach, are gone since 9.0.0 (ADR-092).
 - **caps** - none since 9.0.0.
 - **immovable_gates** - `RP-GATE-001..003`: `verify.correctness`,
@@ -120,11 +121,10 @@ The shipped defaults (see `governance/check-set.yml` for the live, id-tagged set
 
 `G5` (a human signs off on the irreversible) holds through the evidence rows:
 a change labelled with an irreversible surface owes `human-approval`, the
-`G5` check, whatever its size. From 7.0.0 the trigger is those four labels
-only. Critical risk owes the architecture review and a person's approval of
-the scenarios, but it does not bring the sign-off on its own, so `compass
-approach evaluate` names the four labels when risk is critical and none is set
-(`governance/guardrails.md`).
+`G5` check, whatever its size. From 7.0.0 the trigger is those four labels,
+and each label a project adds with `signoff_labels`. Critical risk owes a
+person's approval of the scenarios, but it does not bring the sign-off on
+its own (`governance/guardrails.md`).
 
 ---
 
@@ -169,7 +169,8 @@ the answer into the manifest as `checkpoints:`.
 The shipped default holds two rows. A path issue's checkpoints come from the
 path writer (below), which lists `build` and `ship` as well where `S17`
 applies, and `specify` under every value where the scenarios owe a person's
-approval.
+approval. `S17` applies to a 9.0.0 issue only where a `require_evidence`
+setting adds one of its tokens.
 
 | Approach | controlled | balanced | autonomous |
 |---|---|---|---|
@@ -333,10 +334,13 @@ stage, which no reader judges: the path writer computes a delivery issue's
 gates from its evidence. The spike keeps a stage map (assess, build, ship) and
 its own gate. Each gate's `stage:` is the path stage where it is
 judged: `G2` and `G3` at specify, `G1` at build, and `G4`, `G5`, `S1`, `S2` and
-every review gate at ship. The `build` stage holds the Definition of Done. The
+every review gate at ship. The `build` stage holds the Definition of Done,
+which a 9.0.0 issue owes only where a `require_evidence` setting adds the
+token `definition-of-done`. The
 set carries the four-layer acceptance strategy (`S17`): the advisory check
 `acceptance-applicability-agrees`, and `acceptance_strategy: 'on'` on
-`delivery`; the evidence row decides each issue's routing. An approach
+`delivery`; the `S17` tokens an issue owes decide its routing, and with
+none owed the routing is `guidance`. An approach
 without the key reads `on` when it ships and `suspended` when it does not, so
 the spike entry, which ships nothing, reads `suspended`. The project setting
 `acceptance_strategy` turns the whole strategy off with a reason and no
@@ -417,21 +421,18 @@ The rows, first match wins:
 | Rule | When | Evidence | `S17` routing |
 |---|---|---|---|
 | `RP-EVID-SPIKE` | goal `exploration` | none; gate `spike.conclude` | `suspended` |
-| `RP-EVID-LIGHT` | size atomic or small, risk trivial or contained, urgency not `live-defect`, no `G5` label | every-issue tokens | `existing-dsl` |
-| `RP-EVID-DEFECT` | urgency `live-defect`, size atomic or small, risk not critical, no `G5` label | every-issue tokens, `regression`, `security`, `definition-of-done` | `existing-dsl-isolation` |
-| `RP-EVID-STANDARD` | any other delivery assessment | every-issue tokens, `regression`, `security`, `clarity`, `definition-of-done` | `on` |
+| `RP-EVID-COMMON` | any other assessment | every-issue tokens | `guidance` |
 
 The every-issue tokens are `request`, `scenarios`, `red-before-green`,
 `suite-green`, `correctness`, `governance`, `traceability` and `ship-approval`.
 The `request` and `ship-approval` tokens meet no gate: the checks
 `request-recorded` and `ship-approval-present`, outside every gate, read them
-(`governance/guardrails.md`). The additions to a delivery row:
+(`governance/guardrails.md`). Risk, size, familiarity and urgency add no
+review and no record (ADR-099 decision 4). The additions to the delivery row,
+each an approval a person gives:
 
 | Rule | When | Adds |
 |---|---|---|
-| `RP-REQUIRE-003` | risk cross-cutting or critical | `architecture` |
-| `RP-REQUIRE-004` | a `G5` label | `architecture` |
-| `RP-EVID-REPRODUCE` | urgency `live-defect`, at any size | `reproduce-first` |
 | `RP-EVID-SIGNOFF` | a `G5` label, or risk critical | `scenario-approval` |
 | `G5` | a `G5` label | `human-approval` |
 
@@ -439,41 +440,48 @@ The `G5` labels are `auth`, `payments`, `personal-data` and `migrations`.
 Exploration with critical risk or a `G5` label is refused, as in 8.x: a spike
 must not touch a surface that owes a person's sign-off.
 
-The `S17` tokens are `outer-loop` (any routing), `isolation` (routing `on` or
-`existing-dsl-isolation`) and `layering` (routing `on`). They are left out
-when the project turns the strategy off, or when assess is told
-`--expected-acceptance validation` or `refactor`.
+The other tokens are owed only where a `require_evidence` setting adds them:
+the review tokens `regression`, `security`, `clarity` and `architecture`,
+`definition-of-done`, `reproduce-first`, and the `S17` tokens `outer-loop`,
+`isolation` and `layering` (ADR-099 decision 9).
+
+The routing of `S17` is read from the `S17` tokens the issue owes, and the
+first of these that is owed decides it:
+
+| Token owed | `S17` routing |
+|---|---|
+| `layering` | `on` |
+| `isolation` | `existing-dsl-isolation` |
+| `outer-loop` | `existing-dsl` |
+
+With none owed the routing is `guidance`: the `atdd` skill is advice and no
+check of the strategy runs. Where a token is owed, the strategy still does not apply when the
+project turns it off, or when assess is told `--expected-acceptance
+validation` or `refactor`.
 
 The configuration adds only what a project can still set for a new issue:
-the gate of each floor that matches (`add_gate`) and each immovable gate, the
-skill a floor asks for (`require_skill`, such as `atdd` from
-`RP-FLOOR-002`) and the advisory strategies. A gate that a token stands for
+the gate of each floor of the project's own that matches (`add_gate`) and
+each immovable gate, the skill a floor asks for (`require_skill`, such as
+`atdd` from `RP-FLOOR-002`) and the advisory strategies. The shipped floors
+`RP-REQUIRE-003` and `RP-REQUIRE-004` add no gate
+(`evidence_required.PATH_RETIRED_FLOORS`). A gate that a token stands for
 joins as that token, so `gates` stays derived from `evidence_required`. The
 function never reads the configuration's approaches, shapes, stage modes or
-caps. Familiarity does not change the evidence.
+caps.
 
 The policy can also carry two of the tighten-only settings of `compass.yml`
 (ADR-094, `docs/configuration.md`). Each only adds:
 
 - `signoff_labels`: more labels that owe what a `G5` label owes. Each `G5`
-  clause of the rows and additions names them too, so such a label takes the
-  standard row, adds `architecture`, `scenario-approval` and `human-approval`,
-  and refuses exploration. A policy cannot take a shipped label away.
+  clause of the additions names them too, so such a label adds
+  `scenario-approval` and `human-approval`, and refuses exploration. A
+  policy cannot take a shipped label away.
 - `require_evidence`: rules `{id, when, add}`. A delivery assessment that
   matches `when` also owes the tokens in `add`, and the rule's id
   (`RP-SETTING-<n>`) is recorded as fired. A spike owes none of them. A token
   outside the closed set is refused.
 
-`compass_pkg.tighten` writes both from a resolved configuration. Until the
-resolver reads the check set, no command passes them.
-
-The rows reproduce the gate sets 8.0.4 owed: the light row is the old quick
-fix (3 gates), the defect row the old hotfix (5 gates) and the standard row
-the old regular and full approaches (6 gates). The `S17` routings are those
-the 9.0.0 preset names for the same approaches. `tests/test_evidence_required.py`
-checks this on all 1,200 assessments of the contract 1 grid under each of the
-16 subsets of the `G5` labels, against the 8.0.4 governance copy in
-`tests/fixtures/compat/v8.0.4-governance.tgz`.
+`compass_pkg.tighten` writes both from a resolved configuration.
 
 ## The path writer
 
@@ -532,31 +540,33 @@ the assessment the issue already holds.
   until ...") and no subtask ceiling. The path has no candidate approach and
   no stage a rule can block.
 - `--verbose` names the evidence row that matched (`evidence row :
-  RP-EVID-STANDARD`) in place of the 8.x candidate approach. A guardrail code
+  RP-EVID-COMMON`) in place of the 8.x candidate approach. A guardrail code
   in a fired rule's line is in backticks, such as `` (`G5`, guardrail) ``.
 
 `compass quick-fix start` serves every delivery size and writes
 `acceptance-criteria.md` with the intent and the one scenario. It writes no
 devlog. It refuses only a spike, because every delivery assessment is written
-onto the path. Its Non-functional requirements rows hold a reason only when the change
-owes no `definition-of-done`; otherwise they are empty, `nfr-rows-resolved`
-names each one, and the next step is to resolve them. It takes the hotfix setting as `--urgency "live-defect - <reason>"`.
-`compass quick-fix finish` serves any delivery issue on the path. It refuses
-with exit 1, before it writes anything, while the issue owes anything but the
-three immovable gates and the green it records itself, and prints one `next:`
-line for each owed item. Each verb that writes a record of a path issue prints
-`next: <command>` from `next_step.next_command` as its last line in text mode.
+onto the path. Risk, familiarity and size are optional: a dimension left out
+is recorded as `contained`, `brownfield-mapped` or `small`. Its
+Non-functional requirements rows hold a reason, except where a
+`require_evidence` setting makes the change owe `definition-of-done`; then
+they are empty and `nfr-rows-resolved` names each one. It takes the hotfix
+setting as `--urgency "live-defect - <reason>"`. A second `start` for a
+request that an issue of the project already holds makes that issue current
+and creates nothing.
 
-Two `next:` lines carry a step before the command:
-
-- Where `layering` is owed, the line that names the outer-loop red says to
-  write the layering test and `git add` it first. The outer-loop green, the
-  isolation proof and the layering record are bound to the tree, which holds
-  the tracked and staged files, so a test file added to it after the green
-  makes all three stale.
-- When every gate passes, the line names the traced files to stage
-  (`git add -- <files>`) before `compass ship-commit`, which lands what is
-  staged. `compass quick-fix finish --no-commit` leaves the change unstaged.
+`compass quick-fix finish -m "<message>" -- <test command>` writes the whole
+record of a delivery issue in one call (ADR-099). It reads the scenarios
+from `acceptance-criteria.md` and the changed files from git, shows that the
+tests fail on a copy of the base commit (`docs/base-copy.md`) and pass on
+the working tree, runs `compass check`, passes the three immovable gates and
+writes the request for each approval a person owes. Once a person has
+approved, the same command commits. Where a `require_evidence` setting or a
+floor of the project's own adds evidence, `finish` writes its own record,
+prints one `next:` line for each added item and exits 1; the session records
+each item and runs `finish` again. Each verb that writes a record of a path
+issue prints `next: <command>` from `next_step.next_command` as its last
+line in text mode.
 
 ## The evaluator input
 

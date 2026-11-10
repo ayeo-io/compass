@@ -50,8 +50,11 @@ are the acceptance check at ship.**
 **Write the failing test first, watch it fail for the right reason, write the
 minimal code to pass, then refactor.**
 
-- This is the shipped-on way to satisfy "tested before it lands" (`G1`). The
-  pre-tool hook enforces red-before-green by default.
+- This is the shipped-on way to satisfy "tested before it lands" (`G1`).
+  `compass quick-fix finish` shows that the tests fail without the change, on
+  a copy of the base commit (`docs/base-copy.md`). It does not show the order
+  of the work: a red recorded with `compass tdd-red` does. The pre-tool hook
+  needs a red before a code edit only on an issue assessed before 9.0.0.
 - TDD serves two purposes:
   - Governance: red-before-green makes "tested before it lands" checkable -
     there is a test, and it was there first.
@@ -136,12 +139,14 @@ commands write; it never reads project code.
   of kind `validation` or `refactor` and no red record. A record line that
   disagrees with the records is advice from the check
   `acceptance-applicability-agrees`, which names the re-assess command.
-- **Routing per evidence row.** On for the standard row. Existing DSL only
-  on the light row (no isolation proof, no layering record). Existing DSL only on the defect row, which still needs the
-  isolation proof. Suspended on a spike, as strategy `S2` is. Where the
-  strategy applies, assess adds its tokens to the evidence the change owes:
-  `outer-loop` on every row, `isolation` on the defect and standard rows,
-  and `layering` on the standard row (`cli/compass_pkg/evidence_required.py`).
+- **Routing.** By default the routing of a delivery issue is `guidance`
+  (ADR-099): the `atdd` skill is advice, no record of the strategy is owed
+  and no check of it runs. A project adds the strategy's tokens with
+  `require_evidence`, and the tokens set the routing: `layering` gives on,
+  `isolation` gives existing DSL only with the isolation proof, and
+  `outer-loop` alone gives existing DSL only (no isolation proof, no
+  layering record). Suspended on a spike, as strategy `S2` is
+  (`cli/compass_pkg/evidence_required.py`).
   An issue assessed before 9.0.0 keeps the routing of its approach.
 - **Project opt-out.** A project turns the strategy off with the setting
   `acceptance_strategy`, written `acceptance_strategy: {state: "off", reason:
@@ -171,8 +176,8 @@ commands write; it never reads project code.
   and the check `isolation-proven` needs every run to pass on the outer-loop
   green's candidate and the tree as it is now. `compass layering record` runs
   the project's own layering test, and `layering-test-passed` needs it to
-  pass. The standard row needs both; the defect row needs the isolation
-  proof; the light row needs neither.
+  pass. The routing on needs both; existing DSL only with the isolation
+  proof needs the isolation proof; existing DSL only needs neither.
 - **Support code.** The project names the paths of its alias helper,
   driver factory, DSL root and layering test under
   `project.acceptance_support`. A missing piece blocks nothing. The first

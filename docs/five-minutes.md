@@ -1,9 +1,11 @@
 # Compass in five minutes
 
-This walkthrough takes one small change through the four stages of the path,
-assess, specify, build and ship, to a commit that holds the code and its
-record. Then it checks that record the way a reviewer does. Every block of
-output below is real: it comes from one new project, run from start to end.
+This walkthrough takes one small change from the request to a commit that
+holds the code and its record. The session runs two `compass` commands:
+`compass quick-fix start` opens the issue, and `compass quick-fix finish`
+writes the record. Then the walkthrough checks that record the way a
+reviewer does. Every block of output below is real: it comes from one new
+project, run from start to end.
 
 ## Before you start
 
@@ -27,11 +29,11 @@ for the issue's manifest and evidence, and a `docs/compass/` directory for the
 issue's documents.
 
 The project in this example is a git repository with one module and its
-test. The test fails: the module spells the message `invlaid token`. Its
-`compass.yml` names the owner, the project and its test command, and nothing
-else.
+test. The module spells a message `invlaid token`, and no test reads the
+message. Its `compass.yml` names the owner, the project and its test
+command, and nothing else.
 
-## 1. Assess the work
+## 1. Start the issue
 
 Start with a real, contained change:
 
@@ -39,8 +41,39 @@ Start with a real, contained change:
 /compass:go "Fix the misspelled invalid-token message"
 ```
 
-`/compass:go` runs all four stages in one session. The steps below show the
-commands it runs at each one.
+`/compass:go` runs the whole change in one session. The steps below show the
+commands it runs.
+
+The session opens the issue in one call:
+
+```bash
+compass quick-fix start fix-token-message \
+  --intent "An invalid token gets a correctly spelled message" \
+  --request https://github.com/acme/token-api/issues/42 --requester "Dana Lee"
+```
+
+```text
+compass quick-fix start: 'fix-token-message' started.
+  created: .compass/ - tell the user
+next: write the tests and the code, then compass quick-fix finish -m "<commit message>" -- <test command>
+```
+
+`--intent` says what will be true afterwards. `--request` links what asked
+for the change and `--requester` names who asked. Every `compass` call that
+writes a record ends with a `next:` line, and `compass next` prints it at
+any time.
+
+The manifest records the assessment. Its first lines:
+
+```yaml
+schema_version: '3.0'
+issue: fix-token-message
+created: '2026-11-10'
+assessment:
+  risk: contained
+  familiarity: brownfield-mapped
+  size: small
+```
 
 Compass scores three dimensions:
 
@@ -50,56 +83,33 @@ Compass scores three dimensions:
 | Familiarity | Is the affected code understood? |
 | Size | How much delivery work is involved? |
 
-Two optional switches change what the change owes: `goal: exploration`
-makes the issue a spike, which explores and ships nothing, and `urgency:
-live-defect` is the hotfix setting, which asks for a reproduction first.
-Domain labels, such as `auth`, add evidence: a person approves the scenarios
-and signs off before the change ships. Neither is scored.
+`start` takes each as an option (`--risk`, `--familiarity`, `--size`). The
+values above are the ones it records when an option is left out. Every
+delivery issue owes the same evidence, whatever its size. Two things add an
+approval by a person:
 
-The session records the assessment, the scenario, the test that proves it and
-the request in one call:
+- a domain label: `auth`, `payments`, `personal-data`, `migrations`, or a
+  label the project adds. A person approves the scenarios before any code
+  edit, and signs the change off before it lands;
+- `critical` risk. A person approves the scenarios before any code edit.
 
-```bash
-compass quick-fix start fix-token-message \
-  --risk "contained - one message string in one module" \
-  --familiarity "brownfield-mapped - two functions with a test" \
-  --size "atomic - one line" \
-  --intent "An invalid token gets a correctly spelled message" \
-  --scenario "Given a request has an invalid token When authentication rejects it Then the response says invalid token" \
-  --test tests/test_auth.py::test_rejects_an_invalid_token \
-  --request https://github.com/acme/token-api/issues/42 --requester "Dana Lee"
-```
+`goal: exploration` makes the issue a spike, which explores and ships
+nothing.
 
-`--request` links what asked for the change and `--requester` names who
-asked. Without them the check `request-recorded` fails, but nothing stops;
-`compass next` names the command that records them.
-
-The manifest records the judgment. Its first lines:
-
-```yaml
-schema_version: '3.0'
-issue: fix-token-message
-created: '2026-11-07'
+The evidence the change owes and the gates are computed: the same assessment
+and configuration produce the same evidence, every time. The `delivery`
+approach is the path; the only other approach is the spike.
+`compass approach evaluate --verbose` shows the computation for an
 assessment:
-  risk: contained
-  familiarity: brownfield-mapped
-  size: atomic
-```
-
-Those three dimensions and the switches are the only judgment. Everything
-after them, the evidence the change owes and the gates, is computed: the same
-assessment and configuration produce the same evidence, every time. The
-`delivery` approach is the path; the only other approach is the spike.
-`compass approach evaluate --verbose` shows the computation:
 
 ```text
   policy          : this project's effective configuration (the check set, tightened by compass.yml)
-  assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "atomic"}
-  evidence row    : RP-EVID-LIGHT
+  assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "small"}
+  evidence row    : RP-EVID-COMMON
   FINAL APPROACH  : delivery
-  evidence owed   : request, scenarios, red-before-green, suite-green, correctness, governance, traceability, outer-loop, ship-approval
+  evidence owed   : request, scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
   policy rules fired:
-    A small change with low risk owes the evidence every change owes (RP-EVID-LIGHT, evidence)
+    Every change owes the same evidence: the request, the scenarios, the red before the green, a green suite and the ship approval (RP-EVID-COMMON, evidence)
         - evidence owed: request, scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
   gate set        : verify.correctness, verify.governance, verify.traceability
 ```
@@ -109,153 +119,186 @@ three lines: the approach and whether the session stops for you, the
 evidence the change owes, and where the issue's files go.
 
 ```text
-Approach: delivery (risk contained, familiarity brownfield-mapped, size atomic) - does not stop to wait for you
-Evidence: request, scenarios, red-before-green, suite-green, correctness, governance, traceability, outer-loop, ship-approval
-Writes: .compass/work/fix-token-message/ and docs/compass/2026-11-07-fix-token-message/
+Approach: delivery (risk contained, familiarity brownfield-mapped, size small) - does not stop to wait for you
+Evidence: request, scenarios, red-before-green, suite-green, correctness, governance, traceability, ship-approval
+Writes: .compass/work/fix-token-message/ and docs/compass/2026-11-10-fix-token-message/
 ```
 
-`outer-loop` is there because the four-layer acceptance strategy (`S17`)
-applies to a change a real client can observe: the scenario's test runs
-against the system from the outside, and its red and green are recorded as
-outer-loop records.
-
-Correct the assessment if it is wrong: the evidence is only as good as the
-assessment. The session waits for your approval only at the checkpoints the
-project's `autonomy` setting lists, which the first line of `compass approach
-show` names.
-
-## 2. Specify the scenario
-
-The acceptance tests are the specification. `quick-fix start` wrote the one
-scenario into `acceptance-criteria.md`, with a traceability id that the
-evidence and the trail use from now on:
+`start` wrote the one scenario into `acceptance-criteria.md`, with a
+traceability id that the evidence and the trail use from now on:
 
 ```text
-### Scenario: Given a request has an invalid token When authentication rejects it Then the response says invalid token
+### Scenario: An invalid token gets a correctly spelled message
 <!-- traceability id: TRC-001 · serves: INT-1 -->
 
-Given a request has an invalid token When authentication rejects it Then the response says invalid token
+An invalid token gets a correctly spelled message
 ```
 
 The scenario tells the engineer what to test, QA what to check, and the
 reviewer what the change is meant to achieve. Larger work gets more
-scenarios, added with `compass scenario add`, and each one names the test
-that proves it.
+scenarios: the session writes each one in this file in the same form, with
+the next `TRC-` id, and `finish` reads them.
 
-## 3. Build with evidence
+## 2. Write the test and the code
 
-Every `compass` call that writes a record ends with a `next:` line, and
-`compass next` prints it at any time. After the assessment it says:
-
-```text
-Build [gate: verify.correctness] | next: compass tdd-red --loop outer --scenario TRC-001 -- <acceptance test command>
-```
-
-Build is red, then green:
-
-1. record the failing test with `compass tdd-red`;
-2. make the smallest useful change; and
-3. record the passing test with `compass tdd-green`.
-
-Until a failing test is on record, the pre-tool hook refuses an edit to the
-code. The red runs the test and keeps its output:
+The session writes a test that reads the message, corrects the spelling and
+runs the tests directly. No `compass` command is needed here:
 
 ```text
-compass tdd-red: failing test recorded (exit 1) (bound to TRC-001).
-  evidence : .compass/work/fix-token-message/evidence/red-TRC-001.outer.json
-  frozen : the scenarios, at this first red (sha256 f0836d6e1023)
-  marker   : .compass/work/fix-token-message/.red
-  the pre-tool hook will now allow code edits.
-next: compass tdd-green --loop outer --scenario TRC-001 --candidate <build id>|local --client api|web|cli -- <acceptance test command>
+$ python3 -m pytest -q
+..                                                                       [100%]
+2 passed in 0.09s
 ```
 
-The scenarios are now frozen: a later change to them shows in the trail.
-After the one-line fix, the green runs the same test against the local build
-(`--candidate local`) through its programming interface (`--client api`):
+## 3. Finish
+
+One command writes the whole record:
+
+```bash
+compass quick-fix finish -m "Fix the misspelled invalid-token message (#42)" -- python3 -m pytest -q
+```
 
 ```text
-compass tdd-green: passing suite recorded (exit 0) (bound to TRC-001).
-  evidence : .compass/work/fix-token-message/evidence/green-TRC-001.outer.json
-  registry : manifest.yml `evidence:` updated with the test-run entry
-  marker : .red cleared - red -> green is on record.
-next: compass quick-fix finish -m "<commit message>" --no-commit --candidate <build id>|local --client api|web|cli -- <test command>
+compass quick-fix finish: 'fix-token-message' checked. Nothing is committed.
+  red      : the tests fail on the base commit 956a3fbc (exit 1), with 1 test file(s) of the change
+  green    : the tests pass on the working tree
+  scenarios: TRC-001
+  files    : 3 traced from git
+next: stop and ask the person to type /compass:approve 1 (the ship approval). Nothing else to run until then. After the approval, run the same finish again: it commits.
 ```
+
+In that one call `finish`:
+
+1. reads the scenarios from `acceptance-criteria.md`;
+2. reads the changed files from git;
+3. copies the commit the issue started from to a temporary directory, lays
+   the changed test file over it and runs the test command there. The
+   command must fail. This is the red;
+4. runs the test command on the working tree. It must pass. This is the
+   green;
+5. runs `compass check` and passes the three gates;
+6. writes the request for your approval, and stops.
+
+The red record says where the red was proved. These lines are from
+`evidence/red-TRC-001.json`:
+
+```text
+  "exit_code": 1,
+  "passed": false,
+  "red_kind": "failure",
+  "proved_on": "base-copy",
+  "base_commit": "956a3fbc422b6a72d2dcd3df5b69a42342173315",
+```
+
+`proved_on: base-copy` means the tests fail without the change. It does not
+show that the test was written before the code.
+`docs/base-copy.md` says what the copy holds and where it has limits.
 
 Compass does not treat "the tests pass" in chat as evidence. `compass check`
 reads the records on disk and runs the checks the change owes:
 
 ```text
-PASS - 15 check(s) passed, 9 had nothing to check, 1 failed as advisory (does not block) on 'fix-to…
+PASS - 12 check(s) passed, 13 had nothing to check on 'fix-token-message' (delivery)
 [mode: enforced]
   generation 1 (parent 9.0.0)
-  Policy: compass-checks@9.0.0 (sha256 59a833c6efcf00adfc00ce6ae50803ab271da6ea103f7fd5c48fdd84da00…
-
-ADVISORY acceptance-support-present: advisory (this check declares severity: advisory) - missing su…
+  Policy: compass-checks@9.0.0 (sha256 446c1cf864df46a525c0e12050681aee9a8799be4db2f4074835d01060b4…
 ```
 
-The advisory says the project has not yet named the support code of the
-four-layer strategy. It does not block. `compass check --verbose` prints
-every check with its reason.
+`compass check --verbose` prints every check with its reason.
 
-## 4. Ship
+## 4. Approve, then commit
 
-`compass quick-fix finish` runs the suite, runs `compass check` and passes the
-gates in one call:
+The ship approval is one person's approval of the change. Compass does not
+let the agent give it. You read the change and type:
 
 ```text
-compass quick-fix finish: 'fix-token-message' checked, not committed.
-  gates : verify.correctness, verify.governance, verify.traceability -> pass
-  evidence : EV-T-TRC-001-outer, EV-CHECK-1
-  commit : when asked, stage the traced files, then run
-  `compass ship-commit --issue fix-token-message -m "<message>" --release-note "<release line>"`
+/compass:approve 1
 ```
 
-When you ask for a commit, stage the changed file and run `compass
-ship-commit --issue fix-token-message` with a message and a release line.
-It commits the files the issue recorded as changed, and nothing else. Unless
-the project keeps the record out, the same commit holds the issue's record:
-the manifest, the evidence, the acceptance criteria and `trail.md`.
+The session then runs the same `finish` again, and it commits:
+
+```text
+compass quick-fix finish: 'fix-token-message' checked and committed.
+  records  : the red and the green already cover these files
+  scenarios: TRC-001
+  commit   : 789b981 "Fix the misspelled invalid-token message (#42)" by Dana Lee, on branch fix-token-message (new)
+  committed: 13 file(s): 2 of the change, 11 of the record (.compass/ and docs/compass/, as intended)
+  tree     : working tree clean
+done: nothing more to run for this issue, before or after the merge. Do not re-check the commit or push it unless the person asks.
+```
+
+The session was on the default branch, so `finish` made a branch named after
+the issue and committed there. A commit on a branch is not a merge: you open
+the pull request and merge it as you do for any change. Unless the project
+keeps the record out, the same commit holds the issue's record: the
+manifest, the evidence, the acceptance criteria and `trail.md`.
 
 ```text
 $ git show --stat --format=%s HEAD
-Fix the misspelled invalid-token message
+Fix the misspelled invalid-token message (#42)
 
  .compass/.gitignore                                |   9 ++
  .compass/work/.gitignore                           |   9 ++
  .../work/fix-token-message/evidence/SHA256SUMS     |   4 +
- .../fix-token-message/evidence/check-output.txt    |  52 ++++++++++
- .../evidence/green-TRC-001.outer.json              |  39 ++++++++
- .../evidence/green-TRC-001.outer.log               |   2 +
- .../evidence/red-TRC-001.outer.json                |  33 +++++++
- .../evidence/red-TRC-001.outer.log                 |  17 ++++
- .compass/work/fix-token-message/manifest.yml       | 108 +++++++++++++++++++++
- .compass/work/fix-token-message/trail.md           |  72 ++++++++++++++
+ .../fix-token-message/evidence/check-output.txt    |  52 +++++++++
+ .../fix-token-message/evidence/green-TRC-001.json  |  34 ++++++
+ .../fix-token-message/evidence/green-TRC-001.log   |   2 +
+ .../fix-token-message/evidence/red-TRC-001.json    |  29 +++++
+ .../fix-token-message/evidence/red-TRC-001.log     |  17 +++
+ .compass/work/fix-token-message/manifest.yml       | 126 +++++++++++++++++++++
+ .compass/work/fix-token-message/trail.md           |  72 ++++++++++++
  app/auth.py                                        |   2 +-
  .../acceptance-criteria.md                         |  32 ++++++
- 12 files changed, 378 insertions(+), 1 deletion(-)
+ tests/test_auth.py                                 |   4 +
+ 13 files changed, 391 insertions(+), 1 deletion(-)
 ```
 
 Your normal CI is still responsible for tests, linting, security scanning,
 builds and deployment checks.
 
-### Where the ship approval comes from
+In this run the person gave the approval at a terminal, with `compass
+evidence approve`. The ship
+approval can also come from the pull request: after the merge, `compass
+issue link set --pr <n>` reads a review that approves it, by a person who is
+not its author.
 
-`ship-approval` is one person's approval of the change. Compass does not let
-the agent give it. After the merge, `compass issue link set --pr <n>` reads
-it from the pull request: a review that approves it, by a person who is not
-its author. With no such review, a person types `/compass:approve` after
-`compass evidence request --ship`. No landing waits for it, and `compass
-next` names both ways while it is owed:
+## 5. Change it after the approval
+
+An approval covers the change you saw. `finish` records a digest of the code
+and test files of the change, and the request and the approval record hold
+it. After feedback, the session edits the code and the test and runs
+`finish` once:
 
 ```text
-all phases complete | next: compass issue link set --pr <n> --issue fix-token-message after the merge, or compass evidence request --ship, then stop for /compass:approve
+compass quick-fix finish: 'fix-token-message' checked and committed.
+  red      : the tests fail on the base commit 956a3fbc (exit 1), with 1 test file(s) of the change
+  green    : the tests pass on the working tree
+  scenarios: TRC-001
+  commit   : 38b13f0 "Add a hint to the invalid-token response (#42)" by Dana Lee, on branch fix-token-message
+  committed: 11 file(s): 2 of the change, 9 of the record (.compass/ and docs/compass/, as intended)
+  tree     : working tree clean
+next: stop: the change differs from the one approved. Ask the person to type /compass:approve 2 (the ship approval). Nothing else to run now.
 ```
 
-When the record ships with the code, the fields the merge adds come after
-that commit: `compass record commit` commits them alone, and the `next:` line
-names it.
+It proved the red and the green again and committed on the branch. The
+change now differs from the one you approved, so `compass check` fails until
+you approve the new state:
 
-## 5. Check the trail
+```text
+FAIL - 1 of 12 check(s) failed, 13 had nothing to check on 'fix-token-message' (delivery)
+[mode: enforced]
+  generation 1 (parent 9.0.0)
+  Policy: compass-checks@9.0.0 (sha256 446c1cf864df46a525c0e12050681aee9a8799be4db2f4074835d01060b4…
+
+FAIL ship-approval-present: EV-SHIP-APPROVAL-1 was given for an earlier state of the change (sha256…
+     fix: Run `compass issue link set --pr <n>` once merged, or `compass evidence request --ship`.
+```
+
+After `/compass:approve 2`, `compass check` passes again. The first approval
+stays on record. The new approval is written to the manifest in the working
+tree, so the next commit that holds the record carries it.
+
+## 6. Check the trail
 
 `trail.md` says, in order, who asked, what was agreed, the red, the green,
 who approved and what shipped:
@@ -269,11 +312,8 @@ who approved and what shipped:
 ## 6. What shipped
 ```
 
-Until the approval is read, section 5 says "Ship approval: not on record
-yet" and names the two ways to give it.
-
 `compass trail --check` writes nothing and exits 1 when the file is out of
-date:
+date. At the first commit above it says:
 
 ```text
 compass trail: trail.md of fix-token-message is up to date.
@@ -282,8 +322,9 @@ compass trail: trail.md of fix-token-message is up to date.
 Under each statement the trail names its files with their `sha256sum`
 digests: the manifest, the acceptance criteria, the red and green records,
 and the code and test as the green tested them. A reviewer checks them from
-the repository root without Compass. `--quiet` prints only the files that do
-not match, so no output and exit 0 means every file matches:
+the repository root without Compass, at the commit that holds that version
+of the trail. `--quiet` prints only the files that do not match, so no
+output and exit 0 means every file matches:
 
 ```text
 $ grep -E '^[0-9a-f]{64}  ' .compass/work/fix-token-message/trail.md | sha256sum -c --quiet -
@@ -293,8 +334,8 @@ Change one of those files after the commit and the same command names it:
 
 ```text
 $ grep -E '^[0-9a-f]{64}  ' .compass/work/fix-token-message/trail.md | sha256sum -c --quiet -
-app/auth.py: FAILED
 sha256sum: WARNING: 1 computed checksum did NOT match
+app/auth.py: FAILED
 ```
 
 Leave out `--quiet` to see an `OK` line for each file. The check proves that
@@ -323,14 +364,19 @@ can resume from these files without the original chat.
 
 ## The mental model in five points
 
-1. **The acceptance tests are the specification.** Each scenario names the
-   test that proves it, and the trail names both.
-2. **Red before green, enforced by the hook.** The agent cannot edit the code
-   until a failing test is on record.
-3. **One path, adaptive evidence.** Every change runs assess, specify, build
-   and ship. The assessment decides which evidence each stage judges.
-4. **One person approves each change.** Compass reads the approval from the
-   merged pull request, or a person types it; the agent cannot give it.
+1. **Two commands.** `start` opens the issue and `finish` writes the record.
+   Between them the session writes tests and code and runs the tests
+   directly.
+2. **The tests fail without the change.** `finish` runs them on a copy of
+   the commit the issue started from, where they must fail, and on the
+   working tree, where they must pass. This does not show the order of the
+   work.
+3. **One path, the same evidence.** Every delivery issue owes the same
+   evidence. A domain label or `critical` risk adds a person's approval of
+   the scenarios before any code edit.
+4. **One person approves each change, as they saw it.** The agent cannot
+   give the approval. When the change differs from the one approved,
+   Compass asks again.
 5. **If it is not on disk, it did not happen.** The record ships with the
    code, and a reviewer checks it with `sha256sum`.
 

@@ -288,6 +288,22 @@ def cmd_quick_fix_start(args):
     except CompassError as exc:
         raise CompassError(f"compass quick-fix start: {exc}")
 
+    # One request is one issue: 5 of 12 measured sessions opened a second
+    # issue for follow-on work and left it unfinished. Name the open issue, so
+    # the session can add the work to it instead.
+    open_issue = None
+    try:
+        with open(os.path.join(project_root, ".compass", "current-task"),
+                  encoding="utf-8") as fh:
+            pointed = fh.read().strip()
+        if pointed and pointed != slug:
+            from compass_pkg import status_words
+            held, _ = load_manifest(os.path.join(project_root, ".compass", "work", pointed))
+            if not status_words.is_closed(held):
+                open_issue = pointed
+    except (OSError, CompassError, ValueError):
+        pass
+
     task_dir = os.path.join(project_root, ".compass", "work", slug)
     if os.path.isdir(task_dir):
         raise CompassError(
@@ -407,6 +423,10 @@ def cmd_quick_fix_start(args):
         f"compass quick-fix start: '{slug}' started.",
         detail=([f"created: {', '.join(created_dirs)} - tell the user"]
                 if created_dirs else []) + chain_detail + (
+            # Two lines, so the output layer cuts neither.
+            [f"open    : '{open_issue}' is not finished; add same-request work to it:",
+             f"`compass issue use {open_issue}`"]
+            if open_issue else []) + (
             ["settled decisions (read any that touch this change):"]
             + [f"  {line}" for line in decisions] if decisions else []) + [
                 f"scenarios: {doc_path_rel}"],
@@ -1075,7 +1095,8 @@ def _lean_finish(args, task_dir, slug, command):
     try:
         if not lean.records_current(task_dir, scenario_ids, argv, ids):
             red_code, red_out, kind = lean.prove_red(
-                project_root, base, test_paths, argv, invoked_from)
+                project_root, base, test_paths, argv, invoked_from,
+                declared=ids.get("test_files") or ())
             lean.drop_greens(task_dir, scenario_ids)
             stamp = lean.write_reds(task_dir, scenario_ids, argv, red_code, red_out, kind,
                                     base, tests, ids)

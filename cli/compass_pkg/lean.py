@@ -251,19 +251,24 @@ def _is_pytest(command):
     return _is_pytest_command(command)
 
 
-def prove_red(root, base, tests, command, cwd):
+def prove_red(root, base, tests, command, cwd, declared=()):
     """Run `command` on a copy of the base commit with the change's test files
     laid over it, and return `(exit code, output, red kind)`.
 
     Raises `CompassError`, in one line, when the run is not a red: the tests
-    pass without the change, or the command did not run a test. `cwd` is the
+    pass without the change, or the command did not run a test. `declared` are
+    the test files the scenarios declare, for a change with no test file of its
+    own. `cwd` is the
     folder the command was given in; the run starts in the same folder of the
     copy. The copy is removed afterwards."""
     from compass_pkg.tdd import _NO_TEST_RAN_EXITS, _run_test
-    if not tests:
+    # With no changed test file, a test the scenarios already declare can
+    # still fail on the base commit: a failing test that was there first.
+    if not tests and not declared:
         raise CompassError(
             "compass quick-fix finish: the change holds no test file, so nothing shows the "
-            "tests fail without it. Add or change a test, then run finish again.")
+            "tests fail without it. Add or change a test; or, for a test that failed "
+            "before the change, run compass scenario tests set <id> --test <path>.")
     holder = tempfile.mkdtemp(prefix="compass-base-")
     env, report, ours, before = pytest_report.with_report(command)
     try:

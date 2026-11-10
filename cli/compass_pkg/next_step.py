@@ -165,11 +165,12 @@ def _lean(task, task_dir):
                    if (r.get("form"), r.get("value")) in subjects]
     if waiting:
         asks = " and ".join(f"/compass:approve {n} ({what})" for n, what in waiting)
-        return (f"stop and ask the person to type {asks}. When they ask for a commit, run "
-                "compass ship-commit")
+        return (f"stop and ask the person to type {asks}. After the approval, run the same "
+                "finish again: it commits")
     if _owed(task, task_dir, "human-approval") and not _human_approval(task, task_dir):
         return f"{LEAN_FINISH}, which asks for the `G5` sign-off"
-    return "when the person asks for a commit, run compass ship-commit"
+    return (f"{LEAN_FINISH} (it commits), or compass ship-commit on the branch the "
+            "person names")
 
 
 def ship_approval_command(task, task_dir):

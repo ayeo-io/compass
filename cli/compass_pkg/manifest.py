@@ -229,6 +229,21 @@ def run_landing_refusals(task, task_dir):
 
 
 def cmd_land_commit(args):
+    """`compass ship-commit`. After a commit on the lean path it prints what a
+    session otherwise checks by hand: the branch, the commit, its author and
+    file count, what is left in the working tree, and that nothing more is to
+    run. `compass quick-fix finish` prints those lines itself."""
+    code = _land_commit(args)
+    if code == 0 and getattr(args, "lean_issue", False) \
+            and not getattr(args, "lean_quiet", False):
+        from compass_pkg import lean
+        for line in lean.commit_report(os.getcwd()):
+            print(line)
+        print(lean.DONE)
+    return code
+
+
+def _land_commit(args):
     import shutil
     cwd = os.getcwd()
     msg = args.message
@@ -259,11 +274,12 @@ def cmd_land_commit(args):
     if lean_issue is not None and lean_issue[0].get("evidence_required") is not None:
         from compass_pkg import lean
         lean_task, lean_dir = lean_issue
+        args.lean_issue = True
         if not getattr(args, "task", None):
             args.task = os.path.basename(os.path.normpath(str(lean_dir)))
         if not msg and not getattr(args, "message_file", None):
             msg = lean_task.get(lean.MESSAGE_KEY)
-        if not status_words.is_closed(lean_task):
+        if not status_words.is_closed(lean_task) and not getattr(args, "lean_checked", False):
             refused = lean.landing_refusal(lean_dir)
             if refused:
                 raise CompassError(refused)

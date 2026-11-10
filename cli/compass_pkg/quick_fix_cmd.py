@@ -288,6 +288,27 @@ def cmd_quick_fix_start(args):
     except CompassError as exc:
         raise CompassError(f"compass quick-fix start: {exc}")
 
+    # One request is one issue, whatever slug the session picks: a request an
+    # issue of this project already holds goes on in that issue, landed or not.
+    # A measured session started a second issue for feedback on a landed
+    # change, and its test edits left the first issue's digests stale.
+    from compass_pkg import lean
+    lean.hide_run_output(project_root)
+    held_slug = lean.issue_for_request(project_root, request_url, request_target)
+    if held_slug is not None:
+        with open(os.path.join(project_root, ".compass", "current-task"),
+                  "w", encoding="utf-8") as fh:
+            fh.write(held_slug + "\n")
+        from compass_pkg.session_lease import SESSION_ENV, record as lease
+        lease(os.path.join(project_root, ".compass"),
+              os.environ.get(SESSION_ENV, ""), held_slug)
+        from compass_pkg.next_step import LEAN_FINISH
+        print(f"compass quick-fix start: this request already has the issue '{held_slug}'. "
+              f"No new issue was made; '{held_slug}' is the current issue again.")
+        print(f"next: write the tests and the code, then {LEAN_FINISH} (it replaces the "
+              f"records and commits)")
+        return 0
+
     # One request is one issue: 5 of 12 measured sessions opened a second
     # issue for follow-on work and left it unfinished. Name the open issue, so
     # the session can add the work to it instead.
@@ -428,8 +449,11 @@ def cmd_quick_fix_start(args):
              f"`compass issue use {open_issue}`"]
             if open_issue else []) + (
             ["settled decisions (read any that touch this change):"]
-            + [f"  {line}" for line in decisions] if decisions else []) + [
-                f"scenarios: {doc_path_rel}"],
+            + [f"  {line}" for line in decisions] if decisions else []) + (
+            # Named only when the session must write in it: a measured session
+            # read the file each time the line named it.
+            [f"scenarios: {doc_path_rel}"]
+            if "scenario-approval" in (task.get("evidence_required") or []) else []),
         decision=True, approach=approach, record=doc_path_rel,
     )
     from compass_pkg.next_line import announce
@@ -1098,6 +1122,7 @@ def _lean_finish(args, task_dir, slug, command):
                 project_root, base, test_paths, argv, invoked_from,
                 declared=ids.get("test_files") or ())
             lean.drop_greens(task_dir, scenario_ids)
+            lean.drop_stale_records(task_dir, scenario_ids)
             stamp = lean.write_reds(task_dir, scenario_ids, argv, red_code, red_out, kind,
                                     base, tests, ids)
             lean.wait_past(stamp)
@@ -1171,8 +1196,34 @@ def _lean_finish(args, task_dir, slug, command):
                 release_line.store(task_dir, line, "compass quick-fix finish")
         waiting = lean.request_owed_approvals(task_dir)
 
-    print(f"compass quick-fix finish: '{slug}' checked"
-          + (", but for the `G5` sign-off" if signoff_only else "") + ". Nothing is committed.")
+    # With nothing owed from a person the change is committed here, in the
+    # same call: every round after the first, and the first once the approval
+    # is on record. `--no-commit` leaves the commit to `compass ship-commit`.
+    committed, branch_note, commit_error = False, "", None
+    if not waiting and not signoff_only and not getattr(args, "no_commit", False):
+        with _at_project_root(project_root):
+            task, _ = load_manifest(task_dir)
+            dirty = lean.traced_paths(task, project_root)
+            if relanding and not dirty:
+                committed = True        # a second finish with nothing new to commit
+            else:
+                if lean.branch_for_first_landing(project_root, slug):
+                    branch_note = " (new)"
+                skip = (".compass/", lean.doc_prefix(task_dir))
+                try:
+                    _out, code = _quiet_run(
+                        cmd_land_commit, task=slug, message=args.message, message_file=None,
+                        files=[p for p in dirty if not p.startswith(skip)],
+                        release_note=None, lean_checked=True, lean_quiet=True)
+                    committed = code == 0
+                    commit_error = None if committed else _out.strip()
+                except CompassError as exc:
+                    commit_error = str(exc)
+
+    state = ("checked and committed" if committed else
+             "checked, but for the `G5` sign-off. Nothing is committed" if signoff_only
+             else "checked. Nothing is committed")
+    print(f"compass quick-fix finish: '{slug}' {state}.")
     if proved is not None:
         print(f"  red      : the tests fail on the base commit {str(base)[:8]} (exit {proved}), "
               f"with {len(tests)} test file(s) of the change")
@@ -1181,14 +1232,26 @@ def _lean_finish(args, task_dir, slug, command):
         print("  records  : the red and the green already cover these files")
     print(f"  scenarios: {', '.join(scenario_ids)}"
           + (f" ({len(added)} read from the acceptance criteria)" if added else ""))
-    print(f"  files    : {len(code_paths) + len(documents)} traced from git")
     if left_out:
         print(f"  left out : {_short(', '.join(left_out), 80)} (changed before start; "
               f"`compass changed-file add` takes one in)")
-    ship = "When they ask for a commit, run compass ship-commit"
+    if committed:
+        for line in lean.commit_report(project_root, branch_note):
+            print(line)
+        print(lean.DONE)
+        return 0
+    if commit_error:
+        lines = commit_error.splitlines()
+        print("  commit   : refused - " + _short(lines[0], 200))
+        for line in lines[1:6]:
+            print("    " + _short(line, 200))
+        print("next: fix what the commit line names, then run the same finish again")
+        return 1
+    print(f"  files    : {len(code_paths) + len(documents)} traced from git")
+    again = ("Nothing else to run until then. After the approval, run the same finish "
+             "again: it commits.")
     if not waiting:
-        print("next: run compass ship-commit to land the fix on this branch" if relanding
-              else "next: when the person asks for a commit, run compass ship-commit")
+        print("next: when the person asks for a commit, run compass ship-commit")
         return 0
     from compass_pkg import approval_requests
     if os.environ.get(approval_requests.CHANNEL_ENV) == "terminal":
@@ -1198,8 +1261,8 @@ def _lean_finish(args, task_dir, slug, command):
         for number, _what in waiting:
             print("  approve  : " + approval_requests._terminal_command(held[number]))
         print(f"next: stop and ask the person to run each `approve :` command above in "
-              f"their own terminal. {ship}")
+              f"their own terminal. {again}")
         return 0
     asks = " and ".join(f"/compass:approve {number} ({what})" for number, what in waiting)
-    print(f"next: stop and ask the person to type {asks}. {ship}")
+    print(f"next: stop and ask the person to type {asks}. {again}")
     return 0

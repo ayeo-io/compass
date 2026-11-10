@@ -474,3 +474,177 @@ def spec_of(task_dir):
 
 def doc_prefix(task_dir):
     return docs_dir(task_dir) + "/"
+
+
+# --- round two: one issue per request, one call per round ------------------------------------
+
+#: The line that ends a hand-off after a commit. It says what the session need
+#: not run, because measured sessions ran `git log`, `git show`, `git status`,
+#: `compass status` and the tests again after each commit.
+DONE = ("done: nothing more to run for this issue, before or after the merge. Do not "
+        "re-check the commit or push it unless the person asks.")
+
+#: Patterns of test-run output, written to the repository's own
+#: `.git/info/exclude`, so `git status` does not list them.
+_EXCLUDED = (".coverage", ".coverage.*", "coverage.xml", "coverage.json", "htmlcov/",
+             ".pytest_cache/", ".mypy_cache/", ".ruff_cache/", "__pycache__/")
+
+
+def issue_for_request(project_root, link, target):
+    """The slug of the issue in this project that already holds the request,
+    or None. The request is the same when the `github:` repository and number
+    match, or the stored link is the same text."""
+    work = os.path.join(project_root, ".compass", "work")
+    try:
+        slugs = sorted(os.listdir(work))
+    except OSError:
+        return None
+    found = []
+    for slug in slugs:
+        try:
+            task, _ = load_manifest(os.path.join(work, slug))
+        except (CompassError, OSError, ValueError):
+            continue
+        if not isinstance(task, dict):
+            continue
+        held = task.get("github") if isinstance(task.get("github"), dict) else {}
+        request = task.get("request") if isinstance(task.get("request"), dict) else {}
+        same_target = target is not None and (
+            str(held.get("repo") or "").lower(), str(held.get("number"))) == (
+            str(target[0]).lower(), str(target[1]))
+        same_link = bool(link) and str(request.get("link") or "").rstrip("/") == \
+            str(link).rstrip("/")
+        if same_target or same_link:
+            found.append((str(task.get("created") or ""), slug))
+    # The newest issue of the request is the one the work goes on in.
+    return max(found)[1] if found else None
+
+
+def hide_run_output(root):
+    """Add the patterns of test-run output to `.git/info/exclude`, once. The
+    file is local to this clone and is never committed."""
+    done = _git(["rev-parse", "--git-path", "info/exclude"], root)
+    if done.returncode != 0 or not done.stdout.strip():
+        return
+    path = os.path.join(root, done.stdout.strip())
+    try:
+        held = ""
+        if os.path.isfile(path):
+            with open(path, encoding="utf-8") as fh:
+                held = fh.read()
+        lines = set(held.splitlines())
+        missing = [p for p in _EXCLUDED if p not in lines]
+        if not missing:
+            return
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(("" if held.endswith("\n") or not held else "\n")
+                     + "# test-run output (added by compass)\n" + "\n".join(missing) + "\n")
+    except OSError:
+        return
+
+
+def leftovers(root):
+    """The changed or untracked paths git still sees, less Compass's own state
+    and test-run output."""
+    out = _git(["status", "--porcelain", "-z", "--untracked-files=all"], root).stdout
+    fields, paths, i = out.split("\0"), [], 0
+    while i < len(fields):
+        entry = fields[i]
+        i += 1
+        if len(entry) < 4:
+            continue
+        if "R" in entry[:2] or "C" in entry[:2]:
+            i += 1
+        path = entry[3:]
+        if path.startswith(".compass/") or _is_generated(path) or _run_output(path):
+            continue
+        paths.append(path)
+    return paths
+
+
+def current_branch(root):
+    return _git(["symbolic-ref", "--short", "-q", "HEAD"], root).stdout.strip() or None
+
+
+def default_branch(root):
+    """The repository's default branch: the one `origin/HEAD` names, else
+    `main` or `master` when the name exists."""
+    named = _git(["symbolic-ref", "--short", "-q", "refs/remotes/origin/HEAD"], root)
+    if named.returncode == 0 and "/" in named.stdout:
+        return named.stdout.strip().split("/", 1)[1]
+    for name in ("main", "master"):
+        if _git(["rev-parse", "--verify", "-q", f"refs/heads/{name}"], root).returncode == 0:
+            return name
+    return None
+
+
+def branch_for_first_landing(root, slug):
+    """Before a commit that finish makes: when `HEAD` is on the default
+    branch, make a branch named after the issue and switch to it, so finish
+    never commits to the default branch. Returns the new branch's name, or
+    None when the current branch is kept."""
+    now = current_branch(root)
+    if not now or now != default_branch(root):
+        return None
+    for name in (slug, slug + "-2", slug + "-3"):
+        if _git(["switch", "-c", name], root).returncode == 0:
+            return name
+    return None
+
+
+def commit_report(root, branch_note=""):
+    """What a session otherwise checks by hand after a commit, in three lines:
+    the branch, the commit, its author and file count, and what is left in the
+    working tree."""
+    shown = _git(["log", "-1", "--format=%h%x00%an%x00%s"], root).stdout.strip().split("\0")
+    if len(shown) != 3:
+        return []
+    short, author, subject = shown
+    names = [n for n in _git(["show", "--name-only", "-z", "--format=", "HEAD"],
+                             root).stdout.split("\0") if n]
+    record = [n for n in names if n.startswith((".compass/", "docs/compass/"))]
+    left = leftovers(root)
+    subject = subject if len(subject) <= 60 else subject[:57] + "..."
+    return [
+        f"  commit   : {short} \"{subject}\" by {author}, on branch "
+        f"{current_branch(root) or 'detached HEAD'}{branch_note}",
+        f"  committed: {len(names)} file(s): {len(names) - len(record)} of the change, "
+        f"{len(record)} of the record (.compass/ and docs/compass/, as intended)",
+        "  tree     : working tree clean" if not left else
+        "  tree     : not committed: " + ", ".join(left[:5])
+        + (f" and {len(left) - 5} more" if len(left) > 5 else ""),
+    ]
+
+
+def drop_stale_records(task_dir, scenario_ids):
+    """Remove the red and green records of this issue that no scenario of the
+    manifest holds now, with their registry entries, so every record left
+    names the files as they are. `finish` calls it before it writes the
+    records of `scenario_ids`; the next record written drops the removed
+    files from `SHA256SUMS`."""
+    from compass_pkg.red_first import is_record_name, record_stem
+    evidence = os.path.join(task_dir, "evidence")
+    keep = {record_stem(kind, sid, "inner") + ".json"
+            for kind in ("red", "green") for sid in scenario_ids}
+    gone = []
+    try:
+        names = sorted(os.listdir(evidence))
+    except OSError:
+        return gone
+    for name in names:
+        if name in keep or not (is_record_name("red", name) or is_record_name("green", name)):
+            continue
+        for path in (os.path.join(evidence, name),
+                     os.path.join(evidence, name[:-len(".json")] + ".log")):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        gone.append("evidence/" + name)
+    if gone:
+        task, task_path = load_manifest(task_dir)
+        task["evidence"] = [e for e in task.get("evidence") or []
+                            if not (isinstance(e, dict) and e.get("path") in gone)]
+        save_manifest(task, task_path)
+    return gone

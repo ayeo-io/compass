@@ -1,40 +1,34 @@
 # Compass operating contract
 
-**Assess before you change anything.** Run `/compass:assess` before a tool
-call changes a file. **Never skip assessment.** Only conversation is exempt.
-**Trigger on intent, not on the command.** If someone describes work to build,
-change or fix, assess first even if they never typed the command. If
-`.compass/current-task` names an assessed issue, carry on with it.
+**Start an issue before you change a file.** When someone describes work to
+build, change or fix, run `/compass:assess` first, even if they never typed
+it. Only conversation is exempt. If `.compass/current-task` names an open
+issue, carry on with it. **One request is one issue.** Do not open a second
+issue for follow-on work in the same request; add it to this one.
 
-**Stages, in order**, run by `/compass:go`: 1. assess, 2. specify, 3. build,
-4. ship. Each verb that writes a record prints `next:`, the command to run
-next, and `compass <verb> --help` explains a verb. Run one `compass` command
-per Bash call, with no `&&`, `;`, loop or `$VAR` around it.
+**The path is three commands**, each alone in its Bash call:
+`compass quick-fix start`, then `compass quick-fix finish -m "<message>" --
+<test command>` once the tests and code are written, then `compass
+ship-commit` when the person asks for a commit. Each prints `next:`; do what
+it says. Between start and finish, write tests and code and run the tests
+directly. Compass writes the record itself: never edit `.compass/`.
 
-**Guardrails are hard. Strategies are soft.** Five guardrails:
-1. Every change lands with a passing test that covers it.
+**Five guardrails:**
+1. Every change lands with a test that fails without it.
 2. Acceptance criteria exist before the code.
 3. Code traces to a criterion and a reason.
-4. Evidence is a recorded command output, never a claim that something passed.
-5. A human approves anything irreversible.
+4. Evidence is a recorded command output, never a claim.
+5. A person approves anything irreversible.
 
-**Evidence, not assertion.** Use the CLI: `compass tdd-red -- <cmd>` records a
-failing test, `compass tdd-green -- <cmd>` a passing one, and `compass check`
-runs the checks. **If it is not on disk, it did not happen.** The acceptance
-criteria go to `docs/compass/<created>-<slug>/`; the manifest and evidence live
-in `.compass/work/<slug>/`. **Settle edge cases before scenarios**
-(`atdd` skill).
+**Approvals.** For the labels `auth`, `payments`, `personal-data` and
+`migrations`, a person approves the scenarios before any code edit. Never
+approve for the person: ask them to type `/compass:approve <n>` and stop.
+Approve yourself only under a delegation naming you. Never create, extend or
+revoke a delegation.
 
-**Approvals.** Approve only under a delegation naming you, with `compass
-evidence approve --delegated --as <you> --issue <slug>`, as a plain Bash
-command, not a script. Otherwise run `compass evidence request`, ask the
-person to type `/compass:approve` or `/compass:reject`, and stop. Never
-create, extend or revoke a delegation.
+**Commit only what you mean to.** `compass ship-commit` stages the changed
+files and the record; do not `git add` anything under `.compass/` yourself.
+Check the commit's files and author. A lint fix never weakens an assertion.
 
-**Commit only what you mean to.** Stage each file by its path, never
-`.compass/`, and check the staged list and commit authors. If something is
-staged by mistake, say so and stop; do not retry a refused unstage. A lint
-fix never weakens an assertion; re-run affected tests.
-
-**Write for a person in the spirit of ASD-STE100.** Lead with the point. Call
-each thing by its `compass terminology` term. If they are lost, re-pitch.
+**Write for a person in the spirit of ASD-STE100.** Lead with the point. If
+they are lost, re-pitch.

@@ -1,12 +1,9 @@
 # compass_pkg.lean - the record keeping `compass quick-fix finish` does itself
-"""The lean path (experiment branch `exp-lean`): Compass keeps the record.
+"""Compass keeps the record itself (ADR-099).
 
-A measurement of Compass 9.0.0 showed an agent making about 100 `compass`
-calls on a medium change, most of them record keeping: `tdd-red`,
-`tdd-green`, `scenario add`, `changed-file add`, `evidence add`, `gate pass`
-and waivers. Each call resends the whole context. On this branch the agent
-writes tests and code freely and `compass quick-fix finish` writes the
-record in one call. This module holds the parts of that call:
+The session writes tests and code and runs the tests directly. `compass
+quick-fix finish` then writes the record in one call. This module holds the
+parts of that call:
 
 - `sync_scenarios` copies the scenarios of `acceptance-criteria.md` into the
   manifest, so no `compass scenario add` is needed;
@@ -18,19 +15,26 @@ record in one call. This module holds the parts of that call:
   lays the changed test files over it, runs the test command there and
   needs it to fail. That failure is the red record: the tests fail without
   the change;
+- `change_digest` is the digest of the change an approval covers;
 - `request_owed_approvals` writes the request for the `G5` sign-off and the
-  ship approval when each is owed and not yet asked for.
+  ship approval when each is owed and no approval covers the change as it is.
 
 The red is proved by `finish`, after the code exists, so its record says
 `proved_on: base-copy` and names the base commit. It shows the tests fail
 without the change. It does not show the order the files were written in.
+
+The base copy holds the base commit's tracked files. `node_modules`, `.venv`
+and `venv` are linked in from the working tree, and so is each path the
+project names under `project.base_copy_links` in `compass.yml`
+(`docs/base-copy.md`).
 """
-# DEPENDENCY: standard library; compass_pkg.core, pytest_report, start_state and
-# tdd; inside functions approval_requests, approvals, checks, scenario_freeze and
-# ship_approval.
+# DEPENDENCY: standard library; compass_pkg.approval_records, core, pytest_report,
+# project_settings, start_state and tdd; inside functions approval_requests,
+# approvals, checks, scenario_freeze and ship_approval.
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import json
 import os
 import re
@@ -39,7 +43,8 @@ import subprocess
 import tempfile
 import time
 
-from compass_pkg import pytest_report
+from compass_pkg import project_settings, pytest_report
+from compass_pkg.approval_records import CHANGE_KEY
 from compass_pkg.core import CompassError, docs_dir, load_manifest, now_iso, save_manifest
 from compass_pkg.start_state import (_is_generated, _is_issue_state, _record_path,
                                      _tracked_paths)
@@ -65,6 +70,9 @@ _TEST_NAMES = ("test_*", "*_test.*", "*.test.*", "*.spec.*", "*_spec.*", "confte
 #: Folders of installed dependencies. The base copy links to them, because the
 #: base commit does not hold them and the tests cannot run without them.
 _DEPENDENCY_DIRS = ("node_modules", ".venv", "venv")
+#: The key under `project:` in `compass.yml` that names more untracked paths to
+#: link into the base copy, each relative to the project root.
+LINKS_KEY = "base_copy_links"
 
 _HEADING = re.compile(r"^###\s+Scenario(?: Outline| Template)?:\s*(?P<title>.+?)\s*$")
 _TRACE = re.compile(r"<!--\s*traceability id:\s*(?P<id>[A-Z][A-Z0-9]*-[A-Za-z0-9_]+)\b"
@@ -195,14 +203,38 @@ def sync_scenarios(task, spec_path):
     return added
 
 
+def change_digest(root, code):
+    """The digest of the change (ADR-099 decision 6): sha256 over one line per
+    path of `code`, in sorted order. A line is the path, a NUL, then the
+    sha256 of the file's bytes, `link:` and the target for a symbolic link, or
+    `absent` for a path the change deleted. `code` is the first list
+    `changed_paths` returns: the code and test files, without the issue's
+    record, its documents and the files a test run leaves. Running the tests
+    or `finish` again does not change it; an edit to a file of the change does."""
+    whole = hashlib.sha256()
+    for path in sorted(code):
+        full = os.path.join(root, path)
+        if os.path.islink(full):
+            state = "link:" + os.readlink(full)
+        elif os.path.isfile(full):
+            with open(full, "rb") as fh:
+                state = hashlib.sha256(fh.read()).hexdigest()
+        else:
+            state = "absent"
+        whole.update(f"{path}\0{state}\n".encode("utf-8", "surrogateescape"))
+    return whole.hexdigest()
+
+
 def record_change(task_dir, root, code, documents, tests):
     """Write the change into the manifest: each changed path traced to every
-    scenario, and the changed test files as the tests of each scenario that
-    declares no test file that exists. Returns the manifest as saved."""
+    scenario, the changed test files as the tests of each scenario that
+    declares no test file that exists, and the digest of the change. Returns
+    the manifest as saved."""
     task, path = load_manifest(task_dir)
     ids = [s["id"] for s in task.get("scenarios") or [] if isinstance(s, dict) and s.get("id")]
     on_disk = [p for p in code + documents if os.path.lexists(os.path.join(root, p))]
     task["changed_files"] = [{"path": p, "scenarios": list(ids)} for p in on_disk]
+    task[CHANGE_KEY] = change_digest(root, code)
     for scenario in task.get("scenarios") or []:
         if not isinstance(scenario, dict):
             continue
@@ -239,11 +271,38 @@ def _build_base_copy(root, base, tests, into):
             shutil.copy2(source, target)
         elif os.path.lexists(target):
             os.remove(target)
-    for name in _DEPENDENCY_DIRS:
+    for name in _DEPENDENCY_DIRS + base_copy_links(root):
         source, target = os.path.join(root, name), os.path.join(copy_root, name)
-        if os.path.isdir(source) and not os.path.lexists(target):
+        if os.path.lexists(source) and not os.path.lexists(target):
+            os.makedirs(os.path.dirname(target), exist_ok=True)
             os.symlink(source, target)
     return copy_root
+
+
+def base_copy_links(root):
+    """The paths of `project.base_copy_links` in the project's settings: more
+    untracked paths the tests need, such as build output, each linked into
+    the base copy. A path that is absolute or leaves the project is refused."""
+    try:
+        project = project_settings.settings(root).get("project")
+    except project_settings.CompassError:
+        return ()
+    named = project.get(LINKS_KEY) if isinstance(project, dict) else None
+    if named is None:
+        return ()
+    if isinstance(named, str) or not isinstance(named, list) \
+            or not all(isinstance(p, str) and p.strip() for p in named):
+        raise CompassError(f"compass quick-fix finish: project.{LINKS_KEY} in the settings "
+                           f"must be a list of paths.")
+    out = []
+    for path in named:
+        clean = os.path.normpath(path.strip())
+        if os.path.isabs(clean) or clean == ".." or clean.startswith(".." + os.sep) \
+                or clean == ".":
+            raise CompassError(f"compass quick-fix finish: project.{LINKS_KEY} names "
+                               f"{path!r}, which is not a path inside the project.")
+        out.append(clean)
+    return tuple(out)
 
 
 def _is_pytest(command):
@@ -289,7 +348,9 @@ def prove_red(root, base, tests, command, cwd, declared=()):
         if code == 0:
             raise CompassError(
                 "compass quick-fix finish: the tests pass on the base commit without the "
-                "change, so they prove nothing. Add a test that fails without the change.")
+                "change, so they prove nothing. Likely causes: the test does not exercise "
+                "the change, or an editable install makes the base copy import the working "
+                "tree (docs/base-copy.md). Add a test that fails without the change.")
         kind, why = "exit-code", None
         if pytest_report.written(report, before):
             kind, _heading, why = pytest_report.judge(report, code, root, _NO_TEST_RAN_EXITS)
@@ -371,18 +432,56 @@ def records_current(task_dir, scenario_ids, command, ids):
     return True
 
 
+def recorded_red(task_dir, sid, ids, still_green=lambda sid: False):
+    """True when `sid` holds a red that `compass tdd-red` recorded, on the test
+    files as they are now. `finish` keeps such a red: it is the only record
+    that the test was written before the code (ADR-099 decision 2). A red on
+    test files that changed since proves nothing about them, so it is not
+    kept. `still_green(sid)` says whether the scenario's green covers the tree
+    as it is now."""
+    from compass_pkg.red_first import load_record, record_stem
+    now = ids.get("file_sha256") if isinstance(ids.get("file_sha256"), dict) else {}
+    for loop in ("inner", "outer"):
+        red = load_record(os.path.join(task_dir, "evidence",
+                                       record_stem("red", sid, loop) + ".json"))
+        if not red or red.get("passed") is not False or red.get("proved_on") == BASE_COPY:
+            continue
+        held = red.get("file_sha256")
+        if isinstance(held, dict) and held:
+            if all(now.get(p) == d for p, d in held.items()):
+                return True
+            continue
+        # A red on a scenario that declared no test file names no digest. It
+        # is kept until a green follows it; after that, only while that green
+        # still covers the tree (`still_green`).
+        green = os.path.join(task_dir, "evidence", record_stem("green", sid, loop) + ".json")
+        if not os.path.isfile(green) or still_green(sid):
+            return True
+    return False
+
+
 def drop_greens(task_dir, scenario_ids):
-    """Remove the green record files of the scenarios, so the next green starts
-    its `first_timestamp` again, after the red that replaces the old one."""
+    """Remove the green records of the scenarios, with their registry entries,
+    so the next green starts its `first_timestamp` again, after the red that
+    replaces the old one."""
     from compass_pkg.red_first import record_stem
+    gone = []
     for sid in scenario_ids:
         for loop in ("inner", "outer"):
-            stem = os.path.join(task_dir, "evidence", record_stem("green", sid, loop))
+            name = record_stem("green", sid, loop)
+            stem = os.path.join(task_dir, "evidence", name)
+            if os.path.isfile(stem + ".json"):
+                gone.append(f"evidence/{name}.json")
             for ending in (".json", ".log"):
                 try:
                     os.remove(stem + ending)
                 except OSError:
                     pass
+    if gone:
+        task, task_path = load_manifest(task_dir)
+        task["evidence"] = [e for e in task.get("evidence") or []
+                            if not (isinstance(e, dict) and e.get("path") in gone)]
+        save_manifest(task, task_path)
 
 
 def specify_owed(task, task_dir):
@@ -401,8 +500,10 @@ def specify_owed(task, task_dir):
 
 def request_owed_approvals(task_dir):
     """Write the request for the `G5` sign-off and for the ship approval when
-    each is owed, not on record and not already asked for. Returns
-    `[(number, what)]` for every request that is pending afterwards."""
+    each is owed, no approval covers the change as it is, and no request for
+    this state of the change is pending. A pending request for an earlier
+    state is replaced (ADR-099 decision 6). Returns `[(number, what)]` for
+    every request that is pending afterwards."""
     from compass_pkg import approval_records, approval_requests, approvals, ship_approval
     from compass_pkg.checks import _check_human_approval
     task, _ = load_manifest(task_dir)
@@ -420,10 +521,12 @@ def request_owed_approvals(task_dir):
     # A `G5` record says for what the person approved.
     scopes = {"guardrail": (f"the change of issue {slug}, labeled {labels}"
                             + (f": {subject[0]}" if subject else ""))[:300]}
+    now = approval_records.change_fields(task)
     with approvals.lock(task_dir):
         for form, value, what in wanted:
             held = next((r for r in approval_requests.pending(task_dir)
-                         if r.get("form") == form and r.get("value") == value), None)
+                         if r.get("form") == form and r.get("value") == value
+                         and r.get(CHANGE_KEY) == now.get(CHANGE_KEY)), None)
             if held is None:
                 scope = scopes.get(form, "")
                 answer = approvals.Answer(form, value, approval_records.APPROVED, None, "",
@@ -437,18 +540,60 @@ def request_owed_approvals(task_dir):
     return waiting
 
 
+def first_approvals_given(task, task_dir):
+    """True when a person has approved the change at least once: a ship
+    approval is on record and, where the `G5` sign-off is owed, a sign-off
+    too, each for this or an earlier state of the change. From then on
+    `finish` commits on the branch in the same call (ADR-099 decision 7), and
+    a commit on a branch is not a landing."""
+    from compass_pkg import approval_records, ship_approval
+    registry = [e for e in task.get("evidence") or [] if isinstance(e, dict)]
+    standing, _note = approval_records.not_withdrawn(
+        [e for e in registry if e.get("decision") == approval_records.APPROVED], registry)
+    # An approval typed before the first `finish` names the digest of no
+    # change: the person saw no code, so it does not start the commits.
+    standing = [e for e in standing
+                if e.get(approval_records.CHANGE_KEY) != approval_records.NO_CHANGE]
+    ship = bool(ship_approval._pr_approvals(task, standing)
+                or ship_approval._typed_approvals(task, task_dir, standing))
+    signed = "human-approval" not in (task.get("evidence_required") or []) or any(
+        e.get("type") == "human-approval" and approval_records.gives_g5(e)
+        and all(e.get(k) for k in approval_records.REQUIRED) for e in standing)
+    return ship and signed
+
+
+def short(text, limit=96):
+    """`text` on one line, cut to `limit` characters."""
+    text = " ".join(str(text).split())
+    return text if len(text) <= limit else text[:limit - 3] + "..."
+
+
+def check_failures(check_out, limit=5):
+    """The failing checks of a `compass check` summary, one line each."""
+    lines = [ln.strip() for ln in check_out.splitlines()
+             if ln.startswith("FAIL ") and not ln.startswith("FAIL - ")]
+    more = [f"... and {len(lines) - limit} more"] if len(lines) > limit else []
+    return [short(ln, 200) for ln in lines[:limit]] + more
+
+
 def landing_refusal(task_dir):
     """Why `compass ship-commit` must not land the issue, in a few lines, or
-    None: `compass check` fails. On the lean path `finish` lets the `G5`
-    sign-off wait for the person, so the landing is where it is enforced."""
+    None: `compass check` fails. `finish` lets a person's approval wait, so
+    the landing is where it is enforced."""
+    import argparse
+    import contextlib
+    import io
+
     from compass_pkg.check_cmd import cmd_check
-    from compass_pkg.quick_fix_cmd import _check_failures, _quiet_run
     slug = os.path.basename(os.path.normpath(task_dir))
-    out, code = _quiet_run(cmd_check, mode="summary", task=slug)
-    if code == 0:
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        code = cmd_check(argparse.Namespace(_mode="summary", evidence_out=None, json=False,
+                                            task=slug))
+    if not code:
         return None
     return ("compass ship-commit: nothing was committed - `compass check` fails:\n  "
-            + "\n  ".join(_check_failures(out))
+            + "\n  ".join(check_failures(out.getvalue()))
             + "\nA person's approval is given with /compass:approve; for anything else, "
             "fix it and run compass quick-fix finish again.")
 
@@ -476,11 +621,12 @@ def doc_prefix(task_dir):
     return docs_dir(task_dir) + "/"
 
 
-# --- round two: one issue per request, one call per round ------------------------------------
+# --- one issue per request, one call per round -----------------------------------------------
 
 #: The line that ends a hand-off after a commit. It says what the session need
 #: not run, because measured sessions ran `git log`, `git show`, `git status`,
 #: `compass status` and the tests again after each commit.
+#: `tests/test_two_command_change.py` bounds the lines `finish` prints.
 DONE = ("done: nothing more to run for this issue, before or after the merge. Do not "
         "re-check the commit or push it unless the person asks.")
 
@@ -617,7 +763,7 @@ def commit_report(root, branch_note=""):
     ]
 
 
-def drop_stale_records(task_dir, scenario_ids):
+def drop_stale_records(task_dir, scenario_ids, kept=()):
     """Remove the red and green records of this issue that no scenario of the
     manifest holds now, with their registry entries, so every record left
     names the files as they are. `finish` calls it before it writes the
@@ -627,6 +773,9 @@ def drop_stale_records(task_dir, scenario_ids):
     evidence = os.path.join(task_dir, "evidence")
     keep = {record_stem(kind, sid, "inner") + ".json"
             for kind in ("red", "green") for sid in scenario_ids}
+    # A scenario whose red `compass tdd-red` recorded keeps both loops' records.
+    keep |= {record_stem(kind, sid, "outer") + ".json"
+             for kind in ("red", "green") for sid in kept}
     gone = []
     try:
         names = sorted(os.listdir(evidence))

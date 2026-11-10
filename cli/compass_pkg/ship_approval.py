@@ -16,13 +16,18 @@ Two records count, and nothing else:
   latest review of a person other than the pull request's author was an
   approval;
 - a `human-approval` record with `ship: <slug>`, given for this issue and its
-  generation, that no `approval-withdrawal` names. A person types it.
+  generation, that no `approval-withdrawal` names. A person types it. It holds
+  `change_sha256`, the digest of the change it covers. When `compass quick-fix
+  finish` records a change with another digest, the record no longer counts
+  and the check fails until a person approves the new state (ADR-099
+  decision 6). A record with no digest counts as it did before.
 
 A sign-off of guardrail `G5` does not count. It is given at specify, before
 code exists, and a labelled change must not owe less at ship than an
 ordinary one (VD-029).
 
-The check fails only when the manifest records the pull request as merged
+The check fails when the only typed approval was given for an earlier state
+of the change, and when the manifest records the pull request as merged
 (`pull_request.merged_at`) and no approval is on record. Otherwise it has
 nothing to check and names the command that records the approval. It never
 refuses a landing: `ship-commit` lands the issue before a pull request
@@ -142,9 +147,17 @@ def _check_ship_approval_present(task, task_dir):
     standing = ([(r, _pr_detail) for r in _pr_approvals(task, registry)]
                 + [(r, _typed_detail) for r in typed])
     standing = [(r, show) for r, show in standing if r.get("id") not in withdrawn]
+    # 1.1.0: a typed approval covers the change the person saw (ADR-099
+    # decision 6). One given for an earlier state does not count. The approving
+    # review of the merged pull request is read after the change stopped moving.
+    earlier = [r for r, _show in standing if approval_records.for_earlier_state(task, r)]
+    standing = [(r, show) for r, show in standing if r not in earlier]
     if standing:
         record, show = standing[0]
         return True, "ship approval on record: " + show(record)
+    if earlier:
+        return False, (approval_records.earlier_state_detail(task, earlier)
+                       + ", or the approving review is read from the merged pull request")
     gone = [r.get("id", "?") for r in typed if r.get("id") in withdrawn]
     note = (f" ({approval_records.WITHDRAWN}: {', '.join(gone)})" if gone else "")
     pr = task.get("pull_request") if isinstance(task.get("pull_request"), dict) else {}

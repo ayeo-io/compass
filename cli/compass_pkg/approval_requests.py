@@ -160,6 +160,8 @@ def digest(request):
         shown["waiver"] = request["waiver"]
     if "spec_sha256" in request:
         shown.update(spec=request.get("spec"), spec_sha256=request.get("spec_sha256"))
+    if approval_records.CHANGE_KEY in request:
+        shown[approval_records.CHANGE_KEY] = request[approval_records.CHANGE_KEY]
     return hashlib.sha256(json.dumps(shown, sort_keys=True, default=str)
                           .encode("utf-8")).hexdigest()
 
@@ -327,6 +329,10 @@ def write(task_dir, form, value, scope):
         # record when it changed after the request was shown (ADR-095).
         from compass_pkg import scenario_freeze
         request.update(scenario_freeze.fields(task, task_dir, value))
+    if form in ("ship", "guardrail"):
+        # The state of the change the person is asked to approve (ADR-099
+        # decision 6).
+        request.update(approval_records.change_fields(task))
     for old in pending(task_dir):
         if same_subject(old, request):
             close(task_dir, old, REPLACED, replaced_by=request["number"])
@@ -359,12 +365,11 @@ def _terminal_command(request):
                               for w in words])
 
 
-def _lean_form(args):
+def _next_form(args):
     """With no form given, the approval the issue waits for next: the `specify`
     checkpoint while the scenarios owe a person's approval, then the `G5`
     sign-off, then the ship approval. Sets the form on `args`, and a scope for
-    `G5`, which needs one. A session that left the form out was refused with
-    the usage text (the 9.0.0 measurement)."""
+    `G5`, which needs one."""
     if any(getattr(args, name, None) for name in
            ("check", "guardrail", "checkpoint", "waiver", "decisions", "ship")):
         return
@@ -387,15 +392,15 @@ def _lean_form(args):
 
 
 def cmd_evidence_request(args):
-    _lean_form(args)
+    _next_form(args)
     form, value = _form_of(args)
     scope = approvals.text(args.scope)
     answer = approvals.Answer(form, value, approval_records.APPROVED, None, "", scope)
     task_dir = resolve_issue_dir(args.task)
     if form == "checkpoint" and value == "specify":
-        # The lean path: the agent writes the scenarios in the acceptance
-        # criteria only, so the manifest takes them from there before the
-        # person is asked to approve them.
+        # The agent writes the scenarios in the acceptance criteria only
+        # (ADR-099), so the manifest takes them from there before the person
+        # is asked to approve them.
         from compass_pkg import lean
         from compass_pkg.core import save_manifest
         held, held_path = load_manifest(task_dir)
@@ -446,8 +451,8 @@ def register(evidence_subs):
     p = evidence_subs.add_parser(
         "request", help="ask a person for an approval: write a pending request that Compass "
                         "shows them", allow_abbrev=False)
-    # The lean path: with no form, the request is for the approval the issue
-    # waits for next (`_lean_form`).
+    # With no form, the request is for the approval the issue waits for next
+    # (`_next_form`).
     form = p.add_mutually_exclusive_group(required=False)
     form.add_argument("--check", help="id of the human check")
     form.add_argument("--guardrail", metavar=approval_records.G5,

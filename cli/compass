@@ -62,6 +62,7 @@ from compass_pkg import core as _core  # noqa: F401
 from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.status_cmd import register as register_status_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
+from compass_pkg.finish_record import register as register_finish_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
 from compass_pkg.lineage import cmd_issue_raised_by  # noqa: E402
 from compass_pkg.approach_diagram import cmd_approach_diagram  # noqa: E402
@@ -347,19 +348,6 @@ def build_parser():
     issue_arg(pnx)
     pnx.set_defaults(func=cmd_next, output_kind="report")
 
-    # `compass status <slug>` is what a session types when it wants the state of
-    # an issue (the 9.0.0 measurement): it prints what `compass next` prints.
-    pst = sub.add_parser(
-        "status", help="the same line as `compass next`; takes the issue as a word or --issue")
-    pst.add_argument("slug", nargs="?", help="issue slug (default: the current issue)")
-    issue_arg(pst)
-
-    def _cmd_status(args):
-        if getattr(args, "slug", None) and not getattr(args, "task", None):
-            args.task = args.slug
-        return cmd_next(args)
-    pst.set_defaults(func=_cmd_status, output_kind="report")
-
     pbf = sub.add_parser(
         "follow-up",
         help="manage an issue's follow-ups (outstanding / resolved)"
@@ -389,8 +377,8 @@ def build_parser():
              "staged artifacts robustly: survives auto-fixing pre-commit "
              "hooks and verifies HEAD advanced.",
     )
-    # The lean path: with no message, `ship-commit` uses the one `compass
-    # quick-fix finish -m` stored.
+    # With no message, `ship-commit` uses the one `compass quick-fix finish -m`
+    # stored (ADR-099).
     plc_msg = plc.add_mutually_exclusive_group(required=False)
     plc_msg.add_argument("-m", "--message", help="commit message")
     plc_msg.add_argument("-F", "--message-file", dest="message_file", metavar="FILE",
@@ -467,7 +455,7 @@ def build_parser():
     register_approve_parser(pevs)
     register_review_parser(pevs)
 
-    register_quick_fix_parser(sub, issue_arg)
+    register_finish_parser(register_quick_fix_parser(sub, issue_arg), issue_arg)
     register_decision_parser(sub)
     register_lesson_parser(sub)
     register_record_parser(sub)

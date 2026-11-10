@@ -17,6 +17,7 @@ from compass_pkg.verb_help import *  # noqa: F401,F403
 from compass_pkg.next_cmd import *  # noqa: F401,F403
 from compass_pkg.policy import *  # noqa: F401,F403
 from compass_pkg.quick_fix_cmd import *  # noqa: F401,F403
+from compass_pkg.finish_record import *  # noqa: F401,F403
 from compass_pkg.adr_cmd import *  # noqa: F401,F403
 from compass_pkg.refusals import *  # noqa: F401,F403
 from compass_pkg.routing import *  # noqa: F401,F403

@@ -163,7 +163,7 @@
     },
     "scenario_freeze": {
       "type": "object",
-      "description": "Optional. What the code of a path delivery issue was written against: the first `compass tdd-red` of the issue writes it, and nothing rewrites it. `compass check` prints a notice, not a row, when the spec's digest has changed since. An issue assessed before 9.0.0 has none.",
+      "description": "Optional. What the code of a path delivery issue was written against: the first `compass tdd-red` of the issue writes it, and `compass quick-fix finish` writes it again for the red it proves. `compass check` prints a notice, not a row, when the spec's digest has changed since. An issue assessed before 9.0.0 has none.",
       "additionalProperties": false,
       "required": ["at", "red", "spec", "spec_sha256", "scenarios"],
       "properties": {
@@ -182,7 +182,7 @@
       "properties": {
         "state": {"enum": ["on", "off"], "description": "The project setting when the issue was assessed."},
         "reason": {"type": "string", "description": "Why the project turned the strategy off; present with off."},
-        "routing": {"enum": ["on", "existing-dsl", "existing-dsl-isolation", "suspended"], "description": "The strategy's routing on the issue's approach."},
+        "routing": {"enum": ["on", "existing-dsl", "existing-dsl-isolation", "suspended", "guidance"], "description": "The strategy's routing on the issue. `guidance`: a 9.0.0 delivery issue that owes no record of the strategy, because no `require_evidence` rule adds one (ADR-099)."},
         "expected_acceptance": {"enum": ["none", "validation", "refactor"], "description": "The acceptance kind assess expected: none for client-observable behavior."},
         "applies": {"type": "boolean", "description": "Whether assess expected the strategy to apply."},
         "why": {"type": "string", "description": "The reason the delivery-approach record shows beside the answer."}
@@ -191,6 +191,18 @@
     "land_commit": {
       "type": "string",
       "description": "The commit ship-commit made when it marked the issue landed, or, after `compass issue link set --pr` reads a merged pull request, its merge commit on the default branch. evidence-matches-tree compares the newest green's tree_id with this commit's tree. compass check reports, as advice, a land_commit that origin's default branch does not reach."
+    },
+    "base_commit": {
+      "type": "string",
+      "description": "Optional. The commit the issue started from, written by `compass quick-fix start`. `compass quick-fix finish` reads the changed files as the difference from it and proves the red on a copy of it (ADR-099)."
+    },
+    "commit_message": {
+      "type": "string",
+      "description": "Optional. The commit message `compass quick-fix finish -m` was given last. `compass ship-commit` uses it when it is given none."
+    },
+    "change_sha256": {
+      "type": "string",
+      "description": "Optional. The digest of the change as `compass quick-fix finish` last recorded it: sha256 over the path and content digest of each code and test file of the change (cli/compass_pkg/lean.py, change_digest). A ship approval or `G5` sign-off record holds the digest it was given for, and counts only while the two are equal (ADR-099 decision 6)."
     },
     "landed_with_record": {
       "type": "boolean",

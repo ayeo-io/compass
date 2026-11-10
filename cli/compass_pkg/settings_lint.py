@@ -493,6 +493,10 @@ def schema():
         "record": {"description": top["record"], "type": "object", "properties": {
             "commit": {"description": top["record.commit"], "type": "boolean"}}},
         "project": {"description": top["project"], "type": "object", "properties": {
+            "base_copy_links": {"description": top["project.base_copy_links"],
+                                "type": "array", "items": {
+                                    "description": "A path relative to the project root.",
+                                    "type": "string"}},
             "acceptance_support": {
                 "description": top["project.acceptance_support"], "type": "object",
                 "properties": {k: {"description": top[f"project.acceptance_support.{k}"],

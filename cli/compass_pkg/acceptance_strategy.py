@@ -54,7 +54,13 @@ ROUTINGS = {
     "existing-dsl": "existing DSL only",
     "existing-dsl-isolation": "existing DSL only, isolation proof required",
     "suspended": "suspended, as strategy `S2`",
+    "guidance": "guidance, no record owed",
 }
+#: The routing of a delivery issue that owes no `S17` token (ADR-099 decision 9):
+#: the `atdd` skill is advice, and no check of the strategy runs. A project
+#: adds the tokens with `require_evidence` in `compass.yml`.
+GUIDANCE = "guidance"
+GUIDANCE_WHY = "no record of the strategy is owed unless `require_evidence` adds one"
 
 #: What `compass approach evaluate --expected-acceptance` takes: `none` for a
 #: change with client-observable behavior.
@@ -305,6 +311,8 @@ def in_scope(task, task_dir):
         return False, f"the project turned the strategy off - {held.get('reason')}"
     if held.get("routing") == "suspended":
         return False, f"suspended on this approach - {held.get('why')}"
+    if held.get("routing") == GUIDANCE:
+        return False, GUIDANCE_WHY
     return records_say(task, task_dir)
 
 
@@ -336,6 +344,8 @@ def _check_applicability_agrees(task, task_dir):
     # as `in_scope` reads it, so there is no line to compare with them.
     if held.get("routing") == "suspended":
         return NOTHING_TO_CHECK, f"not required: the strategy is suspended - {held.get('why')}"
+    if held.get("routing") == GUIDANCE:
+        return NOTHING_TO_CHECK, f"not required: {GUIDANCE_WHY}"
     applies, why = records_say(task, task_dir)
     if bool(held.get("applies")) != applies:
         said = "applies" if held.get("applies") else "does not apply"

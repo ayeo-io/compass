@@ -368,6 +368,7 @@ def _record_guardrail(task_dir, answer, save):
              "approver": answer.approver, "role": answer.role, "scope": answer.scope,
              "decision": approval_records.APPROVED, "timestamp": _stamp(),
              "issue": _slug(task_dir), "generation": task.get("generation")}
+    entry.update(approval_records.change_fields(task))
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)
@@ -560,7 +561,10 @@ def _record_ship(task_dir, answer, save):
                 if e.get("type") == "human-approval" and e.get(ship_approval.SHIP) == slug
                 and e.get("generation") == task.get("generation")
                 and e.get("decision") == approval_records.APPROVED
-                and e.get("id") not in withdrawn]
+                and e.get("id") not in withdrawn
+                # An approval of an earlier state of the change no longer
+                # stands, so the new state can be approved (ADR-099 decision 6).
+                and not approval_records.for_earlier_state(task, e)]
     if standing:
         raise CompassError(f"{VERB}: the change of issue {slug} is already approved at ship "
                            f"({standing[0]}). Nothing was written.")
@@ -575,6 +579,7 @@ def _record_ship(task_dir, answer, save):
              "approver": answer.approver, "role": answer.role, "scope": scope,
              "decision": approval_records.APPROVED, "timestamp": _stamp(),
              "issue": slug, "generation": task.get("generation")}
+    entry.update(approval_records.change_fields(task))
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)

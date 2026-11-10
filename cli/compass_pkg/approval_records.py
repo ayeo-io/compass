@@ -107,6 +107,43 @@ G5_HOW = ("in Claude Code the person types `/compass:approve` for the request th
 #: The record that withdraws an approval made under a delegation (ADR-069).
 WITHDRAWAL = "approval-withdrawal"
 
+#: The key that holds the digest of the change (ADR-099 decision 6). `compass
+#: quick-fix finish` writes it in the manifest for the change as it is. The
+#: request for the ship approval or the `G5` sign-off holds it, and so does
+#: the approval record: the approval covers the change with that digest.
+CHANGE_KEY = "change_sha256"
+#: The digest of a change with no file: an approval given before the first
+#: `finish` covers no code.
+NO_CHANGE = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+
+def change_fields(task):
+    """`{change_sha256}` for an approval, or the request for one, made now on
+    an issue with an `evidence_required` list: the digest the manifest holds,
+    or `NO_CHANGE` before the first `finish`. `{}` for an issue assessed before
+    9.0.0, whose approvals name no state of the change."""
+    if not isinstance(task, dict) or not isinstance(task.get("evidence_required"), list):
+        return {}
+    held = task.get(CHANGE_KEY)
+    return {CHANGE_KEY: held if isinstance(held, str) and held else NO_CHANGE}
+
+
+def for_earlier_state(task, record):
+    """True when `record` was given for a change whose digest differs from the
+    one the manifest holds now. A record or a manifest with no digest names no
+    state, so the approval keeps the meaning it had before the digest existed."""
+    now, then = (task or {}).get(CHANGE_KEY), record.get(CHANGE_KEY)
+    return bool(now and then and now != then)
+
+
+def earlier_state_detail(task, records):
+    """The failure detail for approvals that `for_earlier_state` set aside."""
+    ids = ", ".join(str(r.get("id", "?")) for r in records)
+    return (f"{ids} was given for an earlier state of the change (sha256 "
+            f"{str(records[-1].get(CHANGE_KEY))[:12]}; the change is now "
+            f"{str(task.get(CHANGE_KEY))[:12]}). A person approves the new state with "
+            f"`/compass:approve`")
+
 
 def not_withdrawn(approved, registry):
     """`(standing, note)`: the approved records that no `approval-withdrawal`

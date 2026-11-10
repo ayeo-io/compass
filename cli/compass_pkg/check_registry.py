@@ -114,7 +114,7 @@ _ENTRIES = (
     # the floor of a landed issue; the corpus verdicts hold, so the major stays (ADR-066).
     # 1.2.0: a record an `approval-withdrawal` names no longer counts while the issue is
     # in flight; the landed floor and the corpus verdicts hold (ADR-069 decision 6).
-    _entry("human-approval-present", _check_human_approval, version="1.2.0"),
+    _entry("human-approval-present", _check_human_approval, version="1.3.0"),
     # 1.1.0: a path issue has nothing to check, because its follow-ups link to GitHub
     # issues; an issue assessed before 9.0.0 keeps the rule, so the corpus verdicts
     # hold (ADR-093).
@@ -143,7 +143,7 @@ _ENTRIES = (
     _entry("isolation-proven", _check_isolation_proven),
     _entry("layering-test-passed", _check_layering_test_passed),
     # The ship approval every delivery issue owes (#355, VD-029).
-    _entry("ship-approval-present", _check_ship_approval_present),
+    _entry("ship-approval-present", _check_ship_approval_present, version="1.1.0"),
     # The request link every delivery issue owes (#356, VD-031).
     _entry("request-recorded", _check_request_recorded),
 )

@@ -229,13 +229,13 @@ def run_landing_refusals(task, task_dir):
 
 
 def cmd_land_commit(args):
-    """`compass ship-commit`. After a commit on the lean path it prints what a
-    session otherwise checks by hand: the branch, the commit, its author and
-    file count, what is left in the working tree, and that nothing more is to
-    run. `compass quick-fix finish` prints those lines itself."""
+    """`compass ship-commit`. After the commit of a delivery issue it prints
+    what a session otherwise checks by hand: the branch, the commit, its author
+    and file count, what is left in the working tree, and that nothing more is
+    to run (ADR-099). `compass quick-fix finish` prints those lines itself."""
     code = _land_commit(args)
-    if code == 0 and getattr(args, "lean_issue", False) \
-            and not getattr(args, "lean_quiet", False):
+    if code == 0 and getattr(args, "record_issue", False) \
+            and not getattr(args, "quiet_report", False):
         from compass_pkg import lean
         for line in lean.commit_report(os.getcwd()):
             print(line)
@@ -266,20 +266,20 @@ def _land_commit(args):
     if inside.returncode != 0:
         raise CompassError("compass ship-commit: not inside a git repository.")
 
-    # The lean path (branch exp-lean): `compass ship-commit` alone lands the
-    # current issue. The issue is the pointer's, the message is the one
+    # `compass ship-commit` alone lands the current issue (ADR-099). The issue
+    # is the pointer's, the message is the one
     # `compass quick-fix finish -m` stored, and with nothing staged and no
     # path given the files are the ones `finish` traced from git.
     lean_issue = checkpoint_outcomes.landing_issue(args)
     if lean_issue is not None and lean_issue[0].get("evidence_required") is not None:
         from compass_pkg import lean
         lean_task, lean_dir = lean_issue
-        args.lean_issue = True
+        args.record_issue = True
         if not getattr(args, "task", None):
             args.task = os.path.basename(os.path.normpath(str(lean_dir)))
         if not msg and not getattr(args, "message_file", None):
             msg = lean_task.get(lean.MESSAGE_KEY)
-        if not status_words.is_closed(lean_task) and not getattr(args, "lean_checked", False):
+        if not status_words.is_closed(lean_task) and not getattr(args, "record_checked", False):
             refused = lean.landing_refusal(lean_dir)
             if refused:
                 raise CompassError(refused)

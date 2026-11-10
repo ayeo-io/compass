@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Play the agent's part of the lean path with no model, and check the record.
+"""Play the agent's part of a change with no model, and check the record.
 
-This is the proof for the experiment branch `exp-lean`. For an unlabeled
-change and a `personal-data` change, it:
+This is the end-to-end proof of ADR-099: a change takes two `compass`
+commands and Compass keeps the record. For an unlabeled change and a
+`personal-data` change, it:
 
 1. makes a small Python package with a pytest suite in a new git repository
    with a bare `origin`;
@@ -18,14 +19,21 @@ It also sends the pre-tool hook a code edit before and after the `specify`
 approval of the labeled case, to show the hook refuses the first.
 
 Usage:
-  python3 scripts/exp-lean-e2e.py [--checker PATH] [--keep]
+  python3 scripts/two-command-e2e.py [--checker PATH] [--keep]
 
 A third case lands a change and then takes three rounds of feedback that
 edit the same test file, with a second `start` for the same request in
 between. It must leave one issue, and each round is one `compass` command.
+After each round the change differs from the one the person approved: `finish`
+commits it and asks for a new approval, `compass check` fails on the ship
+approval, the person approves the new state, and `compass check` passes with
+no further command from the agent (ADR-099 decision 6).
 
-Exit status: 0 when every record passes all six checks and each of the first
-two cases used at most five `compass` commands.
+A fourth case does the same for a labeled change, where the `G5` sign-off is
+asked for again too.
+
+Exit status: 0 when every record passes all six checks of the checker and each
+of the first two cases used at most five `compass` commands.
 """
 from __future__ import annotations
 
@@ -40,9 +48,12 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "cli"))
+from compass_pkg.core import load_yaml  # noqa: E402  (the bundled PyYAML)
+
 COMPASS = str(ROOT / "bin" / "compass")
 HOOK = str(ROOT / "hooks" / "pre-tool.sh")
-APPROVER = "exp-lean-approver"
+APPROVER = "e2e-approver"
 PYTEST = [sys.executable, "-m", "pytest", "-q"]
 REQUEST_REPO, REQUEST_NUMBER, REQUESTER = "acme/shop", 7, "Sam Taylor"
 
@@ -81,10 +92,9 @@ class Agent:
 
 def person_approves(repo):
     """The person at a terminal: answer each pending request, on a pseudo-terminal."""
-    import yaml
     answered = []
     for path in sorted(repo.glob(".compass/work/*/approval-requests/pending/*.yml")):
-        request = yaml.safe_load(path.read_text(encoding="utf-8"))
+        request = load_yaml(str(path))
         marker = path.with_suffix(".answered")
         if marker.exists():
             continue
@@ -124,12 +134,12 @@ def person_approves(repo):
 
 def hook_verdict(repo, target):
     """The pre-tool hook's exit code for an Edit of `target`: 2 is a refusal."""
-    event = {"tool_name": "Edit", "session_id": "exp-lean-e2e", "cwd": str(repo),
+    event = {"tool_name": "Edit", "session_id": "two-command-e2e", "cwd": str(repo),
              "tool_input": {"file_path": str(repo / target), "old_string": "a",
                             "new_string": "b"}}
     done = subprocess.run(["bash", HOOK], cwd=repo, env=dict(ENV, CLAUDE_PROJECT_DIR=str(repo)),
                           input=json.dumps(event), capture_output=True, text=True)
-    return done.returncode, (done.stderr.strip().splitlines() or [""])[0]
+    return done.returncode, done.stderr.strip()
 
 
 def make_repo(folder):
@@ -229,10 +239,16 @@ def case_unlabeled(folder, checker):
     return agent, check_record(repo, checker)
 
 
-def expect_committed(repo, out, branch):
-    """The hand-off after a commit says what a session otherwise checks by hand."""
+def expect_committed(repo, out, branch, stale=False):
+    """The hand-off after a commit says what a session otherwise checks by hand.
+    With `stale`, the change differs from the one approved, and the last line
+    asks for the new approval and says nothing else is to run."""
+    last = ("the change differs from the one approved" if stale
+            else "done: nothing more to run")
+    if stale and "Nothing else to run now" not in out:
+        sys.exit("FAILED: the hand-off does not say nothing else is to run")
     for wanted in ("checked and committed", f"on branch {branch}", "working tree clean",
-                   "done: nothing more to run"):
+                   last):
         if wanted not in out:
             sys.exit(f"FAILED: the hand-off does not say {wanted!r}")
     if len(out.strip().splitlines()) > 11:
@@ -255,10 +271,30 @@ def feedback_round(repo, agent, number, message):
     (repo / ".coverage").write_text("run data\n")
     print(f"  [person] feedback {number}: (the agent edits tests/test_discount.py and the code)")
     out = agent.compass("quick-fix", "finish", "-m", message, "--", *PYTEST)
-    expect_committed(repo, out, "discount")
+    expect_committed(repo, out, "discount", stale=True)
     listed = sh(["git", "ls-files"], repo).stdout
     if ".coverage" in listed:
         sys.exit("FAILED: .coverage was committed")
+    reapprove(repo, "discount", ("ship-approval-present",))
+
+
+def reapprove(repo, slug, checks):
+    """After a change to approved work: `compass check` fails on each approval
+    check, the person approves the new state, and `compass check` passes. The
+    agent runs nothing."""
+    before = sh([COMPASS, "check", "--issue", slug], repo, check=False)
+    failed = [c for c in checks if any(
+        line.startswith("FAIL") and c in line for line in before.stdout.splitlines())]
+    print(f"  [check] before the new approval: exit {before.returncode}, fails {failed}")
+    if before.returncode == 0 or failed != list(checks):
+        sys.exit("FAILED: compass check did not fail on the approval of an earlier state\n"
+                 + before.stdout[-1500:])
+    if len(person_approves(repo)) != len(checks):
+        sys.exit("FAILED: the person was not asked once for each approval")
+    after = sh([COMPASS, "check", "--issue", slug], repo, check=False)
+    print(f"  [check] after the person approved the new state: exit {after.returncode}")
+    if after.returncode != 0:
+        sys.exit("FAILED: compass check fails after the new approval\n" + after.stdout[-1500:])
 
 
 def case_feedback(folder, checker):
@@ -318,7 +354,8 @@ def case_labeled(folder, checker):
     print(f"  (the agent adds scenario TRC-002 to {spec.relative_to(repo)})")
     agent.compass("evidence", "request", "--checkpoint", "specify")
     code, why = hook_verdict(repo, "shop/users.py")
-    print(f"  [hook] a code edit before the specify approval: exit {code} - {why}")
+    print(f"  [hook] a code edit before the specify approval: exit {code} - "
+          f"{(why.splitlines() or [''])[0]}")
     if code != 2:
         sys.exit("FAILED: the hook allowed a code edit before the specify approval")
     person_approves(repo)
@@ -340,17 +377,57 @@ def case_labeled(folder, checker):
     return agent, check_record(repo, checker)
 
 
+def case_labeled_feedback(folder, checker):
+    print("\n=== case (d): a labeled change, approved, then changed and approved again ===")
+    repo = make_repo(folder)
+    agent = Agent(repo)
+    agent.compass("quick-fix", "start", "forget-user",
+                  "--intent", "A user can be forgotten: their row is deleted",
+                  "--labels", "personal-data",
+                  "--request", f"https://github.com/{REQUEST_REPO}/issues/{REQUEST_NUMBER}",
+                  "--requester", REQUESTER)
+    agent.compass("evidence", "request", "--checkpoint", "specify")
+    person_approves(repo)
+    write_forget_user(repo)
+    finish = ("quick-fix", "finish", "-m", "Let a user be forgotten (#7)", "--", *PYTEST)
+    agent.compass(*finish)
+    person_approves(repo)
+    expect_committed(repo, agent.compass(*finish), "forget-user")
+    first = len(agent.commands)
+    with (repo / "shop" / "users.py").open("a") as fh:
+        fh.write("\n\ndef forget_all():\n    USERS.clear()\n")
+    with (repo / "tests" / "test_forget_user.py").open("a") as fh:
+        fh.write("\n\ndef test_forget_all_leaves_no_row():\n"
+                 "    users.add_user('bo', 'bo@example.com')\n"
+                 "    users.forget_all()\n    assert users.USERS == {}\n")
+    print("  [person] feedback: (the agent edits the test file and the code)")
+    out = agent.compass("quick-fix", "finish", "-m", "Let every user be forgotten (#7)",
+                        "--", *PYTEST)
+    expect_committed(repo, out, "forget-user", stale=True)
+    reapprove(repo, "forget-user", ("human-approval-present", "ship-approval-present"))
+    # The same finish with nothing changed: the approvals cover the change.
+    out = agent.compass("quick-fix", "finish", "-m", "Let every user be forgotten (#7)",
+                        "--", *PYTEST)
+    if "done: nothing more to run" not in out:
+        sys.exit("FAILED: a finish on the approved state asked for something")
+    squash_merge(repo, "forget-user", REQUEST_NUMBER + 1)
+    print(f"  [person] merged pull request #{REQUEST_NUMBER + 1} into main")
+    print(f"  first landing: {first} compass command(s); the feedback round: 1")
+    return agent, check_record(repo, checker)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--checker", default=os.path.expanduser(
         "~/dev/sdd-bench/tools/check_record.py"), help="the sdd-bench record checker")
     parser.add_argument("--keep", action="store_true", help="keep the temporary repositories")
     args = parser.parse_args()
-    holder = Path(tempfile.mkdtemp(prefix="exp-lean-e2e-"))
+    holder = Path(tempfile.mkdtemp(prefix="two-command-e2e-"))
     failed = False
     try:
         for name, case in (("unlabeled", case_unlabeled), ("personal-data", case_labeled),
-                           ("feedback", case_feedback)):
+                           ("feedback", case_feedback),
+                           ("labeled-feedback", case_labeled_feedback)):
             folder = holder / name
             folder.mkdir()
             agent, code = case(folder, args.checker)
@@ -358,7 +435,7 @@ def main():
                   f"check_record exit {code}")
             for command in agent.commands:
                 print(f"    {command}")
-            failed = failed or code != 0 or (name != "feedback" and len(agent.commands) > 5)
+            failed = failed or code != 0 or ("feedback" not in name and len(agent.commands) > 5)
     finally:
         if args.keep:
             print(f"kept: {holder}")

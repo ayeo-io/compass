@@ -255,9 +255,9 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "run compass evidence request --checkpoint specify --issue {slug} and "
                "stop; the person answers with /compass:approve. Then run the red again.",
     },
-    # The pre-tool hook on the lean path (branch exp-lean): a code edit on an issue
-    # whose scenarios owe a person's approval, before the `specify` checkpoint has
-    # a person's answer.
+    # The pre-tool hook (ADR-099 decision 5): a code edit on an issue whose
+    # scenarios owe a person's approval, before the `specify` checkpoint has a
+    # person's answer.
     "code-before-approval": {
         "what": "edit to {target} (tool: {tool})",
         "why": "the scenarios of {slug} need a person's approval before code, and "

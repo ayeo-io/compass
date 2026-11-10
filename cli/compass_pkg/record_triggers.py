@@ -29,6 +29,7 @@ RECORD_TRIGGERS = {
     "cmd_issue_link": None,
     "cmd_land_commit": None,
     "cmd_quick_fix_finish": None,
+    "cmd_evidence_request": None,
     "cmd_scenario_add": None,
     "cmd_gate_pass": None,
     "cmd_tdd_red": None,

@@ -237,7 +237,9 @@ def test_trc_a3_a_moved_program_reads_stdin_only_where_it_did():
 # The `breakdown`, `plan`, `refine` and `verify` commands also wrote issue state only;
 # ADR-092 decision 7 deleted them with the stages they ran. The role entry points
 # `consult`, `design`, `intent` and `position` went with ADR-093.
-ISSUE_STATE_ONLY = ("assess", "flow", "init", "status")
+# `assess` left the list with ADR-099: it starts the issue and the session then
+# writes the tests and the code under it.
+ISSUE_STATE_ONLY = ("flow", "init", "status")
 DELETED_STAGE_COMMANDS = ("breakdown", "plan", "refine", "verify")
 SCOPES = ("./.compass/**", "./docs/**")
 
@@ -498,7 +500,11 @@ INHERITS_ENVIRONMENT = {
     ("cli/compass_pkg/landing.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/lessons.py", "_decider"): (1, _GIT),
     ("cli/compass_pkg/manifest.py", "_git"): (1, _GIT),
-    ("cli/compass_pkg/manifest.py", "cmd_land_commit"):
+    ("cli/compass_pkg/lean.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/lean.py", "_build_base_copy"):
+        (2, "runs git archive in the person's repository and tar on its output, to copy "
+            "the base commit"),
+    ("cli/compass_pkg/manifest.py", "_land_commit"):
         (1, "runs the project's own pre-commit hooks, which need the person's environment"),
     ("cli/compass_pkg/quick_fix_cmd.py", "_untracked_paths"): (1, _GIT),
     ("cli/compass_pkg/quick_fix_cmd.py", "_write_start_state"): (3, _GIT),

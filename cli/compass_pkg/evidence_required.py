@@ -8,18 +8,29 @@ rules that fired. The owning doc, `governance/routing-policy.md` ("The evidence
 rows"), explains each row and addition.
 
 The rows are fixed in code. A row is picked by the first match; the additions
-then apply on top. The configuration adds only what a project can still set
-for a new issue: the gates of its floors (`add_gate`) and immovable gates, the
-skills its floors ask for (`require_skill`), its advisory strategies, and the
-two tighten-only settings the policy can carry (`signoff_labels`, read as more
-`G5` labels, and `require_evidence`, read as more tokens). This
-module never reads the configuration's approaches, shapes, stage modes or
-caps, so a stored 8.x generation or copied governance that still declares them gives
-the same evidence as the live default.
+then apply on top. Every delivery issue owes the same row (ADR-099 decision 4):
+risk, size, familiarity and urgency add no review and no record. Two additions
+stay, and each is a person's approval: the scenario approval before code for a
+`G5` label or critical risk, and the `G5` sign-off for a `G5` label (ADR-099
+decision 5).
 
-The rows reproduce the gate sets 8.0.4 owed: `tests/test_evidence_required.py`
-compares them on every point of the contract 1 grid and every subset of the
-`G5` labels.
+The configuration adds only what a project can still set for a new issue: the
+gates of its floors (`add_gate`) and immovable gates, the skills its floors
+ask for (`require_skill`), its advisory strategies, and the two tighten-only
+settings the policy can carry (`signoff_labels`, read as more `G5` labels, and
+`require_evidence`, read as more tokens). The shipped check set
+(`governance/check-set.yml`) keeps two floors that add the architecture gate,
+`PATH_RETIRED_FLOORS`, because the 8.x evaluator and its compatibility
+contract read them. They add nothing here, so a project with no settings owes
+the common row and the two approvals, and nothing else.
+This module never reads the configuration's approaches, shapes, stage modes or
+caps.
+
+The records of the four-layer acceptance strategy (`S17`) are owed only where
+a `require_evidence` rule adds their tokens (ADR-099 decision 9). The routing
+of the strategy is read from the tokens owed (`S17_ROUTING`); with none owed it
+is `guidance`: the `atdd` skill applies as advice and no check of the strategy
+runs.
 """
 # DEPENDENCY: compass_pkg.core (CompassError, reading_matches), red_first
 # (ACCEPTANCE_KINDS), retired (DIMENSIONS), routing (RoutingConflict,
@@ -63,40 +74,39 @@ SPIKE_GATE = "spike.conclude"
 EVERY_ISSUE = ("request", "scenarios", "red-before-green", "suite-green",
                "correctness", "governance", "traceability", "ship-approval")
 
-#: The `S17` tokens, each with the routings that owe it. `outer-loop` is owed
-#: wherever the strategy applies.
-S17_TOKENS = {"outer-loop": ("existing-dsl", "existing-dsl-isolation", "on"),
-              "isolation": ("existing-dsl-isolation", "on"),
-              "layering": ("on",)}
+#: The routing of `S17` an issue gets, read from the `S17` tokens it owes: the
+#: first entry whose token is owed. No token is owed by default; a
+#: `require_evidence` rule adds one. `layering` needs the full strategy,
+#: `isolation` the isolation proof, `outer-loop` the outer-loop records alone.
+S17_ROUTING = (("layering", "on"), ("isolation", "existing-dsl-isolation"),
+               ("outer-loop", "existing-dsl"))
+#: The routing of a delivery issue that owes no `S17` token: the strategy is
+#: advice, and no check of it runs (`acceptance_strategy.in_scope`).
+GUIDANCE = "guidance"
 STATES = ("on", "off")
 EXPECTED = ("none",) + tuple(ACCEPTANCE_KINDS)
 
-_SMALL = {"size": ["atomic", "small"]}
 _G5 = {"labels_any": list(G5_LABELS)}
 
-#: The rows, first match wins: `(rule id, when, tokens, routing)`, the routing of `S17`. A row's
-#: `when` is read with the extra keys `not` (none of these clauses holds) as well
-#: as the keys `reading_matches` reads.
+#: The rows, first match wins: `(rule id, when, tokens, routing)`, the routing of
+#: `S17` before any token a setting adds. A row's `when` is read with the extra
+#: key `not` (none of these clauses holds) as well as the keys `reading_matches`
+#: reads.
 ROWS = (
     ("RP-EVID-SPIKE", {"goal": "exploration"}, (), "suspended"),
-    ("RP-EVID-LIGHT",
-     dict(_SMALL, risk=["trivial", "contained"], **{"not": [{"urgency": "live-defect"}, _G5]}),
-     EVERY_ISSUE, "existing-dsl"),
-    ("RP-EVID-DEFECT",
-     dict(_SMALL, urgency="live-defect", **{"not": [{"risk": "critical"}, _G5]}),
-     EVERY_ISSUE + ("regression", "security", "definition-of-done"),
-     "existing-dsl-isolation"),
-    ("RP-EVID-STANDARD", {},
-     EVERY_ISSUE + ("regression", "security", "clarity", "definition-of-done"), "on"),
+    ("RP-EVID-COMMON", {}, EVERY_ISSUE, GUIDANCE),
 )
 
-#: The additions to a delivery row, in order: `(rule id, when, token)`.
-#: `RP-REQUIRE-003` and `RP-REQUIRE-004` keep the ids of the 8.x floors that added
-#: the architecture review.
+#: The floors of the shipped check set that add no gate on the path (ADR-099
+#: decision 4: risk and labels add no review). The check set keeps them for the
+#: 8.x evaluator, `routing.evaluate_route`, which compatibility contract 1
+#: compares with 8.0.4. A floor with any other id is the project's own and adds
+#: its gate.
+PATH_RETIRED_FLOORS = ("RP-REQUIRE-003", "RP-REQUIRE-004")
+
+#: The additions to the delivery row, in order: `(rule id, when, token)`. Each is
+#: an approval a person gives.
 ADDITIONS = (
-    ("RP-REQUIRE-003", {"risk": ["cross-cutting", "critical"]}, "architecture"),
-    ("RP-REQUIRE-004", _G5, "architecture"),
-    ("RP-EVID-REPRODUCE", {"urgency": "live-defect"}, "reproduce-first"),
     ("RP-EVID-SIGNOFF", {"any_of": [_G5, {"risk": "critical"}]}, "scenario-approval"),
     (GATE_G5, _G5, "human-approval"),
 )
@@ -188,8 +198,9 @@ def evaluate(assessment, policy, acceptance_state="on", expected_acceptance="non
     in the shape `routing.evaluate_route` takes.
 
     `acceptance_state` is the project's `acceptance_strategy` setting and
-    `expected_acceptance` what assess was told (`--expected-acceptance`); either
-    can leave out the `S17` tokens, as `acceptance_strategy.block` decides.
+    `expected_acceptance` what assess was told (`--expected-acceptance`). The
+    strategy applies only where a `require_evidence` rule adds one of its
+    tokens, the setting is `on` and the change has client-observable behavior.
 
     Two keys of `policy` carry the tighten-only settings of `compass.yml`:
     `signoff_labels` (more labels that owe what a `G5` label owes) and
@@ -243,7 +254,8 @@ def evaluate(assessment, policy, acceptance_state="on", expected_acceptance="non
         # a floor that adds a gate is.
         named = [(None, ig.get("gate")) for ig in guard.get("immovable_gates") or []]
         named += [(fl.get("id"), fl.get("add_gate")) for fl in guard.get("floors") or []
-                  if fl.get("add_gate") and reading_matches(fl.get("when"), readings, orders)]
+                  if fl.get("add_gate") and fl.get("id") not in PATH_RETIRED_FLOORS
+                  and reading_matches(fl.get("when"), readings, orders)]
         for rule_id, gate in named:
             if not gate or gate in REMOVED_GATES:
                 continue
@@ -254,19 +266,12 @@ def evaluate(assessment, policy, acceptance_state="on", expected_acceptance="non
             if rule_id and rule_id not in fired:
                 fired.append(rule_id)
 
-    # The lean experiment (branch exp-lean): one path for every change. A
-    # delivery issue owes only what `compass quick-fix finish` records itself,
-    # plus a person's approvals for a `G5` label. Risk, size and the settings
-    # add no review gate, no Definition of Done and no `S17` record, because
-    # each of those needed commands or files written by the agent.
-    applies = False
+    # The `S17` records are owed only through a token a setting added, and the
+    # routing says how much of the strategy those tokens need.
     if not spike:
-        lean = set(EVERY_ISSUE)
-        if _matches({"labels_any": list(labels)}, readings, orders):
-            lean.update(("scenario-approval", "human-approval"))
-        owed &= lean
-        extra_gates = []
-        routing = "suspended"
+        routing = next((r for token, r in S17_ROUTING if token in owed), routing)
+    applies = (not spike and routing != GUIDANCE and acceptance_state == "on"
+               and expected_acceptance not in ACCEPTANCE_KINDS)
 
     skills = []
     for fl in guard.get("floors") or []:

@@ -42,14 +42,8 @@ NOT_SHOWN = ("candidate_route", "candidate_via", "blocked_phases")
 #: `policy_rules_fired` list and the screens that print it. A rule of the
 #: configuration (a floor) keeps the entry the evaluator wrote for it.
 RATIONALE = {
-    "RP-EVID-LIGHT": "A small change with low risk owes the evidence every change owes",
-    "RP-EVID-DEFECT": ("A small fix to a live defect owes the regression and security "
-                       "reviews and the Definition of Done"),
-    "RP-EVID-STANDARD": ("A change that is not small, or not low risk, owes the regression, "
-                         "security and clarity reviews and the Definition of Done"),
-    "RP-REQUIRE-003": "Cross-cutting or critical risk owes the architecture review",
-    "RP-REQUIRE-004": "A change to a `G5` surface owes the architecture review",
-    "RP-EVID-REPRODUCE": "A live defect is reproduced by a red before anything else",
+    "RP-EVID-COMMON": ("Every change owes the same evidence: the request, the scenarios, "
+                       "the red before the green, a green suite and the ship approval"),
     "RP-EVID-SIGNOFF": ("A change to a `G5` surface, or with critical risk, owes a "
                         "person's approval of its scenarios"),
     GATE_G5: "A change to a `G5` surface owes a person's sign-off before it ships",
@@ -94,6 +88,8 @@ def _block(out, state, reason, expected):
     from compass_pkg import acceptance_strategy as strategy
     if state == "off":
         why = reason
+    elif out["acceptance_routing"] == strategy.GUIDANCE:
+        why = strategy.GUIDANCE_WHY
     elif expected in strategy.ACCEPTANCE_KINDS:
         why = f"acceptance of kind {expected}"
     else:

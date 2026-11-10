@@ -256,11 +256,17 @@ TOP_DESCRIPTIONS = {
                      "`remote` is set.",
     "project": "The project's name, its commands (`test_command`, `test_micro_command`, "
                "`bdd_run_command` and `layering_command`, which `compass layering record` "
-               "runs when given no command), and the paths of its acceptance support code "
-               "(`acceptance_support`). Since 9.0.0 (ADR-093) nothing reads `lint_command`, "
+               "runs when given no command), the paths of its acceptance support code "
+               "(`acceptance_support`) and the untracked paths the base copy links "
+               "(`base_copy_links`). Since 9.0.0 (ADR-093) nothing reads `lint_command`, "
                "`format_check_command`, `build_command`, `typecheck_command`, `secret_scan` "
                "or `structured_logging`, which stay valid and which `compass policy lint` "
                "names.",
+    "project.base_copy_links": "More paths that `compass quick-fix finish` links into the copy "
+                               "of the base commit it proves the red on, each relative to the "
+                               "project root, such as build output the tests need. "
+                               "`node_modules`, `.venv` and `venv` are linked without it; the "
+                               "default is none.",
     "project.acceptance_support": "The paths of the support code of the four-layer acceptance "
                                   "strategy (`S17`), each relative to the project root. "
                                   "`acceptance-support-present` reports a piece with no path, or "

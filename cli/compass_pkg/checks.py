@@ -803,9 +803,18 @@ def _check_human_approval(task, task_dir):
                  and e.get("type") == "human-approval"]
     approved = [a for a in approvals if a.get("decision") == "approved"]
     standing, note = approval_records.not_withdrawn(approved, registry)
+    # 1.3.0: a sign-off covers the change the person saw (ADR-099 decision 6).
+    # One given for an earlier state does not count, in flight or landed.
+    earlier = [a for a in standing if approval_records.gives_g5(a)
+               and approval_records.for_earlier_state(task, a)]
+    if earlier:
+        standing = [a for a in standing if a not in earlier]
+        if not any(approval_records.gives_g5(a) for a in standing):
+            return False, approval_records.earlier_state_detail(task, earlier)
     ok, detail = _judge_g5_approval(task, standing)
     detail = f"{note}; {detail}" if note and not ok else detail
-    if ok or status_words.is_in_flight(task) or not _earlier_rule_passes(approved):
+    if ok or status_words.is_in_flight(task) or not _earlier_rule_passes(
+            [a for a in approved if a not in earlier]):
         return ok, detail
     return True, (f"{detail} - the issue has landed and the earlier rule passes it (the "
                   f"first approved human-approval record holds all four fields), so this "

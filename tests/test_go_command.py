@@ -28,11 +28,14 @@ GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
 
 def test_go_is_a_command_that_assesses_shows_the_view_and_continues():
     text = (ROOT / "commands" / "go.md").read_text(encoding="utf-8")
-    for step in ("compass init", "compass quick-fix start",
-                 "compass approach show --issue <slug>", "/compass:assess",
-                 "--no-commit", "`next:`", "/compass:ship"):
+    # ADR-099: `start` makes `.compass/` itself, `finish` writes the record and
+    # commits once a person approves, so go names two commands and the one
+    # request that asks for approval before code.
+    for step in ("compass quick-fix start", "compass quick-fix finish",
+                 "compass evidence request --checkpoint", "/compass:approve",
+                 "/compass:assess", "`next:`"):
         assert step in text, step
-    assert len(text.split()) < 700, len(text.split())
+    assert len(text.split()) < 350, len(text.split())
 
 
 # --- ONE-2: the three-line decision view ----------------------------------------
@@ -150,20 +153,16 @@ def test_a_ci_sweep_does_not_count(repo):
 # --- GC-1: go does not stop at assess's confirmation (issue `go-confirms-on-the-heavier-route`) ----------------
 
 def test_gc_1_go_and_assess_agree_that_go_does_not_wait_to_confirm():
-    """`/compass:go` runs the whole path itself (ADR-092). Assess step 7 asks
-    for a confirmation; go says not to stop. Both texts must say the same
-    thing: under go, the three lines already shown are the confirmation, and
-    go stops only where a `next:` line says to wait for a person."""
-    go = (ROOT / "commands" / "go.md").read_text(encoding="utf-8")
-    flat = " ".join(go.split())
-    assess = (ROOT / "commands" / "assess.md").read_text(encoding="utf-8") \
-        + (ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
-    assert "do not wait for a confirmation" in flat.lower(), \
-        "go must say it does not wait for a confirmation"
-    assert "Stop only where a `next:` line says to wait for a person" in flat, \
-        "go must say the one place it stops"
-    step7 = assess[assess.index("7. **Confirm.**"):assess.index("## Voice")]
-    assert "/compass:go" in step7, "assess step 7 must say what go does"
+    """`/compass:go` runs the whole path itself (ADR-092). Since ADR-099 it
+    has no confirmation step, and stops only where a `next:` line asks for a
+    person's approval. `/compass:assess` runs the same five steps and the
+    same stop."""
+    go = _flat(ROOT / "commands" / "go.md")
+    assess = _flat(ROOT / "commands" / "assess.md")
+    assert "confirm" not in go.lower(), "go must not wait for a confirmation"
+    stop = "When its `next:` line asks for a person's approval, stop."
+    assert stop in go, "go must say the one place it stops"
+    assert stop in assess, "assess must stop in the same place as go"
 
 
 def _flat(path: Path) -> str:

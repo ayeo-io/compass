@@ -13,7 +13,9 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STRATEGIES = ROOT / "governance" / "strategies.md"
-SHIP_COMMAND = ROOT / "commands" / "ship.md"
+# ADR-099 took the review method out of commands/ship.md; the dimensions a
+# reviewer applies are in the evidence-gates skill's review-dimensions.md.
+SHIP_COMMAND = ROOT / "skills" / "evidence-gates" / "review-dimensions.md"
 EVIDENCE_GATES_DIR = ROOT / "skills" / "evidence-gates"
 
 
@@ -124,7 +126,7 @@ def test_trc_2_the_verify_guidance_points_at_the_strategy():
     assert match, "TRC-1 must land before this scenario can"
     s_number = match.group(1)
 
-    for name, path in (("commands/ship.md", SHIP_COMMAND),
+    for name, path in (("skills/evidence-gates/review-dimensions.md", SHIP_COMMAND),
                        ("skills/evidence-gates/SKILL.md", EVIDENCE_GATES)):
         text = _flat(path.read_text(encoding="utf-8"))
         assert s_number in text, (

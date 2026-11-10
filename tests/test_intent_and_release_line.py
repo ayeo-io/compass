@@ -33,10 +33,18 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 import compass_pkg  # noqa: E402,F401 - puts the bundled PyYAML first
 import yaml  # noqa: E402
+import importlib.util  # noqa: E402
+
+# The person who answers an approval request does so on a pseudo-terminal, as
+# `tests/test_two_command_change.py` does (ADR-099).
+_spec = importlib.util.spec_from_file_location(
+    "two_command_e2e", ROOT / "scripts" / "two-command-e2e.py")
+e2e = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(e2e)
 
 SLUG = "feature"
 CREATED = "2026-10-10"
-DOCS = f"docs/compass/{CREATED}-{SLUG}"
+DOCS = f"docs/compass/{CREATED}-{SLUG}"      # a hand-built spike issue (`assess`)
 
 GH_SHIM = """#!/bin/sh
 echo "gh $*" >> "{log}"
@@ -46,8 +54,8 @@ exit 1
 
 #: A project on autonomous autonomy, so a regular issue lists no checkpoint and
 #: the only landing refusal a test meets is the one it sets up.
-AUTONOMOUS = {"schema": 1, "owner": "jed72", "autonomy": "autonomous",
-              "approvers": {"issue-waiver": ["jed72"]}}
+AUTONOMOUS = {"schema": 1, "owner": e2e.APPROVER, "autonomy": "autonomous",
+              "approvers": {"issue-waiver": [e2e.APPROVER]}}
 
 #: The assessments that route to each approach on the shipped default.
 ASSESSMENTS = {
@@ -172,10 +180,41 @@ def assess(root, approach="regular", slug=SLUG):
     return task_dir
 
 
+#: What `quick-fix start` is given for each approach of the old routing. A delivery
+#: assessment is stored as `delivery` whatever its values (ADR-092), and since
+#: ADR-099 no value but `critical` risk and a `G5` label asks for a person's approval
+#: before code, so the values here keep clear of both.
+START_FLAGS = {
+    "quick-fix": ["--risk", "trivial - a text change", "--size", "atomic - one file"],
+    "regular": ["--risk", "contained - one module", "--size", "medium - a few files"],
+    "hotfix": ["--risk", "trivial - a text change", "--size", "atomic - one file",
+               "--urgency", "live-defect - users see it now"],
+    "full": ["--risk", "cross-cutting - many modules", "--size", "large - many files"],
+}
+
+
+def start_issue(root, approach, slug=SLUG):
+    """A delivery issue opened with `compass quick-fix start`, on the default branch."""
+    done = run(root, "quick-fix", "start", slug, *START_FLAGS[approach],
+               "--familiarity", "brownfield-mapped - the module is mapped",
+               "--intent", "Greetings say hello.",
+               "--test", "tests/test_new.py::test_the_new_module_exists",
+               "--request", "https://example.com/requests/feature",
+               "--requester", "Test fixture")
+    assert done.returncode == 0, done
+    body = manifest(root, slug)
+    assert body["delivery_approach"] == "delivery", body
+    assert body["evidence_required"] and "stages" not in body, body
+
+
 def project(tmp_path, approach="regular", compass_yml=AUTONOMOUS):
+    """A project with one open issue assessed on the shipped default."""
     root = repo(tmp_path, compass_yml)
-    assess(root, approach)
-    (root / ".compass" / "current-task").write_text(SLUG + "\n")
+    if approach == "spike":
+        assess(root, approach)
+        (root / ".compass" / "current-task").write_text(SLUG + "\n")
+    else:
+        start_issue(root, approach)
     return root
 
 
@@ -353,9 +392,51 @@ class _Absent:
 ABSENT = _Absent()
 
 
-def ready_to_ship(root, slug=SLUG, skip=(), path="src/new.py"):
+NEW_TEST = (
+    "import pathlib\n\n\n"
+    "def test_the_new_module_exists():\n"
+    "    root = pathlib.Path(__file__).resolve().parent.parent\n"
+    "    assert (root / '{path}').exists()\n")
+
+
+def ready_to_ship(root, slug=SLUG, skip=(), path="src/new.py", acceptance=False):
+    """The state `ship-commit` lands from.
+
+    A delivery issue is written as ADR-099 has it written: one changed file and a
+    test file for it, then `compass quick-fix finish --no-commit`, which proves the red
+    on a copy of the base commit, records the green, checks the record and requests
+    the ship approval; then the person's approval, answered on a pseudo-terminal; and
+    the files staged. `finish` stores a release line from the commit message when
+    the issue owes one and holds none, so that line is taken out again: these tests
+    set the line themselves. With `acceptance`, the issue declared a validation
+    acceptance before the change, and `finish` runs its command in place of a red. A spike
+    has no such flow and is built by hand."""
+    if manifest(root, slug).get("delivery_approach") == "delivery":
+        return _ready_to_ship_delivery(root, slug, path, acceptance)
+    return _ready_to_ship_by_hand(root, slug, skip, path)
+
+
+def _ready_to_ship_delivery(root, slug, path, acceptance):
+    (root / path).parent.mkdir(parents=True, exist_ok=True)
+    (root / path).write_text("y = 1\n")
+    test = f"tests/test_{Path(path).stem}.py"
+    (root / test).parent.mkdir(parents=True, exist_ok=True)
+    (root / test).write_text(NEW_TEST.format(path=path))
+    command = ([sys.executable, "-c", "pass"] if acceptance else
+               [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", test])
+    staged = [path, test]
+    done = run(root, "quick-fix", "finish", "--issue", slug, "--no-commit", "-m", "Ship it",
+               "--", *command)
+    assert done.returncode == 0, done
+    assert e2e.person_approves(root), "no request was waiting for the person"
+    if manifest(root, slug).get("release_note") == "Ship it":
+        set_keys(root, slug, release_note=ABSENT)
+    git(root, "add", *staged)
+
+
+def _ready_to_ship_by_hand(root, slug, skip, path):
     """Every gate passed, every registered document approved, one changed file traced,
-    a green on record and the file staged: the state `ship-commit` lands from."""
+    a green on record and the file staged."""
     for entry in manifest(root, slug).get("artifacts") or []:
         if entry.get("kind") not in skip and entry.get("status") != "approved":
             register(root, entry["kind"], slug=slug)
@@ -574,7 +655,7 @@ def test_irl_12_acceptance_record_and_latest_write_wins(tmp_path):
                *PASS)
     assert done.returncode == 0, done
     assert manifest(root)["release_note"] == "First text."
-    ready_to_ship(root)
+    ready_to_ship(root, acceptance=True)
     done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG)
     assert done.returncode == 0, done
     assert manifest(root).get("land_timestamp"), manifest(root)
@@ -612,9 +693,13 @@ def title_reason(root, text, slug=SLUG):
     ("acceptance record", "Users now see the page in under a second")])
 def test_irl_13_release_line_title_rules(tmp_path, command, text):
     root = project(tmp_path)
-    ready_to_ship(root)
+    if command == "ship-commit":
+        ready_to_ship(root)
+    else:
+        # A validation acceptance is declared before the change (ADR-099), so the
+        # `acceptance record` case has no change yet.
+        declare_acceptance(root)
     set_keys(root, release_note="Stored text.")
-    declare_acceptance(root)
     reason = title_reason(root, text)
     before = state(root)
     argv = (["ship-commit", "-m", "Ship it", "--issue", SLUG] if command == "ship-commit"
@@ -708,27 +793,51 @@ def note_path(root, slug):
 
 
 def test_irl_14_quick_fix_finish_release_line(tmp_path):
+    """`finish` commits once the person has approved (ADR-099), so each quick fix is
+    finished twice: the first call checks and requests the approval, the second
+    commits. With `--release-note` the line is stored and the commit lands. With none,
+    `finish` takes the line from the first line of the commit message when that line
+    can be one; when it cannot, no line is stored and the commit is refused with the
+    flag named, and the commit goes on once the line is given."""
     root = repo(tmp_path)
     slug = quick_fix(root, "fix-greeting", "greeting")
-    done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix the greeting",
-               "--release-note", "Greetings now say hello.", "--candidate", "local",
-               "--client", "cli", *greet_command("greeting"))
+    finish = ["quick-fix", "finish", "--issue", slug, "-m", "Fix the greeting",
+              "--release-note", "Greetings now say hello.", "--candidate", "local",
+              "--client", "cli", *greet_command("greeting")]
+    done = run(root, *finish)
+    assert done.returncode == 0, done
+    assert e2e.person_approves(root)
+    done = run(root, *finish)
     assert done.returncode == 0, done
     landed = manifest(root, slug)
     assert landed.get("land_timestamp") and landed["release_note"] == "Greetings now say hello."
 
+    # No `--release-note`: the line is the first line of the commit message.
     slug = quick_fix(root, "fix-farewell", "farewell")
-    before = manifest_file(root, slug).read_bytes()
-    marker = root / "ran.txt"
     done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix the farewell",
-               "--candidate", "local", "--client", "cli",
-               *greet_command("farewell", marker=str(marker)))
+               "--candidate", "local", "--client", "cli", *greet_command("farewell"))
+    assert done.returncode == 0, done
+    assert manifest(root, slug)["release_note"] == "Fix the farewell"
+
+    # A message that cannot be a line stores none, and the commit is refused.
+    slug = quick_fix(root, "fix-welcome", "welcome")
+    base = ["quick-fix", "finish", "--issue", slug, "-m", "Fixed in docs/no-such-file.md",
+            "--candidate", "local", "--client", "cli"]
+    bad = [*base, *greet_command("welcome")]
+    done = run(root, *bad)
+    assert done.returncode == 0, done
+    assert "release_note" not in manifest(root, slug)
+    assert e2e.person_approves(root)
+    head = git(root, "rev-parse", "HEAD")
+    done = run(root, *bad)
     assert done.returncode != 0, done
-    assert "--release-note" in done.stderr and MISSING in done.stderr, done.stderr
-    assert not marker.exists(), "the test command ran before the refusal"
-    assert manifest_file(root, slug).read_bytes() == before
-    assert not (root / note_path(root, slug)).exists()
-    assert not list((root / ".compass" / "work" / slug / "evidence").glob("green-*"))
+    assert "--release-note" in done.stdout and MISSING in done.stdout, done.stdout
+    assert "land_timestamp" not in manifest(root, slug)
+    assert git(root, "rev-parse", "HEAD") == head
+    done = run(root, *base, "--release-note", "Welcomes now say hello.",
+               *greet_command("welcome"))
+    assert done.returncode == 0, done
+    assert manifest(root, slug)["release_note"] == "Welcomes now say hello."
     assert_no_gh_call(root)
 
 
@@ -744,12 +853,19 @@ def test_irl_24_landed_issue_not_refused_or_rewritten(tmp_path):
     set_keys(root, release_note=ABSENT)
     first_land = _land_commit(root, manifest(root))
 
-    # A review fix on top of the landing, its green re-recorded, nothing staged.
+    # A review fix on top of the landing: the code and its test change and are
+    # committed, `finish` records the new state and asks for a new approval, the
+    # person approves, `finish` runs again, and nothing is staged.
     (root / "src" / "new.py").write_text("y = 2\n")
-    git(root, "add", "src/new.py")
+    with (root / "tests" / "test_new.py").open("a") as fh:
+        fh.write("\n\ndef test_the_fix():\n    import src.new as new\n    assert new.y == 2\n")
+    git(root, "add", "src/new.py", "tests/test_new.py")
     git(root, "commit", "-q", "-m", "review fix")
-    done = run(root, "tdd-green", "--issue", SLUG, "--", sys.executable, "-c", "pass")
-    assert done.returncode == 0, done
+    again = ["quick-fix", "finish", "--issue", SLUG, "-m", "Land again", "--", sys.executable,
+             "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_new.py"]
+    assert run(root, *again).returncode == 0
+    assert e2e.person_approves(root)
+    assert run(root, *again).returncode == 0
     done = run(root, "ship-commit", "-m", "Land again", "--issue", SLUG)
     output = done.stdout + done.stderr
     assert done.returncode == 0, done
@@ -1008,35 +1124,31 @@ def _argv(line, fills):
 
 
 def test_irl_30_documented_quick_fix_flow_lands(tmp_path):
-    # The ship command tells a person to give the release line on ship-commit.
-    ship = " ".join((ROOT / "commands" / "ship.md").read_text().split())
-    assert '--release-note "<text written for a user>"' in ship, "commands/ship.md"
+    # The runtime skill tells the session how `finish` gets the release line.
+    runtime = " ".join((ROOT / "skills" / "compass-runtime" / "SKILL.md").read_text().split())
+    assert '`finish` takes it from `--release-note "<text written for a user>"`, or from ' \
+        "the first line of the commit message" in runtime, "skills/compass-runtime/SKILL.md"
     for given in (True, False):
         root = repo(tmp_path / str(given))
         slug = quick_fix(root, "fix-greeting", "greeting")
         test = greet_command("greeting")[1:]
         finish = _documented("commands/quick-fix.md", "compass quick-fix finish")
         argv = _argv(finish, {"<commit message>": "Fix the greeting",
-                              "<test command>": " ".join(test),
-                              "<line>": "Greetings now say hello.",
-                              "<build>": "local", "<client>": "cli"})
-        if not given:
-            # With --no-commit the line is the person's to give now or at the commit.
-            at = argv.index("--release-note")
-            del argv[at:at + 2]
+                              "<test command>": " ".join(test)})
         cut = argv.index("--")
-        done = run(root, *argv[:cut], "--issue", slug, *argv[cut:])
+        flags = ["--release-note", "Greetings now say hello."] if given else []
+        command = [*argv[:cut], "--issue", slug, *flags, *argv[cut:]]
+        done = run(root, *command)
         assert done.returncode == 0, done
-        printed = next(line for line in done.stdout.splitlines() if "compass ship-commit" in line)
-        command = printed.split("`")[1]
-        assert ("--release-note" in command) is not given, command
-        git(root, "add", "-A")
-        done = run(root, *_argv(command, {"<message>": "Fix the greeting",
-                                          "<release line>": "Greetings now say hello."}))
+        # The person approves, and the same `finish` commits.
+        assert e2e.person_approves(root)
+        done = run(root, *command)
         assert done.returncode == 0, done
-        assert "[release-line-missing]" not in done.stderr
+        assert "[release-line-missing]" not in done.stdout + done.stderr
         landed = manifest(root, slug)
-        assert landed.get("land_timestamp") and landed["release_note"] == "Greetings now say hello."
+        # With no flag the line is the first line of the commit message.
+        expected = "Greetings now say hello." if given else "Fix the greeting"
+        assert landed.get("land_timestamp") and landed["release_note"] == expected
         assert_no_gh_call(root)
     upgrade = " ".join((ROOT / "docs" / "upgrade-7-0-0.md").read_text().split())
     section = upgrade.split("## The lightweight intent and the release line")[1]

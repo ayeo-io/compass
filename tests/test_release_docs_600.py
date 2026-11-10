@@ -333,18 +333,22 @@ S9_FILES = (
 )
 
 
+def test_trc_s9_ship_teaches_the_evidence_add_and_gate_pass_forms():
+    """The `verify` command's gate steps moved to ship with the four-stage path
+    (ADR-092). ADR-099 cut them from `commands/ship.md`: `finish` passes the
+    three gates, and the older record commands are no longer taught. No file of
+    `commands/`, `skills/` or `approaches/` gives these two forms now."""
+    ship = _read("commands/ship.md")
+    assert "compass evidence add <EV-id> --type <type> --path <file>" in ship
+    assert "compass gate pass <gate> --evidence <EV-id>" in ship
+
+
 def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
     known = _evidence_types()
     assert {"artifact", "test-run"} <= known and "architect-notes" not in known
     report = {rel: s9_findings(_read(rel), known) for rel in S9_FILES}
     report = {rel: found for rel, found in report.items() if found}
     assert not report, report
-
-    # The `verify` command's gate steps moved to ship with the four-stage path
-    # (ADR-092).
-    ship = _read("commands/ship.md")
-    assert "compass evidence add <EV-id> --type <type> --path <file>" in ship
-    assert "compass gate pass <gate> --evidence <EV-id>" in ship
 
     # The path writer writes no `subtask_ceiling` and no breakdown stage
     # records an orchestration (ADR-092): the procedure names the fields the
@@ -825,7 +829,10 @@ def test_trc_s3_routing_deep_dive_matches_the_evaluator():
     case = _case_3(_read("docs/routing-deep-dive.md"))
     verbose = _evaluate_verbose(**CASE_3)
     fired = _fired_rules(verbose)
-    assert ("RP-REQUIRE-003", True) in fired and ("RP-REQUIRE-004", False) in fired, fired
+    # The shipped floors `RP-REQUIRE-003` and `RP-REQUIRE-004` add no gate on a
+    # path issue (ADR-099), so they no longer fire. The row and the sign-off
+    # rows are what fire, and each adds evidence.
+    assert fired == [("RP-EVID-COMMON", True), ("RP-EVID-SIGNOFF", True), ("G5", True)], fired
     assert not case_3_findings(case, verbose), case_3_findings(case, verbose)
 
     # A routing change is a change to compass.yml, not to the generated file.
@@ -840,13 +847,17 @@ def test_trc_s3_the_case_3_scan_would_report_the_old_text():
     old = ("## Case 3 - x\nRP-EVID-STANDARD. Two floors fire, and they reinforce each "
            "other: RP-FLOOR-001 and RP-REQUIRE-003.\n## Case 4 - y")
     found = case_3_findings(_case_3(old), verbose)
+    assert "Case 3 does not name the evidence row RP-EVID-COMMON" in found, found
     assert "Case 3 does not name RP-EVID-SIGNOFF, which fires" in found, found
     assert "Case 3 names RP-FLOOR-001, which 9.0.0 does not fire" in found, found
     assert "Case 3 names Two floors fire, which 9.0.0 does not fire" in found, found
-    silent = ("## Case 3 - x\nRP-EVID-STANDARD, RP-REQUIRE-003, RP-REQUIRE-004, "
-              "RP-EVID-SIGNOFF and G5 fire.\n## Case 4 - y")
-    assert case_3_findings(_case_3(silent), verbose) == [
-        "Case 3 must say RP-REQUIRE-004 fires but adds nothing"]
+    named = ("## Case 3 - x\nRP-EVID-COMMON, RP-EVID-SIGNOFF and G5 fire.\n## Case 4 - y")
+    assert case_3_findings(_case_3(named), verbose) == []
+    # A rule that fires and adds no evidence must be said to add nothing: take the
+    # evidence line off the sign-off row to play one.
+    silent = verbose.replace("        - evidence owed: scenario-approval\n", "")
+    assert case_3_findings(_case_3(named), silent) == [
+        "Case 3 must say RP-EVID-SIGNOFF fires but adds nothing"]
 
 
 # --- The governance prose describes the 6.0.0 model ---------------------------

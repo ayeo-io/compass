@@ -23,10 +23,10 @@ import reassess_fixtures as fx  # noqa: E402
 
 STEPS = ("resolved", "provenance", "versions", "records", "marker", "manifest")
 
-#: A size whose evidence differs from the fixture's. On the path a medium and a
-#: large change owe the same evidence (ADR-092 decision 3), so a reassessment
-#: that must commit a new generation moves the size to small, the light row.
-SMALLER = "small"
+#: A label whose evidence differs from the fixture's. Every path issue owes the
+#: same evidence whatever its size (ADR-099 decision 4), so a reassessment that
+#: must commit a new generation adds a label that owes the sign-off.
+CHANGED_LABELS = ["auth"]
 
 
 def _snapshot(root):
@@ -68,7 +68,7 @@ def _changed_project(tmp_path):
     reassess commits generation 2."""
     root, task_dir = fx.committed(tmp_path)
     body = fx.manifest_of(task_dir)
-    body["assessment"]["size"] = SMALLER
+    body["assessment"]["labels"] = CHANGED_LABELS
     fx.write_manifest(task_dir, assessment=body["assessment"])
     return root, task_dir
 
@@ -151,7 +151,7 @@ def test_cr_6_a_landed_issue_is_refused_before_anything_prints(tmp_path):
 def test_cr_8_a_reassessment_records_the_generation_it_moved_from_and_to(tmp_path):
     root, task_dir = fx.committed(tmp_path)
     body = fx.manifest_of(task_dir)
-    body["assessment"]["size"] = SMALLER
+    body["assessment"]["labels"] = CHANGED_LABELS
     fx.write_manifest(task_dir, assessment=body["assessment"])
     code, out, err = fx.reassess(root)
     assert code == 0, out + err

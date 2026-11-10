@@ -18,10 +18,19 @@ ITEMS = ["dod-every-scenario-passes", "dod-suite-green", "dod-coverage-floor",
          "dod-follow-ups-settled"]
 
 
-def _issue(tmp_path, created, *, gates_pass, before_the_path=False, assessment=None):
+#: A delivery issue owes no Definition of Done by default (ADR-099 decision 9); the
+#: project's own `require_evidence` rule adds the token.
+OPT_IN = {"schema": 1,
+          "require_evidence": [{"when": {}, "add": ["definition-of-done"]}]}
+
+
+def _issue(tmp_path, created, *, gates_pass, before_the_path=False, assessment=None,
+           opt_in=False):
     """The issue, created on `created`. With `before_the_path`, its manifest holds
-    the keys 8.x stored for its assessment in place of the path keys (ADR-092)."""
-    root = base.project(tmp_path, assessment=assessment)
+    the keys 8.x stored for its assessment in place of the path keys (ADR-092).
+    With `opt_in`, the project asks for the Definition of Done."""
+    root = base.project(tmp_path, assessment=assessment,
+                        compass_yml=OPT_IN if opt_in else None)
     body = manifest(root)
     if before_the_path:
         from test_next_stage import assessed_before_the_path
@@ -47,13 +56,13 @@ def _row(root):
 
 
 def test_a_new_issue_is_judged_once_every_gate_has_passed(tmp_path):
-    row = _row(_issue(tmp_path, "2026-11-05", gates_pass=True))
+    row = _row(_issue(tmp_path, "2026-11-05", gates_pass=True, opt_in=True))
     assert row["status"] == "fail", row
     assert all(f"{item} is open" in row["detail"] for item in ITEMS), row
 
 
 def test_a_new_issue_with_a_gate_still_to_pass_has_nothing_due(tmp_path):
-    row = _row(_issue(tmp_path, "2026-11-05", gates_pass=False))
+    row = _row(_issue(tmp_path, "2026-11-05", gates_pass=False, opt_in=True))
     assert row["status"] == "nothing-to-check", row
     assert "gate" in row["detail"], row
 

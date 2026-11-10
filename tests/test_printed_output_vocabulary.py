@@ -39,12 +39,12 @@ ASSESSMENT = ["risk=critical", "familiarity=brownfield-mapped", "size=small",
               "goal=delivery", "role=engineer", "labels=auth"]
 
 
-def _evaluate(*extra):
+def _evaluate(*extra, cwd=None):
     args = [sys.executable, str(CLI), "approach", "evaluate", "--verbose"]
     for pair in ASSESSMENT:
         args += ["--assessment", pair]
     args += list(extra)
-    r = subprocess.run(args, cwd=str(ROOT), capture_output=True, text=True,
+    r = subprocess.run(args, cwd=str(cwd or ROOT), capture_output=True, text=True,
                        timeout=60)
     assert r.returncode == 0, f"evaluate failed:\n{r.stdout}{r.stderr}"
     return r.stdout
@@ -182,23 +182,30 @@ def test_trc_b3_spine_keys_are_the_current_ones(tmp_path):
 # `TRC-E1` - a shared effect prints once
 # ---------------------------------------------------------------------------
 
-def test_trc_e1_shared_effect_printed_once():
-    """`RP-REQUIRE-003` and `RP-REQUIRE-004` both add `verify.architecture`. The rules are NOT
-    merged - they fire on different conditions and both conditions are worth
-    seeing - so each still prints with its own rationale.
+def test_trc_e1_shared_effect_printed_once(tmp_path):
+    """Two rules of a project's `require_evidence` both add the architecture
+    review. The rules are NOT merged - they fire on different conditions and
+    both conditions are worth seeing - so each still prints, and the evidence
+    and the gate they share are each named once. (The shipped floors
+    `RP-REQUIRE-003` and `RP-REQUIRE-004` add no gate on a path issue since
+    ADR-099, so a project's own rules carry the case.)
     """
-    out = _evaluate()
+    (tmp_path / "compass.yml").write_text(
+        "schema: 1\n"
+        "require_evidence:\n"
+        "  - when: {risk: [cross-cutting, critical]}\n"
+        "    add: [architecture]\n"
+        "  - when: {labels_any: [auth, payments, personal-data, migrations]}\n"
+        "    add: [architecture]\n", encoding="utf-8")
+    out = _evaluate(cwd=tmp_path)
 
-    # On the four-stage path (ADR-092) the shared effect is the evidence both
-    # rules add: the architecture review, which derives `verify.architecture`.
-    for gate in ("evidence owed: architecture",):
-        effect_lines = [ln for ln in out.splitlines() if ln.strip() == "- " + gate]
-        assert len(effect_lines) == 1, (
-            f"the effect line for {gate} is printed {len(effect_lines)} "
-            f"times; the tool reads as repeating itself:\n"
-            + "\n".join(effect_lines))
+    owed = [ln for ln in out.splitlines() if ln.strip().startswith("evidence owed   :")]
+    assert len(owed) == 1, owed
+    assert owed[0].split(", ").count("architecture") == 1, owed[0]
+    gates = [ln for ln in out.splitlines() if ln.strip().startswith("gate set")]
+    assert len(gates) == 1 and gates[0].count("verify.architecture") == 1, gates
 
-    for rule in ("RP-REQUIRE-003", "RP-REQUIRE-004"):
+    for rule in ("RP-SETTING-1", "RP-SETTING-2"):
         assert rule in out, (
             f"{rule} stopped printing - the rules were merged rather than "
             f"their duplicate output deduplicated:\n{out}")

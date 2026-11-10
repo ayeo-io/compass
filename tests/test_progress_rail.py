@@ -463,8 +463,10 @@ def test_on_the_path_the_line_names_the_next_command_not_a_stage_command(tmp_pat
     `Next: /compass:<stage>` line; the plain line's `next:` part is the command."""
     plain = ANSI.sub("", _tty(_path_project(tmp_path))[1])
     assert "Next: /compass:" not in plain, plain
-    # Where `layering` is owed the line first says to write the layering test.
-    assert "next: " in plain and "then compass tdd-red --loop outer" in plain, plain
+    # ADR-099: with no approval owed, the line says to write the tests and the
+    # code, then run `finish`. It names no record command and no outer-loop red.
+    assert "next: write the tests and the code, then compass quick-fix finish" in plain, plain
+    assert "tdd-red" not in plain, plain
 
 
 def test_on_the_path_a_narrow_terminal_wraps_the_rail(tmp_path):

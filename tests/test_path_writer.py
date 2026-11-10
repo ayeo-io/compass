@@ -31,9 +31,8 @@ EVERY_ISSUE = ["request", "scenarios", "red-before-green", "suite-green",
                "correctness", "governance", "traceability"]
 #: The ship approval every delivery row owes (#355); it is last in the manifest's order.
 SHIP = ["ship-approval"]
-LIGHT = EVERY_ISSUE + ["outer-loop"] + SHIP
-STANDARD = EVERY_ISSUE + ["regression", "security", "clarity", "outer-loop", "isolation",
-                          "layering", "definition-of-done"] + SHIP
+#: Every delivery issue owes the same evidence whatever its size (ADR-099 decision 4).
+COMMON = EVERY_ISSUE + SHIP
 THREE = ["verify.correctness", "verify.governance", "verify.traceability"]
 LEGACY_ONLY = ("stages", "subtask_ceiling", "max_worktrees", "orchestration")
 
@@ -104,62 +103,61 @@ def _expected(assessment):
 
 # --- the four delivery rows and the spike ----------------------------------------------
 
-def test_a_small_change_writes_the_light_evidence(tmp_path):
+def test_a_small_change_writes_the_common_evidence(tmp_path):
     root = _project(tmp_path, size="small")
     manifest = _evaluate(root)
     _assert_path_keys(manifest)
-    assert manifest["evidence_required"] == LIGHT
+    assert manifest["evidence_required"] == COMMON
     assert [g["id"] for g in manifest["gates"]] == THREE
+    # No record of the four-layer strategy is owed unless a setting adds one.
     assert manifest["acceptance_strategy"] == {
-        "state": "on", "routing": "existing-dsl", "expected_acceptance": "none",
-        "applies": True, "why": "client-observable behavior"}
-    # Balanced is the default autonomy: nothing waits on a light change.
+        "state": "on", "routing": "guidance", "expected_acceptance": "none",
+        "applies": False,
+        "why": "no record of the strategy is owed unless `require_evidence` adds one"}
+    # Balanced is the default autonomy: nothing waits on a change.
     assert manifest["checkpoints"] == []
-    assert [r["id"] for r in manifest["policy_rules_fired"]] == ["RP-EVID-LIGHT"]
+    assert [r["id"] for r in manifest["policy_rules_fired"]] == ["RP-EVID-COMMON"]
 
 
-def test_a_medium_change_writes_the_standard_evidence(tmp_path):
+def test_a_medium_change_writes_the_same_evidence_as_a_small_one(tmp_path):
     root = _project(tmp_path)
     manifest = _evaluate(root)
     _assert_path_keys(manifest)
-    assert manifest["evidence_required"] == STANDARD
-    assert [g["id"] for g in manifest["gates"]] == THREE + [
-        "verify.regression", "verify.security", "verify.clarity"]
-    assert manifest["acceptance_strategy"]["routing"] == "on"
+    assert manifest["evidence_required"] == COMMON
+    assert [g["id"] for g in manifest["gates"]] == THREE
+    assert manifest["acceptance_strategy"]["routing"] == "guidance"
     assert manifest["checkpoints"] == []
     fired = manifest["policy_rules_fired"]
-    assert [r["id"] for r in fired] == ["RP-EVID-STANDARD"]
+    assert [r["id"] for r in fired] == ["RP-EVID-COMMON"]
     assert fired[0]["kind"] == "evidence" and fired[0]["rationale"]
 
 
-def test_a_live_defect_writes_the_hotfix_evidence_and_reproduce_first(tmp_path):
+def test_a_live_defect_writes_the_common_evidence(tmp_path):
     root = _project(tmp_path, size="small", urgency="live-defect")
     manifest = _evaluate(root)
     _assert_path_keys(manifest)
     expected = _expected(manifest["assessment"])
-    assert manifest["evidence_required"] == expected["evidence_required"]
-    assert "reproduce-first" in manifest["evidence_required"]
-    assert "definition-of-done" in manifest["evidence_required"]
-    assert [g["id"] for g in manifest["gates"]] == expected["gates"]
-    assert manifest["acceptance_strategy"]["routing"] == "existing-dsl-isolation"
-    assert [r["id"] for r in manifest["policy_rules_fired"]] == [
-        "RP-EVID-DEFECT", "RP-EVID-REPRODUCE"]
+    assert manifest["evidence_required"] == expected["evidence_required"] == COMMON
+    assert "reproduce-first" not in manifest["evidence_required"]
+    assert [g["id"] for g in manifest["gates"]] == expected["gates"] == THREE
+    assert manifest["acceptance_strategy"]["routing"] == "guidance"
+    assert [r["id"] for r in manifest["policy_rules_fired"]] == ["RP-EVID-COMMON"]
 
 
-def test_a_g5_label_owes_the_architecture_review_and_two_sign_offs(tmp_path):
+def test_a_g5_label_owes_two_sign_offs_and_no_review(tmp_path):
     root = _project(tmp_path, size="small", labels=["payments"])
     manifest = _evaluate(root)
     _assert_path_keys(manifest)
     expected = _expected(manifest["assessment"])
     assert manifest["evidence_required"] == expected["evidence_required"]
-    for token in ("architecture", "scenario-approval", "human-approval"):
+    for token in ("scenario-approval", "human-approval"):
         assert token in manifest["evidence_required"], token
-    assert "verify.architecture" in [g["id"] for g in manifest["gates"]]
+    assert "architecture" not in manifest["evidence_required"]
+    assert "verify.architecture" not in [g["id"] for g in manifest["gates"]]
     # `scenario-approval` lists the specify checkpoint under every autonomy value.
     assert manifest["checkpoints"] == ["specify"]
     ids = [r["id"] for r in manifest["policy_rules_fired"]]
-    assert ids[0] == "RP-EVID-STANDARD"
-    assert {"RP-REQUIRE-004", "RP-EVID-SIGNOFF", "G5"} <= set(ids)
+    assert ids == ["RP-EVID-COMMON", "RP-EVID-SIGNOFF", "G5"]
 
 
 def test_an_exploration_writes_the_spike_keys_and_no_evidence(tmp_path):
@@ -174,12 +172,12 @@ def test_an_exploration_writes_the_spike_keys_and_no_evidence(tmp_path):
 # --- the checkpoints each autonomy value lists (ADR-092 open question 7) --------------
 
 @pytest.mark.parametrize("autonomy, evidence, applies, listed", [
-    ("controlled", LIGHT, True, ["assess", "specify", "build", "ship"]),
-    ("controlled", LIGHT, False, ["assess", "specify"]),
-    ("balanced", STANDARD, True, []),
-    ("autonomous", STANDARD, True, []),
-    ("balanced", STANDARD + ["scenario-approval"], True, ["specify"]),
-    ("autonomous", STANDARD + ["scenario-approval"], False, ["specify"]),
+    ("controlled", COMMON, True, ["assess", "specify", "build", "ship"]),
+    ("controlled", COMMON, False, ["assess", "specify"]),
+    ("balanced", COMMON, True, []),
+    ("autonomous", COMMON, True, []),
+    ("balanced", COMMON + ["scenario-approval"], True, ["specify"]),
+    ("autonomous", COMMON + ["scenario-approval"], False, ["specify"]),
 ])
 def test_the_checkpoints_follow_the_autonomy_and_the_evidence(autonomy, evidence, applies,
                                                                listed):
@@ -209,7 +207,7 @@ def test_a_reassess_moves_an_old_issue_onto_the_path(tmp_path):
 
     moved = _evaluate(root, "--reason", "move the issue onto the four-stage path")
     _assert_path_keys(moved)
-    assert moved["evidence_required"] == STANDARD
+    assert moved["evidence_required"] == COMMON
     entry = moved["reassessments"][-1]
     assert (entry["from_route"], entry["to_route"]) == ("regular", "delivery")
     assert entry["reason"] == "move the issue onto the four-stage path"
@@ -226,7 +224,7 @@ def test_approach_show_prints_the_evidence_line_on_a_path_issue(tmp_path):
     assert shown.returncode == 0, shown.stderr
     lines = shown.stdout.splitlines()
     assert lines[0].startswith("Approach: delivery (risk contained")
-    assert lines[1] == "Evidence: " + ", ".join(LIGHT)
+    assert lines[1] == "Evidence: " + ", ".join(COMMON)
     assert lines[2].startswith("Writes: .compass/work/demo/")
 
 
@@ -256,10 +254,8 @@ def test_evaluate_json_names_the_evidence_on_the_path(tmp_path):
     assert doc["delivery_approach"] == "delivery"
     for key in LEGACY_ONLY:
         assert key not in doc, key
-    # The preview owes what the write stores. A project with no `compass.yml`
-    # reads the governance files, which declare no `S17` strategy, but the write
-    # commits the live configuration, which does: so the outer loop is owed.
-    assert doc["evidence_required"] == LIGHT
+    # The preview owes what the write stores.
+    assert doc["evidence_required"] == COMMON
     assert _evaluate(root)["evidence_required"] == doc["evidence_required"]
 
 
@@ -310,10 +306,10 @@ def test_each_verb_that_writes_a_record_ends_with_the_next_command(tmp_path):
                   "https://example.com/requests/demo", "--requester", "Test fixture")
     assert linked.returncode == 0, linked.stdout + linked.stderr
     added, red, green = _verb_lines(root)
-    # The light row owes the outer loop, so the next command after the first
-    # scenario and its inner red is the outer-loop red.
-    assert added == ("next: compass tdd-red --loop outer --scenario TRC-001 "
-                     "-- <acceptance test command>")
+    # `finish` does the work of the older record commands (ADR-099), so each of
+    # them ends with the same line: write the tests and the code, then finish.
+    assert added == ('next: write the tests and the code, then compass quick-fix finish '
+                     '-m "<commit message>" -- <test command>')
     assert red == added
     assert green == added
 

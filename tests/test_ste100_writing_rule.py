@@ -65,6 +65,7 @@ def test_ste_2_the_targets_fit_the_rule():
     """The contract with the writing rule was 2,873 characters and 442
     words. #358 cut it to 2,191 characters and 342 words, with the rule
     kept, and the targets moved down with it. A target far above the text
-    would never warn and stop meaning anything."""
-    assert _target(BUDGET_TEST, "CONTRACT_TARGET") == 2200
+    would never warn and stop meaning anything. ADR-099 cut the contract to
+    1,697 characters and 275 words, and the character target moved to 1,750."""
+    assert _target(BUDGET_TEST, "CONTRACT_TARGET") == 1750
     assert _target(BOOTSTRAP_TEST, "CONTRACT_WORD_TARGET") == 350

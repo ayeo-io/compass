@@ -299,7 +299,11 @@ def test_ef_5_the_accepts_comments_come_from_the_configuration_committed(tmp_pat
 
     from compass_pkg import effective
     from compass_pkg.manifest import annotate_gate_accepts_text
-    root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
+    # The security review is owed only where the project's settings add it
+    # (ADR-099 decision 9), so the gate `verify.security` exists here by a rule.
+    root, task_dir = _project(tmp_path, compass_yml={
+        "schema": 1, "require_evidence": [
+            {"when": {"size": ["medium"]}, "add": ["security"]}]})
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
     assert code == 0, out + err
     monkeypatch.chdir(root)
@@ -338,11 +342,10 @@ def test_ef_6_the_result_matches_the_one_the_governance_files_give(tmp_path):
     # The stored generation also carries the delivery-approach record every approach owes
     # (the catalogue flag `every_approach`); the governance files do not declare the flag.
     stored["artifacts"] = [a for a in stored["artifacts"] if a["kind"] != "delivery-approach"]
-    # On the four-stage path the preview owes what a write would store (ADR-092):
-    # the governance files of a project with no `compass.yml` do not declare `S17`,
-    # but the configuration a write commits does, so both owe the `S17` evidence.
-    assert stored["acceptance_strategy"]["applies"] is True
-    assert {"outer-loop", "isolation", "layering"} <= set(live["evidence_required"])
+    # On the four-stage path the preview owes what a write would store (ADR-092).
+    # No record of `S17` is owed unless a setting adds it (ADR-099 decision 9).
+    assert stored["acceptance_strategy"]["applies"] is False
+    assert not {"outer-loop", "isolation", "layering"} & set(live["evidence_required"])
     assert stored == live
 
 

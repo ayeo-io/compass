@@ -45,18 +45,24 @@ def _project(tmp_path):
     return root
 
 
-ARCHITECTURE = "A change to a `G5` surface owes the architecture review"
+# ADR-099: the architecture review is no longer owed to a `G5` surface by
+# default; the label adds the person's approval of the scenarios (row
+# `RP-EVID-SIGNOFF`) and the `G5` sign-off.
+SCENARIO_APPROVAL = ("A change to a `G5` surface, or with critical risk, owes a "
+                     "person's approval of its scenarios")
 SIGN_OFF = "A change to a `G5` surface owes a person's sign-off before it ships"
 
 
 def test_fr_1_each_screen_prints_what_it_printed_before(tmp_path):
     # The issue is on the four-stage path (ADR-092): an auth label adds evidence,
-    # and each rule is named by the evidence it adds.
+    # and each rule is named by the evidence it adds. The summary cuts a long
+    # rule at 70 characters.
     root = _project(tmp_path)
     summary = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--summary")
-    assert f"  - {ARCHITECTURE} (RP-REQUIRE-004, evidence)\n" in summary
+    cut = SCENARIO_APPROVAL[:SCENARIO_APPROVAL.index("owes a person's") + len("owes a person's")]
+    assert f"  - {cut} \u2026 (RP-EVID-SIGNOFF, evidence)\n" in summary
     verbose = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--verbose")
-    assert f"    {ARCHITECTURE} (RP-REQUIRE-004, evidence)\n" in verbose
+    assert f"    {SCENARIO_APPROVAL} (RP-EVID-SIGNOFF, evidence)\n" in verbose
     # A guardrail code is in backticks, as its rationale writes it.
     assert f"    {SIGN_OFF} (`G5`, guardrail)\n" in verbose
 
@@ -64,7 +70,7 @@ def test_fr_1_each_screen_prints_what_it_printed_before(tmp_path):
 def test_fr_1_the_verbose_view_on_the_path_uses_path_words(tmp_path):
     root = _project(tmp_path)
     verbose = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--verbose")
-    assert "  evidence row    : RP-EVID-STANDARD\n" in verbose, verbose
+    assert "  evidence row    : RP-EVID-COMMON\n" in verbose, verbose
     assert "first approach" not in verbose and "quick fix" not in verbose, verbose
     assert "(G5," not in verbose, verbose
 

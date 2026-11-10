@@ -307,13 +307,15 @@ def test_si_5_the_allow_list_is_honest():
 # so adding one or removing one fails until this table changes.
 STAGE_LEDGER = {
     "approval_records.py": (1, 'the record subject key "ship" names the ship approval (#355), not the pipeline stage'),
-    "approval_requests.py": (3, 'the request form "ship" names the ship approval (#355), not the pipeline stage'),
+    "approval_requests.py": (6, 'the request form "ship" names the ship approval (#355), not the pipeline stage; and the checkpoint value "specify" names the specify approval a person gives before code (ADR-099)'),
     "approvals.py": (3, 'the approval form "ship" names the ship approval (#355), not the pipeline stage'),
     "delegations.py": (8, 'the delegated form and record key "ship" name the ship approval (#355), not the pipeline stage'),
     "core.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),
+    "lean.py": (2, 'the subject "ship" names the ship approval, and the checkpoint value "specify" names the specify approval a person gives before code (ADR-099)'),
     "lessons.py": (2, 'a lesson source named "verify" is not a pipeline stage'),
     "migrate.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),
     "migrate_settings.py": (2, 'the "ship" key of the 8.x stages: block that docs/judged-checks.md gave for the agent review, which compass migrate reads to write agent_review: on (#359)'),
+    "next_step.py": (2, 'the subject "ship" names the ship approval a person gives (ADR-099), not the pipeline stage'),
     "pytest_report.py": (1, 'the "build" folder a test run skips is not a pipeline stage'),
     "removed_parts.py": (1, 'the removed verb "compass plan lint" is a command word, not a stage'),
     "word_map.py": (1, 'the retired run stage "build" in the fallback word table is a v1 name'),

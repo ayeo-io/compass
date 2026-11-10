@@ -8,7 +8,7 @@ session got the full feature process, stopped to ask, and wrote nothing.
 
 The four-stage path (ADR-092) has no approaches, so the old evaluator is
 tested on the 8.0.4 governance copy (`compat_baseline.policy_8_0_4`), and the
-same change on the path owes the light evidence row. On the path the quick fix
+same change on the path owes the common evidence row (ADR-099). On the path the quick fix
 no longer refuses heavier work: it starts the change and names the evidence it
 owes.
 """
@@ -41,14 +41,14 @@ def test_a_small_contained_greenfield_change_is_a_quick_fix():
     assert _evaluate(**GREENFIELD) == "quick-fix"
 
 
-def test_on_the_path_a_small_contained_greenfield_change_owes_the_light_row():
-    """The path twin: the 8.x quick fix is the light evidence row (ADR-092)."""
+def test_on_the_path_a_small_contained_greenfield_change_owes_the_common_row():
+    """The path twin: every change owes the common evidence row (ADR-099)."""
     from compass_pkg import evidence_required
     from compass_pkg.core import load_yaml
     policy = shipped_view("routing-policy.yml")
     result = evidence_required.evaluate(GREENFIELD, policy)
     assert result["delivery_approach"] == "delivery"
-    assert result["rules_fired"] == ["RP-EVID-LIGHT"], result["rules_fired"]
+    assert result["rules_fired"] == ["RP-EVID-COMMON"], result["rules_fired"]
     assert result["gates"] == ["verify.correctness", "verify.governance",
                                "verify.traceability"]
 
@@ -105,7 +105,7 @@ def test_a_long_slug_and_a_wrapped_rule_reach_the_reader_whole(repo):
         [sys.executable, str(CLI), "approach", "evaluate", "--issue",
          "refactor-the-configuration-parser-into-helpers", "--verbose"],
         cwd=repo, capture_output=True, text=True)
-    assert "(RP-REQUIRE-003, evidence)" in shown.stdout, shown.stdout + shown.stderr
+    assert "(RP-EVID-COMMON, evidence)" in shown.stdout, shown.stdout + shown.stderr
     assert "…" not in shown.stdout, shown.stdout
 
 
@@ -122,10 +122,12 @@ def test_on_the_path_heavier_work_is_started_and_owes_more_evidence(repo):
     assert "is None" not in out and "labels_any" not in out, out
     m = yaml.safe_load((repo / ".compass" / "work" / slug / "manifest.yml").read_text())
     assert m["delivery_approach"] == "delivery" and "stages" not in m
-    # Cross-cutting risk owes the standard row and the architecture review.
-    assert "architecture" in m["evidence_required"]
-    assert "definition-of-done" in m["evidence_required"]
+    # Cross-cutting risk and unmapped ground add no review (ADR-099 decision 4):
+    # the issue owes the common row, and the floor for unmapped ground keeps its
+    # skill and its reason.
+    assert "architecture" not in m["evidence_required"]
+    assert "definition-of-done" not in m["evidence_required"]
     fired = {f["id"]: f for f in m["policy_rules_fired"]}
-    assert {"RP-EVID-STANDARD", "RP-REQUIRE-003", "RP-FLOOR-002"} <= set(fired), fired
+    assert set(fired) == {"RP-EVID-COMMON", "RP-FLOOR-002"}, fired
     # A fired rule keeps its reason.
     assert all(f["rationale"] for f in fired.values()), fired

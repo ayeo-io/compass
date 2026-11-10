@@ -5,11 +5,12 @@ issue's "how to check": on a finished issue, `sha256sum -c` over the digests
 in `trail.md` passes on a machine without Compass.
 
 The test builds a git repository, takes one quick fix through the CLI (start
-with a request link and a requester, a real failing pytest run, the fix, a
-passing run, `quick-fix finish`). The project has no `compass.yml`, so the
-record mode is committed, and `finish` lands through `compass ship-commit`,
-which writes `trail.md` and commits the issue record with the fix (step 6).
-The test does not commit anything by hand. It then clones the repository
+with a request link and a requester, a real failing pytest run recorded with
+`tdd-red`, the fix, `quick-fix finish`, the person's ship approval and a
+second `finish`). The project's `compass.yml` names only the owner, so the
+record mode is committed, and the second `finish` lands through `compass
+ship-commit`, which writes `trail.md` and commits the issue record with the
+fix (step 6). The test does not commit anything by hand except the base. It then clones the repository
 from a `file://` path, so nothing reaches the network, and runs the check in
 the clone with `PATH=/usr/bin:/bin:/sbin`, where neither the `compass`
 launcher nor its package is reachable.
@@ -22,6 +23,7 @@ either way.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import os
 import re
 import shutil
@@ -32,6 +34,10 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+_spec = importlib.util.spec_from_file_location(
+    "two_command_e2e", ROOT / "scripts" / "two-command-e2e.py")
+e2e = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(e2e)
 CLI = ROOT / "cli" / "compass"
 SLUG = "fix-f"
 TRAIL = f".compass/work/{SLUG}/trail.md"
@@ -86,6 +92,8 @@ def landed(tmp_path_factory):
     (root / "src").mkdir()
     (root / "tests").mkdir()
     (root / "src" / "__init__.py").write_text("")
+    # The person who approves is the project's owner.
+    (root / "compass.yml").write_text(f"owner: {e2e.APPROVER}\n")
     (root / "src" / "f.py").write_text("def f():\n    return 1\n")
     (root / "tests" / "test_f.py").write_text(
         "from src.f import f\n\n\ndef test_f():\n    assert f() == 2\n")
@@ -102,11 +110,17 @@ def landed(tmp_path_factory):
     _ok(root, "tdd-red", "--issue", SLUG, *loop, "--", *_pytest())
     (root / "src" / "f.py").write_text("def f():\n    return 2\n")
     where = ["--candidate", "local", "--client", "cli"]
-    _ok(root, "tdd-green", "--issue", SLUG, *loop, *where, "--", *_pytest())
-    # No `compass.yml`, so the record mode is committed: `finish` lands through
-    # `ship-commit`, which writes `trail.md` and commits the record with the fix.
-    _ok(root, "quick-fix", "finish", "--issue", SLUG, "-m", "Fix f",
-        "--release-note", "f returns 2", "--loop", "outer", *where, "--", *_pytest())
+    finish = ["quick-fix", "finish", "--issue", SLUG, "-m", "Fix f",
+              "--release-note", "f returns 2", "--loop", "outer", *where, "--", *_pytest()]
+    # `finish` keeps the red recorded with `tdd-red` and records the green. It
+    # commits nothing until a person gives the ship approval.
+    first = _ok(root, *finish)
+    assert "Nothing is committed" in first.stdout, first.stdout
+    assert e2e.person_approves(root) == [1]
+    # The record mode is committed: this `finish` lands through `ship-commit`,
+    # which writes `trail.md` and commits the record with the fix.
+    second = _ok(root, *finish)
+    assert "checked and committed" in second.stdout, second.stdout
     return root
 
 

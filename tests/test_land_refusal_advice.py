@@ -73,16 +73,18 @@ def test_lra3_an_issue_with_no_created_date_owns_its_documents():
                              artifacts, prefix)
 
 
-def test_lra4_finish_names_an_untraced_hand_committed_file(repo):
-    """A fix committed by hand before finish is not traced by finish, but
-    finish must say so rather than land it silently untraced."""
-    from test_quick_fix_verbs import _ready_to_finish, _finish
+def test_lra4_finish_traces_a_hand_committed_file(repo):
+    """A fix committed by hand before finish is part of the change, because
+    `finish` reads the change as the difference from the base commit (ADR-099),
+    so it is traced and cannot land untraced."""
+    from test_quick_fix_verbs import _ready_to_finish, _land, _manifest
     slug = "greet-hand"
     _ready_to_finish(repo, slug)
     (repo / "data" / "extra.txt").write_text("committed by hand\n")
     _git(repo, "add", "data/extra.txt")
     _git(repo, "commit", "-q", "-m", "part of the fix, by hand")
 
-    finish = _finish(repo, slug)
-    assert "data/extra.txt" in finish.stdout + finish.stderr
-    assert "not traced" in (finish.stdout + finish.stderr).lower()
+    finish = _land(repo, slug)
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    traced = {cf["path"] for cf in _manifest(repo, slug)["changed_files"]}
+    assert "data/extra.txt" in traced, traced

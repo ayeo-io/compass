@@ -45,13 +45,16 @@ def test_qfo_6_the_command_exists_and_the_skill_does_not():
 
 
 def test_qfo_6_the_command_names_start_with_its_fixed_flags():
-    """`quick-fix start`'s flags are fixed by the design (subtask-1); the
-    command must teach the exact set, not a paraphrase."""
+    """`quick-fix start`'s flags are fixed by the design (ADR-099); the
+    command must teach the exact set, not a paraphrase. The scenarios and the
+    tests are no longer flags: `finish` reads them from the issue's
+    acceptance-criteria.md and from git."""
     text = _text(COMMAND)
     assert "compass quick-fix start" in text
-    for flag in ("--risk", "--familiarity", "--size", "--goal",
-                 "--intent", "--scenario", "--scenario-id", "--test"):
+    for flag in ("--intent", "--request", "--requester", "--labels", "--risk"):
         assert flag in text, f"commands/quick-fix.md does not name {flag}"
+    for flag in ("--familiarity", "--size", "--goal", "--scenario", "--test"):
+        assert flag not in text, f"commands/quick-fix.md still names {flag}"
 
 
 def test_qfo_6_the_command_names_finish_with_its_fixed_flags():
@@ -61,10 +64,12 @@ def test_qfo_6_the_command_names_finish_with_its_fixed_flags():
         "commands/quick-fix.md does not name finish's -m flag")
 
 
-def test_qfo_6_the_command_names_the_red_and_the_green():
+def test_qfo_6_the_command_names_no_red_or_green_step():
+    """`finish` proves the red on a copy of the base commit and records the
+    green (ADR-099 decision 2), so the command names neither verb."""
     text = _text(COMMAND)
-    assert "compass tdd-red" in text
-    assert "compass tdd-green" in text
+    assert "compass tdd-red" not in text
+    assert "compass tdd-green" not in text
 
 
 def test_qfo_6_no_template_is_named_to_read():
@@ -80,18 +85,19 @@ def test_qfo_6_no_hand_run_gate_or_evidence_step():
         "commands/quick-fix.md still instructs a hand-run `compass gate pass`")
     assert "compass evidence add" not in text, (
         "commands/quick-fix.md still instructs a hand-run `compass evidence add`")
+    assert "compass scenario add" not in text and "compass changed-file add" not in text
 
 
 def test_qfo_6_the_command_has_no_wrong_path_list():
-    """On the four-stage path (ADR-092) no size is wrong for the three calls:
-    the evidence line says what the change owes, and `finish` names each
-    owed item. So the list of cases where this command was the wrong one
-    went, and the command says how the calls serve every size instead."""
+    """On the path (ADR-092) no size is wrong for the two calls, so the list
+    of cases where this command was the wrong one went. The description says
+    the issue takes two commands, and `finish` names what a person still owes
+    on its `next:` line."""
     text = _text(COMMAND)
     assert "When this command is the wrong one" not in text
     flat = " ".join(text.split())
-    assert "serve every size" in flat
-    assert "`next:` line for each owed item" in flat
+    assert "Start, change and finish an issue in two commands" in flat
+    assert "its `next:` line asks for a person's approval, stop" in flat
 
 
 def test_qfo_6_the_command_keeps_the_reassess_rule():
@@ -115,35 +121,37 @@ def test_qfo_6_the_command_is_under_the_word_ceiling():
         f"{WORD_CEILING}-word ceiling")
 
 
-def test_qfo_6_finish_is_taught_with_the_test_command_and_no_commit():
-    """`finish` records the green itself, so it takes the test command, and
-    it commits only when the user asked for a commit."""
+def test_qfo_6_finish_is_taught_with_the_test_command_and_it_commits_after_approval():
+    """`finish` records the red and the green itself, so it takes the test
+    command. It commits once a person has approved (ADR-099 decision 7), so
+    the command shows no `--no-commit` and no separate green step."""
     text = _text(COMMAND)
-    finish_lines = [l for l in text.splitlines()
-                    if l.startswith("compass quick-fix finish")]
+    finish_lines = [l.strip() for l in text.splitlines()
+                    if l.strip().startswith("compass quick-fix finish")]
     assert finish_lines, "commands/quick-fix.md shows no finish command line"
-    assert all("-- <test command>" in l and "--no-commit" in l
+    assert all("-- <test command>" in l and "--no-commit" not in l
                for l in finish_lines), finish_lines
+    assert "It commits once a person has approved" in " ".join(text.split())
     assert "compass tdd-green --scenario" not in text, (
         "a separate green step before finish records a green over the "
         "untraced files")
 
 
-def test_qfo_6_the_command_lists_every_allowed_value():
-    """An agent that guesses `low` or `high` spends a call on the refusal."""
+def test_qfo_6_the_command_names_the_labels_and_the_risk_that_owe_an_approval():
+    """An agent that guesses a label spends a call on the refusal. Only the
+    four labels and critical risk need a flag on `start` (ADR-099 decision 5)."""
     text = _text(COMMAND)
-    for value in ("trivial", "contained", "cross-cutting", "critical",
-                  "greenfield", "brownfield-mapped", "brownfield-unmapped",
-                  "atomic", "small", "medium", "large", "product"):
-        assert f"`{value}`" in text, f"commands/quick-fix.md omits {value}"
+    for value in ("auth", "payments", "personal-data", "migrations", "critical"):
+        assert f"`{value}`" in text or f"{value} - " in text, (
+            f"commands/quick-fix.md omits {value}")
 
 
-def test_qfo_6_assess_sends_a_small_change_to_quick_fix_start():
-    """An agent that opens `/compass:assess` for a small change otherwise
-    writes the manifest and the approach record by hand."""
+def test_qfo_6_assess_carries_the_start_and_finish_commands():
+    """`/compass:assess` is the entry point for every request, so it carries
+    both commands and a session does not load `/compass:quick-fix` as well."""
     text = _text(ROOT / "commands" / "assess.md")
     assert "compass quick-fix start" in text
-    assert "/compass:quick-fix" in text
+    assert "compass quick-fix finish" in text
 
 
 def _skill_names() -> dict[str, str]:
@@ -170,46 +178,68 @@ def test_qfs_176_no_skill_shares_a_command_name():
         f"{shadowed}")
 
 
-#: Each rule the skill held, with a phrase the command must now carry. Each
-#: phrase is the shortest wording that carries the rule, so a rule that is
-#: reworded around it still passes, and a rule that is dropped does not.
-RULES_MOVED_FROM_THE_SKILL = {
-    "an unjustified value is worse than a question": "an unjustified value",
-    "risk is consequence, never effort": "never effort",
-    "risk: trivial test": "instantly reversible",
-    "risk: contained test": "recoverable without an incident",
-    "risk: cross-cutting test": "ecovery needs coordination",
-    "risk: critical test": "cannot be rolled back",
-    "familiarity: greenfield test": "net-new",
-    "familiarity: brownfield-mapped test": "trivially readable",
-    "familiarity: brownfield-unmapped does not stop a quick fix":
-        "pin with a test what the code does now",
-    "size: atomic test": "under about half an hour",
-    "size: small test": "solution pattern that already exists",
-    "size: medium and above test": "design decisions",
-    "size: estimate up when unsure": "estimate up",
+#: Each rule the skill held, with the file that holds it now and a phrase it
+#: must carry. The command is 244 words (ADR-099): the session no longer scores
+#: risk, familiarity or size, so the rubric holds those rules, and the
+#: test-first rules are in the `tdd-discipline` skill.
+RULES = Path("approaches") / "rubric.md"
+TDD = Path("skills") / "tdd-discipline" / "SKILL.md"
+NO_RED = Path("skills") / "tdd-discipline" / "no-natural-red.md"
+RULES_NOW_HELD_ELSEWHERE = {
+    "an unjustified value is worse than a question": (RULES, "an unjustified value"),
+    "risk is consequence, never effort": (Path("skills/adaptive-routing/SKILL.md"),
+                                          "never effort"),
+    "risk: trivial test": (RULES, "instantly reversible"),
+    "risk: contained test": (RULES, "recoverable without incident"),
+    "risk: cross-cutting test": (RULES, "ecovery needs coordination"),
+    "risk: critical test": (RULES, "cannot be cleanly rolled back"),
+    "familiarity: greenfield test": (RULES, "Net-new"),
+    "familiarity: brownfield-mapped test": (RULES, "trivially readable"),
+    "size: atomic test": (RULES, "< ~30 min"),
+    "size: small test": (RULES, "known solution pattern"),
+    "size: medium and above test": (RULES, "design decisions"),
+    "size: estimate up when unsure": (RULES, "estimates *up*"),
     # The rule that an intent.md or positioning.md pulls the approach up went in
     # 9.0.0: no command reads which documents an issue has on disk (ADR-091).
-    "goal: exploration is a spike": "exploration",
-    "the guardrail is tested before it lands": "tested before it lands",
-    "a light approach adapts surface, never whether a test exists": "never whether a test exists",
-    "red: fail for the right reason": "right reason",
-    "green: the smallest correct change": "smallest correct change",
-    "refactor: a changed test means back to red": "go back to red",
-    "the hook blocks an edit with no failing test; never work around it": "work around it",
+    "goal: exploration is a spike": (RULES, "goal: exploration"),
+    "the guardrail is tested before it lands": (Path("approaches/path.md"),
+                                                "tested before it lands"),
+    "red: fail for the right reason": (TDD, "right reason"),
+    "green: the smallest correct change": (TDD, "smallest *correct*"),
+    "refactor: a changed test means back to red": (TDD, "going back to red"),
+    "a sanctioned red is not an exemption from red": (NO_RED, "not an exemption"),
+    # The older kinds of proof (regression, e2e, typecheck, live) became the kinds of a
+    # declared acceptance: `validation` and `refactor`.
+    "no natural failing test: the declared acceptance kinds": (
+        NO_RED, "compass acceptance start --kind validation"),
+}
+
+#: Rules no file carries now. `RULES_NOW_HELD_ELSEWHERE` leaves them out, and
+#: the test below fails on each until a file carries it again.
+RULES_NO_FILE_CARRIES = {
+    "familiarity: brownfield-unmapped does not stop a quick fix":
+        "pin with a test what the code does now",
+    "a light approach adapts surface, never whether a test exists":
+        "never whether a test exists",
     "no natural failing test: use a guard that can fail": "guard that can fail",
-    "no natural failing test: the verified-by kinds": "regression|e2e|typecheck|live",
-    "a sanctioned red is not an exemption from red": "not an exemption from red",
 }
 
 
-def test_qfs_176_every_rule_of_the_skill_reaches_the_command():
-    """A session that runs `/compass:quick-fix` reads the command and nothing
-    else, so a rule must be in the command to be followed."""
-    text = " ".join(_text(COMMAND).split())
-    missing = sorted(rule for rule, phrase in RULES_MOVED_FROM_THE_SKILL.items()
+def test_qfs_176_every_rule_of_the_skill_is_held_by_the_file_that_teaches_it_now():
+    """The command no longer carries the rules of the quick-fix skill; the
+    file named for each rule must still carry its phrase."""
+    missing = sorted(rule for rule, (path, phrase) in RULES_NOW_HELD_ELSEWHERE.items()
+                     if phrase not in " ".join(_text(ROOT / path).split()))
+    assert not missing, f"these rules are in no file that teaches them: {missing}"
+
+
+def test_qfs_176_every_other_rule_of_the_skill_is_still_taught_somewhere():
+    text = " ".join(" ".join(_text(p).split()) for p in sorted(
+        list((ROOT / "commands").glob("*.md")) + list((ROOT / "skills").glob("**/*.md"))
+        + list((ROOT / "approaches").glob("*.md"))))
+    missing = sorted(rule for rule, phrase in RULES_NO_FILE_CARRIES.items()
                      if phrase not in text)
-    assert not missing, f"commands/quick-fix.md lacks these rules: {missing}"
+    assert not missing, f"no command, skill or approach file carries: {missing}"
 
 
 def test_qfs_176_the_command_does_not_promise_a_skill_load():
@@ -225,15 +255,14 @@ def test_qfs_176_the_command_does_not_promise_a_skill_load():
 
 
 def test_qfo_6_assess_carries_the_whole_quick_fix_recipe():
-    """A session opens `/compass:assess` first. With the three commands and
-    the allowed values there, it does not spend a call loading
-    `/compass:quick-fix` as well."""
+    """A session opens `/compass:assess` first. With the two commands and the
+    labels there, it does not spend a call loading `/compass:quick-fix` as
+    well."""
     text = _text(ROOT / "commands" / "assess.md")
-    assert "compass tdd-red" in text
+    assert "compass tdd-red" not in text
     finish = [l for l in text.splitlines()
               if l.strip().startswith("compass quick-fix finish")]
-    assert finish and all("--no-commit" in l and "-- <test command>" in l
+    assert finish and all("--no-commit" not in l and "-- <test command>" in l
                           for l in finish), finish
-    for value in ("trivial", "contained", "brownfield-mapped", "atomic",
-                  "small"):
-        assert f"`{value}`" in text, f"commands/assess.md omits {value}"
+    for value in ("auth", "payments", "personal-data", "migrations", "critical"):
+        assert value in text, f"commands/assess.md omits {value}"

@@ -349,49 +349,44 @@ def test_route_fixture(run_cli, fixture):
 # of the approach (`stages`, `subtask_ceiling`, `max_worktrees`) are gone.
 
 #: The evidence of the acceptance strategy `S17` (`governance/strategies.md`).
+#: It is owed only where a project setting adds it (ADR-099 decision 9).
 S17_EVIDENCE = ("outer-loop", "isolation", "layering")
 
-LIGHT = ["scenarios", "red-before-green", "suite-green", "correctness",
-         "governance", "traceability"]
-STANDARD = LIGHT + ["regression", "security", "clarity", "definition-of-done"]
+#: What every delivery issue owes between the request link and the ship approval
+#: (ADR-099 decision 4). Size, risk, familiarity and urgency add nothing.
+COMMON = ["scenarios", "red-before-green", "suite-green", "correctness",
+          "governance", "traceability"]
 SMALL = {"risk": "contained", "familiarity": "brownfield-mapped",
          "size": "small", "intent": "delivery"}
+COMMON_RULE = ["RP-EVID-COMMON"]
 
 PATH_TWINS = {
     # twin of test_express_route_for_small_mapped_change
-    "small-mapped": (SMALL, LIGHT, ["RP-EVID-LIGHT"]),
+    "small-mapped": (SMALL, COMMON, COMMON_RULE),
     # twin of test_standard_route_for_default_shape
-    "standard": (dict(SMALL, size="standard"), STANDARD, ["RP-EVID-STANDARD"]),
+    "standard": (dict(SMALL, size="standard"), COMMON, COMMON_RULE),
     # twin of test_expedition_route_for_large_magnitude
-    "large": (dict(SMALL, size="large"), STANDARD, ["RP-EVID-STANDARD"]),
+    "large": (dict(SMALL, size="large"), COMMON, COMMON_RULE),
     # twin of test_hotfix_route_for_live_defect
-    "live-defect": (dict(SMALL, urgency="live-defect"),
-                    LIGHT + ["regression", "security", "definition-of-done",
-                             "reproduce-first"],
-                    ["RP-EVID-DEFECT", "RP-EVID-REPRODUCE"]),
+    "live-defect": (dict(SMALL, urgency="live-defect"), COMMON, COMMON_RULE),
     # twin of test_floor_critical_blast_radius_forces_expedition
-    "critical": (dict(SMALL, risk="critical"),
-                 STANDARD[:-1] + ["architecture", "definition-of-done",
-                                  "scenario-approval"],
-                 ["RP-EVID-STANDARD", "RP-REQUIRE-003", "RP-EVID-SIGNOFF"]),
+    "critical": (dict(SMALL, risk="critical"), COMMON + ["scenario-approval"],
+                 COMMON_RULE + ["RP-EVID-SIGNOFF"]),
     # twin of test_cap_critical_caps_worktrees_to_one
     "critical-large": (dict(SMALL, risk="critical", size="large"),
-                       STANDARD[:-1] + ["architecture", "definition-of-done",
-                                        "scenario-approval"],
-                       ["RP-EVID-STANDARD", "RP-REQUIRE-003", "RP-EVID-SIGNOFF"]),
+                       COMMON + ["scenario-approval"], COMMON_RULE + ["RP-EVID-SIGNOFF"]),
     # twin of test_floor_brownfield_unmapped_requires_specify
     "brownfield-unmapped": (dict(SMALL, familiarity="brownfield-unmapped",
                                  size="medium"),
-                            STANDARD, ["RP-EVID-STANDARD", "RP-FLOOR-002"]),
+                            COMMON, COMMON_RULE + ["RP-FLOOR-002"]),
 }
 # twins of test_floor_g5_domains_force_expedition and
 # test_candidate_and_final_route_both_recorded: a `G5` label owes two sign-offs.
 for _domain in ("auth", "payments", "personal-data", "migrations"):
     PATH_TWINS[f"g5-{_domain}"] = (
         dict(SMALL, labels=[_domain]),
-        STANDARD[:-1] + ["architecture", "definition-of-done",
-                         "scenario-approval", "human-approval"],
-        ["RP-EVID-STANDARD", "RP-REQUIRE-004", "RP-EVID-SIGNOFF", "G5"])
+        COMMON + ["scenario-approval", "human-approval"],
+        COMMON_RULE + ["RP-EVID-SIGNOFF", "G5"])
 
 
 @pytest.mark.parametrize("name", sorted(PATH_TWINS))
@@ -400,13 +395,10 @@ def test_the_command_prints_the_path_for_a_delivery_assessment(run_cli, name):
     data = _evaluate_cli(run_cli, readings)
     assert data["delivery_approach"] == "delivery"
     # Every delivery row also owes the request link, first in the manifest's order
-    # (#356), and the ship approval, last (#355). The command reads the check set,
-    # which declares the acceptance strategy `S17`, so its evidence is owed too;
-    # the 8.0.4 copy these lists were written against declared none.
-    s17 = [t for t in data["evidence_required"] if t in S17_EVIDENCE]
-    assert s17 == [t for t in S17_EVIDENCE if t in s17]
-    assert [t for t in data["evidence_required"] if t not in S17_EVIDENCE] == \
-        ["request"] + owed + ["ship-approval"]
+    # (#356), and the ship approval, last (#355). The records of `S17` are owed
+    # only where a project setting adds them, and these projects have none.
+    assert not [t for t in data["evidence_required"] if t in S17_EVIDENCE]
+    assert data["evidence_required"] == ["request"] + owed + ["ship-approval"]
     assert [f["id"] for f in data["policy_rules_fired"]] == fired
     # The gates are derived from the evidence (ADR-092).
     path = er.evaluate(_as_read(readings), cb.policy_8_0_4())

@@ -727,9 +727,9 @@ def test_gs_11_a_repeat_says_no_change_and_a_new_assessment_commits_two(tmp_path
     assert "no change" in out and "generation 1" in out
     assert _manifest(task_dir)["generation"] == 1 and not _gen(task_dir, 2).exists()
     body = _manifest(task_dir)
-    # On the path a medium and a large change owe the same evidence (ADR-092
-    # decision 3), so the new assessment moves the size to small, the light row.
-    body["assessment"]["size"] = "small"
+    # Every path issue owes the same evidence whatever its size (ADR-099
+    # decision 4), so the new assessment adds a label that owes the sign-off.
+    body["assessment"]["labels"] = ["auth"]
     _write_manifest(task_dir, assessment=body["assessment"])
     code, out, err = _evaluate_write(root, "--reason", "smaller than thought")
     assert code == 0, out + err
@@ -1008,9 +1008,9 @@ def test_gs_17_the_command_refuses_a_symlinked_folder_with_exit_2(tmp_path):
     (victim / "keep.txt").write_text("mine\n", encoding="utf-8")
     _link(_gen(task_dir, 2), victim)
     body = _manifest(task_dir)
-    # A size whose evidence differs, so the write commits generation 2 (ADR-092
-    # decision 3: a medium and a large change owe the same evidence).
-    body["assessment"]["size"] = "small"
+    # A label whose evidence differs, so the write commits generation 2 (ADR-099
+    # decision 4: size does not change the evidence a path issue owes).
+    body["assessment"]["labels"] = ["auth"]
     _write_manifest(task_dir, assessment=body["assessment"])
     code, out, err = _evaluate_write(root)
     assert code == 2, out + err

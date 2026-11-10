@@ -29,7 +29,10 @@ READY = ["dor-summary-filled", "dor-problem-traces-up", "dor-behavior-is-gwt",
          "dor-traceability-ids", "dor-affected-surface-named", "dor-no-open-questions",
          "dor-approach-still-fits"]
 #: A project that declares jed72 as owner and as an approver.
-LAYER = dict(sup.base.HUMAN_DESIGN)
+#: A delivery issue owes no Definition of Done by default (ADR-099 decision 9); the
+#: project's own `require_evidence` rule adds the token.
+LAYER = {**sup.base.HUMAN_DESIGN,
+         "require_evidence": [{"when": {}, "add": ["definition-of-done"]}]}
 ON = {**LAYER, "capabilities": {"entry-exit-evaluation": True}}
 SPEC = {"risk": "critical", "familiarity": "brownfield-mapped", "size": "large",
         "goal": "delivery", "role": "engineer", "labels": []}

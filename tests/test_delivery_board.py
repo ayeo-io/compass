@@ -43,8 +43,10 @@ def _manifest(root, slug, **fields):
 
 
 def _green(repo):
+    # The four-layer acceptance strategy is guidance by default (ADR-099), so the
+    # green is a unit-test green: it names no candidate and no client.
     r = _run(repo, "tdd-green", "--issue", "fix-greeting", "--scenario",
-             "TRC-001", "--candidate", "local", "--client", "cli", *GREET_CMD)
+             "TRC-001", *GREET_CMD)
     assert r.returncode == 0, r.stdout + r.stderr
 
 

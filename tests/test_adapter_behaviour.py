@@ -169,8 +169,10 @@ def test_semantic_changes_and_tampered_evidence_fail(tmp_path):
 def test_hook_decisions(tmp_path):
     adapter = Adapter("claude-code", tmp_path / "claude-code")
     adapter.seed("quick-fix")
-    for state, expected_exit in (("unassessed", 2), ("no-red", 2), ("red", 0)):
-        if state == "no-red":
+    # `finish` proves the red (ADR-099), so a started issue allows a code edit
+    # before any red is on record.
+    for state, expected_exit in (("unassessed", 2), ("started", 0), ("red", 0)):
+        if state == "started":
             adapter.start_quick_fix()
         elif state == "red":
             adapter.red()
@@ -179,6 +181,14 @@ def test_hook_decisions(tmp_path):
             assert decision["exit_code"] == expected_exit, (state, action, decision)
             if expected_exit:
                 assert decision["reason"]
+    # An issue that owes a person's approval of its scenarios refuses a code
+    # edit until it is on record.
+    labelled = Adapter("claude-code", tmp_path / "claude-code-labelled")
+    labelled.seed("quick-fix")
+    labelled.start_quick_fix("--labels", "payments")
+    for action in ("file", "move", "shell"):
+        decision = labelled.payload_decision(action)
+        assert decision == {"exit_code": 2, "reason": "code-before-approval"}, (action, decision)
     spike = Adapter("claude-code", tmp_path / "claude-code-spike")
     spike.seed("quick-fix")
     spike.start_spike()

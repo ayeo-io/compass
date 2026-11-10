@@ -226,8 +226,13 @@ def test_an_old_issue_keeps_the_verify_is_thorough_rule(tmp_path, monkeypatch):
 
 def test_on_a_path_issue_stage_one_ends_at_specify():
     from compass_pkg.acceptance_strategy import stage_one
+    unwritten = _path_task(scenarios=[])
+    assert stage_one(unwritten, "outer") is True
+    assert stage_one(unwritten, "inner") is False
+    # A scenario needs no declared test: `finish` reads the tests from git
+    # (ADR-099), so the scenarios are written once they have an id and an intent.
     untested = _path_task(scenarios=[{"id": "TRC-001", "intent": "INT-1"}])
-    assert stage_one(untested, "outer") is True
+    assert stage_one(untested, "outer") is False
     assert stage_one(untested, "inner") is False
     assert stage_one(_path_task(), "outer") is False
 

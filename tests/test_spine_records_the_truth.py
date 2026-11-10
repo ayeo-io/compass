@@ -74,8 +74,19 @@ def _seeded(tmp_path, **readings):
         "risk": "contained", "familiarity": "greenfield",
         "size": "standard", "intent": "delivery", "urgency": "none",
         "role": "engineer", "labels": [], **readings}))
+    # The project's `compass.yml` replaces the legacy `.compass/config.yml`.
+    (root / ".compass" / "config.yml").unlink()
+    (root / "compass.yml").write_text("schema: 1\n" + ARCHITECTURE_ON_CROSS_CUTTING)
     _run(root, "approach", "evaluate", "--issue", "t", "--write")
     return root
+
+
+#: The project asks for the architecture review on cross-cutting risk. Risk adds
+#: no review by default (ADR-099 decision 4), so a re-assessment moves the gate
+#: set only where a `require_evidence` rule says so.
+ARCHITECTURE_ON_CROSS_CUTTING = (
+    "require_evidence:\n  - when: {risk: [cross-cutting, critical]}\n"
+    "    add: [architecture]\n")
 
 
 # The four-stage path (ADR-092): each re-assessment here is written by the path
@@ -89,9 +100,9 @@ def test_scn_a1_content_change_is_logged(tmp_path):
     assert "architecture" not in before["evidence_required"]
 
     # cross-cutting keeps the approach name `delivery` and takes the gate set
-    # from 6 to 7 (RP-REQUIRE-003 adds the `architecture` evidence and its gate
-    # `verify.architecture`). On the path every delivery issue has the one name,
-    # so any re-assessment that moves the evidence is a content-only change.
+    # from 3 to 4 (the project's rule adds the `architecture` evidence and its
+    # gate `verify.architecture`). On the path every delivery issue has the one
+    # name, so any re-assessment that moves the evidence is a content-only change.
     before["assessment"]["risk"] = "cross-cutting"
     (root / ".compass" / "work" / "t" / "manifest.yml").write_text(
         yaml.safe_dump(before, sort_keys=False))

@@ -99,8 +99,8 @@
       2,
       2
     ],
-    "list_items": 22,
-    "table_rows": 27
+    "list_items": 26,
+    "table_rows": 18
   },
   "docs/routing-deep-dive.md": {
     "fences": 14,
@@ -142,7 +142,7 @@
       2,
       2
     ],
-    "list_items": 47,
+    "list_items": 34,
     "table_rows": 37
   },
   "docs/safety-contract.md": {
@@ -158,6 +158,7 @@
       3,
       3,
       2,
+      3,
       3,
       3,
       3,
@@ -380,7 +381,7 @@
       2,
       2
     ],
-    "list_items": 49,
+    "list_items": 47,
     "table_rows": 33
   },
   "governance/strategies.md": {
@@ -440,7 +441,7 @@
       2,
       2
     ],
-    "list_items": 19,
+    "list_items": 17,
     "table_rows": 0
   },
   "skills/flow-management/SKILL.md": {

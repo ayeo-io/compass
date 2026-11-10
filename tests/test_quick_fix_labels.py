@@ -48,25 +48,27 @@ def _manifest(root, slug):
         (root / ".compass" / "work" / slug / "manifest.yml").read_text())
 
 
-#: The evidence every change owes, and the light row's outer loop (ADR-092).
-LIGHT = ["request", "scenarios", "red-before-green", "suite-green", "correctness", "governance",
-         "traceability", "outer-loop", "ship-approval"]
+#: The evidence every change owes (ADR-099 decision 4).
+COMMON = ["request", "scenarios", "red-before-green", "suite-green", "correctness",
+          "governance", "traceability", "ship-approval"]
 
 
 def test_on_the_path_a_labelled_change_owes_the_domain_evidence(repo):
-    """ADR-092 decision: the quick fix no longer refuses heavier work. A `G5` label reaches the domain floor as owed evidence:
-    the architecture review, the scenario sign-off and the human sign-off."""
+    """ADR-092 decision: the quick fix no longer refuses heavier work. A `G5` label
+    reaches the domain floor as owed evidence: the scenario sign-off and the human
+    sign-off (ADR-099 decision 5). It adds no review."""
     r = _start(repo, "login-error", "--labels", "auth")
     assert r.returncode == 0, r.stdout + r.stderr
     m = _manifest(repo, "login-error")
     assert m["assessment"]["labels"] == ["auth"]
     assert m["delivery_approach"] == "delivery"
     assert "stages" not in m
-    for token in ("architecture", "scenario-approval", "human-approval"):
+    for token in ("scenario-approval", "human-approval"):
         assert token in m["evidence_required"], token
-    assert "verify.architecture" in [g["id"] for g in m["gates"]]
+    assert "architecture" not in m["evidence_required"]
+    assert "verify.architecture" not in [g["id"] for g in m["gates"]]
     fired = [f["id"] for f in m["policy_rules_fired"]]
-    assert {"RP-REQUIRE-004", "RP-EVID-SIGNOFF", "G5"} <= set(fired), fired
+    assert fired == ["RP-EVID-COMMON", "RP-EVID-SIGNOFF", "G5"], fired
 
 
 def test_the_human_sign_off_applies_to_a_labelled_change(repo):
@@ -84,11 +86,11 @@ def test_without_labels_nothing_changes(repo):
     r = _start(repo, "login-error")
     m = _manifest(repo, "login-error")
     assert m["assessment"]["labels"] == []
-    # ADR-092 decision: no approaches. The 8.x quick fix is the light evidence row,
-    # with none of the evidence a label adds.
+    # ADR-099 decision 4: every change owes the common row, with none of the
+    # evidence a label adds.
     assert m["delivery_approach"] == "delivery", r.stdout + r.stderr
-    assert m["evidence_required"] == LIGHT, m["evidence_required"]
-    assert [f["id"] for f in m["policy_rules_fired"]] == ["RP-EVID-LIGHT"]
+    assert m["evidence_required"] == COMMON, m["evidence_required"]
+    assert [f["id"] for f in m["policy_rules_fired"]] == ["RP-EVID-COMMON"]
 
 
 def test_a_malformed_label_is_refused_before_anything_is_written(repo):

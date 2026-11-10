@@ -166,29 +166,26 @@ def test_quick_fix_start_without_a_request_succeeds_and_next_asks_for_it(repo, g
     assert rows["request-recorded"] == "fail", rows
 
 
-def test_finish_lands_when_the_request_is_the_only_failure(repo):
-    """The request is not a stop (#356, VD-033): `quick-fix finish` lands an issue
-    whose only failing check is `request-recorded`, names the missing request,
-    and `compass check` keeps failing on it until it is recorded."""
-    from test_quick_fix_verbs import _finish, _ready_to_finish, _run
+def test_finish_refuses_when_the_request_is_the_only_failure_and_lands_once_recorded(repo):
+    """`quick-fix finish` runs `compass check` and refuses on any failure a person
+    cannot clear (ADR-099), the missing request among them. It names the check,
+    commits nothing, and lands once the request is recorded."""
+    from test_quick_fix_verbs import _land, _ready_to_finish, _run, _finish
     _ready_to_finish(repo, "no-ask", request=False)
     finish = _finish(repo, "no-ask")
-    assert finish.returncode == 0, finish.stdout + finish.stderr
-    assert "request : not recorded" in finish.stdout, finish.stdout
-    assert "`compass issue link set --issue no-ask --request <url> --requester <name>`" \
-        in finish.stdout, finish.stdout
-    assert _manifest(repo, "no-ask")["status"] == "done"
-    check = _run(repo, "check", "--json", "--issue", "no-ask")
-    body = json.loads(check.stdout)
-    assert check.returncode == 1
-    assert [c["name"] for c in body["checks"] if c["status"] == "fail"] == ["request-recorded"]
+    assert finish.returncode == 1, finish.stdout + finish.stderr
+    assert "FAIL request-recorded" in finish.stdout, finish.stdout
+    assert _manifest(repo, "no-ask").get("status") != "done"
     linked = _run(repo, "issue", "link", "set", "--issue", "no-ask", "--request", LINK,
                   "--requester", "Dana Smith")
     assert linked.returncode == 0, linked.stdout + linked.stderr
+    landed = _land(repo, "no-ask")
+    assert landed.returncode == 0, landed.stdout + landed.stderr
+    assert _manifest(repo, "no-ask")["status"] == "done"
     assert _run(repo, "check", "--issue", "no-ask").returncode == 0
 
 
-def test_finish_still_refuses_on_another_failure_beside_the_request(repo):
+def test_finish_names_both_failures_when_another_fails_beside_the_request(repo):
     from test_quick_fix_verbs import _finish, _ready_to_finish
     _ready_to_finish(repo, "no-ask", request=False)
     body = _manifest(repo, "no-ask")
@@ -197,7 +194,8 @@ def test_finish_still_refuses_on_another_failure_beside_the_request(repo):
     _save_manifest(repo, "no-ask", body)
     finish = _finish(repo, "no-ask")
     assert finish.returncode != 0
-    assert "`compass check` failed" in finish.stdout + finish.stderr
+    heard = finish.stdout + finish.stderr
+    assert "`compass check`" in heard and "FAIL request-recorded" in heard, heard
     assert _manifest(repo, "no-ask").get("status") != "done"
 
 

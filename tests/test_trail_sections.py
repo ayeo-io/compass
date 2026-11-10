@@ -177,7 +177,12 @@ def test_who_asked_names_no_command_when_the_record_names_none(tmp_path):
 
 
 def test_who_asked_says_what_is_missing(tmp_path):
+    # `start` records "not stated at start" when it gets a link and no
+    # requester, so the missing requester is a record written another way.
     root = _issue(tmp_path, "--request", REQUEST)
+    held = manifest(root)
+    held["request"] = {"link": REQUEST, "recorded_at": "2026-11-07T10:00:00Z"}
+    write_manifest(root, held)
     body = section(trail(root), 1)
     assert "The record holds no requester" in body and REQUEST in body
 

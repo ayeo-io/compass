@@ -135,17 +135,18 @@ def test_critical_and_domain_floors_still_win(readings, floor):
 
 
 @pytest.mark.parametrize("readings, floor", CRITICAL_AND_DOMAIN)
-def test_on_the_path_critical_and_domain_work_owes_what_full_owed(readings, floor):
-    """ADR-092 decision: no approaches. The floors that forced `full` become the
-    standard row, the architecture review and the scenario sign-off; a domain
+def test_on_the_path_critical_and_domain_work_owes_the_person_approvals_full_owed(
+        readings, floor):
+    """ADR-099 decisions 4 and 5: no approaches and no reviews. The floors that
+    forced `full` leave the common row and the scenario approval; a domain
     label adds the human sign-off (`G5`)."""
     result = _owed(familiarity="brownfield-unmapped", size="small", intent="delivery",
                    **readings)
-    assert result["rules_fired"][0] == "RP-EVID-STANDARD", (floor, result["rules_fired"])
-    for token in ("definition-of-done", "architecture", "scenario-approval"):
-        assert token in result["evidence_required"], (floor, token)
-    if "labels" in readings:
-        assert "human-approval" in result["evidence_required"]
+    assert result["rules_fired"][0] == "RP-EVID-COMMON", (floor, result["rules_fired"])
+    assert "scenario-approval" in result["evidence_required"], floor
+    for token in ("definition-of-done", "architecture"):
+        assert token not in result["evidence_required"], (floor, token)
+    assert ("human-approval" in result["evidence_required"]) is ("labels" in readings)
 
 
 @pytest.fixture
@@ -171,14 +172,16 @@ def test_ua_2_quick_fix_start_takes_it_and_records_the_advice(repo):
         cwd=repo, capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
     # 9.0.0 writes no delivery-approach.md (ADR-091), and on the path start writes
-    # no devlog (ADR-092 open question 8). The advice is on the record lines start
-    # prints, beside the acceptance criteria it wrote.
+    # no devlog (ADR-092 open question 8). `start` prints no `advice :` line
+    # (ADR-099); the advice is in the view of the assessment.
     assert not (repo / ".compass" / "work" / "tidy-config" / "devlog.md").exists()
-    lines = r.stdout.splitlines()
-    advice = [ln for ln in lines if ln.strip().startswith("advice :")]
-    assert advice, r.stdout
-    assert "atdd" in advice[0] and "RP-ADV-002" in advice[0], advice
-    assert any("acceptance-criteria.md" in ln for ln in lines if "record :" in ln), r.stdout
+    assert "advice :" not in r.stdout, r.stdout
+    shown = subprocess.run([sys.executable, str(CLI), "approach", "evaluate", "--issue",
+                            "tidy-config", "--verbose"], cwd=repo,
+                           capture_output=True, text=True)
+    assert shown.returncode == 0, shown.stdout + shown.stderr
+    advice = [ln for ln in shown.stdout.splitlines() if "[RP-ADV-002]" in ln]
+    assert advice and "atdd" in advice[0], shown.stdout
     from compass_pkg import path_stages
     import yaml
     manifest = yaml.safe_load(

@@ -2,10 +2,12 @@
 
 Assess selects the evidence, not an approach: `compass_pkg.evidence_required`
 is a pure function of the assessment and the configuration in force. These
-tests pin each row and each addition, the cases that leave out the tokens of
-the four-layer acceptance strategy (`S17`), and the parity with 8.0.4: on every
-assessment of the contract 1 grid and every subset of the `G5` labels, the
-gates derived from the evidence equal the gates the 8.0.4 governance routes.
+tests pin the common row, each addition, the four-layer acceptance strategy
+(`S17`), which is owed only where a project setting adds its tokens, and the
+parity with 8.0.4: on every assessment of the contract 1 grid and every subset
+of the `G5` labels, a refusal is a refusal on both sides, the gates are the
+three every issue has, and the sign-offs owed are the ones 8.0.4 required.
+Every delivery issue owes the same row (ADR-099 decision 4).
 
 Issue: ayeo-io/compass-delivery#351 [Replace the approaches and eight stages
 with one four-stage path].
@@ -49,53 +51,58 @@ def policy_8_0_4(tmp_path_factory):
 
 # --- the rows -------------------------------------------------------------------
 
-def test_light_row_owes_the_every_issue_evidence_and_the_outer_loop(live):
+def test_the_common_row_owes_the_every_issue_evidence_and_nothing_more(live):
     out = er.evaluate(_assess(), live)
     assert out["delivery_approach"] == er.APPROACH_DELIVERY == "delivery"
-    assert out["evidence_required"] == EVERY_ISSUE + ["outer-loop"] + SHIP
+    assert out["evidence_required"] == EVERY_ISSUE + SHIP
     assert out["gates"] == ["verify.correctness", "verify.governance",
                             "verify.traceability"]
-    assert out["acceptance_routing"] == "existing-dsl"
-    assert out["rules_fired"] == ["RP-EVID-LIGHT"]
+    assert out["acceptance_routing"] == "guidance"
+    assert out["acceptance_applies"] is False
+    assert out["rules_fired"] == ["RP-EVID-COMMON"]
     assert out["stages"] == er.PATH_STAGE_IDS == ("assess", "specify", "build", "ship")
 
 
-def test_defect_row_adds_the_old_hotfix_evidence(live):
+def test_a_live_defect_owes_the_common_evidence_and_no_reproduction_record(live):
     out = er.evaluate(_assess(urgency="live-defect", size="atomic"), live)
+    assert out["evidence_required"] == EVERY_ISSUE + SHIP
+    assert out["gates"] == ["verify.correctness", "verify.governance",
+                            "verify.traceability"]
+    assert out["acceptance_routing"] == "guidance"
+    assert out["rules_fired"] == ["RP-EVID-COMMON"]
+
+
+def test_a_project_rule_adds_the_old_hotfix_evidence_for_a_live_defect(live):
+    policy = dict(live, require_evidence=[
+        {"id": "RP-SETTING-HOTFIX", "when": {"urgency": "live-defect"},
+         "add": ["regression", "security", "isolation", "definition-of-done",
+                 "reproduce-first"]}])
+    out = er.evaluate(_assess(urgency="live-defect", size="atomic"), policy)
     assert out["evidence_required"] == EVERY_ISSUE + [
-        "regression", "security", "outer-loop", "isolation", "definition-of-done",
+        "regression", "security", "isolation", "definition-of-done",
         "reproduce-first"] + SHIP
     assert out["gates"] == ["verify.correctness", "verify.governance",
                             "verify.traceability", "verify.regression",
                             "verify.security"]
     assert out["acceptance_routing"] == "existing-dsl-isolation"
-    assert out["rules_fired"] == ["RP-EVID-DEFECT", "RP-EVID-REPRODUCE"]
-
-
-def test_standard_row_adds_regression_security_clarity_and_the_definition_of_done(live):
-    out = er.evaluate(_assess(size="medium"), live)
-    assert out["evidence_required"] == EVERY_ISSUE + [
-        "regression", "security", "clarity"] + S17_ON + ["definition-of-done"] + SHIP
-    assert out["gates"] == ["verify.correctness", "verify.governance",
-                            "verify.traceability", "verify.regression",
-                            "verify.security", "verify.clarity"]
-    assert out["acceptance_routing"] == "on"
-    assert out["rules_fired"] == ["RP-EVID-STANDARD"]
+    assert out["rules_fired"] == ["RP-EVID-COMMON", "RP-SETTING-HOTFIX"]
+    # Without the live defect the rule does not match.
+    assert er.evaluate(_assess(size="atomic"), policy)["evidence_required"] \
+        == EVERY_ISSUE + SHIP
 
 
 @pytest.mark.parametrize("over", [
-    {"size": "large"}, {"size": "product"}, {"risk": "cross-cutting"},
-    {"urgency": "live-defect", "size": "medium"},
-    {"urgency": "live-defect", "risk": "critical"},
-    {"labels": ["auth"]}, {"urgency": "live-defect", "labels": ["payments"]},
+    {"size": "medium"}, {"size": "large"}, {"size": "product"},
+    {"risk": "cross-cutting"}, {"urgency": "live-defect", "size": "medium"},
+    {"familiarity": "greenfield"}, {"urgency": "live-defect", "risk": "cross-cutting"},
 ])
-def test_every_other_delivery_assessment_takes_the_standard_row(live, over):
+def test_no_size_risk_familiarity_or_urgency_adds_evidence(live, over):
     out = er.evaluate(_assess(**over), live)
-    assert out["rules_fired"][0] == "RP-EVID-STANDARD"
-    # The hotfix setting owes the reproduction first at every size (ADR-092 D4).
-    live_defect = over.get("urgency") == "live-defect"
-    assert ("reproduce-first" in out["evidence_required"]) is live_defect
-    assert ("RP-EVID-REPRODUCE" in out["rules_fired"]) is live_defect
+    assert out["rules_fired"] == ["RP-EVID-COMMON"]
+    assert out["evidence_required"] == EVERY_ISSUE + SHIP
+    assert out["gates"] == ["verify.correctness", "verify.governance",
+                            "verify.traceability"]
+    assert out["acceptance_routing"] == "guidance"
 
 
 def test_exploration_takes_the_spike_row_and_owes_only_its_conclusion(live):
@@ -119,31 +126,42 @@ def test_exploration_on_a_surface_that_owes_a_sign_off_is_refused(live, over):
 
 # --- the additions --------------------------------------------------------------
 
-def test_cross_cutting_risk_adds_the_architecture_review(live):
+def test_cross_cutting_risk_adds_no_review_and_no_approval(live):
     out = er.evaluate(_assess(risk="cross-cutting", size="medium"), live)
-    assert "architecture" in out["evidence_required"]
-    assert "verify.architecture" in out["gates"]
+    assert "architecture" not in out["evidence_required"]
+    assert "verify.architecture" not in out["gates"]
     assert "scenario-approval" not in out["evidence_required"]
-    assert out["rules_fired"] == ["RP-EVID-STANDARD", "RP-REQUIRE-003"]
+    # The shipped floors that add the architecture gate are kept for 8.x only.
+    assert out["rules_fired"] == ["RP-EVID-COMMON"]
 
 
-def test_critical_risk_adds_the_architecture_review_and_the_scenario_approval(live):
-    out = er.evaluate(_assess(risk="critical", size="atomic"), live)
-    assert out["evidence_required"] == EVERY_ISSUE + [
-        "regression", "security", "clarity", "architecture"] + S17_ON + [
-        "definition-of-done", "scenario-approval"] + SHIP
+def test_a_project_rule_adds_the_architecture_review_for_cross_cutting_risk(live):
+    policy = dict(live, require_evidence=[
+        {"id": "RP-SETTING-ARCH", "when": {"risk": ["cross-cutting", "critical"]},
+         "add": ["architecture"]}])
+    out = er.evaluate(_assess(risk="cross-cutting"), policy)
+    assert out["evidence_required"] == EVERY_ISSUE + ["architecture"] + SHIP
     assert out["gates"][-1] == "verify.architecture"
-    assert out["rules_fired"] == ["RP-EVID-STANDARD", "RP-REQUIRE-003", "RP-EVID-SIGNOFF"]
+    assert er.evaluate(_assess(), policy)["evidence_required"] == EVERY_ISSUE + SHIP
+
+
+def test_critical_risk_adds_the_scenario_approval_and_no_sign_off(live):
+    out = er.evaluate(_assess(risk="critical", size="atomic"), live)
+    assert out["evidence_required"] == EVERY_ISSUE + ["scenario-approval"] + SHIP
+    assert "human-approval" not in out["evidence_required"]
+    assert out["gates"] == ["verify.correctness", "verify.governance",
+                            "verify.traceability"]
+    assert out["rules_fired"] == ["RP-EVID-COMMON", "RP-EVID-SIGNOFF"]
 
 
 @pytest.mark.parametrize("label", er.G5_LABELS)
-def test_a_g5_label_adds_architecture_scenario_approval_and_human_approval(live, label):
+def test_a_g5_label_adds_scenario_approval_and_human_approval(live, label):
     out = er.evaluate(_assess(size="atomic", risk="trivial", labels=[label]), live)
     assert out["evidence_required"] == EVERY_ISSUE + [
-        "regression", "security", "clarity", "architecture"] + S17_ON + [
-        "definition-of-done", "scenario-approval", "human-approval"] + SHIP
-    assert out["rules_fired"] == ["RP-EVID-STANDARD", "RP-REQUIRE-004",
-                                  "RP-EVID-SIGNOFF", "G5"]
+        "scenario-approval", "human-approval"] + SHIP
+    assert out["gates"] == ["verify.correctness", "verify.governance",
+                            "verify.traceability"]
+    assert out["rules_fired"] == ["RP-EVID-COMMON", "RP-EVID-SIGNOFF", "G5"]
 
 
 def test_the_g5_labels_are_the_four_the_routing_rules_name(live):
@@ -181,9 +199,9 @@ def test_required_evidence_of_the_policy_adds_its_tokens_where_it_matches(live):
         {"id": "RP-SETTING-1", "when": {"risk": "contained"}, "add": ["security"]},
         {"id": "RP-SETTING-2", "when": {"size": "large"}, "add": ["clarity"]}])
     out = er.evaluate(_assess(), policy)
-    assert out["evidence_required"] == EVERY_ISSUE + ["security", "outer-loop"] + SHIP
+    assert out["evidence_required"] == EVERY_ISSUE + ["security"] + SHIP
     assert "verify.security" in out["gates"]
-    assert out["rules_fired"] == ["RP-EVID-LIGHT", "RP-SETTING-1"]
+    assert out["rules_fired"] == ["RP-EVID-COMMON", "RP-SETTING-1"]
     assert er.evaluate(_assess(goal="exploration"), policy)["evidence_required"] == []
     with pytest.raises(CompassError, match="require_evidence"):
         er.evaluate(_assess(), dict(live, require_evidence=[{"id": "X", "add": ["nope"]}]))
@@ -191,27 +209,58 @@ def test_required_evidence_of_the_policy_adds_its_tokens_where_it_matches(live):
 
 # --- the four-layer acceptance strategy -----------------------------------------
 
-@pytest.mark.parametrize("row", [{}, {"urgency": "live-defect"}, {"size": "medium"}])
-def test_the_strategy_turned_off_leaves_out_its_tokens_and_keeps_the_routing(live, row):
-    on = er.evaluate(_assess(**row), live)
-    off = er.evaluate(_assess(**row), live, acceptance_state="off")
-    assert [t for t in on["evidence_required"] if t not in S17_ON] \
-        == off["evidence_required"]
-    assert not set(S17_ON) & set(off["evidence_required"])
-    assert off["acceptance_routing"] == on["acceptance_routing"]
+ROWS_TO_TRY = [{}, {"urgency": "live-defect"}, {"size": "medium"}]
+
+
+def _adds(*tokens):
+    """The shipped configuration plus a project rule that adds `tokens`."""
+    return lambda live: dict(live, require_evidence=[
+        {"id": "RP-SETTING-S17", "when": {}, "add": list(tokens)}])
+
+
+@pytest.mark.parametrize("row", ROWS_TO_TRY)
+def test_the_strategy_is_guidance_and_owes_nothing_unless_a_setting_adds_a_token(live, row):
+    out = er.evaluate(_assess(**row), live)
+    assert not set(S17_ON) & set(out["evidence_required"])
+    assert out["acceptance_routing"] == "guidance"
+    assert out["acceptance_applies"] is False
+
+
+@pytest.mark.parametrize("token, routing", [
+    ("outer-loop", "existing-dsl"), ("isolation", "existing-dsl-isolation"),
+    ("layering", "on")])
+@pytest.mark.parametrize("row", ROWS_TO_TRY)
+def test_a_setting_that_adds_a_strategy_token_owes_it_and_routes_the_strategy(
+        live, row, token, routing):
+    out = er.evaluate(_assess(**row), _adds(token)(live))
+    assert token in out["evidence_required"]
+    assert out["acceptance_routing"] == routing
+    assert out["acceptance_applies"] is True
+    assert out["gates"] == ["verify.correctness", "verify.governance",
+                            "verify.traceability"]
+
+
+@pytest.mark.parametrize("row", ROWS_TO_TRY)
+def test_the_strategy_turned_off_keeps_the_routing_and_does_not_apply(live, row):
+    policy = _adds("layering")(live)
+    on = er.evaluate(_assess(**row), policy)
+    off = er.evaluate(_assess(**row), policy, acceptance_state="off")
+    assert off["acceptance_routing"] == on["acceptance_routing"] == "on"
     assert off["acceptance_applies"] is False and on["acceptance_applies"] is True
     assert off["gates"] == on["gates"]
 
 
 @pytest.mark.parametrize("kind", ["validation", "refactor"])
-@pytest.mark.parametrize("row", [{}, {"urgency": "live-defect"}, {"size": "medium"}])
-def test_an_expected_acceptance_of_validation_or_refactor_leaves_out_its_tokens(
+@pytest.mark.parametrize("row", ROWS_TO_TRY)
+def test_an_expected_acceptance_of_validation_or_refactor_does_not_apply_the_strategy(
         live, kind, row):
-    on = er.evaluate(_assess(**row), live)
-    out = er.evaluate(_assess(**row), live, expected_acceptance=kind)
-    assert out["evidence_required"] == [t for t in on["evidence_required"]
-                                        if t not in S17_ON]
+    policy = _adds("outer-loop")(live)
+    assert er.evaluate(_assess(**row), policy)["acceptance_applies"] is True
+    out = er.evaluate(_assess(**row), policy, expected_acceptance=kind)
     assert out["acceptance_applies"] is False
+    assert out["acceptance_routing"] == "existing-dsl"
+    assert er.evaluate(_assess(**row), live, expected_acceptance=kind)["evidence_required"] \
+        == er.evaluate(_assess(**row), live)["evidence_required"]
 
 
 def test_an_unknown_strategy_state_or_acceptance_kind_is_refused(live):
@@ -289,10 +338,10 @@ def test_a_floor_of_the_configuration_adds_its_gate(live):
         {"id": "P-TWO", "when": {"size": "atomic"}, "add_gate": "verify.claims"},
     ]
     out = er.evaluate(_assess(size="atomic"), policy)
-    assert out["evidence_required"] == EVERY_ISSUE + ["regression", "outer-loop"] + SHIP
+    assert out["evidence_required"] == EVERY_ISSUE + ["regression"] + SHIP
     assert out["gates"] == ["verify.correctness", "verify.governance",
                             "verify.traceability", "verify.regression", "verify.claims"]
-    assert out["rules_fired"] == ["RP-EVID-LIGHT", "P-ONE", "P-TWO"]
+    assert out["rules_fired"] == ["RP-EVID-COMMON", "P-ONE", "P-TWO"]
     # A spike takes no added gate, as in 8.x.
     spike = er.evaluate(_assess(size="atomic", goal="exploration"), policy)
     assert spike["gates"] == ["spike.conclude"]
@@ -320,14 +369,6 @@ def test_the_assessment_passed_in_is_not_changed(live):
 
 # --- parity with 8.0.4 ------------------------------------------------------------
 
-#: The routing of `S17` each 8.x approach named in the live default preset of
-#: 9.0.0 before the preset went (its `acceptance_strategy` field). 8.0.4
-#: itself named none, so every approach that ships read `on` there; the
-#: routings come from 9.0.0, before the approaches were removed.
-ROUTING_OF_APPROACH = {"quick-fix": "existing-dsl", "hotfix": "existing-dsl-isolation",
-                       "regular": "on", "full": "on", "spike": "suspended"}
-
-
 def _readings(assessment):
     """A contract 1 grid assessment in the words 9.0.0 reads, through the bridges of
     `compat_baseline.compact`: the size `standard` read as `medium` (`SIZE_NOW`), and
@@ -339,6 +380,10 @@ def _readings(assessment):
     return readings
 
 
+#: The three gates every delivery issue has, whatever its assessment.
+THREE_GATES = ["verify.correctness", "verify.governance", "verify.traceability"]
+
+
 def _result(readings, policy):
     try:
         out = er.evaluate(copy.deepcopy(readings), policy)
@@ -348,11 +393,24 @@ def _result(readings, policy):
 
 
 def _routed(readings, policy):
+    """What the 8.0.4 copy routes: the gates and whether it owed a person's
+    sign-off, or "refused"."""
     try:
         out = evaluate_route(copy.deepcopy(readings), policy)
     except RoutingConflict:
         return "refused"
-    return (sorted(out["gates"]), ROUTING_OF_APPROACH[out["delivery_approach"]])
+    return sorted(out["gates"])
+
+
+def _owed(readings, policy):
+    """The sign-offs the evidence owes: `(scenario-approval, human-approval)`,
+    or "refused"."""
+    try:
+        out = er.evaluate(copy.deepcopy(readings), policy)
+    except RoutingConflict:
+        return "refused"
+    return ("scenario-approval" in out["evidence_required"],
+            "human-approval" in out["evidence_required"])
 
 
 def test_the_8_0_4_copy_routes_the_contract_1_baseline(policy_8_0_4):
@@ -364,7 +422,15 @@ def test_the_8_0_4_copy_routes_the_contract_1_baseline(policy_8_0_4):
 
 def _parity_differences(policy_8_0_4, live, first_only=False):
     """`(points, differences)` over every row of the contract 1 grid under every
-    subset of the four `G5` labels."""
+    subset of the four `G5` labels. On each point:
+
+    - a refusal on one side is a refusal on the other;
+    - a spike has the one gate `spike.conclude` on both sides and owes no sign-off;
+    - the evidence owes the three gates every issue has and no other, and the
+      8.0.4 copy routed all three (ADR-099 decision 4: risk, size and urgency
+      no longer add a review, so the 8.0.4 gates are a superset);
+    - the evidence owes the scenario approval for critical risk or a `G5`
+      label, and the `G5` sign-off for a `G5` label, as 8.x did."""
     header, rows = cb.load_routing()
     grid = [row["assessment"] for row in rows if row["kind"] == "grid"]
     subsets = list(cb.label_subsets(header["labels"]))
@@ -376,19 +442,26 @@ def _parity_differences(policy_8_0_4, live, first_only=False):
             points += 1
             want = _routed(readings, policy_8_0_4)
             got = _result(readings, live)
-            if got != want:
-                differ.append(f"{readings}: 8.0.4 {want}, evidence {got}")
+            owed = _owed(readings, live)
+            if want == "refused" or got == "refused":
+                bad = want != got or owed != "refused"
+            elif got[0] == ["spike.conclude"]:
+                bad = want != got[0] or owed != (False, False)
+            else:
+                signoff = (readings.get("risk") == "critical" or bool(labels), bool(labels))
+                bad = (got[0] != THREE_GATES or not set(THREE_GATES) <= set(want)
+                       or owed != signoff)
+            if bad:
+                differ.append(f"{readings}: 8.0.4 {want}, evidence {got}, owes {owed}")
                 if first_only:
                     return points, differ
     return points, differ
 
 
-def test_the_evidence_owes_the_gates_8_0_4_routed_on_every_grid_point(policy_8_0_4, live):
+def test_the_evidence_owes_what_8_0_4_required_of_a_person_on_every_grid_point(
+        policy_8_0_4, live):
     """Parity: every row of the contract 1 grid (1,200 assessments) under every subset
-    of the four `G5` labels (16), so 19,200 points. On each, the gates derived from
-    `evidence_required` equal the gates the 8.0.4 copy routes, and the `S17` routing
-    equals the routing of the approach 8.0.4 chose. A refusal on one side must be a
-    refusal on the other."""
+    of the four `G5` labels (16), so 19,200 points. See `_parity_differences`."""
     points, differ = _parity_differences(policy_8_0_4, live)
     assert points == 19200
     assert differ == [], f"{len(differ)} of {points} points differ:\n" + "\n".join(differ[:40])
@@ -403,8 +476,6 @@ def test_the_parity_test_sees_one_changed_row_or_addition(policy_8_0_4, live,
         rows[1] = (rule, when, tokens + ("regression",), routing)
         monkeypatch.setattr(er, "ROWS", tuple(rows))
     else:
-        # Taking an addition out is not seen: the configuration's own floors
-        # `RP-REQUIRE-003` and `RP-REQUIRE-004` add the same gate. Widening one is.
         rule, when, token = er.ADDITIONS[0]
         widened = (rule, {"risk": ["contained", "cross-cutting", "critical"]}, token)
         monkeypatch.setattr(er, "ADDITIONS", (widened,) + er.ADDITIONS[1:])

@@ -47,11 +47,11 @@ def test_trc_a1():
     entry = text[text.index(re.search(r"^### .*\(`S17`\)$", text, re.M).group(0)):]
     entry = entry[:re.search(r"\n##+ ", entry).start()]
     assert STRATEGY in entry.lower(), entry[:200]
-    # Since 9.0.0 the entry routes by evidence row in place of the 8.x approaches:
-    # the light, defect and standard rows stand where quick-fix, hotfix and
-    # regular or full stood (ADR-092).
-    for needed in ("`validation`", "`refactor`", "light row", "defect row",
-                   "standard row", "spike", "`acceptance_strategy`", "issue waiver"):
+    # Since ADR-099 the entry routes by the tokens a project's `require_evidence`
+    # adds, in place of the evidence rows of ADR-092.
+    for needed in ("`validation`", "`refactor`", "`guidance`", "`layering`",
+                   "`isolation`", "`outer-loop`", "`require_evidence`", "spike",
+                   "`acceptance_strategy`", "issue waiver"):
         assert needed in entry, needed
     rationale = (ROOT / "governance" / "strategies-rationale.md").read_text(encoding="utf-8")
     assert re.search(r"^## .*\(`S17`\)$", rationale, re.M), "no S17 entry in the rationale"
@@ -136,19 +136,23 @@ def test_trc_a5(tmp_path, line):
 # --- `TRC-A6` ------------------------------------------------------------------------------
 
 # On the four-stage path assess selects the evidence, not an approach (ADR-092
-# decision 3). Each 8.x approach's assessment now lands on the evidence row that
-# reproduces its gates and keeps its `S17` routing; the line names the stored
-# `delivery_approach`, which is `delivery` for every delivery row (decision 2).
+# decision 3). Since ADR-099 every delivery issue lands on the one evidence row
+# and owes the strategy only where a project rule adds its tokens. The rules of
+# `support.OPT_IN_BY_SIZE` stand where the 8.x approaches stood. The
+# line names the stored `delivery_approach`, which is `delivery` for every
+# delivery row (decision 2).
 @pytest.mark.parametrize("approach, stored, row, routing", [
-    ("regular", "delivery", "RP-EVID-STANDARD", "on"),
-    ("full", "delivery", "RP-EVID-STANDARD", "on"),
-    ("quick-fix", "delivery", "RP-EVID-LIGHT", "existing DSL only"),
-    ("hotfix", "delivery", "RP-EVID-DEFECT", "existing DSL only, isolation proof required"),
+    ("regular", "delivery", "RP-EVID-COMMON", "on"),
+    ("full", "delivery", "RP-EVID-COMMON", "on"),
+    ("quick-fix", "delivery", "RP-EVID-COMMON", "existing DSL only"),
+    ("hotfix", "delivery", "RP-EVID-COMMON", "existing DSL only, isolation proof required"),
     ("spike", "spike", None, "suspended, as strategy `S2`"),
 ])
 def test_trc_a6(tmp_path, approach, stored, row, routing):
-    """The strategy is routed per evidence row; the spike keeps its own routing."""
+    """The strategy is routed per token a project rule adds; the spike keeps its own routing."""
     project = support.Project(tmp_path / "repo")
+    project.require_evidence = support.OPT_IN_BY_SIZE
+    project.setting(None)
     issue = project.issue("change", approach=approach)
     code, out, err = issue.assess()
     assert code == 0, out + err
@@ -164,6 +168,8 @@ def test_trc_a6(tmp_path, approach, stored, row, routing):
 def test_trc_a6_the_record_quick_fix_start_writes_shows_the_line(tmp_path):
     """The quick-fix example of `TRC-A6`, on the record `quick-fix start` itself writes."""
     project = support.Project(tmp_path / "repo")
+    project.require_evidence = support.OPT_IN_BY_SIZE
+    project.setting(None)
     code, out, err = project.run(
         "quick-fix", "start", "docs", "--risk", "trivial - a docs edit",
         "--familiarity", "brownfield-mapped - known file", "--size", "atomic - one line",
@@ -176,7 +182,7 @@ def test_trc_a6_the_record_quick_fix_start_writes_shows_the_line(tmp_path):
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
     line = _strategy_line(support.strategy_line(manifest))
     assert "(`S17`): does not apply - acceptance of kind validation" in line, line
-    # The light evidence row keeps the routing the quick fix had (ADR-092 decision 3).
+    # The project's rule for an atomic change keeps the routing the quick fix had.
     assert manifest["delivery_approach"] == "delivery", manifest
     assert line.endswith("Routing on the delivery approach: existing DSL only."), line
 

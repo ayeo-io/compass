@@ -852,6 +852,14 @@ def test_d2_repairs_change_only_retired_names():
     question 6) re-baselined `governance/guardrails.md` (list_items 92 -> 91):
     the bullet on an issue in a project pinned at major 6 or 7 went.
 
+    ADR-099 (a change takes two commands) re-baselined five more, when the
+    docs and the taught text were cut to the two-command path:
+    `docs/quickstart.md` (list_items 22 -> 26, table_rows 27 -> 18),
+    `docs/routing-deep-dive.md` (list_items 47 -> 34),
+    `docs/safety-contract.md` (one more heading), `governance/routing-policy.md`
+    (list_items 49 -> 47) and `skills/evidence-gates/traceability.md`
+    (list_items 19 -> 17).
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

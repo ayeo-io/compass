@@ -103,17 +103,16 @@ def test_trc_001_the_header_names_the_source_and_each_adaptation():
 
 def test_trc_002_the_map_loads_atdd_at_specify_build_and_ship():
     runtime = _section(_text(SKILLS / "compass-runtime" / "SKILL.md"),
-                       "Which skill, per stage")
+                       "Which skill helps")
     bullets = [_flat(b) for b in re.split(r"\n(?=- )", runtime)]
-    # The specify bullet names `atdd` too, for its scenario and behavior
-    # mapping sections (#360); the bullet for the four layers is the one
-    # that names the three stages.
-    [atdd] = [b for b in bullets if "`atdd`" in b and "stage 1 at specify" in b]
-    for stage in ("stage 1 at specify", "stage 2 at build",
-                  "stage 3 at ship"):
-        assert stage in atdd, f"the map does not load atdd for {stage}"
+    # Since ADR-099 no skill is required: the map lists the skills that help and
+    # says which stages `atdd` covers in the skill's own description and stage
+    # headings (below). The bullet for the four layers says where the strategy
+    # applies and that it is guidance.
+    [atdd] = [b for b in bullets if b.startswith("- `atdd`")]
     assert "a real client can observe" in atdd, (
         "the map does not say where the strategy applies")
+    assert "guidance" in atdd, "the map does not say the strategy is guidance"
     # The stage commands that loaded the skill went with the path (ADR-092),
     # so the skill's own description and its stage headings say where it
     # loads: one heading per Compass stage, in order.
@@ -215,6 +214,10 @@ def test_trc_005_the_skills_describe_one_chain(skill):
     text = _flat(_text(SKILLS / skill / "SKILL.md"))
     assert "scenario, dsl, driver, unit tests" in text, (
         f"{skill} does not describe the chain in order")
+    if skill == "tdd-discipline":
+        # ADR-099 rewrote the skill to teach the red-first cycle alone. The
+        # specify and build rules of the chain live in `atdd`.
+        return
     assert ("specify settles each implied failure mode with the person or "
             "descopes it") in text, f"{skill} lacks the specify rule"
     assert "build adds no scenario the specification does not state" in text, (

@@ -24,10 +24,17 @@ def test_s6_registered_in_strategies_md(framework_root):
     assert ("does not block land" in low or "never" in low)
 
 
-def test_routing_strategy_surfaces_on_touches_no_gate_change(run_cli, make_task):
+def test_routing_strategy_surfaces_on_touches_no_gate_change(run_cli, make_task, project):
     """`TRC-R10-2`: approach evaluate surfaces regression-baseline as
     applicable for a cross-cutting issue - without adding or changing a
-    gate."""
+    gate. A delivery issue owes no regression review by default (ADR-099), so
+    the project's own `require_evidence` rule adds the `regression` token."""
+    # Settings live in one file only (`settings-conflict`).
+    (project / ".compass" / "config.yml").unlink()
+    (project / "compass.yml").write_text(yaml.safe_dump({
+        "schema": 1,
+        "require_evidence": [{"when": {"risk": ["cross-cutting", "critical"]},
+                              "add": ["regression"]}]}), encoding="utf-8")
     body = {"task": "rb", "created": "2026-06-22",
             "assessment": {"risk": "cross-cutting",
                          "familiarity": "brownfield-mapped", "size": "large",

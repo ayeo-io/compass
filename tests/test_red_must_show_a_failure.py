@@ -111,7 +111,9 @@ def test_rsf_4_a_run_where_no_test_failed_is_refused(red):
 
 
 def test_rsf_4_the_tdd_skill_names_the_import_red():
-    text = " ".join((ROOT / "skills" / "tdd-discipline" / "SKILL.md")
+    # ADR-099 moved the reference text on red and green records from the
+    # TDD skill to the evidence-gates skill's red-green-records.md.
+    text = " ".join((ROOT / "skills" / "evidence-gates" / "red-green-records.md")
                     .read_text(encoding="utf-8").split()).lower()
     assert "import red" in text
 

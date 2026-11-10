@@ -713,7 +713,10 @@ def test_trc_a4(tmp_path):
 
 def test_trc_a7(tmp_path):
     """An in-scope quick fix needs an outer-loop green and nothing heavier."""
-    issue = _issue(_project(tmp_path), approach="quick-fix")
+    project = _project(tmp_path)
+    project.require_evidence = support.OPT_IN_BY_SIZE
+    project.setting(None, project={"acceptance_support": SUPPORT_PATHS})
+    issue = _issue(project, approach="quick-fix")
     assert issue.manifest()["acceptance_strategy"]["routing"] == "existing-dsl"
     assert _record(issue, "evidence/green-TRC-1.outer.json")["attempts"] == 1
     code, document = issue.check()
@@ -725,7 +728,10 @@ def test_trc_a7(tmp_path):
 
 def test_trc_a8(tmp_path):
     """An in-scope hotfix also needs the isolation proof."""
-    issue = _issue(_project(tmp_path), approach="hotfix")
+    project = _project(tmp_path)
+    project.require_evidence = support.OPT_IN_BY_SIZE
+    project.setting(None, project={"acceptance_support": SUPPORT_PATHS})
+    issue = _issue(project, approach="hotfix")
     assert issue.manifest()["acceptance_strategy"]["routing"] == "existing-dsl-isolation"
     code, document = issue.check()
     assert code == 1

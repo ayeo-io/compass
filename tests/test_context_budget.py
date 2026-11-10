@@ -25,28 +25,34 @@ CONTRACT = ROOT / "compass-contract.md"
 # One phrase from each rule. Several are pinned elsewhere word for word
 # (tests/invisible/test_invisible_triggering.py, tests/test_contract_facts.py).
 RULES = {
-    "assess first": "**Assess before you change anything.**",
-    "never skip": "**Never skip assessment.**",
-    "trigger on intent": "**Trigger on intent, not on the command.**",
-    "guardrails hard": "**Guardrails are hard. Strategies are soft.**",
-    "guardrail 1": "1. Every change lands with a passing test that covers it.",
+    "start an issue": "**Start an issue before you change a file.**",
+    "assess first": "run `/compass:assess` first",
+    "trigger on intent": "even if they never typed it.",
+    "one request": "**One request is one issue.**",
+    "guardrail 1": "1. Every change lands with a test that fails without it.",
     "guardrail 2": "2. Acceptance criteria exist before the code.",
     "guardrail 3": "3. Code traces to a criterion and a reason.",
     "guardrail 4": "4. Evidence is a recorded command output",
-    "guardrail 5": "5. A human approves anything irreversible.",
-    "evidence": "**Evidence, not assertion.**",
-    "use the CLI": "Use the CLI:",
-    "five guardrails": "Five guardrails:",
-    "on disk": "**If it is not on disk, it did not happen.**",
-    "stages": "**Stages, in order**",
-    # The four stages of the path (ADR-092), in order.
-    "specify stage": "2. specify",
-    "build stage": "3. build",
-    "ship stage": "4. ship",
-    "next line": "prints `next:`",
-    "where to look": "`compass <verb> --help`",
+    "guardrail 5": "5. A person approves anything irreversible.",
+    "five guardrails": "**Five guardrails:**",
+    "the path": "**The path is two commands**",
+    "start command": "`compass quick-fix start`",
+    "finish command": "`compass quick-fix finish -m \"<message>\" -- <test command>`",
+    "next line": "Each command prints `next:` or `done:`",
+    "never edit": "Never edit `.compass/`.",
     "write for a person": "**Write for a person in the spirit of ASD-STE100.**",
     "approvals": "**Approvals.**",
+}
+
+# Rules the contract held before ADR-099 cut it to one screen (275 words) and
+# that no sentence of it carries now. ADR-099 and `lean-behavior.md` section 11
+# record the cut. Each pin stays so the loss is visible: it fails until the
+# owner puts the rule back or accepts the loss.
+LOST_RULES = {
+    "guardrails hard": "**Guardrails are hard. Strategies are soft.**",
+    "evidence heading": "**Evidence, not assertion.**",
+    "on disk": "**If it is not on disk, it did not happen.**",
+    "where to look": "`compass <verb> --help`",
 }
 
 # The four rules for sign-off, staging, lint fixes and edge cases (issue
@@ -55,13 +61,11 @@ RULES = {
 # person. Compared with whitespace collapsed, because the contract wraps its
 # lines inside a phrase.
 NEW_RULES = {
-    "signoff request": ("ask the person to type `/compass:approve` or "
-                        "`/compass:reject`, and stop."),
-    "staging heading": "**Commit only what you mean to.**",
-    "staging by path": "Stage each file by its path",
-    "staging no compass": "never `.compass/`",
+    "signoff request": "ask them to type `/compass:approve <n>` and stop.",
+    "staging heading": "**Commits.**",
+    "staging by finish": "`finish` stages the changed files and the record",
+    "staging no compass": "do not `git add` anything under `.compass/` yourself",
     "lint fix": "A lint fix never weakens an assertion",
-    "edge cases heading": "**Settle edge cases before scenarios**",
 }
 
 # Raised from 2,250 by the one line that asks the agent to record friction it
@@ -88,7 +92,8 @@ NEW_RULES = {
 # 2,873 characters measured, rounded up to the next 50. Every message a
 # session writes to a person depends on it, so it must be resident.
 # Lowered to 2,200 by #358, which cut the contract to 2,191 characters.
-CONTRACT_TARGET = 2200
+# Lowered to 1,750 by ADR-099, which cut the contract to 1,697 characters.
+CONTRACT_TARGET = 1750
 
 # Set from the rewrite of 2026-10-04 (2,581, 1,476, 1,436 and 1,216
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,
@@ -161,6 +166,12 @@ def test_tc_1_the_contract_keeps_every_rule_within_its_budget():
     warn_if_over("compass-contract.md", len(text), CONTRACT_TARGET, "characters")
 
 
+def test_tc_1_the_contract_keeps_the_rules_it_held_before_adr_099():
+    text = CONTRACT.read_text(encoding="utf-8")
+    flat = " ".join(text.split())
+    assert [name for name, phrase in LOST_RULES.items() if phrase not in flat] == []
+
+
 def test_tc_1_deleting_any_rule_is_caught():
     text = CONTRACT.read_text(encoding="utf-8")
     flat = " ".join(text.split())
@@ -218,10 +229,9 @@ def _contract_flat():
 def test_contract_states_signoff_handoff():
     text = _contract_flat()
     assert "**Approvals.**" in text
-    assert "Approve only under a delegation naming you" in text
-    assert "run `compass evidence request`" in text
-    assert ("ask the person to type `/compass:approve` or "
-            "`/compass:reject`, and stop.") in text
+    assert "Approve yourself only under a delegation naming you" in text
+    assert "Never approve for the person" in text
+    assert "ask them to type `/compass:approve <n>` and stop." in text
     # The superseded handoff, a command printed for the person's terminal,
     # must not come back beside the typed approval.
     assert "for their own terminal" not in text
@@ -230,25 +240,31 @@ def test_contract_states_signoff_handoff():
 
 def test_contract_states_staging_rule():
     text = _contract_flat()
-    assert "**Commit only what you mean to.**" in text
-    assert "Stage each file by its path" in text
-    assert "never `.compass/`" in text
-    assert "check the staged list and commit authors" in text
-    assert ("If something is staged by mistake, say so and stop; "
-            "do not retry a refused unstage.") in text
+    assert "**Commits.**" in text
+    assert "`finish` stages the changed files and the record" in text
+    assert "do not `git add` anything under `.compass/` yourself" in text
 
 
 def test_contract_states_lint_fix_rule():
     text = _contract_flat()
     assert "A lint fix never weakens an assertion" in text
-    assert "re-run affected tests" in text
+
+
+def test_contract_states_staging_checks_before_a_commit():
+    """The contract once told the agent to check the staged list and commit
+    authors, and to stop when something was staged by mistake. ADR-099 moved
+    staging into `finish`, and no sentence of the contract carries those two
+    rules now."""
+    text = _contract_flat()
+    assert "check the staged list and commit authors" in text
+    assert ("If something is staged by mistake, say so and stop; "
+            "do not retry a refused unstage.") in text
 
 
 def test_contract_states_id_and_header_rule():
-    """The contract keeps the heading and names the skill that holds the
-    rule (a pointer, because the full text put the resident words over the
-    900-word ceiling). It names the skill, not a path: the contract is loaded
-    in every project, where the plugin's `skills/` folder is not on disk."""
+    """The contract once kept the heading and named the `atdd` skill that
+    holds the rule. ADR-099 cut the pointer; the skill still holds the
+    rule."""
     text = _contract_flat()
     assert "**Settle edge cases before scenarios**" in text
     assert "(`atdd` skill)" in text
@@ -308,7 +324,7 @@ def test_trc_026():
     """The `language` line is added by the session-start hook, so the shipped
     contract does not grow (issue `language-key-and-us-english`)."""
     text = CONTRACT.read_text(encoding="utf-8")
-    assert len(text) <= 2200
-    assert CONTRACT_TARGET == 2200
+    assert len(text) <= 1750
+    assert CONTRACT_TARGET == 1750
     assert "Write all prose in" not in text
     warn_if_over("compass-contract.md", len(text), CONTRACT_TARGET, "characters")

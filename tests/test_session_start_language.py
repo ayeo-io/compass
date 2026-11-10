@@ -127,7 +127,7 @@ def test_trc_018(tmp_path, name):
     try:
         result = run_hook(root)
         assert not has_line(context(result))
-        assert "Assess before you change anything" in context(result)
+        assert "Start an issue before you change a file" in context(result)
     finally:
         if (root / "compass.yml").exists() and not (root / "compass.yml").is_symlink():
             (root / "compass.yml").chmod(0o644)
@@ -196,7 +196,7 @@ def test_trc_024(tmp_path):
     plain = run_hook(project(tmp_path, "", "plain"), hook=hook)
     result = run_hook(project(tmp_path, "language: de\n"), hook=hook)
     text = context(result)
-    assert "Assess before you change anything" in text
+    assert "Start an issue before you change a file" in text
     assert not has_line(text)
     assert result.stdout == plain.stdout
 

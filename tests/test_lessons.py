@@ -229,7 +229,9 @@ def test_the_verb_is_on_the_public_surface():
 
 def test_the_model_is_told_to_propose(project):
     """The model's route is propose, stated where the model reads it."""
-    for rel in ("skills/compass-runtime/SKILL.md", "commands/ship.md"):
+    # ADR-099 cut the lesson offer out of `commands/ship.md`; the runtime
+    # skill is the one text that still tells the model its route.
+    for rel in ("skills/compass-runtime/SKILL.md",):
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert "compass lesson propose" in text, rel
         assert "never `compass lesson add`" in text, rel

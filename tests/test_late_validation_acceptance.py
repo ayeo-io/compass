@@ -17,8 +17,13 @@ VALIDATE = ["--", "python3", "-c", "import configparser; configparser.ConfigPars
 TEST = ["--", "python3", "-c", "pass"]
 
 
-def _setup(repo, dirty=None):
+def _setup(repo, dirty=None, with_test=True):
     (repo / "app.ini").write_text("[a]\nx = 1\n")
+    # `finish` reads the scenario's test from the tree, so the declared test file
+    # exists before the change.
+    if with_test:
+        (repo / "tests").mkdir(exist_ok=True)
+        (repo / "tests" / "test_conf.py").write_text("def test_conf():\n    assert True\n")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "conf")
     if dirty:
@@ -65,7 +70,7 @@ def test_lv_1_a_file_dirty_before_quick_fix_start_does_not_count(repo):
 
 
 def test_lv_1_a_refactor_may_write_its_characterisation_test_first(repo):
-    _setup(repo)
+    _setup(repo, with_test=False)
     (repo / "tests").mkdir()
     (repo / "tests" / "test_conf.py").write_text("def test_conf():\n    assert True\n")
     declared = _run(repo, "acceptance", "start", "--kind", "refactor", "--issue", SLUG,

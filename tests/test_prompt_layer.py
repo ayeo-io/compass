@@ -317,14 +317,8 @@ def test_trc_f1_a_quick_fix_reads_one_command():
 #: run, each with the reason. Every entry is checked below for still being in
 #: the path commands, so an entry cannot quietly stop guarding anything.
 NOT_ON_THE_LIGHT_PATH = {
-    "follow-up": "a quick fix borrows no process weight, so it owes nothing to pay back",
     "next": "the quick-fix verbs print the same next: line compass next prints, so a quick fix does not call it",
-    "lesson": "offered in the full ship, which a quick fix collapses",
-    "scenario": "the specify stage records de-scoped failure modes with it; a quick fix records its one scenario through compass quick-fix start",
-    "gate": "the ship review passes each gate by hand with its evidence id; compass quick-fix finish passes the three gates itself",
-    "policy": "the ship review reads the rules in force with compass policy show for its governance dimension; a quick fix's governance check is the one compass quick-fix finish runs",
-    "review-rule": "the ship review applies a project's review rules; compass quick-fix finish runs the governance check without them",
-    "issue": "a re-assessment proposes an issue configuration with compass issue configure; a quick fix that outgrows itself goes to /compass:assess, and compass quick-fix start sets the pointer itself",
+    "check": "compass quick-fix finish runs compass check itself and prints the lines that fail; ship.md names it only to explain a failing check",
 }
 
 #: The path commands the quick-fix command inlines (ADR-092): assess, the
@@ -413,7 +407,9 @@ def test_trc_f1_the_quick_fix_command_sends_the_agent_nowhere_else():
         # above. Exactly one is allowed: the way back out when the CLI says
         # the work is heavier than a quick fix.
         for match in re.finditer(r"/compass:([a-z-]+)", line):
-            if match.group(1) not in ("quick-fix", "assess"):
+            # `approve` names the person's typed answer, which the command
+            # tells the agent to wait for; it is no file or skill to read.
+            if match.group(1) not in ("quick-fix", "assess", "approve"):
                 offenders.append(f"{n}: /compass:{match.group(1)}")
     assert not offenders, (
         "commands/quick-fix.md points the agent at other commands or skills, "

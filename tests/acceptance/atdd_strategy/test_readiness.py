@@ -156,6 +156,10 @@ def _quick_fix(project):
 def test_trc_i2(tmp_path):
     """The missing support code is reported and does not block."""
     project = _project(tmp_path, ("driver_factory", "dsl_root", "layering_test"))
+    # A project rule owes the outer loop (ADR-099 decision 9), so the strategy applies.
+    project.require_evidence = [{"when": {}, "add": ["outer-loop"]}]
+    project.setting(None, project={"acceptance_support": {
+        key: PIECES[key][1] for key in ALL}})
     issue = _quick_fix(project)
     assert issue.manifest()["acceptance_strategy"]["applies"] is True
 
@@ -164,7 +168,8 @@ def test_trc_i2(tmp_path):
     issue.must("tdd-red", "--issue", "greet", "--scenario", "TRC-001", *command)
     (project.root / "data" / "greeting.txt").write_text("Hello\n", encoding="utf-8")
     issue.must("quick-fix", "finish", "--issue", "greet", "--no-commit", "-m", "Say Hello",
-               "--release-note", "The greeting says Hello.", *support.NAMED, *command)
+               "--release-note", "The greeting says Hello.", "--loop", "outer", *support.NAMED,
+               *command)
     gates = issue.manifest().get("gates") or []
     assert gates and all(g.get("status") == "pass" for g in gates), gates
     assert issue.must("next", "--issue", "greet").startswith("Ship"), "the next stage is ship"

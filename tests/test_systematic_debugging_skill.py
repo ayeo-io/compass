@@ -82,11 +82,14 @@ def test_trc_a3_the_skill_should_be_reachable_from_where_the_failure_happens():
         "nothing tells a reader when to load it")
 
     # and the build guidance points at it, because that is where a test goes red
-    pointers = [ROOT / "commands" / "go.md",
-                ROOT / "skills" / "tdd-discipline" / "SKILL.md"]
+    # (ADR-099 cut the line from commands/go.md; the skill map and the TDD
+    # anti-patterns name it now.)
+    pointers = [ROOT / "skills" / "compass-runtime" / "SKILL.md",
+                ROOT / "skills" / "tdd-discipline" / "SKILL.md",
+                ROOT / "skills" / "tdd-discipline" / "anti-patterns.md"]
     naming = [p for p in pointers
               if "systematic-debugging" in p.read_text(encoding="utf-8")]
     assert naming, (
-        "neither commands/go.md nor skills/tdd-discipline names "
+        "neither skills/compass-runtime nor skills/tdd-discipline names "
         "systematic-debugging. A skill nobody is told to load at the moment of "
         "failure is a file, not a method.")

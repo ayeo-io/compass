@@ -470,14 +470,15 @@ def test_trc_c2_the_rewritten_original_is_unmodified_and_cited():
 # ---------------------------------------------------------------------------
 
 def test_trc_d1_the_clarity_dimension_names_the_tells_as_judgement():
-    # `commands/ship.md` carries the review the reviewer agent did until 9.0.0
-    # (ADR-090, ADR-092).
-    reviewer = (REPO_ROOT / "commands" / "ship.md").read_text(encoding="utf-8")
+    # `skills/evidence-gates/review-dimensions.md` carries the review method the
+    # reviewer agent did until 9.0.0 (ADR-090, ADR-092, ADR-099).
+    reviewer = (REPO_ROOT / "skills" / "evidence-gates"
+                / "review-dimensions.md").read_text(encoding="utf-8")
     gates = _evidence_gates_text()
     reference_path = "skills/compass-runtime/writing-voice.md"
 
     for name, text in (
-        ("commands/ship.md", reviewer),
+        ("skills/evidence-gates/review-dimensions.md", reviewer),
         ("skills/evidence-gates/SKILL.md", gates),
     ):
         assert reference_path in text, (

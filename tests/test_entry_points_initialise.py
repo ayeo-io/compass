@@ -32,39 +32,48 @@ MUST_NOT_INITIALISE = ["status", "flow"]
 
 INIT_CALL = re.compile(r"compass init\b")
 
+# ADR-099: `compass quick-fix start` makes `.compass/` itself, so an entry
+# point initialises the project by running it.
+START_CALL = re.compile(r"compass quick-fix start\b")
+
 
 def _read(name):
     return (COMMANDS / f"{name}.md").read_text(encoding="utf-8")
 
 
 def test_ioi_b1_every_entry_point_initialises_the_project():
-    missing = [name for name in ENTRY_POINTS if not INIT_CALL.search(_read(name))]
+    missing = [name for name in ENTRY_POINTS if not START_CALL.search(_read(name))]
     assert not missing, (
-        "these entry-point commands never run `compass init`, so a user whose "
-        "first Compass command is one of them lands in a project that was "
-        f"never initialised: {', '.join(missing)}")
+        "these entry-point commands never run `compass quick-fix start`, which "
+        "initialises the project, so a user whose first Compass command is "
+        "one of them lands in a project that was never initialised: "
+        f"{', '.join(missing)}")
 
 
-def test_ioi_b1b_every_entry_point_reports_that_it_initialised():
+def test_ioi_b1b_every_entry_point_reports_that_it_initialised(tmp_path):
     """Silent creation is the failure mode, not missing creation.
 
     A .compass/ directory appearing with no word said is how someone deletes
-    it by hand, or commits it without meaning to.
+    it by hand, or commits it without meaning to. The entry points run
+    `compass quick-fix start`; in a project that was never initialised it
+    prints a `created:` line that tells the person, and `go` repeats the
+    instruction to say so.
     """
-    silent = []
-    for name in ENTRY_POINTS:
-        text = _read(name)
-        m = INIT_CALL.search(text)
-        if not m:
-            continue
-        # The instruction to say so must sit with the instruction to run it,
-        # not three sections away where an agent will not connect them.
-        window = text[max(0, m.start() - 400):m.end() + 400].lower()
-        if not any(w in window for w in ("report", "say", "tell")):
-            silent.append(name)
-    assert not silent, (
-        "these commands initialise the project without being told to say so: "
-        f"{', '.join(silent)}")
+    import subprocess
+    import sys
+    git = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
+    subprocess.run([*git, "init", "-q"], cwd=tmp_path, check=True)
+    (tmp_path / "README.md").write_text("hello\n")
+    subprocess.run([*git, "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run([*git, "commit", "-q", "-m", "base"], cwd=tmp_path, check=True)
+    done = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "cli" / "compass"), "quick-fix", "start",
+         "first", "--intent", "it works"],
+        cwd=tmp_path, capture_output=True, text=True)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert (tmp_path / ".compass").is_dir()
+    assert "created: .compass/" in done.stdout, done.stdout
+    assert "If `start` creates `.compass/`, say so" in " ".join(_read("go").split())
 
 
 def test_ioi_d2_reading_commands_do_not_initialise():

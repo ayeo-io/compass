@@ -121,9 +121,13 @@ class Adapter:
                 "from feature import clean_names\n\ndef test_feature():\n"
                 "    assert clean_names([' Alice ', ' bob ']) == ['ALICE', 'BOB']\n"
                 "    assert clean_names([]) == []\n")
-        # The four-layer acceptance strategy applies to both fixtures. Their
-        # project names its acceptance support code, as an adopter does, so
-        # `compass check` gives no support-code advice to the issue.
+        # A change owes the same evidence by default (ADR-099), and the four-layer
+        # acceptance strategy is guidance. Each fixture opts in to the records it
+        # observes through a `require_evidence` rule of its project: the quick fix
+        # records the outer loop, the regular feature the full strategy and the
+        # three reviews that are no longer owed by default. The project names its
+        # acceptance support code, as an adopter does, so `compass check` gives no
+        # support-code advice to the issue.
         support = {"alias_helper": "tests/support/alias.py",
                    "driver_factory": "tests/support/drivers.py",
                    "dsl_root": "tests/support/dsl.py",
@@ -131,13 +135,18 @@ class Adapter:
         (tests / "support").mkdir()
         for path in support.values():
             (self.project / path).write_text("# acceptance support code\n")
-        (self.project / ".compass/config.yml").write_text(
-            yaml.safe_dump({"project": {"acceptance_support": support}}))
-        self.git("add", ".gitignore", self.source, self.node.split("::")[0], *support.values())
+        tokens = (["outer-loop"] if kind == "quick-fix"
+                  else ["layering", "regression", "clarity", "security"])
+        (self.project / "compass.yml").write_text(yaml.safe_dump({
+            "schema": 1, "owner": "conformance",
+            "project": {"acceptance_support": support},
+            "require_evidence": [{"when": {}, "add": tokens}]}))
+        self.git("add", ".gitignore", self.source, self.node.split("::")[0], "compass.yml",
+                 *support.values())
         self.git("commit", "-q", "-m", "Seed the reference behaviour")
 
-    def start_quick_fix(self):
-        self.cli("quick-fix", "start", self.slug,
+    def start_quick_fix(self, *extra):
+        self.cli("quick-fix", "start", self.slug, *extra,
                  "--risk", "trivial - a reversible greeting correction",
                  "--familiarity", "brownfield-mapped - the seed test states the behaviour",
                  "--size", "atomic - one function returns the expected text",
@@ -147,8 +156,9 @@ class Adapter:
                  "--request", REQUEST_LINK, "--requester", REQUESTER)
 
     # The fixture's one test is its scenario's acceptance test, so its red and green
-    # are the outer loop of the four-layer acceptance strategy (ADR-080). A quick fix
-    # records outer by default; the regular feature says so.
+    # are the outer loop of the four-layer acceptance strategy (ADR-080). The red is
+    # recorded before the code with `tdd-red`, which `finish` keeps (ADR-099); the
+    # green is `finish`'s own, and says so with --loop.
     def red(self):
         self.cli("tdd-red", "--issue", self.slug, "--scenario", "CONF-1",
                  "--loop", "outer", "--", *self.test_command)
@@ -163,8 +173,8 @@ class Adapter:
 
     def finish_quick_fix(self):
         self.cli("quick-fix", "finish", "--issue", self.slug, "--no-commit",
-                 "-m", "Correct the reference greeting", "--candidate", "local",
-                 "--client", "cli", "--", *self.test_command)
+                 "-m", "Correct the reference greeting", "--loop", "outer",
+                 "--candidate", "local", "--client", "cli", "--", *self.test_command)
 
     def manifest(self):
         return yaml.safe_load((self.issue_dir / "manifest.yml").read_text())

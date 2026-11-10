@@ -386,7 +386,8 @@ def _path_issue(root: Path, *, scenarios=True, tests=True, reds=(), green=(), na
 # that needs one has a red no later than its first green, and the green.
 PATH_CASES = {
     "assessed only": (dict(scenarios=False), "Specify"),
-    "a scenario with no test": (dict(tests=False), "Specify"),
+    # A scenario needs no declared test: `finish` reads the tests from git (ADR-099).
+    "a scenario with no test": (dict(tests=False), "Build"),
     "specify listed, no outcome": (dict(raw={"checkpoints": ["specify"]}), "Specify"),
     "specify listed and approved": (dict(raw={"checkpoints": ["specify"]},
                                          handed_off=[("specify", "waited")]), "Build"),

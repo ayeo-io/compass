@@ -29,11 +29,12 @@ def test_rwp_7_a_forced_stage_names_thorough(run_cli):
 
 
 def test_rwp_8_quick_fix_help_names_the_path(run_cli):
-    """Since 9.0.0 `build` is a stage of the four-stage path (ADR-092), so the
-    quick-fix line names the path, not the removed `implement` stage."""
+    """Since 9.0.0 `build` is a stage of the four-stage path (ADR-092) and the
+    change takes two commands (ADR-099), so the quick-fix line names the two
+    commands, not the removed `implement` stage."""
     r = run_cli("--help")
     assert r.returncode == 0, r
     flat = " ".join(r.stdout.split())
-    assert re.search(r"quick-fix start and finish a change of any size on the path", flat), (
-        r.stdout)
+    assert re.search(r"quick-fix the two commands of a change: start opens the issue, "
+                     r"finish writes the record", flat), r.stdout
     assert "implement and ship" not in flat, r.stdout

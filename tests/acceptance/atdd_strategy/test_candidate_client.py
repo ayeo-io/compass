@@ -243,6 +243,9 @@ def test_several_scenarios_need_the_outer_loop(tmp_path):
 def _quick_fix(tmp_path):
     """An in-scope quick fix, its test committed and failing, its outer-loop red recorded."""
     project = support.Project(tmp_path / "repo")
+    # A project rule owes an atomic change the outer loop (ADR-099 decision 9).
+    project.require_evidence = support.OPT_IN_BY_SIZE
+    project.setting(None)
     root = project.root
     (root / "data").mkdir()
     (root / "data" / "greeting.txt").write_text("Hi\n", encoding="utf-8")
@@ -258,7 +261,9 @@ def _quick_fix(tmp_path):
                "--familiarity", "brownfield-mapped - the file and its test exist",
                "--size", "atomic - one line", "--intent", "The greeting says Hello.",
                "--scenario", "Given the greeting, when it is read, then it says Hello.",
-               "--test", "tests/test_greeting.py::test_greeting")
+               "--test", "tests/test_greeting.py::test_greeting",
+               "--request", "https://example.com/requests/greet",
+               "--requester", "Test fixture")
     issue.must("tdd-red", "--issue", "greet", "--scenario", "TRC-001", "--", *QUICK_TEST)
     (root / "data" / "greeting.txt").write_text("Hello\n", encoding="utf-8")
     return project, issue

@@ -43,6 +43,19 @@ STRATEGY_CHECKS = ("acceptance-applicability-agrees", "outer-loop-recorded",
                    "layering-test-passed", "acceptance-support-present")
 
 
+#: The project's own rule that owes the full strategy (ADR-099 decision 9). A
+#: delivery issue owes no record of the strategy by default, so the projects
+#: these tests build opt in. `layering` routes the strategy as `on`.
+OPT_IN = [{"when": {}, "add": ["layering"]}]
+
+#: Rules that stand where the 8.x approaches stood: a token per size of change.
+OPT_IN_BY_SIZE = [
+    {"when": {"size": ["medium"]}, "add": ["layering"]},
+    {"when": {"size": ["atomic"]}, "add": ["outer-loop"]},
+    {"when": {"urgency": ["live-defect"]}, "add": ["isolation"]},
+]
+
+
 def env(root):
     return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(root),
             "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "200",
@@ -67,6 +80,7 @@ class Project:
         self.root = Path(root)
         self.cli = Path(cli)
         self.extra_env = {}
+        self.require_evidence = list(OPT_IN)
         if init:
             self.root.mkdir(parents=True)
             (self.root / "README.md").write_text("base\n", encoding="utf-8")
@@ -75,6 +89,7 @@ class Project:
             git(self.root, "commit", "-q", "-m", "base")
             code, out, err = self.run("init")
             assert code == 0, out + err
+            self.setting(None)
 
     def run(self, *argv):
         r = subprocess.run([sys.executable, str(self.cli), *argv], cwd=self.root,
@@ -86,6 +101,11 @@ class Project:
         """Write the strategy setting into `compass.yml` or `.compass/config.yml`.
         `value` None writes the file without the key."""
         doc = {"schema": 1, **more} if where == "compass.yml" else dict(more)
+        if self.require_evidence and "require_evidence" not in doc:
+            doc["require_evidence"] = self.require_evidence
+        if where != "compass.yml":
+            # The project's settings live in one file only (`settings-conflict`).
+            (self.root / "compass.yml").unlink(missing_ok=True)
         if value is not None:
             doc["acceptance_strategy"] = value
         path = self.root / where

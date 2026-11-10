@@ -619,12 +619,18 @@ def test_acf_64():
     # no justification (ACF-21). A text that tells the reader to run it bare sends them
     # into that refusal.
     import re
+    named = []
     for name in ASSESS_TEXTS:
         text = " ".join((ROOT / name).read_text(encoding="utf-8").split())
         spans = re.findall(r"`compass approach evaluate --write[^`]*`", text)
-        assert spans, f"{name} no longer names `approach evaluate --write`"
+        named += spans
         bare = [s for s in spans if "--justify" not in s]
         assert not bare, f"{name} shows approach evaluate --write without --justify: {bare}"
+    # ADR-099: `commands/assess.md` teaches `compass quick-fix start`, which writes
+    # the assessment itself, so only the procedure and the routing skill name the
+    # command that re-assesses.
+    assert named, "no text names `approach evaluate --write`"
+    assert any("--justify" in s for s in named)
 
 
 # --- group H: the migrate maps the ad-hoc kinds ------------------------------------

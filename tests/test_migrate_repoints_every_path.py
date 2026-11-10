@@ -425,6 +425,8 @@ EXCLUDED = {
     "landed_by[].issue": "an issue slug",
     "depends_on[].issue": "an issue slug",
     "land_commit": "a commit id",
+    "base_commit": "the commit `compass quick-fix start` found at HEAD, a commit id; only a 9.0.0 path issue has the field, never a 1.x tree the migration reads",
+    "change_sha256": "a digest of the change's code and test files, not a path; only a 9.0.0 path issue has the field (ADR-099)",
     "repairs": "an issue slug",
     "scenarios[].verifiable": "a scenario taxonomy label",
     "subtasks[].last_error_digest": "a digest of an error message",

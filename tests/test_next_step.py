@@ -102,6 +102,20 @@ def _next(root: Path, *extra, **env):
 
 # --- the table, one row at a time --------------------------------------------------------
 
+#: The line of a path issue until `compass quick-fix finish` has passed its gates
+#: (ADR-099): the session writes the tests and the code, then runs `finish`.
+WRITE = ('write the tests and the code, then compass quick-fix finish -m '
+         '"<commit message>" -- <test command>')
+FINISH_AFTER = 'compass quick-fix finish -m "<commit message>" -- <test command>'
+#: The line of a path issue whose three gates and green are on record and that
+#: owes no approval: `finish` commits, or `ship-commit` on a branch.
+COMMITS = FINISH_AFTER + (" (it commits), or compass ship-commit on the branch the "
+                          "person names")
+#: A project setting adds a review gate: the three immovable gates pass, and the
+#: added gate is the only one still pending.
+ADDED_GATE = [{"id": g, "status": "pass", "evidence": []} for g in THREE_GATES] + [
+    {"id": "verify.regression", "status": "pending", "evidence": []}]
+
 ROWS = {
     # The request is asked for first, before the scenario (#356).
     "request owed, not recorded": (
@@ -113,73 +127,56 @@ ROWS = {
     "request recorded": (
         dict(evidence=["request"] + LIGHT,
              raw={"request": {"link": "https://example.com/r/1", "requester": "Dana Smith"}}),
-        "compass scenario add TRC-001 --intent <intent id> --test <path::name>"),
-    "assessed, no scenario": (
-        dict(), "compass scenario add TRC-001 --intent <intent id> --test <path::name>"),
-    "a scenario with no test": (
-        dict(scenarios=[dict(SCENARIO, tests=[])]),
-        "compass scenario tests set TRC-001 --test <path::name>"),
+        WRITE),
+    # `finish` reads the scenarios from acceptance-criteria.md and the tests from
+    # git, so no scenario or test is declared by hand (ADR-099).
+    "assessed, no scenario": (dict(), WRITE),
+    "a scenario with no test": (dict(scenarios=[dict(SCENARIO, tests=[])]), WRITE),
     "scenario approval owed": (
         dict(evidence=LIGHT + ["scenario-approval"], scenarios=[SCENARIO]),
-        "compass evidence request --checkpoint specify, then stop for /compass:approve"),
+        "write the scenarios in acceptance-criteria.md, then compass evidence request "
+        "--checkpoint specify, then stop for /compass:approve"),
+    # No token of the four-layer strategy (`S17`) changes the line: `finish` does
+    # the work, and the layering and isolation records are not asked for here.
     "S17 applies, no outer-loop red": (
-        dict(evidence=LIGHT + ["outer-loop"], scenarios=[SCENARIO]),
-        "compass tdd-red --loop outer --scenario TRC-001 -- <acceptance test command>"),
-    # The layering test is written and staged before the outer-loop red: added to
-    # the tree after the outer-loop green, it would make the green, isolation and
-    # layering records stale.
+        dict(evidence=LIGHT + ["outer-loop"], scenarios=[SCENARIO]), WRITE),
     "layering owed, no outer-loop red": (
         dict(evidence=LIGHT + ["outer-loop", "isolation", "layering"], scenarios=[SCENARIO]),
-        "write the layering test at <layering test path> and git add it, then compass "
-        "tdd-red --loop outer --scenario TRC-001 -- <acceptance test command>"),
-    "a scenario with no red": (
-        dict(scenarios=[SCENARIO]), "compass tdd-red --scenario TRC-001 -- <test command>"),
-    "a red with no green": (
-        dict(scenarios=[SCENARIO], reds=["TRC-001"]),
-        "compass tdd-green --scenario TRC-001 -- <test command>"),
-    # Where `S17` applies the green is the outer loop's, which names the candidate
-    # the isolation proof is then made on.
+        WRITE),
+    "a scenario with no red": (dict(scenarios=[SCENARIO]), WRITE),
+    "a red with no green": (dict(scenarios=[SCENARIO], reds=["TRC-001"]), WRITE),
     "S17 applies, no outer-loop green": (
         dict(evidence=LIGHT + ["outer-loop"], scenarios=[SCENARIO],
-             outer_reds=["TRC-001"], greens=["TRC-001"]),
-        "compass tdd-green --loop outer --scenario TRC-001 --candidate <build id>|local "
-        "--client api|web|cli -- <acceptance test command>"),
+             outer_reds=["TRC-001"], greens=["TRC-001"]), WRITE),
     "isolation owed": (
         dict(evidence=LIGHT + ["outer-loop", "isolation"], scenarios=[SCENARIO],
-             outer_reds=["TRC-001"], outer_greens=["TRC-001"]),
-        "compass isolation record --candidate build-7 --client cli "
-        "--parallel \"<acceptance suite command>\" "
-        "--repeat \"<scenario test command> {tests}\""),
+             outer_reds=["TRC-001"], outer_greens=["TRC-001"]), WRITE),
     "layering owed": (
         dict(evidence=LIGHT + ["outer-loop", "isolation", "layering"], scenarios=[SCENARIO],
              outer_reds=["TRC-001"], outer_greens=["TRC-001"],
-             files=["isolation-proof.json"]),
-        "compass layering record --test-path <layering test path> "
-        "-- <layering test command>"),
-    "a review gate pending": (
+             files=["isolation-proof.json"]), WRITE),
+    # Before `finish` has passed the gates, every gate is pending and the line is
+    # the same.
+    "a review gate pending, before finish": (
         dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"],
              raw={"gates": [{"id": g, "status": "pending", "evidence": []}
                             for g in THREE_GATES + ["verify.regression"]]}),
-        "compass gate pass verify.regression --evidence <EV-id>"),
-    # `compass quick-fix finish` passes the three immovable gates itself.
+        WRITE),
     "only the three immovable gates pending": (
-        dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"]),
-        next_step.FINISH),
+        dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"]), WRITE),
     "human approval owed": (
         dict(evidence=LIGHT + ["human-approval"], scenarios=[SCENARIO], reds=["TRC-001"],
              greens=["TRC-001"], gates_pass=True),
-        "compass evidence request --check human-approval-present"),
+        FINISH_AFTER + ", which asks for the `G5` sign-off"),
     "every gate passes": (
         dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"], gates_pass=True),
-        "compass check, then stage the changed files, "
-        f"then compass ship-commit --issue {SLUG} -m \"<message>\""),
-    # `compass ship-commit` lands what is staged, so the traced files are named.
+        COMMITS),
+    # The traced files are not named: `finish` stages them itself.
     "every gate passes, files traced": (
         dict(scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"], gates_pass=True,
              raw={"changed_files": [{"path": "greet.py", "scenario": "TRC-001"},
                                     {"path": "my file.py", "scenario": "TRC-001"}]}),
-        "compass check, then git add -- greet.py 'my file.py', "
-        f"then compass ship-commit --issue {SLUG} -m \"<message>\""),
+        COMMITS),
 }
 
 
@@ -189,6 +186,40 @@ def test_each_row_of_the_table_names_its_command(tmp_path, case):
     kwargs, expected = ROWS[case]
     task = _path_issue(tmp_path, **kwargs)
     assert next_step.next_command(_load(task), str(task)) == expected, case
+
+
+def test_a_gate_a_project_setting_adds_is_named_once_finish_has_passed_the_three(tmp_path):
+    """`compass next` still names `compass gate pass` for a gate that
+    `require_evidence` adds (ADR-099 decision 9)."""
+    task = _path_issue(tmp_path, scenarios=[SCENARIO], reds=["TRC-001"], greens=["TRC-001"],
+                       raw={"gates": ADDED_GATE})
+    assert next_step.next_command(_load(task), str(task)) == (
+        "compass gate pass verify.regression --evidence <EV-id>")
+
+
+def _request(task, number, form, value=None):
+    """A pending request for a person's approval, as `finish` writes it."""
+    folder = task / "approval-requests" / "pending"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{number}.yml").write_text(yaml.safe_dump(
+        {"number": number, "form": form, "value": value, "issue": SLUG}, sort_keys=False))
+
+
+def test_a_pending_scenario_approval_request_is_named_by_its_number(tmp_path):
+    task = _path_issue(tmp_path, evidence=LIGHT + ["scenario-approval"], scenarios=[SCENARIO])
+    _request(task, 1, "checkpoint", "specify")
+    assert next_step.next_command(_load(task), str(task)) == (
+        "stop: the scenarios wait for the person's approval. Ask them to type "
+        "/compass:approve 1")
+
+
+def test_a_pending_ship_approval_request_says_to_stop_and_run_finish_again(tmp_path):
+    task = _path_issue(tmp_path, evidence=LIGHT + ["ship-approval"], scenarios=[SCENARIO],
+                       reds=["TRC-001"], greens=["TRC-001"], gates_pass=True)
+    _request(task, 1, "ship")
+    assert next_step.next_command(_load(task), str(task)) == (
+        "stop and ask the person to type /compass:approve 1 (the ship approval). After the "
+        "approval, run the same finish again: it commits")
 
 
 def test_no_manifest_names_go():
@@ -250,16 +281,17 @@ def test_an_issue_closed_as_not_planned_owes_no_ship_approval(tmp_path):
     assert next_step.next_command(_load(task), str(task)) is None
 
 
-def test_a_narrative_scenario_needs_no_test_and_no_red(tmp_path):
+def test_a_narrative_scenario_gets_the_same_line_as_any_other(tmp_path):
     task = _path_issue(tmp_path, scenarios=[dict(SCENARIO, tests=[], verifiable="narrative")])
-    assert next_step.next_command(_load(task), str(task)) == next_step.FINISH
+    assert next_step.next_command(_load(task), str(task)) == WRITE
 
 
 # --- stage completion on the path --------------------------------------------------------
 
 STAGES = {
     "assessed, no scenario": (dict(), "specify"),
-    "a scenario with no test": (dict(scenarios=[dict(SCENARIO, tests=[])]), "specify"),
+    # A scenario needs no declared test: `finish` reads the tests from git.
+    "a scenario with no test": (dict(scenarios=[dict(SCENARIO, tests=[])]), "build"),
     "a scenario with its test": (dict(scenarios=[SCENARIO]), "build"),
     "a red, no green": (dict(scenarios=[SCENARIO], reds=["TRC-001"]), "build"),
     "a green with no red": (dict(scenarios=[SCENARIO], greens=["TRC-001"]), "build"),
@@ -294,15 +326,13 @@ def test_specify_waits_for_a_listed_checkpoint(tmp_path):
 def test_compass_next_prints_the_stage_and_the_next_command(tmp_path):
     _path_issue(tmp_path)
     assert _next(tmp_path) == (
-        "Specify [gate: verify.correctness] | next: compass scenario add TRC-001 "
-        "--intent <intent id> --test <path::name>\n")
+        f"Specify [gate: verify.correctness] | next: {WRITE}\n")
 
 
 def test_compass_next_at_build(tmp_path):
     _path_issue(tmp_path, scenarios=[SCENARIO], reds=["TRC-001"])
     assert _next(tmp_path) == (
-        "Build [gate: verify.correctness] | next: compass tdd-green --scenario TRC-001 "
-        "-- <test command>\n")
+        f"Build [gate: verify.correctness] | next: {WRITE}\n")
 
 
 def test_the_rail_shows_the_four_path_stages(tmp_path):
@@ -317,11 +347,9 @@ def test_compass_next_json_gains_the_next_field(tmp_path):
     _path_issue(tmp_path, scenarios=[SCENARIO])
     doc = json.loads(_next(tmp_path, "--json"))
     assert list(doc) == ["output", "structured", "note", "next"], doc
-    assert doc["output"] == [
-        "Build [gate: verify.correctness] | next: compass tdd-red --scenario TRC-001 "
-        "-- <test command>"]
+    assert doc["output"] == [f"Build [gate: verify.correctness] | next: {WRITE}"]
     assert doc["structured"] is False
-    assert doc["next"] == "compass tdd-red --scenario TRC-001 -- <test command>"
+    assert doc["next"] == WRITE
 
 
 def test_compass_next_json_on_a_closed_issue_has_a_null_next(tmp_path):

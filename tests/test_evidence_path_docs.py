@@ -146,13 +146,17 @@ def test_a2_docs_state_the_binding_rule():
     run writes and which an unbound run writes.
 
     Removing a false claim is not the same as making the true one available.
+    `commands/go.md` and `skills/compass-runtime/SKILL.md` no longer explain the
+    green verb (ADR-099: `finish` records the green), and the reference text went
+    to `skills/evidence-gates/red-green-records.md`, which must state the rule.
     """
-    for name in ("commands/go.md", "skills/compass-runtime/SKILL.md"):
-        text = (REPO_ROOT / name).read_text(encoding="utf-8")
-        assert BOUND.search(text), (
-            f"{name} explains the green verb but never mentions the "
-            f"scenario-bound record, so a reader is told nothing about where "
-            f"their evidence went")
+    name = "skills/evidence-gates/red-green-records.md"
+    text = (REPO_ROOT / name).read_text(encoding="utf-8")
+    assert "tdd-green" in text, f"{name} no longer explains the green verb"
+    assert BOUND.search(text), (
+        f"{name} explains the green verb but never mentions the "
+        f"scenario-bound record, so a reader is told nothing about where "
+        f"their evidence went")
 
 
 def test_a3_worked_example_matches_what_runs():

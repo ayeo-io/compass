@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 
 from test_quick_fix_verbs import (  # noqa: F401
-    _finish, _manifest, _ready_to_finish, repo)
+    _land, _manifest, _ready_to_finish, repo)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -22,7 +22,8 @@ ROOT = Path(__file__).resolve().parent.parent
 def test_rq_1_the_resume_command_names_the_landing_command():
     text = " ".join((ROOT / "commands" / "resume.md").read_text().split())
     assert "compass quick-fix finish" in text
-    assert "compass tdd-red" in text
+    # `finish` proves the red itself (ADR-099), so the command asks for no red step.
+    assert "compass tdd-red" not in text
     assert "do not pass the gates by hand" in text.lower()
 
 
@@ -32,7 +33,7 @@ def test_rq_1_finish_lands_a_quick_fix_with_no_start_record(repo):
         ["git", "rev-parse", "--git-path", "compass/start-state/fix.json"],
         cwd=str(repo), capture_output=True, text=True, check=True).stdout.strip()
     (repo / record).unlink()        # another session started it
-    result = _finish(repo, "fix")
+    result = _land(repo, "fix")
     assert result.returncode == 0, result.stdout + result.stderr
     assert _manifest(repo, "fix")["status"] == "done"
     assert _manifest(repo, "fix")["close_reason"] == "completed"

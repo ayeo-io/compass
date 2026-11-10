@@ -607,13 +607,58 @@ def _ready_to_ship(root, cli=CLI):
     git(root, "add", "src/new.py")
 
 
+def _finished(root, specify=False):
+    """An issue `finish` has checked and left uncommitted, with its changes staged.
+    The landing runs the whole of `compass check` first (ADR-099), so the state it
+    lands from is a real record that `finish` writes. With `specify`, a person
+    answers the `specify` hand-off first, as a critical-risk change cannot start
+    without, and its outcome is taken out again after `finish`, leaving the
+    listed hand-off with no outcome."""
+    from compass_pkg.path_writer import NFR_REASON
+    from compass_pkg.section_checks import CONCERNS
+    # The project's settings are committed, so they are not part of the change.
+    git(root, "add", "compass.yml")
+    git(root, "commit", "-q", "-m", "settings")
+    rows = "".join(f"| {c} | | {NFR_REASON} |\n" for c in CONCERNS)
+    (root / DOCS / "acceptance-criteria.md").write_text(
+        "# Acceptance criteria\n\n### Scenario: one\n"
+        "<!-- traceability id: TRC-001 | serves: INT-1 -->\nGiven x, when y, then z.\n\n"
+        f"## Non-functional requirements\n\n| Concern | Scenarios | Reason |\n|---|---|---|\n{rows}")
+    assert run(root, "issue", "link", "set", "--issue", SLUG, "--request",
+               "https://example.com/r/1", "--requester", "Dana Smith").returncode == 0
+    if specify:
+        assert run(root, "evidence", "request", "--checkpoint", "specify",
+                   "--issue", SLUG).returncode == 0
+        assert approve(root, "specify").returncode == 0
+    (root / "src").mkdir()
+    (root / "tests").mkdir()
+    (root / "src" / "new.py").write_text("def f():\n    return 2\n")
+    (root / "tests" / "test_one.py").write_text(
+        "from src.new import f\n\n\ndef test_one():\n    assert f() == 2\n")
+    done = run(root, "quick-fix", "finish", "--issue", SLUG, "--no-commit", "-m", "Ship it",
+               "--release-note", RELEASE_NOTE, "--", sys.executable, "-m", "pytest", "-q",
+               "-p", "no:cacheprovider", "tests/test_one.py")
+    assert done.returncode == 0, done
+    if specify:
+        body = manifest(root)
+        body["checkpoint_outcomes"] = []
+        write_manifest(root, body)
+    git(root, "add", "src/new.py", "tests/test_one.py")
+
+
 def _tree(root):
-    """The bytes of every file under .compass and docs/compass."""
+    """The bytes of every file under .compass and docs/compass. The landing runs
+    `compass check` first (ADR-099), which stamps the time of each check it runs
+    in `results.yml`; the stamps are masked and nothing else may change."""
+    import re
     found = {}
     for top in (".compass", "docs/compass"):
         for path in sorted((Path(root) / top).rglob("*")):
             if path.is_file():
-                found[str(path.relative_to(root))] = path.read_bytes()
+                data = path.read_bytes()
+                if path.name == "results.yml":
+                    data = re.sub(rb"(\n\s+at: )'[^']*'", rb"\1'<time>'", data)
+                found[str(path.relative_to(root))] = data
     return found
 
 
@@ -630,8 +675,7 @@ def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatc
     # A new issue's first assessment makes it judged.
     assert manifest(root)["checkpoint_outcomes"] == []
     assert manifest(root)["checkpoints"] == ["specify"]
-    specify_done(root)
-    _ready_to_ship(root)
+    _finished(root, specify=True)
     head, before = git(root, "rev-parse", "HEAD"), _tree(root)
 
     done = run(root, "ship-commit", "-m", "Ship it")
@@ -665,7 +709,6 @@ def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatc
     assert seen == ["stub"]
 
     assert approve(root, "specify").returncode == 0
-    git(root, "add", "src/new.py")
     done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG)
     assert done.returncode == 0, done
     assert manifest(root).get("land_timestamp") and git(root, "rev-parse", "HEAD") != head
@@ -676,7 +719,12 @@ def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatc
     # "landed" is retired (ADR-044). The capture was edited to match, word for word, and again when 9.0.0 stopped
     # deriving the living spec at landing (ADR-091).
     captured = json.loads((FIXTURES / "base-ship-commit-not-judged.json").read_text())
-    assert ship_not_judged(tmp_path / "not-judged") == captured
+    landed = ship_not_judged(tmp_path / "not-judged")
+    assert (landed["exit"], landed["stderr"]) == (captured["exit"], captured["stderr"])
+    # ADR-099 adds the `commit`, `committed`, `tree` and `done` lines after the two
+    # lines the base commit printed.
+    assert landed["stdout"].startswith(captured["stdout"]), landed["stdout"]
+    assert "done: nothing more to run" in landed["stdout"], landed["stdout"]
     _quick_fix_refused(tmp_path / "quick-fix")
 
 
@@ -688,8 +736,7 @@ def ship_not_judged(tmp_path, cli=CLI):
     assert body["checkpoints"] == []
     body.pop("checkpoint_outcomes", None)
     write_manifest(root, body)
-    register(root, "acceptance-criteria", "approved", cli=cli)
-    _ready_to_ship(root, cli=cli)
+    _finished(root)
     done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG, cli=cli)
     assert manifest(root).get("land_timestamp"), done
     assert_no_gh_call(root)
@@ -701,16 +748,25 @@ def _quick_fix_refused(tmp_path):
     root = project(tmp_path, compass_yml=dict(BALANCED, autonomy="controlled"))
     slug = quick_fix(root)
     body = manifest(root, slug)
-    # Controlled autonomy lists every path stage where `S17` applies, as it does to
-    # the light row (ADR-092 open question 7).
-    assert body["checkpoints"] == ["assess", "specify", "build", "ship"], body
+    # Controlled autonomy lists the assess and specify hand-offs; it lists build and
+    # ship only where `S17` applies, which a setting must add (ADR-099 decision 9).
+    assert body["checkpoints"] == ["assess", "specify"], body
     assert body["checkpoint_outcomes"] == []
     head = git(root, "rev-parse", "HEAD")
-    done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix it",
-               "--candidate", "local", "--client", "cli", *GREET_CMD)
-    assert done.returncode == 2, done
-    assert ("assess, specify, build and ship are listed in checkpoints with no outcome "
-            "recorded") in done.stderr, done
+    argv = ["quick-fix", "finish", "--issue", slug, "-m", "Fix it", *GREET_CMD]
+    assert run(root, "issue", "link", "set", "--issue", slug, "--request",
+               "https://example.com/r/1", "--requester", "Dana Smith").returncode == 0
+    # `finish` commits nothing until a person approves, so the refusal is at the commit.
+    first = run(root, *argv)
+    assert first.returncode == 0, first
+    done = run(root, "evidence", "approve", "--ship", "--issue", slug, "--approver", "jed72",
+               "--role", "owner", terminal=True)
+    assert done.returncode == 0, done
+    done = run(root, *argv)
+    assert done.returncode == 1, done
+    assert ("assess and specify are listed in checkpoints with no outcome "
+            "recorded") in done.stdout, done
+    assert "[checkpoint-no-outcome]" in done.stdout, done
     assert git(root, "rev-parse", "HEAD") == head
     assert "land_timestamp" not in manifest(root, slug)
     assert_no_gh_call(root)

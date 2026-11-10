@@ -19,6 +19,7 @@ call off the network.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import os
 import re
 import subprocess
@@ -31,6 +32,10 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
+_spec = importlib.util.spec_from_file_location(
+    "two_command_e2e", ROOT / "scripts" / "two-command-e2e.py")
+e2e = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(e2e)
 
 from compass_pkg import landing  # noqa: E402
 
@@ -112,16 +117,6 @@ def _ready(root):
     return root
 
 
-def _finish_next(root):
-    """The `next:` line of `compass quick-fix finish --no-commit` on a fixed issue."""
-    _fixed(root)
-    done = _ok(root, "quick-fix", "finish", "--issue", SLUG, "--no-commit", "-m", "Fix f",
-               "--release-note", "f returns 2", *WHERE, "--", *_pytest())
-    last = done.stdout.splitlines()[-1]
-    assert last.startswith("next: compass check, then "), done.stdout
-    return last
-
-
 def _ship(root, *extra):
     _git(root, "add", "--", "src/f.py")
     return _compass(root, "ship-commit", "--issue", SLUG, "-m", "Fix f", *extra)
@@ -195,36 +190,24 @@ def test_the_commit_holds_both_ignore_files(tmp_path):
     assert _git(root, "status", "--porcelain", "--", ".compass/.gitignore") == ""
 
 
-def test_the_finish_next_line_leaves_the_record_to_ship_commit(tmp_path):
-    """In committed mode `compass ship-commit` stages the documents folder and
-    the issue folder itself, so the `next:` line names only the code to stage."""
-    last = _finish_next(_repo(tmp_path / "repo"))
-    assert "git add -- src/f.py, then" in last, last
-    assert "acceptance-criteria.md" not in last and ".compass/" not in last, last
-
-
 @pytest.mark.parametrize("compass_yml", [None, "record:\n  commit: false\n"],
                          ids=["committed", "kept-out"])
-def test_the_finish_next_line_names_the_command_its_commit_line_names(tmp_path, compass_yml):
-    """The `next:` line after `compass quick-fix finish --no-commit` ends with the
-    same `compass ship-commit` command as its `commit :` line, in both record
-    modes. Without `--issue` the landing writes no record and does not mark the
-    issue done; without `--release-note` an issue that owes a line is refused."""
+def test_finish_no_commit_names_ship_commit_once_the_ship_approval_is_given(tmp_path, compass_yml):
+    """`finish` stages and commits the change itself (ADR-099), so after the
+    approval its `--no-commit` run ends with one line that names `compass
+    ship-commit`, in both record modes, and names no file to stage."""
     root = _repo(tmp_path / "repo", compass_yml=compass_yml)
     _fixed(root)
-    done = _ok(root, "quick-fix", "finish", "--issue", SLUG, "--no-commit", "-m", "Fix f",
-               *WHERE, "--", *_pytest())
-    lines = done.stdout.splitlines()
-    command = (f'compass ship-commit --issue {SLUG} -m "<message>" '
-               '--release-note "<release line>"')
-    assert f"`{command}`" in [ln.strip() for ln in lines], done.stdout
-    assert lines[-1].endswith(f", then {command}"), done.stdout
-
-
-def test_the_finish_next_line_asks_for_no_line_it_holds(tmp_path):
-    """A release line given to `finish` is stored, so the command does not ask again."""
-    last = _finish_next(_repo(tmp_path / "repo"))
-    assert last.endswith(f'then compass ship-commit --issue {SLUG} -m "<message>"'), last
+    argv = ["quick-fix", "finish", "--issue", SLUG, "--no-commit", "-m", "Fix f",
+            "--release-note", "f returns 2", *WHERE, "--", *_pytest()]
+    first = _ok(root, *argv)
+    assert first.stdout.splitlines()[-1].startswith("next: stop and ask the person to type "
+                                                    "/compass:approve 1 (the ship approval)")
+    assert e2e.person_approves(root) == [1]
+    done = _ok(root, *argv)
+    assert done.stdout.splitlines()[-1] == (
+        "next: when the person asks for a commit, run compass ship-commit"), done.stdout
+    assert "git add" not in done.stdout, done.stdout
 
 
 def test_the_manifest_says_landed_with_the_record_and_names_no_commit(tmp_path):
@@ -310,26 +293,18 @@ def test_a_refused_landing_leaves_the_record_as_it_was(tmp_path):
     assert staged == ["src/f.py"], staged
 
 
-def test_a_landing_that_names_no_issue_says_the_record_was_left_out(tmp_path):
-    """Without `--issue` the commit holds only the staged code, so the issue's
-    record is not committed and the issue is not marked done. In committed
-    mode, when the current issue could have landed, the output says so and
-    names the command that lands the record."""
+def test_a_landing_that_names_no_issue_lands_the_current_issue_with_its_record(tmp_path):
+    """Without `--issue` the landing takes the current issue (ADR-099, whose
+    `next:` line names `compass ship-commit` with no flag), so the record is in
+    the commit and the issue is marked done."""
     root = _ready(_repo(tmp_path / "repo"))
     _git(root, "add", "--", "src/f.py")
     done = _compass(root, "ship-commit", "-m", "Fix f")
     assert done.returncode == 0, done.stdout + done.stderr
-    assert _files(root) == ["src/f.py"]
-    assert _manifest(root).get("status") != "done"
-    assert (f"the record of issue '{SLUG}' is not in this commit, and the issue is "
-            "not marked done") in done.stdout, done.stdout
-    assert f'`compass ship-commit --issue {SLUG} -m "<message>"`' in done.stdout, done.stdout
-    # The command it names lands the record.
-    landed = _compass(root, "ship-commit", "--issue", SLUG, "-m", "Land fix-f")
-    assert landed.returncode == 0, landed.stdout + landed.stderr
+    held = _files(root)
+    assert "src/f.py" in held and f"{RECORD}/manifest.yml" in held, held
     assert _manifest(root)["landed_with_record"] is True
-    # The acceptance criteria were not committed with the code; the record commit holds them.
-    assert any(p.endswith("/acceptance-criteria.md") for p in _files(root)), _files(root)
+    assert "is not in this commit" not in done.stdout, done.stdout
 
 
 def test_a_landing_that_names_its_issue_gives_no_such_line(tmp_path):
@@ -390,14 +365,6 @@ def test_kept_out_stages_nothing_under_compass_and_names_the_land_commit(tmp_pat
     assert f"in {head}." in (root / TRAIL).read_text()
 
 
-def test_kept_out_the_finish_next_line_names_the_acceptance_criteria(tmp_path):
-    """In kept-out mode nothing stages the documents folder for the person, so
-    the `next:` line names the acceptance criteria with the code."""
-    last = _finish_next(_repo(tmp_path / "repo", compass_yml="record:\n  commit: false\n"))
-    assert re.search(r"git add -- src/f\.py docs/compass/[^ ]*-fix-f/acceptance-criteria\.md, "
-                     r"then compass ship-commit", last), last
-
-
 def test_kept_out_refuses_a_staged_record_path(tmp_path):
     """In kept-out mode the issue folder is outside the scope, so a record
     file staged by hand is refused before anything is committed."""
@@ -421,13 +388,18 @@ def test_this_repositorys_compass_yml_keeps_everything_under_compass_out(tmp_pat
                GIT_ALLOW_PROTOCOL="file", GIT_CONFIG_COUNT="1",
                GIT_CONFIG_KEY_0=f"url.{bare.as_uri()}.insteadOf",
                GIT_CONFIG_VALUE_0=remote)
-    root = _repo(tmp_path / "repo", compass_yml=settings)
+    # The person who approves is the project's owner, as in the real file.
+    root = _repo(tmp_path / "repo",
+                 compass_yml=settings.replace("owner: jed72", f"owner: {e2e.APPROVER}"))
     key = root / ".compass" / "private" / "rival-codes.yml"
     key.parent.mkdir(parents=True)
     key.write_text("rivals:\n  R1:\n    name: Zqxjvname\n")
     _fixed(root, env=env)
-    done = _ok(root, "quick-fix", "finish", "--issue", SLUG, "-m", "Fix f",
-               "--release-note", "f returns 2", *WHERE, "--", *_pytest(), env=env)
+    argv = ["quick-fix", "finish", "--issue", SLUG, "-m", "Fix f",
+            "--release-note", "f returns 2", *WHERE, "--", *_pytest()]
+    assert "Nothing is committed" in _ok(root, *argv, env=env).stdout
+    assert e2e.person_approves(root)
+    done = _ok(root, *argv, env=env)
     held = _files(root)
     assert "src/f.py" in held, held
     assert not [p for p in held if p.startswith(".compass/")], held

@@ -39,7 +39,9 @@ GLOSSARY = ROOT / "docs" / "glossary.md"
 CODE_SURFACES = ("templates", "commands", "skills", "docs", "governance",
                  "agents", "approaches", "schemas")
 
-PREFIX_RE = re.compile(r"\b([A-Z]{2,4})-(?:[A-Z]{2,}-)?\d")
+# A word that follows another word and a hyphen is the tail of a longer id, such
+# as `SHIP-APPROVAL-1` in `EV-SHIP-APPROVAL-1`, not a prefix of its own.
+PREFIX_RE = re.compile(r"(?<![A-Za-z0-9]-)\b([A-Z]{2,4})-(?:[A-Z]{2,}-)?\d")
 
 # Standards references that happen to look like Compass ids. Not vocabulary,
 # and defining them would be worse than not: the glossary would claim
@@ -261,6 +263,20 @@ def test_routing_ids_are_rp_and_kinds_are_distinct():
             )
 
 
+def _two_architecture_rules(root):
+    """The two rules that added the architecture review before 9.0.0 (the
+    shipped floors `RP-REQUIRE-003` and `RP-REQUIRE-004`), now a project's own
+    `require_evidence` rules: since ADR-099 the shipped floors add no gate on a
+    path issue."""
+    (root / "compass.yml").write_text(
+        "schema: 1\n"
+        "require_evidence:\n"
+        "  - when: {risk: [cross-cutting, critical]}\n"
+        "    add: [architecture]\n"
+        "  - when: {labels_any: [auth, payments, personal-data, migrations]}\n"
+        "    add: [architecture]\n", encoding="utf-8")
+
+
 def _probe_project(tmp_path):
     """A throwaway project with one cross-cutting issue.
 
@@ -279,6 +295,7 @@ def _probe_project(tmp_path):
         '  role: engineer\n  labels: [auth]\n', encoding="utf-8")
     shutil.copytree(ROOT / "governance", tmp_path / "governance")
     shutil.copytree(ROOT / "schemas", tmp_path / "schemas")
+    _two_architecture_rules(tmp_path)
     return tmp_path
 
 
@@ -298,11 +315,11 @@ def test_a_gate_adder_reports_its_kind_as_requirement(tmp_path):
     )
     assert r.returncode == 0, r.stdout + r.stderr
     # Asserts the id and the kind share a line, in either order.
-    gate_adder = [ln for ln in r.stdout.splitlines() if "RP-REQUIRE-003" in ln]
-    assert gate_adder, f"RP-REQUIRE-003 did not fire:\n{r.stdout}"
-    # On the four-stage path (ADR-092) the rule adds evidence the issue owes,
-    # the architecture review, so its kind is `evidence`, never `floor`.
-    assert all("evidence" in ln and "floor" not in ln for ln in gate_adder), (
+    gate_adder = [ln for ln in r.stdout.splitlines() if "RP-SETTING-1" in ln]
+    assert gate_adder, f"the project's first rule did not fire:\n{r.stdout}"
+    # A project's `require_evidence` rule adds evidence the issue owes, the
+    # architecture review, so its kind is `requirement`, never `floor`.
+    assert all("requirement" in ln and "floor" not in ln for ln in gate_adder), (
         f"a rule that only attaches a gate still reports itself as a floor:\n"
         + "\n".join(gate_adder)
     )
@@ -354,6 +371,7 @@ def test_the_rename_does_not_change_what_the_command_prints(tmp_path):
     import shutil
     shutil.copytree(ROOT / "governance", tmp_path / "governance")
     shutil.copytree(ROOT / "schemas", tmp_path / "schemas")
+    _two_architecture_rules(tmp_path)
 
     r = subprocess.run(
         [sys.executable, str(CLI), "approach", "evaluate", "--verbose", "--issue", "probe"],
@@ -366,7 +384,7 @@ def test_the_rename_does_not_change_what_the_command_prints(tmp_path):
         f"the fitness gate is no longer added on a cross-cutting change - the "
         f"rename changed behaviour:\n{out}"
     )
-    assert "RP-REQUIRE-003" in out and "RP-REQUIRE-004" in out, out
+    assert "RP-SETTING-1" in out and "RP-SETTING-2" in out, out
 
 
 def test_the_archive_is_untouched():
@@ -402,13 +420,17 @@ def test_the_archive_is_untouched():
 
 def test_follow_up_surfaces_match_the_schema():
     """The manifest has said follow_ups/outstanding/resolved since the rename."""
-    # The verification report template went in 9.0.0 (ADR-091); the ship
-    # command now teaches the tag syntax.
-    text = (ROOT / "commands" / "ship.md").read_text(encoding="utf-8")
-    assert "BF-" not in text, (
-        "commands/ship.md uses the retired follow-up id prefix")
-    assert "(follow-up: FU-" in text, (
-        "commands/ship.md does not use the live follow-up id prefix")
+    # The verification report template went in 9.0.0 (ADR-091). ADR-099 cut the
+    # Definition of Done from the ship command; the records skill teaches the
+    # follow-up id now.
+    for rel in ("commands/ship.md", "skills/evidence-gates/red-green-records.md"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert "BF-" not in text, f"{rel} uses the retired follow-up id prefix"
+    text = (ROOT / "skills" / "evidence-gates" / "red-green-records.md").read_text(
+        encoding="utf-8")
+    assert "compass follow-up add FU-<id>" in text, (
+        "skills/evidence-gates/red-green-records.md does not use the live "
+        "follow-up id prefix")
 
 
 def test_the_parser_still_reads_the_retired_tag():

@@ -46,6 +46,19 @@ def project(tmp_path):
     return root
 
 
+#: A project that asks for the outer loop of the four-layer strategy (`S17`). The
+#: strategy applies, and `controlled` autonomy waits at build and ship, only where
+#: a setting adds its records (ADR-099 decision 9).
+OUTER_LOOP = "require_evidence:\n  - when: {}\n    add: [outer-loop]\n"
+
+
+def _controlled_with_outer_loop(root):
+    """`controlled` autonomy and the outer loop, both in `compass.yml`. Its
+    settings replace `.compass/config.yml`, which is removed."""
+    (root / ".compass" / "config.yml").unlink()
+    (root / "compass.yml").write_text("schema: 1\nautonomy: controlled\n" + OUTER_LOOP)
+
+
 def _set_autonomy(root, value):
     (root / ".compass" / "config.yml").write_text(
         f"mode: enforced\nautonomy: {value}\n")
@@ -81,14 +94,18 @@ def test_au_1_balanced_is_the_default(project):
     for readings in (QUICK_FIX, FEATURE, INITIATIVE):
         assert _evaluate(project, readings)["checkpoints"] == [], readings
     _set_autonomy(project, "controlled")
+    # No record of `S17` is owed, so `controlled` waits at assess and specify.
+    assert _evaluate(project, FEATURE)["checkpoints"] == ["assess", "specify"]
+    _controlled_with_outer_loop(project)
     assert _evaluate(project, FEATURE)["checkpoints"] == ["assess", "specify", "build", "ship"]
+    (project / "compass.yml").unlink()
     _set_autonomy(project, "balanced")
     _start(project, "bigger", "contained", "medium")
     manifest = yaml.safe_load(
         (project / ".compass" / "work" / "bigger" / "manifest.yml").read_text())
     # On the four-stage path balanced autonomy lists no checkpoint for a change
     # that owes no `scenario-approval` (ADR-092 open question 7).
-    assert "definition-of-done" in manifest["evidence_required"], manifest
+    assert "definition-of-done" not in manifest["evidence_required"], manifest
     assert "stages" not in manifest, manifest
     assert manifest["checkpoints"] == [], manifest
 
@@ -126,7 +143,7 @@ def test_au_4_the_summary_stays_three_lines_and_names_the_checkpoints(project):
     # On the path balanced autonomy waits nowhere on this change, so the bigger
     # issue is assessed under controlled autonomy, which lists every stage where
     # `S17` applies (ADR-092 open question 7).
-    _set_autonomy(project, "controlled")
+    _controlled_with_outer_loop(project)
     assert _start(project, "bigger", "contained", "medium").returncode == 0
     small = _run(project, "approach", "show", "--issue", "greeting")
     big = _run(project, "approach", "show", "--issue", "bigger")

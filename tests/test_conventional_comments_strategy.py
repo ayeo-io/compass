@@ -24,11 +24,12 @@ STRATEGIES = ROOT / "governance" / "strategies.md"
 # author guessing at the rest.
 LABELS = ("issue", "suggestion", "nitpick", "question", "praise")
 
-# Where a session needs the pointer: the command whose review writes the
-# comments (the reviewer agent until 9.0.0, ADR-090), and the skill for the
-# person answering them.
+# Where a session needs the pointer: the file whose review method writes the
+# comments (the reviewer agent until 9.0.0, ADR-090; commands/ship.md until
+# ADR-099), and the skill for the person answering them.
 POINTER_SURFACES = (
-    ("commands/ship.md", ROOT / "commands" / "ship.md"),
+    ("skills/evidence-gates/review-dimensions.md",
+     ROOT / "skills" / "evidence-gates" / "review-dimensions.md"),
     ("skills/receiving-code-review/SKILL.md",
      ROOT / "skills" / "receiving-code-review" / "SKILL.md"),
 )

@@ -236,9 +236,11 @@ def test_pl_c1_strategy_states_the_order_with_four_real_pairs():
 
 def test_pl_c5_reviewer_instructions_name_the_bare_code():
     """`TRC-C5` - the reviewer is told what to look for, not just to be careful."""
-    # `commands/ship.md` carries the review the reviewer agent did until 9.0.0
-    # (ADR-090, ADR-092).
-    doc = (REPO_ROOT / "commands" / "ship.md").read_text(encoding="utf-8")
+    # The review dimensions file carries the review method the reviewer agent
+    # had until 9.0.0 (ADR-090, ADR-092); it moved there from `commands/ship.md`
+    # with ADR-099.
+    doc = (REPO_ROOT / "skills" / "evidence-gates"
+           / "review-dimensions.md").read_text(encoding="utf-8")
     # Normalise whitespace and emphasis first, because hard-wrapped prose
     # splits phrases across lines.
     low = " ".join(doc.replace("*", "").split()).lower()

@@ -12,8 +12,12 @@ Do not fake a red with a test that asserts that a **string appears in a
 file**. That is the "testing implementation, not behavior" anti-pattern in
 `anti-patterns.md`, that only looks compliant.
 
-**Declare an acceptance instead.** State what would convince a reviewer, before
-the change:
+**First look for a guard that can fail.** A regression or end-to-end test
+that fails on the base commit and passes with the change is a red. Put it in
+the change: `finish` proves it as it proves any other test.
+
+**With no such guard, declare an acceptance.** State what would convince a
+reviewer, before the change:
 
 ```
 compass acceptance start --kind validation -- promtool check rules alerts.yml

@@ -1,6 +1,6 @@
 ---
 description: Start the issue for a request, or start a spike
-argument-hint: "<the request>"
+argument-hint: "<the request> [--reassess --reason <why>]"
 allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 
@@ -44,4 +44,6 @@ feedback in the same request; add it to this one.
 5. After feedback, edit and run `finish` again, once.
 
 If you cannot state what will be true afterwards, it is a spike: follow
-`${CLAUDE_PLUGIN_ROOT}/approaches/assess-procedure.md`.
+`${CLAUDE_PLUGIN_ROOT}/approaches/assess-procedure.md`. Follow it also for
+`/compass:assess --reassess --reason "<why>"`, when an issue outgrew its
+assessment: it logs the reason in the manifest's `reassessments:`.

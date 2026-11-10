@@ -20,7 +20,8 @@ feedback in the same request; add it to this one.
 
    Add `--labels <label,...>` only for `auth`, `payments`, `personal-data`,
    `migrations` or a label the project adds, and `--risk "critical - <why>"`
-   only for critical risk.
+   only for critical risk. If it prints a `created:` line naming `.compass/`
+   or `docs/compass/`, report it to the person.
 
 2. Only with one of those: write every scenario in the
    `acceptance-criteria.md` that `start` names, each in the form of the first
@@ -42,5 +43,9 @@ feedback in the same request; add it to this one.
    you are on the default one. Do not check that commit again.
 
 5. After feedback, edit and run `finish` again, once.
+
+Stop and re-assess when the change outgrows the request, three fixes in a
+row did not hold, or a scenario needs a new DSL method: run
+`/compass:assess --reassess`.
 
 `compass ship-commit` also commits a checked change, on the branch you are on.

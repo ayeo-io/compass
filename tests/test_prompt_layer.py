@@ -319,6 +319,7 @@ def test_trc_f1_a_quick_fix_reads_one_command():
 NOT_ON_THE_LIGHT_PATH = {
     "next": "the quick-fix verbs print the same next: line compass next prints, so a quick fix does not call it",
     "check": "compass quick-fix finish runs compass check itself and prints the lines that fail; ship.md names it only to explain a failing check",
+    "scenario": "go.md records a de-scoped failure mode with compass scenario descope when it writes scenarios; compass quick-fix finish reads the scenarios from acceptance-criteria.md",
 }
 
 #: The path commands the quick-fix command inlines (ADR-092): assess, the

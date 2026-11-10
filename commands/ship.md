@@ -44,6 +44,64 @@ commits on the branch and asks again, and `compass check` fails
 `ship-approval-present` until a person approves the new state or the review
 of the merged pull request is read. A `G5` sign-off is not a ship approval.
 
+## Evidence a project adds
+
+When the project's `require_evidence` adds a review, `finish` prints one
+`next:` line for each item it owes. Follow the item's checklist in
+`skills/evidence-gates/review-dimensions.md`, write the output to a file,
+register it and pass the gate with it:
+
+```
+compass evidence add <EV-id> --type <type> --path <file>
+compass gate pass <gate> --evidence <EV-id>
+```
+
+A gate takes evidence ids, not file paths. Then run the same `finish` again.
+
+If the issue is itself a sweep, rename or cleanup that touches many files,
+have an agent that has not seen the change check it, not its author:
+`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` describes the practice,
+fresh eyes on a sweep (`S9`; an unmigrated 5.x project is refused until it
+migrates).
+
+## The stage 2 and 3 reviews
+
+On an issue the four-layer acceptance strategy (`S17`) applies to, the end
+of build is the end of stage 2 of the `atdd` skill, and the end of ship is
+the end of stage 3. Wait for approval only if the stage (`build` or `ship`)
+is in the manifest's `checkpoints:`. The three commands of each hand-off:
+
+```
+compass evidence request --checkpoint build
+compass evidence approve --checkpoint build --approver <name> --role <role>
+compass issue checkpoint add build --outcome skipped --by builder
+
+compass evidence request --checkpoint ship
+compass evidence approve --checkpoint ship --approver <name> --role <role>
+compass issue checkpoint add ship --outcome skipped --by verifier
+```
+
+- If the stage is listed, ask with the first command and stop. The person
+  types `/compass:approve <n>`, or runs the second command at a terminal.
+- If it is not listed and `compass next` names the review, show the
+  hand-off, say you are going on and name the autonomy setting, and record
+  it with the third command.
+
+## Hand-off
+
+When `finish` asks for the ship approval, hand the result to the person:
+what changed, the test command and its result, and each mode in the
+manifest's `failure_modes_descoped` with its reason, or "None": a mode named
+at specify must not disappear before ship. Ask them to check the change
+against the scenarios. After the approval, run the same `finish` again: it
+commits.
+
+## Voice
+
+The hand-off is evidence a person reads, not a status board. Say what passed
+and what it means - never that the issue is "ready for the next command."
+See `skills/compass-runtime/writing-voice.md`.
+
 ## Spike note
 
 On a spike, ship is **conclude, then graduate or discard** - never "merge to

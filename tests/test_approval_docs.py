@@ -39,10 +39,7 @@ def test_e4_docs_name_prompt_path():
 
 
 def test_e4_contract_gives_the_delegated_approval_command():
-    """The contract once gave the command an agent runs to approve under a
-    delegation. ADR-099 cut it: the contract says only that an agent approves
-    under a delegation naming it, and no command or skill file gives the form
-    (`commands/revoke.md` names `compass evidence approve --delegated` only to
-    stop it)."""
+    """The contract gives the command an agent runs to approve under a
+    delegation naming it."""
     contract = _flat("compass-contract.md")
     assert "compass evidence approve --delegated --as" in contract

@@ -44,10 +44,8 @@ RULES = {
     "approvals": "**Approvals.**",
 }
 
-# Rules the contract held before ADR-099 cut it to one screen (275 words) and
-# that no sentence of it carries now. ADR-099 and `lean-behavior.md` section 11
-# record the cut. Each pin stays so the loss is visible: it fails until the
-# owner puts the rule back or accepts the loss.
+# Rules the contract held before ADR-099 cut it to 275 words. The cut dropped
+# them, and each is back in its shortest form (342 words).
 LOST_RULES = {
     "guardrails hard": "**Guardrails are hard. Strategies are soft.**",
     "evidence heading": "**Evidence, not assertion.**",
@@ -93,7 +91,10 @@ NEW_RULES = {
 # session writes to a person depends on it, so it must be resident.
 # Lowered to 2,200 by #358, which cut the contract to 2,191 characters.
 # Lowered to 1,750 by ADR-099, which cut the contract to 1,697 characters.
-CONTRACT_TARGET = 1750
+# Moved to 2,250 when the rules that cut dropped went back, each in its
+# shortest form: 2,213 characters and 342 words measured, rounded up to the
+# next 50.
+CONTRACT_TARGET = 2250
 
 # Set from the rewrite of 2026-10-04 (2,581, 1,476, 1,436 and 1,216
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,
@@ -251,10 +252,10 @@ def test_contract_states_lint_fix_rule():
 
 
 def test_contract_states_staging_checks_before_a_commit():
-    """The contract once told the agent to check the staged list and commit
-    authors, and to stop when something was staged by mistake. ADR-099 moved
-    staging into `finish`, and no sentence of the contract carries those two
-    rules now."""
+    """ADR-099 moved staging into `finish`. The two older rules hold for any
+    other commit: check the staged list and commit authors, and stop when
+    something is staged by mistake."""
+    assert "For any other commit, check the staged list" in _contract_flat()
     text = _contract_flat()
     assert "check the staged list and commit authors" in text
     assert ("If something is staged by mistake, say so and stop; "
@@ -262,9 +263,8 @@ def test_contract_states_staging_checks_before_a_commit():
 
 
 def test_contract_states_id_and_header_rule():
-    """The contract once kept the heading and named the `atdd` skill that
-    holds the rule. ADR-099 cut the pointer; the skill still holds the
-    rule."""
+    """The contract keeps the heading and names the `atdd` skill that holds
+    the rule."""
     text = _contract_flat()
     assert "**Settle edge cases before scenarios**" in text
     assert "(`atdd` skill)" in text
@@ -324,7 +324,7 @@ def test_trc_026():
     """The `language` line is added by the session-start hook, so the shipped
     contract does not grow (issue `language-key-and-us-english`)."""
     text = CONTRACT.read_text(encoding="utf-8")
-    assert len(text) <= 1750
-    assert CONTRACT_TARGET == 1750
+    assert len(text) <= 2250
+    assert CONTRACT_TARGET == 2250
     assert "Write all prose in" not in text
     warn_if_over("compass-contract.md", len(text), CONTRACT_TARGET, "characters")

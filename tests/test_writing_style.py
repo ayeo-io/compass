@@ -950,10 +950,6 @@ _register(Rule(
             "(PRINCIPLE), and the audit's own per-file entry for this file "
             "lists it under \"Pinned\", to keep as it stands."),
         Exemption(
-            "tests/test_spine_records_the_truth.py", "RP-REQUIRE-003 adds",
-            "the same rule-id false match as RP-REQUIRE-003 above, for the "
-            "fitness-check floor this test's fixture triggers."),
-        Exemption(
             "cli/compass_pkg/routing.py",
             "calling it a floor is the same conflation the RP-REQUIRE ids "
             "were",
@@ -967,14 +963,11 @@ _register(Rule(
             "RP-REQUIRE-003 is a real rule id, quoted as the literal "
             "printed text this comment explains."),
         Exemption(
-            "commands/quick-fix.md", "--verified-by",
+            "tests/test_acceptance_verb.py", "--verified-by",
             "a real CLI flag (`cli/compass:246,258`, `dest=\"verified_by\"`) "
             "- the match lands mid-flag-name on the \"verified\" substring, "
-            "not the standalone verb the word table means to catch."),
-        Exemption(
-            "tests/test_acceptance_verb.py", "--verified-by",
-            "the same real CLI flag false match as commands/quick-fix.md "
-            "above; found while fixing batch 7, not by the audit."),
+            "not the standalone verb the word table means to catch; found "
+            "while fixing batch 7, not by the audit."),
         Exemption(
             "skills/tdd-discipline/no-natural-red.md", "terraform validate",
             "a third-party command's real name (Terraform's own CLI verb), "
@@ -1146,14 +1139,6 @@ _register(Rule(
         # does not sit immediately before the match.
         Exemption("architecture/decisions/README.md",
                    "RP-REQUIRE-001/002, verify.analyze",
-                   "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("tests/test_verify_fitness_route_promotion.py",
-                   "When cross-cutting fires RP-REQUIRE-003, it appears in "
-                   "fired_guardrails.",
-                   "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("tests/test_verify_fitness_route_promotion.py",
-                   "When touches fires RP-REQUIRE-004, it appears in "
-                   "fired_guardrails.",
                    "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("governance/strategies-rationale.md",
                    "[RP-REQUIRE-003] requirement:",
@@ -1851,11 +1836,6 @@ _register(Rule(
             "the real evidence filename `compass tdd-red` wrote for this "
             "issue's one real scenario, inside backticks - nesting a "
             "second backtick span inside it would break the filename."),
-        Exemption(
-            "docs/quickstart.md", "`--scenario TRC-x`",
-            "a placeholder scenario id, the same shape as `<test cmd>` "
-            "elsewhere on this page - not a real code pointing at meaning "
-            "kept outside the file"),
         Exemption(
             "templates/devlog.md", "green-TRC-3.json",
             "the placeholder evidence filename `compass tdd-green` writes "

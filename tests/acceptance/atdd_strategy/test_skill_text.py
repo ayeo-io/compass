@@ -214,10 +214,6 @@ def test_trc_005_the_skills_describe_one_chain(skill):
     text = _flat(_text(SKILLS / skill / "SKILL.md"))
     assert "scenario, dsl, driver, unit tests" in text, (
         f"{skill} does not describe the chain in order")
-    if skill == "tdd-discipline":
-        # ADR-099 rewrote the skill to teach the red-first cycle alone. The
-        # specify and build rules of the chain live in `atdd`.
-        return
     assert ("specify settles each implied failure mode with the person or "
             "descopes it") in text, f"{skill} lacks the specify rule"
     assert "build adds no scenario the specification does not state" in text, (

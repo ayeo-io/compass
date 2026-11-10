@@ -52,3 +52,31 @@ why and how to clear it.
 
 If you cannot state what will be true afterwards, it is a spike: run
 `/compass:assess`.
+
+## When you write scenarios
+
+- When the labels include `public-api`, or the change touches a service in
+  `architecture/relations.md` or a `lens_trigger_tag` in
+  `architecture/invariants.yml`, take the architect's perspective first, and
+  write `architecture-notes.md` beside the acceptance criteria before you
+  write the scenarios.
+- Ask which input classes and failure modes the intent implies that no
+  scenario covers. Each becomes a scenario or is recorded with
+  `compass scenario descope "<mode>" --reason "<why>"`.
+- Scan the criteria for placeholders, orphan intents, untestable Thens and
+  ambiguous quantifiers, and fix each in place. This self-review is not
+  repeated later.
+
+## Before you edit shared code
+
+Run the existing suite and see it pass: that run is the baseline of the
+`regression-baseline` strategy (`S6`). Run the suite again after the change.
+
+## Hand-off
+
+When you wrote scenarios, hand `acceptance-criteria.md` to the person for a
+cold read. Ask them to look for intent fidelity, untestable Thens, a missing
+failure mode and ambiguous quantifiers. The manifest's `checkpoints:` lists
+the stages that wait for a person. Where the `specify` checkpoint is
+listed, wait for approval; build starts after it. Otherwise say you are going
+on, and name the autonomy setting.

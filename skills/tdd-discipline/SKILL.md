@@ -10,7 +10,8 @@ description: The red-green-refactor cycle, and what to do with no natural failin
 - **The guardrail is tested-before-ship.** Every change lands with a test
   that fails without it. `compass quick-fix finish` checks it: the change's
   tests must fail on a copy of the base commit and pass on the working tree.
-  It never adapts.
+  It never adapts: the size of a change sets how much its tests cover, never
+  whether a test exists.
 - **TDD is the strategy** - red-before-green, the default way to meet that
   guardrail. Compass does not check the order of the work: the red that
   `finish` records shows that the tests fail without the change, not that
@@ -63,6 +64,12 @@ the step was too big.
   skill spells it out: scenario, DSL, driver, unit tests. The scenario runs
   through the DSL and a driver as the outer loop; the code behind the driver
   is built here, one unit test at a time.
+- Build adds no scenario the specification does not state. Specify settles
+  each implied failure mode with the person or descopes it, so a case you
+  think is missing goes back to the person, not into the suite.
+- Existing code whose behavior is written down nowhere does not stop a small
+  change: before you edit it, pin with a test what the code does now where
+  the change touches it.
 - One red at a time. A wall of failing tests written up front is not TDD; it is
   a test plan. Take them one behavior at a time so each green is a real,
   isolated step.

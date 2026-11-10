@@ -179,7 +179,7 @@ def test_qfs_176_no_skill_shares_a_command_name():
 
 
 #: Each rule the skill held, with the file that holds it now and a phrase it
-#: must carry. The command is 244 words (ADR-099): the session no longer scores
+#: must carry. The command is under 300 words (ADR-099): the session no longer scores
 #: risk, familiarity or size, so the rubric holds those rules, and the
 #: test-first rules are in the `tdd-discipline` skill.
 RULES = Path("approaches") / "rubric.md"
@@ -214,8 +214,9 @@ RULES_NOW_HELD_ELSEWHERE = {
         NO_RED, "compass acceptance start --kind validation"),
 }
 
-#: Rules no file carries now. `RULES_NOW_HELD_ELSEWHERE` leaves them out, and
-#: the test below fails on each until a file carries it again.
+#: Rules that ADR-099 dropped with the command's long form. The `tdd-discipline`
+#: skill holds the first two and its `no-natural-red.md` the third; the test
+#: below reads every command, skill and approach file for each phrase.
 RULES_NO_FILE_CARRIES = {
     "familiarity: brownfield-unmapped does not stop a quick fix":
         "pin with a test what the code does now",

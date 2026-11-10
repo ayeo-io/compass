@@ -57,6 +57,8 @@ artifact communicate a decision, or does it narrate the pipeline? Run
 The calibration sample it is read
 against is named in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` (`S8`; an
 unmigrated 5.x project is refused until it migrates).
+Flag a short code with no plain words in front of it: the fix is to put the
+meaning first and the code in brackets, never to delete the code.
 
 **claims** - When the manifest lists claims: does every
 public claim trace to a *passing* scenario? Evidence is the manifest's
@@ -78,3 +80,23 @@ Two questions worth asking of every claim, because both failures showed up in
 one release: does it say what it counted **and what it did not**, and would it
 still be true if someone quoted it on its own six months from now?
 
+## How the review is done
+
+These rules hold on every dimension.
+
+- **Patterns.** Where the design names patterns, check them against the code
+  (the named-patterns strategy, `S16`). It is advice: never fail a gate on it.
+- **Comments.** Open every comment with a plain-word label - **issue**,
+  **suggestion**, **nitpick**, **question**, **praise** (the
+  conventional-comments strategy, `S12`) - and label honestly.
+- **A disputed quantity.** Where a review comment and the author disagree
+  about a quantity - how many call sites, how much output, how often it
+  fires - measure the number and report it before defending either position
+  (the measure-before-arguing strategy, `S11`).
+- **Settled decisions.** Before you recommend a rename or a reversal, read
+  `governance/decisions/` if the project has one. A point that collides with
+  an entry is "settled by <path>", not a defect.
+- **Review rules.** If the project has `governance/review-rules.yml`, run
+  `compass review-rule list --changed-files <paths>` and apply the rules it
+  prints. Report a breach under the RR- id it breaks, and do not flag what a
+  rule's `allowed` list permits.

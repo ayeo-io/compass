@@ -35,7 +35,10 @@ def test_go_is_a_command_that_assesses_shows_the_view_and_continues():
                  "compass evidence request --checkpoint", "/compass:approve",
                  "/compass:assess", "`next:`"):
         assert step in text, step
-    assert len(text.split()) < 350, len(text.split())
+    # 350 when ADR-099 cut the command to the two commands alone. The specify
+    # rules, the baseline and the hand-off went back in 495 words; before
+    # ADR-099 the limit was 700.
+    assert len(text.split()) < 500, len(text.split())
 
 
 # --- ONE-2: the three-line decision view ----------------------------------------

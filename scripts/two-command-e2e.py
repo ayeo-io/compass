@@ -16,7 +16,7 @@ commands and Compass keeps the record. For an unlabeled change and a
 5. runs the sdd-bench record checker on the result and prints its output.
 
 It also sends the pre-tool hook a code edit before and after the `specify`
-approval of the labeled case, to show the hook refuses the first.
+approval of the case with a label, to show the hook refuses the first.
 
 Usage:
   python3 scripts/two-command-e2e.py [--checker PATH] [--keep]
@@ -29,7 +29,7 @@ commits it and asks for a new approval, `compass check` fails on the ship
 approval, the person approves the new state, and `compass check` passes with
 no further command from the agent (ADR-099 decision 6).
 
-A fourth case does the same for a labeled change, where the `G5` sign-off is
+A fourth case does the same for a change with a label, where the `G5` sign-off is
 asked for again too.
 
 Exit status: 0 when every record passes all six checks of the checker and each

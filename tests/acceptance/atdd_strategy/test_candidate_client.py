@@ -321,7 +321,8 @@ def test_quick_fix_finish_on_the_inner_loop_writes_neither(tmp_path):
     # in-scope quick fix needs an outer-loop green.
     code, out, err = issue.run(*FINISH, "--loop", "inner", "--candidate", "local",
                                "--client", "cli", "--", *QUICK_TEST)
-    assert code == 2 and "outer-loop-recorded" in out + err, out + err
+    # `finish` reports a failing `compass check` on stdout and exits 1 (ADR-099).
+    assert code == 1 and "outer-loop-recorded" in out + err, out + err
     record = _record(issue, "evidence/green-TRC-001.json")
     assert record["loop"] == "inner", record
     assert not {"candidate", "candidate_kind", "client"} & set(record), record

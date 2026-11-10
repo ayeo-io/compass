@@ -635,6 +635,10 @@ def _finished(root, specify=False):
     (root / "src" / "new.py").write_text("def f():\n    return 2\n")
     (root / "tests" / "test_one.py").write_text(
         "from src.new import f\n\n\ndef test_one():\n    assert f() == 2\n")
+    # This issue was not opened by `compass quick-fix start`, so it has no start
+    # record, and `finish` refuses an untracked file it cannot place. Staged, the
+    # two files are the change.
+    git(root, "add", "src/new.py", "tests/test_one.py")
     done = run(root, "quick-fix", "finish", "--issue", SLUG, "--no-commit", "-m", "Ship it",
                "--release-note", RELEASE_NOTE, "--", sys.executable, "-m", "pytest", "-q",
                "-p", "no:cacheprovider", "tests/test_one.py")
@@ -643,22 +647,15 @@ def _finished(root, specify=False):
         body = manifest(root)
         body["checkpoint_outcomes"] = []
         write_manifest(root, body)
-    git(root, "add", "src/new.py", "tests/test_one.py")
 
 
 def _tree(root):
-    """The bytes of every file under .compass and docs/compass. The landing runs
-    `compass check` first (ADR-099), which stamps the time of each check it runs
-    in `results.yml`; the stamps are masked and nothing else may change."""
-    import re
+    """The bytes of every file under .compass and docs/compass."""
     found = {}
     for top in (".compass", "docs/compass"):
         for path in sorted((Path(root) / top).rglob("*")):
             if path.is_file():
-                data = path.read_bytes()
-                if path.name == "results.yml":
-                    data = re.sub(rb"(\n\s+at: )'[^']*'", rb"\1'<time>'", data)
-                found[str(path.relative_to(root))] = data
+                found[str(path.relative_to(root))] = path.read_bytes()
     return found
 
 

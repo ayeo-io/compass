@@ -608,9 +608,11 @@ def _emit_check(run, args):
     # marker does not cover. An issue with no generation writes nothing.
     from compass_pkg import effective
     # A refused check did not run, so it has no result to record.
-    effective.record_check_results(
-        run.task_dir, _verdicts([r for r in run.results if r[1] not in run.refused]),
-        manifest=run.task)
+    # A caller that only reads the verdicts (`no_record`) leaves the file as it was.
+    if not getattr(args, "no_record", False):
+        effective.record_check_results(
+            run.task_dir, _verdicts([r for r in run.results if r[1] not in run.refused]),
+            manifest=run.task)
 
     mark_handled()
     mode = resolve_mode(args)

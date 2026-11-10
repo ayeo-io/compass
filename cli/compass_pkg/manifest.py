@@ -284,7 +284,7 @@ def _land_commit(args):
             if refused:
                 raise CompassError(refused)
         if not files and _git(["diff", "--cached", "--quiet"], cwd).returncode == 0:
-            skip = (".compass/", lean.doc_prefix(lean_dir))
+            skip = (".compass/work/", lean.doc_prefix(lean_dir))
             files = [p for p in lean.traced_paths(lean_task, cwd) if not p.startswith(skip)]
     if not msg or not str(msg).strip():
         raise CompassError('compass ship-commit: give the commit message with -m "<message>".')

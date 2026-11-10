@@ -54,7 +54,7 @@ import os
 import shlex
 
 from compass_pkg import next_line, path_stages, red_first, status_words
-from compass_pkg.stable_ids import (APPROACH_SPIKE, GATE_VERIFY_CORRECTNESS,
+from compass_pkg.stable_ids import (APPROACH_SPIKE, GATE_G5, GATE_VERIFY_CORRECTNESS,
                                     GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
                                     MODE_THOROUGH, REMOVED_GATE_IDS,
                                     STAGE_SPECIFY, STAGE_VERIFY)
@@ -113,7 +113,7 @@ def _first_match(task, task_dir, done):
             from compass_pkg import request_link
             return request_link.command(task_dir)
         if path_stages.is_path_issue(task):
-            return _record_path(task, task_dir)
+            return _record_path(task, task_dir, done)
         for row in (_specify, _build, _ship):
             command = row(task, task_dir)
             if command:
@@ -137,18 +137,51 @@ def _first_match(task, task_dir, done):
 FINISH_RECORD = 'compass quick-fix finish -m "<commit message>" -- <test command>'
 
 
-def _record_path(task, task_dir):
+def finish_loop(task, task_dir, given=None):
+    """The loop `compass quick-fix finish` records its green on: the one given,
+    else the outer loop where the issue owes `outer-loop` (a project setting
+    adds it, ADR-099 decision 9), else the inner loop."""
+    if given:
+        return given
+    return "outer" if _owed(task, task_dir, "outer-loop") else "inner"
+
+
+def finish_command(task, task_dir):
+    """`compass quick-fix finish` as the session must type it. Where the green
+    is the outer loop's and `S17` applies, an outer-loop green with no
+    candidate and client is refused (ADR-085), so the line names them."""
+    from compass_pkg.tdd_green import strategy_applies
+    if task_dir and finish_loop(task, task_dir) == "outer" and strategy_applies(task_dir):
+        return FINISH_RECORD.replace(
+            " -- ", f" --loop outer --candidate <build id>|local "
+                    f"--client {'|'.join(_CLIENTS)} -- ")
+    return FINISH_RECORD
+
+
+def _record_path(task, task_dir, done=None):
     """The next step of a delivery issue (ADR-099): the scenario approval where
     it is owed, then the tests and the code, then `compass quick-fix finish`,
-    then the approvals a person owes, then `compass ship-commit`. No row names
-    `tdd-red`, `tdd-green`, `scenario add`, `changed-file add`, `evidence add`
-    or `gate pass`: `finish` does their work."""
+    then what a project's settings add (a gate of its own, a listed
+    checkpoint), then the approvals a person owes, then `compass ship-commit`.
+    No row names `tdd-red`, `tdd-green`, `scenario add` or `changed-file add`,
+    or `gate pass` for one of the three gates: `finish` does their work."""
     from compass_pkg import lean
     owed = lean.specify_owed(task, task_dir) if task_dir else None
     if owed:
         return owed
-    if _pending_gate(task) or not greens(task):
-        return f"write the tests and the code, then {FINISH_RECORD}"
+    finish = finish_command(task, task_dir)
+    three_pending = any(g.get("id") in IMMOVABLE_GATES and g.get("status") != "pass"
+                        for g in _dicts(task.get("gates")))
+    if three_pending or not greens(task):
+        return f"write the tests and the code, then {finish}"
+    added = owed_commands(task, task_dir, IMMOVABLE_GATES, approvals=False) if task_dir \
+        else [f"compass gate pass {g} --evidence <EV-id>"
+              for g in [_pending_gate(task, skip=IMMOVABLE_GATES)] if g]
+    if added:
+        return added[0]
+    stage = _checkpoint_waiting(task, done)
+    if stage:
+        return f"compass evidence request --checkpoint {stage}, then stop for /compass:approve"
     waiting = _waiting_approvals(task, task_dir) if task_dir else []
     if waiting:
         asks = " and ".join(f"/compass:approve {n} ({what})" for n, what in waiting)
@@ -158,8 +191,8 @@ def _record_path(task, task_dir):
         return (f"stop and ask the person to type {asks}. After the approval, run the same "
                 "finish again: it commits")
     if _owed(task, task_dir, "human-approval") and not _human_approval(task, task_dir):
-        return f"{FINISH_RECORD}, which asks for the `G5` sign-off"
-    return (f"{FINISH_RECORD} (it commits), or compass ship-commit on the branch the "
+        return f"{finish}, which asks for the `G5` sign-off"
+    return (f"{finish} (it commits), or compass ship-commit on the branch the "
             "person names")
 
 
@@ -169,9 +202,10 @@ def _waiting_approvals(task, task_dir):
     person's terminal stays pending, so a request counts only while `compass
     check` does not pass its approval."""
     from compass_pkg import approval_requests, ship_approval
-    subjects = {("guardrail", "G5"): "the `G5` sign-off", ("ship", None): "the ship approval"}
+    subjects = {("guardrail", GATE_G5): f"the `{GATE_G5}` sign-off",
+                ("ship", None): "the ship approval"}
     if not (_owed(task, task_dir, "human-approval") and not _human_approval(task, task_dir)):
-        subjects.pop(("guardrail", "G5"))
+        subjects.pop(("guardrail", GATE_G5))
     if not ship_approval.owed(task) or \
             ship_approval._check_ship_approval_present(task, task_dir)[0] is True:
         subjects.pop(("ship", None))

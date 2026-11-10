@@ -120,7 +120,10 @@ def test_a_project_setting_leaves_the_requirement_rows_empty_for_a_medium_change
     spec = _spec(repo).read_text()
     for concern in CONCERNS:
         assert f"| {concern} | | |" in spec, concern
-    assert result.stdout.splitlines()[-1] == f"next: {WRITE}"
+    # The setting adds the outer loop too, so the line names the loop and the
+    # candidate and client an outer-loop green needs (ADR-085).
+    assert result.stdout.splitlines()[-1] == "next: " + WRITE.replace(
+        " -- ", " --loop outer --candidate <build id>|local --client api|web|cli -- ")
     checked = _run(repo, "check", "--issue", SLUG, "--verbose")
     assert checked.returncode != 0
     assert '"performance" has neither a scenario nor a reason' in checked.stdout

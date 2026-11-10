@@ -648,9 +648,11 @@ def test_sjs2_a_differently_split_command_is_not_reused(repo):
     assert second.returncode != 0, second.stdout
 
 
-def test_sjs5_a_fix_the_agent_committed_by_hand_is_traced_and_lands(repo):
-    """When the agent committed the fix itself, `finish` reads the change as the
-    difference from the base commit, so the hand commit is still the change."""
+def test_sjs5_a_fix_the_agent_committed_by_hand_lands_once_traced(repo):
+    """When the agent committed the fix itself, `finish` says so and takes the
+    file once the agent traces it: a committed file is traced by the agent,
+    never by finish on its own, because a commit after `start` may be another
+    person's (`gdh2`)."""
     slug = "greet-precommitted"
     (repo / ".gitignore").write_text(".compass/\ndocs/\n")
     _git(repo, "add", ".gitignore")
@@ -658,11 +660,16 @@ def test_sjs5_a_fix_the_agent_committed_by_hand_is_traced_and_lands(repo):
     _ready_to_finish(repo, slug)
     _git(repo, "add", "data/greeting.txt")
     _git(repo, "commit", "-q", "-m", "the fix, committed by hand")
+    refused = _finish(repo, slug)
+    assert refused.returncode != 0, refused.stdout
+    assert "committed by hand" in refused.stderr and "data/greeting.txt" in refused.stderr
+    traced = _run(repo, "changed-file", "add", "data/greeting.txt",
+                  "--issue", slug, "--scenario", "TRC-001")
+    assert traced.returncode == 0, traced.stderr
     finish = _land(repo, slug)
     assert finish.returncode == 0, finish.stdout + finish.stderr
     traced = {cf["path"] for cf in _manifest(repo, slug)["changed_files"]}
     assert "data/greeting.txt" in traced, traced
-    assert "files" in finish.stdout or "commit" in finish.stdout
 
 
 def test_sjs5_a_name_with_a_control_character_is_shown_quoted(repo):
@@ -757,41 +764,39 @@ def test_gdh1_finish_refuses_an_edited_green(repo):
     assert _git(repo, "rev-parse", "HEAD") == head_before
 
 
-def test_gdh2_finish_reads_a_commit_made_after_start_as_part_of_the_change(repo):
-    """`finish` reads the change as the difference from the base commit
-    (ADR-099 decision 3), so a commit another person makes after `start` is in
-    it. It is traced and the digest of the change covers it, so the approval
-    names it. `finish` commits none of it again, as it is committed already."""
+def test_gdh2_finish_does_not_trace_someone_elses_commit(repo):
+    """A commit another person makes after `start` is not the change's:
+    finish must not trace it, even though it is already committed."""
     slug = "greet-others"
     _ready_to_finish(repo, slug)
     (repo / "other.py").write_text("theirs = 1\n")
     _git(repo, "add", "other.py")
     _git(repo, "commit", "-q", "-m", "someone else's change")
-    head_before = _git(repo, "rev-parse", "HEAD")
 
-    finish = _land(repo, slug)
+    finish = _finish(repo, slug)
     assert finish.returncode == 0, finish.stdout + finish.stderr
     traced = {cf["path"] for cf in _manifest(repo, slug)["changed_files"]}
-    assert "other.py" in traced, traced
-    assert "other.py" not in _files_in_head(repo)
-    assert _git(repo, "rev-parse", "HEAD~1") == head_before
+    assert "other.py" not in traced, traced
 
 
 # --- QFO-5 ---------------------------------------------------------------
 
 def test_qfo5_finish_refuses_when_check_fails(repo):
     slug = "greet-ghost"
-    # No request is recorded, so `compass check` fails `request-recorded`; no
-    # person can clear that check, so `finish` refuses.
-    _ready_to_finish(repo, slug, request=False)
+    _ready_to_finish(repo, slug)
+    manifest = _manifest(repo, slug)
+    # A scenario with no intent: the green passes, and `compass check` fails.
+    # (`finish` writes the traces itself, so a wrong trace cannot be planted.)
+    manifest["scenarios"][0]["intent"] = ""
+    _save_manifest(repo, slug, manifest)
     head_before = _git(repo, "rev-parse", "HEAD")
 
     finish = _finish(repo, slug)
     assert finish.returncode == 1, finish.stdout + finish.stderr
     heard = finish.stdout + finish.stderr
-    assert "`compass check`" in heard, heard
-    assert "FAIL request-recorded" in heard, heard
+    assert "`compass check` fails" in heard, heard
     assert "Traceback" not in heard
+    assert set(_gate_statuses(repo, slug).values()) == {"pending"}
     assert _git(repo, "rev-parse", "HEAD") == head_before
 
 
@@ -937,12 +942,17 @@ def test_qfg1_finish_after_no_commit_reuses_the_green_and_commits(repo):
 
 def test_qfg1_finish_succeeds_after_a_failed_check_is_fixed(repo):
     # A first call records a green and then fails at `compass check` for a
-    # reason outside the source tree - no request is recorded. Fixing the record
+    # reason outside the source tree - the scenario names no intent (a missing
+    # request would not do: it is not a stop, #356). Fixing the record
     # and calling `finish` again, with the same command on the same tree, must
     # reuse the green rather than refuse it as a rerun; a third call with
     # nothing changed must succeed the same way.
     slug = "greet-badtrace"
-    _ready_to_finish(repo, slug, request=False)
+    _ready_to_finish(repo, slug)
+    manifest = _manifest(repo, slug)
+    intent = manifest["scenarios"][0]["intent"]
+    manifest["scenarios"][0]["intent"] = ""
+    _save_manifest(repo, slug, manifest)
     head_before = _git(repo, "rev-parse", "HEAD")
 
     first = _finish(repo, slug, "--no-commit")
@@ -950,9 +960,9 @@ def test_qfg1_finish_succeeds_after_a_failed_check_is_fixed(repo):
     assert "`compass check`" in (first.stdout + first.stderr)
     assert _git(repo, "rev-parse", "HEAD") == head_before
 
-    linked = _run(repo, "issue", "link", "set", "--issue", slug, "--request",
-                  "https://example.com/requests/" + slug, "--requester", "Test fixture")
-    assert linked.returncode == 0, linked.stdout + linked.stderr
+    manifest = _manifest(repo, slug)
+    manifest["scenarios"][0]["intent"] = intent
+    _save_manifest(repo, slug, manifest)
 
     second = _finish(repo, slug, "--no-commit")
     assert second.returncode == 0, second.stdout + second.stderr

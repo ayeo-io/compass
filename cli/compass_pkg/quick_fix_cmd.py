@@ -83,8 +83,8 @@ def register(sub, issue_arg):
     # default. A value given is recorded with its reason.
     st.add_argument("--risk", default="contained - not rated at start",
                     metavar="VALUE - REASON",
-                    help="risk value and its reason (optional; critical brings a person's "
-                         "approval of the scenarios before code)")
+                    help="risk value and its reason (optional; critical: a person "
+                         "approves the scenarios before code)")
     st.add_argument("--familiarity", default="brownfield-mapped - not rated at start",
                     metavar="VALUE - REASON", help="familiarity value and its reason (optional)")
     st.add_argument("--size", default="small - not rated at start",
@@ -95,10 +95,9 @@ def register(sub, issue_arg):
                     help="urgency value and its reason; 'live-defect - <reason>' is the "
                          "hotfix setting")
     st.add_argument("--labels", default="", metavar="TAG[,TAG...]",
-                    help="domain tags the change touches, comma-separated - "
-                         "auth, payments, personal-data, migrations or a label of the "
-                         "project's signoff_labels bring a person's approval of the "
-                         "scenarios before code and the `G5` sign-off (default: none)")
+                    help="domain tags, comma-separated; for auth, payments, "
+                         "personal-data, migrations or a signoff_labels label a person "
+                         "approves the scenarios before code and gives the `G5` sign-off")
     st.add_argument("--intent", required=True,
                     help="the intent sentence this change serves (recorded as INT-1)")
     st.add_argument("--scenario", default=None,
@@ -264,6 +263,8 @@ def cmd_quick_fix_start(args):
     created_project, _ = ensure_initialised(
         project_root, by="compass quick-fix start")
     created_dirs = [".compass/"] if created_project else []
+    docs_root = os.path.join(project_root, "docs", "compass")
+    had_docs = os.path.isdir(docs_root)
 
     # The parent is checked before anything is written, so a mistyped one
     # leaves no half-made issue behind.
@@ -288,11 +289,13 @@ def cmd_quick_fix_start(args):
         from compass_pkg.session_lease import SESSION_ENV, record as lease
         lease(os.path.join(project_root, ".compass"),
               os.environ.get(SESSION_ENV, ""), held_slug)
-        from compass_pkg.next_step import FINISH_RECORD
+        from compass_pkg.next_step import finish_command
+        held_dir = os.path.join(project_root, ".compass", "work", held_slug)
+        held_task, _ = load_manifest(held_dir)
         print(f"compass quick-fix start: this request already has the issue '{held_slug}'. "
               f"No new issue was made; '{held_slug}' is the current issue again.")
-        print(f"next: write the tests and the code, then {FINISH_RECORD} (it replaces the "
-              f"records and commits)")
+        print(f"next: write the tests and the code, then "
+              f"{finish_command(held_task, held_dir)} (it replaces the records and commits)")
         return 0
 
     # One request is one issue: 5 of 12 measured sessions opened a second
@@ -425,6 +428,8 @@ def cmd_quick_fix_start(args):
     decisions = settled(project_root)
     # One short hand-off: later calls resend it, so it holds only what the
     # agent acts on.
+    if not had_docs and os.path.isdir(docs_root):
+        created_dirs.append("docs/compass/")      # a new folder is never made unsaid
     said = say(
         args,
         f"compass quick-fix start: '{slug}' recorded as {display_shape(approach)}.",

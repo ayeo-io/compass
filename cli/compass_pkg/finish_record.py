@@ -70,14 +70,30 @@ def cmd_quick_fix_finish(args):
     if not (command and is_path_issue(task)
             and task.get("delivery_approach") == APPROACH_DELIVERY):
         return _finish_earlier_issue(args)
-    return finish_record(args, task_dir, task.get("issue"), command)
+    from compass_pkg.terminal import mark_handled, resolve_mode
+    if resolve_mode(args) != "json":
+        return finish_record(args, task_dir, task.get("issue"), command)
+    # `--json`: the same lines as one document, with the owed items as `owed`.
+    import contextlib
+    import io
+    import json
+    held, owed = io.StringIO(), []
+    with contextlib.redirect_stdout(held):
+        code = finish_record(args, task_dir, task.get("issue"), command, owed)
+    lines = [ln for ln in held.getvalue().splitlines() if ln.strip()]
+    steps = [ln.split(": ", 1)[1] for ln in lines if ln.startswith(("next: ", "done: "))]
+    mark_handled()
+    print(json.dumps({"outcome": lines[0] if lines else "", "owed": owed, "next": steps,
+                      "detail": [ln.strip() for ln in lines[1:]
+                                 if not ln.startswith(("next: ", "done: "))]}, indent=2))
+    return code
 
 
 #: The checks only a person can clear. `finish` asks for the approval and goes on.
 _PERSON_CHECKS = frozenset({"human-approval-present", "ship-approval-present"})
 
 
-def finish_record(args, task_dir, slug, command):
+def finish_record(args, task_dir, slug, command, owed_out=None):
     """`compass quick-fix finish` on a delivery issue: one call writes the record
     (ADR-099).
 
@@ -102,6 +118,30 @@ def finish_record(args, task_dir, slug, command):
     if owed:
         return refuse("a person has not approved its scenarios.", owed)
 
+    # Where a project's settings add the outer loop, the green is the outer
+    # loop's unless `--loop inner` is given, and an outer-loop green on an
+    # issue `S17` applies to names its candidate and client (ADR-085). Each is
+    # refused here, before anything is traced or run. On the inner loop the
+    # two flags are taken and not written; an unknown client is always refused.
+    from compass_pkg import candidate_client, next_step
+    from compass_pkg.tdd_green import strategy_applies
+    loop = next_step.finish_loop(task, task_dir, getattr(args, "loop", None))
+    flags = ((getattr(args, "candidate", None), getattr(args, "client", None))
+             if loop == "outer" else (None, None))
+    candidate_client.named("quick-fix finish", "outer", None, getattr(args, "client", None),
+                           False, {})
+    candidate_client.named("quick-fix finish", loop, *flags,
+                           loop == "outer" and strategy_applies(task_dir), ids_for(task_dir))
+    # An inner-loop finish cannot give the outer-loop red the issue owes.
+    if loop == "inner" and next_step._owed(task, task_dir, "outer-loop") \
+            and not next_step._outer_red(task_dir):
+        scenario = next((s["id"] for s in next_step.needing_tests(task)), "<id>")
+        step = next_step._outer_red_command(task, task_dir, scenario)
+        if owed_out is not None:
+            owed_out.append(step)
+        return refuse("it owes an outer-loop red, which an inner-loop finish does not "
+                      "record.", step)
+
     base = lean.base_commit(task, project_root, slug)
     added = lean.sync_scenarios(task, lean.spec_of(task_dir))
     task[lean.MESSAGE_KEY] = args.message
@@ -115,7 +155,11 @@ def finish_record(args, task_dir, slug, command):
         raise CompassError(f"compass quick-fix finish: '{slug}' has no scenario; write one "
                            f"in its acceptance-criteria.md, then run finish again.")
 
+    # What the manifest traces already, and the test files the scenarios
+    # declare: the change's by declaration, committed or not.
     keep = {cf.get("path") for cf in task.get("changed_files") or [] if isinstance(cf, dict)}
+    keep |= {t.split("::", 1)[0] for sc in task.get("scenarios") or [] if isinstance(sc, dict)
+             for t in sc.get("tests") or [] if isinstance(t, str)}
     with _at_project_root(project_root):
         code_paths, documents, left_out = lean.changed_paths(
             project_root, base, slug, lean.doc_prefix(task_dir), keep)
@@ -146,10 +190,10 @@ def finish_record(args, task_dir, slug, command):
         else:
             # A red that `compass tdd-red` recorded stays; `finish` proves the
             # red only for the scenarios that hold none.
-            loop = getattr(args, "loop", None) or "inner"
+            named = candidate_client.named("quick-fix finish", loop, *flags, False, ids)
             kept = [sid for sid in scenario_ids if lean.recorded_red(
                 task_dir, sid, ids,
-                lambda sid: _reusable_green(task_dir, sid, command, ids, loop=loop))]
+                lambda sid: _reusable_green(task_dir, sid, command, ids, loop, named))]
             fresh = [sid for sid in scenario_ids if sid not in kept]
             shared = None
 
@@ -165,25 +209,22 @@ def finish_record(args, task_dir, slug, command):
                             f"(exit {shared['result'][0]}); nothing is checked.\n{tail}")
                 _quiet_run(cmd_tdd_green, task=slug, scenario=sid, verified_by=None,
                            command=list(command), loop=sid_loop,
-                           candidate=getattr(args, "candidate", None) if sid_loop == "outer"
-                           else None,
-                           client=getattr(args, "client", None) if sid_loop == "outer"
-                           else None, prerun=shared)
+                           candidate=flags[0], client=flags[1], prerun=shared)
 
-            if fresh and not lean.records_current(task_dir, fresh, argv, ids):
+            if fresh and not lean.records_current(task_dir, fresh, argv, ids, loop):
                 red_code, red_out, kind = lean.prove_red(
                     project_root, base, test_paths, argv, invoked_from,
                     declared=ids.get("test_files") or ())
                 lean.drop_greens(task_dir, fresh)
-                lean.drop_stale_records(task_dir, scenario_ids, kept)
+                lean.drop_stale_records(task_dir, scenario_ids, kept, loop)
                 stamp = lean.write_reds(task_dir, fresh, argv, red_code, red_out, kind,
-                                        base, tests, ids)
+                                        base, tests, ids, loop)
                 lean.wait_past(stamp)
                 for sid in fresh:
-                    green(sid, "inner")
+                    green(sid, loop)
                 proved = red_code
             for sid in kept:
-                if not _reusable_green(task_dir, sid, command, ids, loop=loop):
+                if not _reusable_green(task_dir, sid, command, ids, loop, named):
                     green(sid, loop)
                     earlier = True
     except CompassError as exc:
@@ -203,8 +244,12 @@ def finish_record(args, task_dir, slug, command):
         # approval checks are the only failures the record is complete but for
         # that answer, and `compass ship-commit` refuses to land until `compass
         # check` passes.
-        failing = {ln.split()[1].rstrip(":") for ln in check_out.splitlines()
-                   if ln.startswith("FAIL ") and len(ln.split()) > 1 and ln.split()[1] != "-"}
+        failing = lean.failing_checks(check_out)
+        # A missing request link is a failing check and not a stop (#356):
+        # finish names it and goes on, and `compass check` keeps failing on it.
+        no_request = "request-recorded" in failing
+        failing -= lean.NOT_A_STOP
+        check_code = check_code if failing else 0
         # An issue that landed and was then changed (a review fix) fails
         # `evidence-matches-tree` until `compass ship-commit` lands it again.
         from compass_pkg import status_words
@@ -255,6 +300,8 @@ def finish_record(args, task_dir, slug, command):
                   f"Nothing is committed.")
             for step in added_by_settings:
                 print(f"next: {step}")
+            if owed_out is not None:
+                owed_out.extend(added_by_settings)
             print("next: then run the same finish again")
             return 1
         waiting = lean.request_owed_approvals(task_dir)
@@ -276,7 +323,7 @@ def finish_record(args, task_dir, slug, command):
             else:
                 if lean.branch_for_first_landing(project_root, slug):
                     branch_note = " (new)"
-                skip = (".compass/", lean.doc_prefix(task_dir))
+                skip = (".compass/work/", lean.doc_prefix(task_dir))
                 try:
                     _out, code = _quiet_run(
                         cmd_land_commit, task=slug, message=args.message, message_file=None,
@@ -306,8 +353,12 @@ def finish_record(args, task_dir, slug, command):
     print(f"  scenarios: {', '.join(scenario_ids)}"
           + (f" ({len(added)} read from the acceptance criteria)" if added else ""))
     if left_out:
-        print(f"  left out : {lean.short(', '.join(left_out), 80)} (changed before start; "
+        print(f"  left out : {lean.short(', '.join(map(lean.shown, left_out)), 80)} "
+              f"(changed before start; "
               f"`compass changed-file add` takes one in)")
+    if no_request:
+        from compass_pkg import request_link
+        print(f"  request  : not recorded - `{request_link.command(task_dir)}`")
     asks = " and ".join(f"/compass:approve {number} ({what})" for number, what in waiting)
     from compass_pkg import approval_requests
     terminal = os.environ.get(approval_requests.CHANNEL_ENV) == "terminal"

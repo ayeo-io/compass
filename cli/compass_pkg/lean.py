@@ -46,6 +46,7 @@ import time
 from compass_pkg import project_settings, pytest_report
 from compass_pkg.approval_records import CHANGE_KEY
 from compass_pkg.core import CompassError, docs_dir, load_manifest, now_iso, save_manifest
+from compass_pkg.stable_ids import GATE_G5
 from compass_pkg.start_state import (_is_generated, _is_issue_state, _record_path,
                                      _tracked_paths)
 
@@ -121,49 +122,94 @@ def _run_output(path):
 
 
 def _before_start(root, slug):
-    """`(paths, folders)` that were already changed or untracked at `start`."""
+    """`(paths, folders)` that were already changed or untracked at `start`, or
+    None when the issue has no start record in this checkout."""
     try:
         with open(_record_path(root, slug), encoding="utf-8") as fh:
             data = json.load(fh)
         return (set(data.get("changed_before_start") or ()),
                 set(data.get("local_dirs_before_start") or ()))
     except (OSError, ValueError, AttributeError, subprocess.CalledProcessError):
-        return set(), set()
+        return None
+
+
+def shown(name):
+    """A file name as one line of output can hold it: quoted when it holds a
+    control character, so a name cannot start a line of its own."""
+    return repr(name) if any(ord(c) < 32 for c in name) else name
 
 
 def changed_paths(root, base, slug, doc_prefix, keep=()):
     """`(code, documents, left_out)`: the paths the change holds, read from git.
 
-    The change is every path that differs between the base commit and the
-    working tree, plus every untracked path git does not ignore. The issue's
-    own state, caches and the files a test run leaves are not the change. A
-    path that was already changed or untracked when the issue started is left
-    out and named, unless `keep` (the paths traced by hand) holds it.
+    The change is every path the working tree holds that git has not
+    committed: changed, staged or untracked and not ignored. A committed path
+    counts only when `keep` holds it and it differs from the base commit.
+    `keep` is what the manifest traces already (an earlier `finish`, or
+    `compass changed-file add`) and the test files the scenarios declare. So a
+    commit `finish` made stays in the change, and a commit that came in after
+    `start` by a pull, a rebase or another person's hand does not enter it.
+
+    The issue's own state, caches and the files a test run leaves are not the
+    change. A tracked file under `.compass/` that is not issue state, such as
+    `.compass/config.yml`, is the project's own and is in the change. A path
+    that was already changed or untracked when the issue started is left out
+    and named, unless `keep` holds it. With no start record nothing shows
+    which untracked files were there first, so an untracked path that `keep`
+    does not hold is refused: a private note must not reach a commit.
     `documents` are the paths under the issue's documents folder."""
-    names = set()
+    names, since_base = set(), []
+    if head_commit(root):
+        diff = _git(["diff", "--name-only", "-z", "--no-renames", "--relative", "HEAD", "--"],
+                    root)
+        names.update(p for p in diff.stdout.split("\0") if p)
     if base:
         diff = _git(["diff", "--name-only", "-z", "--no-renames", "--relative", base, "--"],
                     root)
         if diff.returncode != 0:
             raise CompassError(f"compass quick-fix finish: git cannot read the base commit "
                                f"{base[:12]}: {diff.stderr.strip()[:200]}")
-        names.update(p for p in diff.stdout.split("\0") if p)
+        since_base = [p for p in diff.stdout.split("\0") if p]
+        names.update(p for p in since_base if p in keep)
     other = _git(["ls-files", "-z", "--others", "--exclude-standard"], root)
-    names.update(p for p in other.stdout.split("\0") if p)
+    untracked = {p for p in other.stdout.split("\0") if p}
+    names.update(untracked)
     tracked = _tracked_paths(root)
-    before_paths, before_dirs = _before_start(root, slug)
-    code, documents, left_out = [], [], []
+    before = _before_start(root, slug)
+    before_paths, before_dirs = before if before is not None else (set(), set())
+    code, documents, left_out, unknown = [], [], [], []
     for path in sorted(names):
         if path.startswith(doc_prefix):
             documents.append(path)
-        elif _is_issue_state(path, tracked) or path.startswith(".compass/") \
-                or _is_generated(path) or _run_output(path):
+        elif _is_issue_state(path, tracked) or _is_generated(path) or _run_output(path):
             continue
-        elif path not in keep and (path in before_paths or any(
-                path.startswith(folder) for folder in before_dirs)):
+        elif path in keep:
+            code.append(path)
+        elif path in before_paths or any(path.startswith(folder) for folder in before_dirs):
             left_out.append(path)
+        elif before is None and path in untracked:
+            unknown.append(path)
         else:
             code.append(path)
+    if unknown:
+        raise CompassError(
+            f"compass quick-fix finish: nothing was written. This checkout has no start "
+            f"record of '{slug}', so nothing shows that these untracked files are the "
+            f"change: {', '.join(shown(p) for p in unknown[:8])}"
+            + (f" and {len(unknown) - 8} more" if len(unknown) > 8 else "")
+            + ". For each, run compass changed-file add <path> --scenario <id>, or move "
+            "it out of the working tree; then run finish again.")
+    if not code:
+        by_hand = [p for p in since_base if p not in names and not p.startswith(doc_prefix)
+                   and not _is_issue_state(p, tracked) and not p.startswith(".compass/")]
+        if by_hand:
+            raise CompassError(
+                f"compass quick-fix finish: nothing was written. No file of the change is "
+                f"uncommitted, and finish does not take a file committed by hand as the "
+                f"change: {', '.join(shown(p) for p in by_hand[:8])}"
+                + (f" and {len(by_hand) - 8} more" if len(by_hand) > 8 else "")
+                + ". For each file of this change, run compass changed-file add <path> "
+                "--scenario <id>; then run finish again.")
     return code, documents, left_out
 
 
@@ -372,7 +418,8 @@ def prove_red(root, base, tests, command, cwd, declared=()):
                 pass
 
 
-def write_reds(task_dir, scenario_ids, command, code, out, kind, base, tests, ids):
+def write_reds(task_dir, scenario_ids, command, code, out, kind, base, tests, ids,
+               loop="inner"):
     """Write one red record per scenario from the base-copy run, as `compass
     tdd-red` writes one, and return the time on the records. The digests are
     those of the test files that ran: the same files as in the working tree."""
@@ -384,14 +431,14 @@ def write_reds(task_dir, scenario_ids, command, code, out, kind, base, tests, id
     sums = {p: d for p, d in (ids.get("file_sha256") or {}).items() if p in named}
     stamp = now_iso()
     payload = {
-        "command": " ".join(command), "argv": list(command), "loop": "inner",
+        "command": " ".join(command), "argv": list(command), "loop": loop,
         "exit_code": code, "passed": False, "timestamp": stamp,
         "log_excerpt": "\n".join(out.splitlines()[-25:]), "_full_log": out,
         "red_kind": kind, "proved_on": BASE_COPY, "base_commit": base,
         "file_sha256": sums, "test_files": sorted(sums),
     }
     payload.update(scenario_freeze.red_payload(task, task_dir))
-    paths = [_write_evidence(task_dir, record_stem("red", sid, "inner"),
+    paths = [_write_evidence(task_dir, record_stem("red", sid, loop),
                              dict(payload, scenario=sid)) for sid in scenario_ids]
     # The scenarios are frozen at the red that stands now, not at one a later
     # run of finish replaced.
@@ -409,7 +456,7 @@ def wait_past(stamp):
         time.sleep(0.05)
 
 
-def records_current(task_dir, scenario_ids, command, ids):
+def records_current(task_dir, scenario_ids, command, ids, loop="inner"):
     """True when every scenario holds a red that `finish` proved and a green,
     both made by this command on the files as they are now. Then a second
     `finish` writes nothing new."""
@@ -420,9 +467,9 @@ def records_current(task_dir, scenario_ids, command, ids):
     tests = {p: d for p, d in wanted.items() if p in set(ids.get("test_files") or ())}
     for sid in scenario_ids:
         red = load_record(os.path.join(task_dir, "evidence",
-                                       record_stem("red", sid, "inner") + ".json"))
+                                       record_stem("red", sid, loop) + ".json"))
         green = load_record(os.path.join(task_dir, "evidence",
-                                         record_stem("green", sid, "inner") + ".json"))
+                                         record_stem("green", sid, loop) + ".json"))
         if red.get("proved_on") != BASE_COPY or red.get("file_sha256") != tests \
                 or red.get("argv") != list(command):
             return False
@@ -510,7 +557,7 @@ def request_owed_approvals(task_dir):
     owed = task.get("evidence_required") or []
     wanted = []
     if "human-approval" in owed and _check_human_approval(task, task_dir)[0] is not True:
-        wanted.append(("guardrail", "G5", "the `G5` sign-off"))
+        wanted.append(("guardrail", GATE_G5, f"the `{GATE_G5}` sign-off"))
     if ship_approval.owed(task) and \
             ship_approval._check_ship_approval_present(task, task_dir)[0] is not True:
         wanted.append(("ship", None, "the ship approval"))
@@ -568,6 +615,17 @@ def short(text, limit=96):
     return text if len(text) <= limit else text[:limit - 3] + "..."
 
 
+#: A failing check that stops neither `finish` nor the landing: `compass check`
+#: keeps failing on it, and `compass next` asks for it (#356).
+NOT_A_STOP = frozenset({"request-recorded"})
+
+
+def failing_checks(check_out):
+    """The names of the checks a `compass check` summary shows as failing."""
+    return {ln.split()[1].rstrip(":") for ln in check_out.splitlines()
+            if ln.startswith("FAIL ") and len(ln.split()) > 1 and ln.split()[1] != "-"}
+
+
 def check_failures(check_out, limit=5):
     """The failing checks of a `compass check` summary, one line each."""
     lines = [ln.strip() for ln in check_out.splitlines()
@@ -588,9 +646,13 @@ def landing_refusal(task_dir):
     slug = os.path.basename(os.path.normpath(task_dir))
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
+        # The landing only reads the verdicts: a refused landing leaves every
+        # file as it was, the stamps of `results.yml` among them.
         code = cmd_check(argparse.Namespace(_mode="summary", evidence_out=None, json=False,
-                                            task=slug))
-    if not code:
+                                            task=slug, no_count=True, no_record=True))
+    # A missing request link is a failing check and not a stop (#356).
+    failing = failing_checks(out.getvalue())
+    if not code or failing <= NOT_A_STOP:
         return None
     return ("compass ship-commit: nothing was committed - `compass check` fails:\n  "
             + "\n  ".join(check_failures(out.getvalue()))
@@ -743,10 +805,10 @@ def commit_report(root, branch_note=""):
     """What a session otherwise checks by hand after a commit, in three lines:
     the branch, the commit, its author and file count, and what is left in the
     working tree."""
-    shown = _git(["log", "-1", "--format=%h%x00%an%x00%s"], root).stdout.strip().split("\0")
-    if len(shown) != 3:
+    last = _git(["log", "-1", "--format=%h%x00%an%x00%s"], root).stdout.strip().split("\0")
+    if len(last) != 3:
         return []
-    short, author, subject = shown
+    short, author, subject = last
     names = [n for n in _git(["show", "--name-only", "-z", "--format=", "HEAD"],
                              root).stdout.split("\0") if n]
     record = [n for n in names if n.startswith((".compass/", "docs/compass/"))]
@@ -758,12 +820,12 @@ def commit_report(root, branch_note=""):
         f"  committed: {len(names)} file(s): {len(names) - len(record)} of the change, "
         f"{len(record)} of the record (.compass/ and docs/compass/, as intended)",
         "  tree     : working tree clean" if not left else
-        "  tree     : not committed: " + ", ".join(left[:5])
+        "  tree     : not committed: " + ", ".join(shown(p) for p in left[:5])
         + (f" and {len(left) - 5} more" if len(left) > 5 else ""),
     ]
 
 
-def drop_stale_records(task_dir, scenario_ids, kept=()):
+def drop_stale_records(task_dir, scenario_ids, kept=(), loop="inner"):
     """Remove the red and green records of this issue that no scenario of the
     manifest holds now, with their registry entries, so every record left
     names the files as they are. `finish` calls it before it writes the
@@ -771,7 +833,7 @@ def drop_stale_records(task_dir, scenario_ids, kept=()):
     files from `SHA256SUMS`."""
     from compass_pkg.red_first import is_record_name, record_stem
     evidence = os.path.join(task_dir, "evidence")
-    keep = {record_stem(kind, sid, "inner") + ".json"
+    keep = {record_stem(kind, sid, loop) + ".json"
             for kind in ("red", "green") for sid in scenario_ids}
     # A scenario whose red `compass tdd-red` recorded keeps both loops' records.
     keep |= {record_stem(kind, sid, "outer") + ".json"

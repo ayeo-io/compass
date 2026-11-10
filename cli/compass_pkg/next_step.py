@@ -112,6 +112,8 @@ def _first_match(task, task_dir, done):
         if _request_missing(task, task_dir):
             from compass_pkg import request_link
             return request_link.command(task_dir)
+        if path_stages.is_path_issue(task):
+            return _lean(task, task_dir)
         for row in (_specify, _build, _ship):
             command = row(task, task_dir)
             if command:
@@ -130,6 +132,44 @@ def _first_match(task, task_dir, done):
     if on_path and _pending_gate(task):
         return _finish(task_dir)
     return _ship_commit(task, task_dir)
+
+
+LEAN_FINISH = 'compass quick-fix finish -m "<commit message>" -- <test command>'
+
+
+def _lean(task, task_dir):
+    """The next step of a delivery issue on the lean path (branch exp-lean):
+    the scenario approval where it is owed, then the tests and the code, then
+    `compass quick-fix finish`, then the approvals a person owes, then
+    `compass ship-commit`. No row names `tdd-red`, `tdd-green`, `scenario add`,
+    `changed-file add`, `evidence add` or `gate pass`: `finish` does their work."""
+    from compass_pkg import approval_requests, lean
+    owed = lean.specify_owed(task, task_dir) if task_dir else None
+    if owed:
+        return owed
+    if _pending_gate(task) or not greens(task):
+        return f"write the tests and the code, then {LEAN_FINISH}"
+    waiting = []
+    if task_dir:
+        subjects = {("guardrail", "G5"): "the `G5` sign-off", ("ship", None): "the ship approval"}
+        # A request answered in the person's terminal stays pending, so a
+        # request counts only while its approval is not on record.
+        from compass_pkg import ship_approval
+        if not (_owed(task, task_dir, "human-approval") and not _human_approval(task, task_dir)):
+            subjects.pop(("guardrail", "G5"))
+        if not ship_approval.owed(task) or \
+                ship_approval._check_ship_approval_present(task, task_dir)[0] is True:
+            subjects.pop(("ship", None))
+        waiting = [(r.get("number"), subjects[(r.get("form"), r.get("value"))])
+                   for r in approval_requests.pending(task_dir)
+                   if (r.get("form"), r.get("value")) in subjects]
+    if waiting:
+        asks = " and ".join(f"/compass:approve {n} ({what})" for n, what in waiting)
+        return (f"stop and ask the person to type {asks}. When they ask for a commit, run "
+                "compass ship-commit")
+    if _owed(task, task_dir, "human-approval") and not _human_approval(task, task_dir):
+        return f"{LEAN_FINISH}, which asks for the `G5` sign-off"
+    return "when the person asks for a commit, run compass ship-commit"
 
 
 def ship_approval_command(task, task_dir):
@@ -444,7 +484,9 @@ def specify_written(task):
     if not scenarios or not all(isinstance(s.get("id"), str) and s["id"] and s.get("intent")
                                 for s in scenarios):
         return False
-    return all(_tests_of(s) for s in scenarios if s.get("verifiable") != "narrative")
+    # The lean path (branch exp-lean): a scenario needs no declared test yet.
+    # `compass quick-fix finish` reads the changed test files from git.
+    return True
 
 
 def greens(task):

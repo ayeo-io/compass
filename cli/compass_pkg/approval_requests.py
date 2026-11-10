@@ -359,11 +359,48 @@ def _terminal_command(request):
                               for w in words])
 
 
+def _lean_form(args):
+    """With no form given, the approval the issue waits for next: the `specify`
+    checkpoint while the scenarios owe a person's approval, then the `G5`
+    sign-off, then the ship approval. Sets the form on `args`, and a scope for
+    `G5`, which needs one. A session that left the form out was refused with
+    the usage text (the 9.0.0 measurement)."""
+    if any(getattr(args, name, None) for name in
+           ("check", "guardrail", "checkpoint", "waiver", "decisions", "ship")):
+        return
+    from compass_pkg import scenario_freeze, ship_approval
+    from compass_pkg.checks import _check_human_approval
+    task_dir = resolve_issue_dir(args.task)
+    task, _ = load_manifest(task_dir)
+    owed = task.get("evidence_required") or []
+    if scenario_freeze.owes_signoff(task) and not scenario_freeze.signed_off(task):
+        args.checkpoint = "specify"
+    elif "human-approval" in owed and _check_human_approval(task, task_dir)[0] is not True:
+        args.guardrail = approval_records.G5
+        slug = os.path.basename(os.path.normpath(task_dir))
+        labels = ", ".join((task.get("assessment") or {}).get("labels") or [])
+        args.scope = args.scope or f"the change of issue {slug}, labeled {labels}"
+    elif ship_approval.owed(task):
+        args.ship = True
+    else:
+        raise CompassError(f"{VERB}: this issue waits for no approval. No request was written.")
+
+
 def cmd_evidence_request(args):
+    _lean_form(args)
     form, value = _form_of(args)
     scope = approvals.text(args.scope)
     answer = approvals.Answer(form, value, approval_records.APPROVED, None, "", scope)
     task_dir = resolve_issue_dir(args.task)
+    if form == "checkpoint" and value == "specify":
+        # The lean path: the agent writes the scenarios in the acceptance
+        # criteria only, so the manifest takes them from there before the
+        # person is asked to approve them.
+        from compass_pkg import lean
+        from compass_pkg.core import save_manifest
+        held, held_path = load_manifest(task_dir)
+        if lean.sync_scenarios(held, lean.spec_of(task_dir)):
+            save_manifest(held, held_path)
     with approvals.lock(task_dir):
         reason = approvals.refusal(task_dir, answer)
         if reason:
@@ -409,7 +446,9 @@ def register(evidence_subs):
     p = evidence_subs.add_parser(
         "request", help="ask a person for an approval: write a pending request that Compass "
                         "shows them", allow_abbrev=False)
-    form = p.add_mutually_exclusive_group(required=True)
+    # The lean path: with no form, the request is for the approval the issue
+    # waits for next (`_lean_form`).
+    form = p.add_mutually_exclusive_group(required=False)
     form.add_argument("--check", help="id of the human check")
     form.add_argument("--guardrail", metavar=approval_records.G5,
                       help="the sign-off of guardrail `G5`; needs --scope")

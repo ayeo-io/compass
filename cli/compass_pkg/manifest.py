@@ -251,6 +251,28 @@ def cmd_land_commit(args):
     if inside.returncode != 0:
         raise CompassError("compass ship-commit: not inside a git repository.")
 
+    # The lean path (branch exp-lean): `compass ship-commit` alone lands the
+    # current issue. The issue is the pointer's, the message is the one
+    # `compass quick-fix finish -m` stored, and with nothing staged and no
+    # path given the files are the ones `finish` traced from git.
+    lean_issue = checkpoint_outcomes.landing_issue(args)
+    if lean_issue is not None and lean_issue[0].get("evidence_required") is not None:
+        from compass_pkg import lean
+        lean_task, lean_dir = lean_issue
+        if not getattr(args, "task", None):
+            args.task = os.path.basename(os.path.normpath(str(lean_dir)))
+        if not msg and not getattr(args, "message_file", None):
+            msg = lean_task.get(lean.MESSAGE_KEY)
+        if not status_words.is_closed(lean_task):
+            refused = lean.landing_refusal(lean_dir)
+            if refused:
+                raise CompassError(refused)
+        if not files and _git(["diff", "--cached", "--quiet"], cwd).returncode == 0:
+            skip = (".compass/", lean.doc_prefix(lean_dir))
+            files = [p for p in lean.traced_paths(lean_task, cwd) if not p.startswith(skip)]
+    if not msg or not str(msg).strip():
+        raise CompassError('compass ship-commit: give the commit message with -m "<message>".')
+
     # The landing refusals run before anything is staged or written, so a
     # refusal leaves every file as it was (ADR-026).
     landing = checkpoint_outcomes.landing_issue(args)

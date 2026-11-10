@@ -255,6 +255,17 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "run compass evidence request --checkpoint specify --issue {slug} and "
                "stop; the person answers with /compass:approve. Then run the red again.",
     },
+    # The pre-tool hook on the lean path (branch exp-lean): a code edit on an issue
+    # whose scenarios owe a person's approval, before the `specify` checkpoint has
+    # a person's answer.
+    "code-before-approval": {
+        "what": "edit to {target} (tool: {tool})",
+        "why": "the scenarios of {slug} need a person's approval before code, and "
+               "the specify checkpoint has no answer from a person.",
+        "fix": "write the scenarios in the issue's acceptance-criteria.md, run compass "
+               "evidence request --checkpoint specify and stop; the person answers "
+               "with /compass:approve.",
+    },
     # The landing check of `compass ship-commit` (manifest._refuse_open_definition_of_done,
     # ADR-091): `dod-evidence-typed` failed, so the Definition of Done has an open item.
     "definition-of-done-open": {

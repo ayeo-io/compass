@@ -87,6 +87,12 @@ reason code and are not in the generated list.
 **Why:** {stages} {is} listed in checkpoints with no outcome recorded, so nothing shows a person answered {it}.
 **Fix:** for each stage named, run compass evidence request --checkpoint {stage} --issue {slug} and stop; the person answers with /compass:approve. Then ship again.
 
+### `code-before-approval`
+
+**Blocked:** edit to {target} (tool: {tool})
+**Why:** the scenarios of {slug} need a person's approval before code, and the specify checkpoint has no answer from a person.
+**Fix:** write the scenarios in the issue's acceptance-criteria.md, run compass evidence request --checkpoint specify and stop; the person answers with /compass:approve.
+
 ### `config-invalid`
 
 **Blocked:** edit to {target} (tool: {tool})

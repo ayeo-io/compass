@@ -93,6 +93,7 @@ FIXTURES = {
     # A 40-character slug, named three times, so the 60-word cap is checked where it
     # is tightest.
     "scenarios-not-approved": dict(slug="a" * 40),
+    "code-before-approval": dict(slug="a" * 40, target="src/billing/invoice.py", tool="Edit"),
     # A 40-character slug and a detail of 20 words, more than the 12 the registry keeps
     # of a parameter for this code, so the 60-word cap is checked where it is tightest.
     "definition-of-done-open": dict(slug="a" * 40,

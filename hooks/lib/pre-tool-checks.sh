@@ -62,6 +62,17 @@ if [ -f "$TASK_DIR/manifest.yml" ]; then
   if [ "${G2_VERDICT:-}" = "block-path" ]; then
     compass_block no-scenario "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}"
   fi
+  # The lean path (branch exp-lean): scenarios that owe a person's approval
+  # have it before any code edit. This takes the place of the refusal `compass
+  # tdd-red` gave, because the lean path records no red before the code.
+  if [ "${G2_VERDICT:-}" = "block-approval" ]; then
+    compass_block code-before-approval "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}"
+  fi
+  LEAN_PATH=""
+  case "${G2_VERDICT:-}" in
+    lean) LEAN_PATH=1 ;;
+    lean-depends) LEAN_PATH=1; G2_VERDICT="depends" ;;
+  esac
 fi
 
 # --- the issues this one waits for (ADR-062) ----------------------------------
@@ -117,6 +128,13 @@ fi
 # here"; overloading it would make the framework's most honest artifact
 # ambiguous. `compass acceptance record` clears this one.
 if [ -f "$TASK_DIR/.acceptance" ]; then
+  exit 0
+fi
+
+# --- the lean path: no red before the code (branch exp-lean) -----------------
+# `compass quick-fix finish` proves the red on a copy of the base commit, so a
+# delivery issue on the path edits code with no `.red` marker.
+if [ -n "${LEAN_PATH:-}" ]; then
   exit 0
 fi
 

@@ -347,6 +347,19 @@ def build_parser():
     issue_arg(pnx)
     pnx.set_defaults(func=cmd_next, output_kind="report")
 
+    # `compass status <slug>` is what a session types when it wants the state of
+    # an issue (the 9.0.0 measurement): it prints what `compass next` prints.
+    pst = sub.add_parser(
+        "status", help="the same line as `compass next`; takes the issue as a word or --issue")
+    pst.add_argument("slug", nargs="?", help="issue slug (default: the current issue)")
+    issue_arg(pst)
+
+    def _cmd_status(args):
+        if getattr(args, "slug", None) and not getattr(args, "task", None):
+            args.task = args.slug
+        return cmd_next(args)
+    pst.set_defaults(func=_cmd_status, output_kind="report")
+
     pbf = sub.add_parser(
         "follow-up",
         help="manage an issue's follow-ups (outstanding / resolved)"
@@ -376,7 +389,9 @@ def build_parser():
              "staged artifacts robustly: survives auto-fixing pre-commit "
              "hooks and verifies HEAD advanced.",
     )
-    plc_msg = plc.add_mutually_exclusive_group(required=True)
+    # The lean path: with no message, `ship-commit` uses the one `compass
+    # quick-fix finish -m` stored.
+    plc_msg = plc.add_mutually_exclusive_group(required=False)
     plc_msg.add_argument("-m", "--message", help="commit message")
     plc_msg.add_argument("-F", "--message-file", dest="message_file", metavar="FILE",
                          help="read the commit message from FILE, as git commit -F does")

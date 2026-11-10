@@ -254,10 +254,19 @@ def evaluate(assessment, policy, acceptance_state="on", expected_acceptance="non
             if rule_id and rule_id not in fired:
                 fired.append(rule_id)
 
-    applies = (not spike and acceptance_state == "on"
-               and expected_acceptance not in ACCEPTANCE_KINDS)
-    if applies:
-        owed.update(t for t, routings in S17_TOKENS.items() if routing in routings)
+    # The lean experiment (branch exp-lean): one path for every change. A
+    # delivery issue owes only what `compass quick-fix finish` records itself,
+    # plus a person's approvals for a `G5` label. Risk, size and the settings
+    # add no review gate, no Definition of Done and no `S17` record, because
+    # each of those needed commands or files written by the agent.
+    applies = False
+    if not spike:
+        lean = set(EVERY_ISSUE)
+        if _matches({"labels_any": list(labels)}, readings, orders):
+            lean.update(("scenario-approval", "human-approval"))
+        owed &= lean
+        extra_gates = []
+        routing = "suspended"
 
     skills = []
     for fl in guard.get("floors") or []:

@@ -777,21 +777,34 @@ Teams must keep their normal CI controls.
 `compass quick-fix start` records which files were already changed or
 untracked, and which directories held no tracked file. It keeps that
 record inside the git directory, where nothing is committed. `compass
-quick-fix finish` reads the change from git: each path that differs from the
-commit the issue started from, and each untracked path git does not ignore.
-It leaves out a path that was already changed or untracked at `start`, and
-names it on a `left out :` line. The files a test run leaves, such as
-`.coverage`, are never part of the change. It does not guard three cases:
+quick-fix finish` reads the change from git: each path the working tree
+holds that git has not committed, changed or untracked and not ignored. A
+committed path counts only when the manifest traces it already, from an
+earlier `finish` or from `compass changed-file add`, and it differs from the
+commit the issue started from. So a commit that `finish` made stays in the
+change, and a commit that a pull, a rebase or another person adds after
+`start` does not enter it. When the session committed the fix by hand,
+`finish` refuses and names `compass changed-file add`.
+
+`finish` leaves out a path that was already changed or untracked at `start`,
+and names it on a `left out :` line. The files a test run leaves, such as
+`.coverage`, are never part of the change. A tracked file under `.compass/`
+that is not issue state, such as `.compass/config.yml`, is part of it. It
+does not guard three cases:
 
 - a file created after `start` is taken as the change's, whoever made it;
 - the start record is not checked for tampering: an edited record changes
   what `finish` refuses;
 - an issue with no start record, such as one begun before `start` wrote
-  one, commits a tracked file changed before the fix began.
+  one, commits a tracked file changed before the fix began. `finish` refuses
+  an untracked file of such an issue until it is traced.
 
-One more case follows from how `finish` decides. A path traced by hand with
+Three more cases follow from how `finish` decides. A path traced by hand with
 `compass changed-file add` is part of the change even if it changed before
-`start`.
+`start`. A test the scenario declares is committed even if it changed before
+`start`, because the scenario names it. And an issue started before the
+record moved into the git directory kept a digest record beside its manifest,
+which is committed with the issue's records.
 
 9.0.0 derives no living spec and writes no project index (ADR-091), so
 `finish` traces a change to the living spec like any other file, and

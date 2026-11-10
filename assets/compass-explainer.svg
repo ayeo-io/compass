@@ -29,7 +29,7 @@
       <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
     <text class="cap" x="40" y="86" opacity="0">
-      Fix a live rounding error in invoices
+      Change how the job queue retries
       <animate attributeName="opacity" values="0;0;1;1;0;0;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
     <text class="cap" x="40" y="86" opacity="0">
@@ -50,7 +50,7 @@
       <circle cx="330" cy="-5" r="2.5" fill="#444a55"/><text x="330" y="14" text-anchor="middle">critical</text>
     </g>
     <circle cx="110" cy="-5" r="7" fill="#fc6255">
-      <animate attributeName="cx" values="110;110;183;183;330;330;110" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+      <animate attributeName="cx" values="110;110;330;330;330;330;110" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
     </circle>
   </g>
   <g transform="translate(40,220)">
@@ -91,15 +91,15 @@
 
   <g>
     <text class="appr" x="510" y="156">
-      the light row: 9 pieces of evidence
+      the common row: 8 pieces of evidence
       <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
     <text class="appr" x="510" y="156" opacity="0">
-      the defect row: 14 pieces of evidence
+      the common row and the scenario approval: 9 pieces of evidence
       <animate attributeName="opacity" values="0;0;1;1;0;0;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
     <text class="appr" x="510" y="156" opacity="0">
-      the standard row: 18 pieces of evidence
+      the common row, the scenario approval and the sign-off: 10 pieces of evidence
       <animate attributeName="opacity" values="0;0;0;0;1;1;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
   </g>
@@ -112,21 +112,21 @@
     </rect>
     <text class="stage" x="560" y="350">assess</text>
     <rect x="630" y="317" width="60" height="13" fill="#58c4dd" rx="2">
-      <animate attributeName="height" values="13;13;13;13;26;26;13" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
-      <animate attributeName="y" values="317;317;317;317;304;304;317" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+      <animate attributeName="height" values="13;13;26;26;26;26;13" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+      <animate attributeName="y" values="317;317;304;304;304;304;317" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
     </rect>
     <circle cx="660" cy="198" r="4" fill="#ffd93d" opacity="0">
-      <animate attributeName="opacity" values="0;0;0;0;1;1;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;0;1;1;1;1;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </circle>
     <text class="stage" x="660" y="350">specify</text>
-    <rect x="730" y="304" width="60" height="26" fill="#58c4dd" rx="2">
-      <animate attributeName="height" values="26;26;65;65;65;65;26" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
-      <animate attributeName="y" values="304;304;265;265;265;265;304" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+    <rect x="730" y="317" width="60" height="13" fill="#58c4dd" rx="2">
+      <animate attributeName="height" values="13;13;13;13;13;13;13" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+      <animate attributeName="y" values="317;317;317;317;317;317;317" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
     </rect>
     <text class="stage" x="760" y="350">build</text>
     <rect x="830" y="265" width="60" height="65" fill="#58c4dd" rx="2">
-      <animate attributeName="height" values="65;65;91;91;130;130;65" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
-      <animate attributeName="y" values="265;265;239;239;200;200;265" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+      <animate attributeName="height" values="65;65;65;65;78;78;65" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
+      <animate attributeName="y" values="265;265;265;265;252;252;265" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
     </rect>
     <circle cx="860" cy="198" r="4" fill="#ffd93d" opacity="0">
       <animate attributeName="opacity" values="0;0;0;0;1;1;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>

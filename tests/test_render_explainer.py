@@ -54,10 +54,12 @@ def test_each_scene_draws_the_evidence_the_policy_computes():
     policy = module.load_policy()
     computed = module.scenes(policy)
     svg = module.render(policy)
-    # The three example assessments land on three different evidence rows, so
-    # the picture shows the evidence changing, not one row three times.
-    rows = [s["row"] for s in computed]
-    assert len(set(rows)) == len(rows), rows
+    # Every change owes the one common row (ADR-099). The three example
+    # assessments owe three different sets of evidence on top of it, so the
+    # picture shows the evidence changing, not one set three times.
+    owed = [tuple(s["evidence"]) for s in computed]
+    assert len(set(owed)) == len(owed), owed
+    assert len({s["label"] for s in computed}) == len(computed)
     for scene, (_, assessment) in zip(computed, module.SCENES):
         fresh = evidence_required.evaluate(dict(assessment), policy)
         assert scene["row"] == fresh["rules_fired"][0]

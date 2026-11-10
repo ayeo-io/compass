@@ -154,7 +154,7 @@ The pre-tool hook no longer refuses a code edit on a 9.0.0 delivery issue for a 
 
 Two approvals by a person stay, and one is new for critical risk:
 
-- An issue labeled `auth`, `payments`, `personal-data` or `migrations`, or with a label in `signoff_labels`, owes a person's approval of the scenarios before any code edit, and the `G5` sign-off before it lands.
+- An issue with the label `auth`, `payments`, `personal-data` or `migrations`, or with a label in `signoff_labels`, owes a person's approval of the scenarios before any code edit, and the `G5` sign-off before it lands.
 - An issue with `critical` risk owes a person's approval of the scenarios before any code edit.
 
 The session asks with `compass evidence request --checkpoint specify` and stops. Until a person has approved, the pre-tool hook refuses a code edit with the code `code-before-approval`.
@@ -192,7 +192,7 @@ That record shows that the tests fail without the change. It does not show that 
 
 - the next `finish` proves the red and the green again and commits on the branch;
 - it writes a new request and ends with `next: stop: the change differs from the one approved. Ask the person to type /compass:approve <n> (the ship approval). Nothing else to run now.`;
-- `compass check` fails `ship-approval-present`, and `human-approval-present` on a labeled issue, until a person approves the new state.
+- `compass check` fails `ship-approval-present`, and `human-approval-present` on an issue with such a label, until a person approves the new state.
 
 The earlier approval record stays on record. `ship-approval-present` also passes when `compass issue link set --pr <n>` reads the approving review of the merged pull request (ADR-095). An approval record with no digest keeps the meaning it had before 9.0.0: it is not compared with the change.
 

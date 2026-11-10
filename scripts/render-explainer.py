@@ -11,9 +11,8 @@ and no script.
 Nothing in the picture is drawn by hand from the policy. Each scene is an
 example assessment; this script runs it through `evidence_required.evaluate`,
 the same pure function `compass approach evaluate` runs, and draws what comes
-back: the evidence row that matched, how many pieces of evidence each stage
-judges, and the stages where a person decides under the `balanced` autonomy
-setting. A changed shipped policy changes the picture, and
+back: the rules that fired, how many pieces of evidence each stage judges,
+and the stages where a person decides under the `balanced` autonomy setting. A changed shipped policy changes the picture, and
 `tests/test_render_explainer.py` fails when the committed file is stale, so
 the README cannot disagree with `governance/check-set.yml`.
 
@@ -39,22 +38,23 @@ AUTONOMY = "balanced"
 
 # One loop, three scenes. Each scene is an example assessment and the words
 # a reader sees for it. The evidence each one owes is not written here: the
-# policy computes it. The three land on three different evidence rows.
+# policy computes it. Every change owes the one common row (ADR-099); the
+# second and third scenes each add a person's approval to it.
 SCENES = (
     ("Fix a typo in the docs",
      {"risk": "trivial", "familiarity": "brownfield-mapped", "size": "atomic"}),
-    ("Fix a live rounding error in invoices",
-     {"risk": "contained", "familiarity": "brownfield-mapped", "size": "small",
-      "urgency": "live-defect"}),
+    ("Change how the job queue retries",
+     {"risk": "critical", "familiarity": "brownfield-mapped", "size": "small"}),
     ("Rewrite the payments ledger",
      {"risk": "critical", "familiarity": "brownfield-unmapped", "size": "large",
       "labels": ["payments"]}),
 )
 
-# The name a reader sees for each evidence row (`governance/routing-policy.md`,
-# "The evidence rows").
-ROW_NAMES = {"RP-EVID-LIGHT": "the light row", "RP-EVID-DEFECT": "the defect row",
-             "RP-EVID-STANDARD": "the standard row"}
+# The words a reader sees for the evidence a scene owes, by the rules that
+# fired beside the common row (`governance/routing-policy.md`).
+COMMON_ROW = "RP-EVID-COMMON"
+ADDED_NAMES = (("G5", "the common row, the scenario approval and the sign-off"),
+               ("RP-EVID-SIGNOFF", "the common row and the scenario approval"))
 
 # The stage of the path that judges each evidence token, as the table in
 # `approaches/path.md` places it. Assess judges the request link (#356) and is
@@ -170,9 +170,13 @@ def scenes(policy):
         stops = set(checkpoints_for(owed, AUTONOMY, result["acceptance_applies"]))
         if PERSON_AT_SHIP in owed:
             stops.add("ship")
-        row = result["rules_fired"][0]
+        fired = result["rules_fired"]
+        row = fired[0]
+        if row != COMMON_ROW:
+            raise SystemExit(f"render-explainer: no name for the evidence row {row}")
+        name = next((words for rule, words in ADDED_NAMES if rule in fired), "the common row")
         out.append({"caption": caption, "assessment": assessment, "row": row,
-                    "label": f"{ROW_NAMES[row]}: {len(owed)} pieces of evidence",
+                    "label": f"{name}: {len(owed)} pieces of evidence",
                     "evidence": owed, "items": items, "stops": stops})
     return out
 

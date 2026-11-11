@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Write, or check, the README's animated explainer.
 
-`assets/compass-explainer.svg` is the picture under the README's pitch: three
-sliders for risk, familiarity and size, a policy arrow, the four stages of the
-path as bars whose height is the evidence each stage judges, dots on the
-stages where a person decides, and five guardrail lines that never move.
+`assets/compass-explainer.svg` is the picture under the README's pitch: the
+session's two commands (ADR-099), with the steps where a person decides, the
+four stages of the path as bars whose height is the evidence each stage
+judges, dots on the stages where a person decides, and five guardrail lines
+that never move.
 GitHub animates it through an `<img>` tag, so the file holds SMIL and CSS only
 and no script.
 
@@ -53,8 +54,9 @@ SCENES = (
 # The words a reader sees for the evidence a scene owes, by the rules that
 # fired beside the common row (`governance/routing-policy.md`).
 COMMON_ROW = "RP-EVID-COMMON"
-ADDED_NAMES = (("G5", "the common row, the scenario approval and the sign-off"),
-               ("RP-EVID-SIGNOFF", "the common row and the scenario approval"))
+ADDED_NAMES = (("G5", "the same, plus two approvals"),
+               ("RP-EVID-SIGNOFF", "the same, plus the scenario approval"))
+COMMON_NAME = "the same for every change"
 
 # The stage of the path that judges each evidence token, as the table in
 # `approaches/path.md` places it. Assess judges the request link (#356) and is
@@ -69,16 +71,11 @@ STAGE_OF_TOKEN = {
     "clarity": "ship", "architecture": "ship", "human-approval": "ship",
     "ship-approval": "ship",
 }
-# The evidence that is a person's decision at ship, beside the checkpoints. The ship
-# approval every change owes is not one: Compass reads it from the merged pull
-# request's review, so it adds no stop in the session (#355).
-PERSON_AT_SHIP = "human-approval"
+# The evidence that is a person's decision at ship, beside the checkpoints:
+# `finish` commits only once a person has approved the change (ADR-099
+# decision 7), and the `G5` sign-off comes before the landing.
+PERSON_AT_SHIP = ("ship-approval", "human-approval")
 LOOP_SECONDS = 18
-
-# The dimensions drawn, top to bottom, and the short form of each value that
-# fits under a tick. A value with no short form is drawn as it is.
-DIMENSIONS = ("risk", "familiarity", "size")
-SHORT = {"brownfield-mapped": "mapped", "brownfield-unmapped": "unmapped"}
 
 # The height of a bar is this many pixels for each item the stage judges.
 BASELINE = 330
@@ -89,11 +86,14 @@ GUARDRAILS = ("tested before it ships", "acceptance before code",
               "every change traces to a criterion", "evidence, not assertion",
               "a person approves the irreversible")
 
-# A 3Blue1Brown-style palette: a dark ground, one color for each dimension,
-# blue for the computed evidence, green for what never moves.
+# A 3Blue1Brown-style palette: a dark ground, red for the commands, blue for
+# the computed evidence, yellow for a person's decision, green for what never
+# moves.
 BG, TEXT, MUTED, TICK = "#15171c", "#d9d9d9", "#9a9a9a", "#444a55"
-DIM_COLORS = {"risk": "#fc6255", "familiarity": "#58c4dd", "size": "#ffd93d"}
-BAR, STOP, GUARD = "#58c4dd", "#ffd93d", "#83c167"
+CMD, BAR, STOP, GUARD = "#fc6255", "#58c4dd", "#ffd93d", "#83c167"
+# A step that does not apply to a scene stays on the page, faint, so the reader
+# sees what each change adds.
+FAINT = 0.18
 
 # Each scene holds, then eases into the next over the last tenth of its
 # slot. Seven key times: the start, then a hold end and a move end per scene.
@@ -168,44 +168,51 @@ def scenes(policy):
                  for stage in STAGE_IDS}
         items[STAGE_IDS[0]] += 1
         stops = set(checkpoints_for(owed, AUTONOMY, result["acceptance_applies"]))
-        if PERSON_AT_SHIP in owed:
+        if any(token in owed for token in PERSON_AT_SHIP):
             stops.add("ship")
         fired = result["rules_fired"]
         row = fired[0]
         if row != COMMON_ROW:
             raise SystemExit(f"render-explainer: no name for the evidence row {row}")
-        name = next((words for rule, words in ADDED_NAMES if rule in fired), "the common row")
+        name = next((words for rule, words in ADDED_NAMES if rule in fired), COMMON_NAME)
         out.append({"caption": caption, "assessment": assessment, "row": row,
-                    "label": f"{name}: {len(owed)} pieces of evidence",
+                    "label": f"{len(owed)} pieces of evidence: {name}",
                     "evidence": owed, "items": items, "stops": stops})
     return out
 
 
-def _sliders(policy, computed):
-    vocab = policy["assessment_vocabulary"]
-    parts = []
-    y = 160
-    for dim in DIMENSIONS:
-        values = list(vocab[dim])
-        x0, x1 = 110, 330
-        step = (x1 - x0) / (len(values) - 1)
-        xs = {v: round(x0 + i * step) for i, v in enumerate(values)}
-        ticks = "".join(
-            f'      <circle cx="{xs[v]}" cy="-5" r="2.5" fill="{TICK}"/>'
-            f'<text x="{xs[v]}" y="14" text-anchor="middle">{SHORT.get(v, v)}</text>\n'
-            for v in values)
-        marker = [xs[s["assessment"][dim]] for s in computed]
-        parts.append(
-            f'  <g transform="translate(40,{y})">\n'
-            f'    <text class="dim" x="0" y="0">{dim}</text>\n'
-            f'    <line x1="{x0}" y1="-5" x2="{x1}" y2="-5" stroke="{TICK}" stroke-width="2"/>\n'
-            f'    <g class="tick">\n{ticks}    </g>\n'
-            f'    <circle cx="{marker[0]}" cy="-5" r="7" fill="{DIM_COLORS[dim]}">\n'
-            f'      {_animate("cx", marker)}\n'
-            f'    </circle>\n'
-            f'  </g>')
-        y += 60
-    return "\n".join(parts)
+def _step(y, text, cls="step", opacity=None, dot=False):
+    """One line of the session column. `opacity` holds one value per scene for
+    a step that only some changes take; `dot` marks a person's decision."""
+    shown = "" if opacity is None or opacity[0] == 1 else f' opacity="{opacity[0]}"'
+    fade = "" if opacity is None else f"\n      {_animate('opacity', opacity, spline=False)}"
+    mark = (f'\n      <circle cx="-14" cy="-5" r="4" fill="{STOP}"/>' if dot else "")
+    return (f'    <g transform="translate(60,{y})"{shown}>{mark}\n'
+            f'      <text class="{cls}" x="0" y="0">{text}</text>{fade}\n'
+            f'    </g>')
+
+
+def _session(computed):
+    """The session in the order it runs: the two commands, the work between
+    them, and each step where a person decides. A step a scene's evidence does
+    not owe is drawn faint in that scene."""
+    def owes(token):
+        return [1 if token in s["evidence"] else FAINT for s in computed]
+    signoff = ["A person approves the change and signs it off; finish commits it."
+               if "human-approval" in s["evidence"]
+               else "A person approves the change; finish commits it."
+               for s in computed]
+    rows = [
+        _step(160, "compass quick-fix start", "cmd"),
+        _step(180, "opens the issue and links the request", "small"),
+        _step(212, "A person approves the scenarios. No code before that.",
+              opacity=owes("scenario-approval"), dot=True),
+        _step(244, "The agent writes the tests and the code."),
+        _step(276, "compass quick-fix finish", "cmd"),
+        _step(296, "proves the tests fail without the change and pass with it", "small"),
+    ]
+    return "\n".join(rows + [f'    <circle cx="46" cy="325" r="4" fill="{STOP}"/>',
+                              _fading_texts(60, 330, "step", signoff)])
 
 
 def _bars(computed):
@@ -255,38 +262,33 @@ def render(policy):
   -->
   <defs>
     <style>
-      .dim    {{ fill: {TEXT}; font-size: 17px; }}
+      .cmd    {{ fill: {CMD}; font-size: 17px; font-family: 'Latin Modern Mono','CMU Typewriter Text',Menlo,monospace; }}
+      .step   {{ fill: {TEXT}; font-size: 15px; }}
       .small  {{ fill: {MUTED}; font-size: 13px; }}
       .tick   {{ fill: #6b6b6b; font-size: 11px; }}
       .stage  {{ fill: {TEXT}; font-size: 13px; text-anchor: middle; }}
       .title  {{ fill: #ececec; font-size: 26px; }}
       .cap    {{ fill: {STOP}; font-size: 19px; font-style: italic; }}
-      .appr   {{ fill: {BAR}; font-size: 22px; }}
+      .appr   {{ fill: {BAR}; font-size: 16px; }}
       .guard  {{ fill: {GUARD}; font-size: 13px; }}
-      .eq     {{ fill: {MUTED}; font-size: 15px; }}
     </style>
   </defs>
 
   <rect width="960" height="500" fill="{BG}"/>
 
-  <text class="title" x="40" y="48">Assess the work. Let policy choose the evidence.</text>
+  <text class="title" x="40" y="48">Two commands. Compass keeps the record.</text>
 
   <g>
 {captions}
   </g>
 
-  <text class="small" x="40" y="126">JUDGMENT: three dimensions</text>
+  <text class="small" x="40" y="126">THE SESSION</text>
 
-{_sliders(policy, computed)}
-
-  <g transform="translate(400,215)">
-    <line x1="0" y1="0" x2="70" y2="0" stroke="{MUTED}" stroke-width="2"/>
-    <polygon points="70,-6 82,0 70,6" fill="{MUTED}"/>
-    <text class="eq" x="41" y="-12" text-anchor="middle">policy</text>
-    <text class="small" x="41" y="22" text-anchor="middle">deterministic</text>
+  <g>
+{_session(computed)}
   </g>
 
-  <text class="small" x="510" y="126">COMPUTED: the evidence each stage of the path judges</text>
+  <text class="small" x="510" y="126">THE RECORD: the evidence each stage of the path judges</text>
 
   <g>
 {names}
@@ -295,7 +297,8 @@ def render(policy):
   <g>
     <line x1="505" y1="{BASELINE}" x2="925" y2="{BASELINE}" stroke="{TICK}" stroke-width="1.5"/>
 {_bars(computed)}
-    <text class="small" x="925" y="202" text-anchor="end" fill="{STOP}">● a person decides</text>
+    <circle cx="790" cy="368" r="4" fill="{STOP}"/>
+    <text class="small" x="800" y="373">a person decides</text>
   </g>
 
   <g transform="translate(40,400)">

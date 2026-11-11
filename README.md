@@ -165,7 +165,7 @@ familiarity and urgency add no review and no record. Three things add to it:
 | **Spike** | Time-boxed exploration, off the path. Record the learning; ship nothing directly. |
 
 <p align="center">
-  <img src="assets/compass-explainer.svg" alt="Three sliders for risk, familiarity and size feed a policy, which gives the evidence each of the four stages judges. Dots mark the stages where a person decides, and five guardrail lines stay the same." width="960">
+  <img src="assets/compass-explainer.svg" alt="A session takes two commands, compass quick-fix start and compass quick-fix finish, with the steps where a person decides: the scenario approval before code for sensitive work, and the approval of the change before finish commits it. Beside it, the evidence each of the four stages judges, the same for every change, and five guardrail lines that stay the same." width="960">
 </p>
 
 Five guardrails apply to all work that ships code, whatever the assessment:

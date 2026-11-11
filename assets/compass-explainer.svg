@@ -7,21 +7,21 @@
   -->
   <defs>
     <style>
-      .dim    { fill: #d9d9d9; font-size: 17px; }
+      .cmd    { fill: #fc6255; font-size: 17px; font-family: 'Latin Modern Mono','CMU Typewriter Text',Menlo,monospace; }
+      .step   { fill: #d9d9d9; font-size: 15px; }
       .small  { fill: #9a9a9a; font-size: 13px; }
       .tick   { fill: #6b6b6b; font-size: 11px; }
       .stage  { fill: #d9d9d9; font-size: 13px; text-anchor: middle; }
       .title  { fill: #ececec; font-size: 26px; }
       .cap    { fill: #ffd93d; font-size: 19px; font-style: italic; }
-      .appr   { fill: #58c4dd; font-size: 22px; }
+      .appr   { fill: #58c4dd; font-size: 16px; }
       .guard  { fill: #83c167; font-size: 13px; }
-      .eq     { fill: #9a9a9a; font-size: 15px; }
     </style>
   </defs>
 
   <rect width="960" height="500" fill="#15171c"/>
 
-  <text class="title" x="40" y="48">Assess the work. Let policy choose the evidence.</text>
+  <text class="title" x="40" y="48">Two commands. Compass keeps the record.</text>
 
   <g>
     <text class="cap" x="40" y="86">
@@ -38,68 +38,57 @@
     </text>
   </g>
 
-  <text class="small" x="40" y="126">JUDGMENT: three dimensions</text>
+  <text class="small" x="40" y="126">THE SESSION</text>
 
-  <g transform="translate(40,160)">
-    <text class="dim" x="0" y="0">risk</text>
-    <line x1="110" y1="-5" x2="330" y2="-5" stroke="#444a55" stroke-width="2"/>
-    <g class="tick">
-      <circle cx="110" cy="-5" r="2.5" fill="#444a55"/><text x="110" y="14" text-anchor="middle">trivial</text>
-      <circle cx="183" cy="-5" r="2.5" fill="#444a55"/><text x="183" y="14" text-anchor="middle">contained</text>
-      <circle cx="257" cy="-5" r="2.5" fill="#444a55"/><text x="257" y="14" text-anchor="middle">cross-cutting</text>
-      <circle cx="330" cy="-5" r="2.5" fill="#444a55"/><text x="330" y="14" text-anchor="middle">critical</text>
+  <g>
+    <g transform="translate(60,160)">
+      <text class="cmd" x="0" y="0">compass quick-fix start</text>
     </g>
-    <circle cx="110" cy="-5" r="7" fill="#fc6255">
-      <animate attributeName="cx" values="110;110;330;330;330;330;110" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
-    </circle>
-  </g>
-  <g transform="translate(40,220)">
-    <text class="dim" x="0" y="0">familiarity</text>
-    <line x1="110" y1="-5" x2="330" y2="-5" stroke="#444a55" stroke-width="2"/>
-    <g class="tick">
-      <circle cx="110" cy="-5" r="2.5" fill="#444a55"/><text x="110" y="14" text-anchor="middle">greenfield</text>
-      <circle cx="220" cy="-5" r="2.5" fill="#444a55"/><text x="220" y="14" text-anchor="middle">mapped</text>
-      <circle cx="330" cy="-5" r="2.5" fill="#444a55"/><text x="330" y="14" text-anchor="middle">unmapped</text>
+    <g transform="translate(60,180)">
+      <text class="small" x="0" y="0">opens the issue and links the request</text>
     </g>
-    <circle cx="220" cy="-5" r="7" fill="#58c4dd">
-      <animate attributeName="cx" values="220;220;220;220;330;330;220" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
-    </circle>
-  </g>
-  <g transform="translate(40,280)">
-    <text class="dim" x="0" y="0">size</text>
-    <line x1="110" y1="-5" x2="330" y2="-5" stroke="#444a55" stroke-width="2"/>
-    <g class="tick">
-      <circle cx="110" cy="-5" r="2.5" fill="#444a55"/><text x="110" y="14" text-anchor="middle">atomic</text>
-      <circle cx="165" cy="-5" r="2.5" fill="#444a55"/><text x="165" y="14" text-anchor="middle">small</text>
-      <circle cx="220" cy="-5" r="2.5" fill="#444a55"/><text x="220" y="14" text-anchor="middle">medium</text>
-      <circle cx="275" cy="-5" r="2.5" fill="#444a55"/><text x="275" y="14" text-anchor="middle">large</text>
-      <circle cx="330" cy="-5" r="2.5" fill="#444a55"/><text x="330" y="14" text-anchor="middle">product</text>
+    <g transform="translate(60,212)" opacity="0.18">
+      <circle cx="-14" cy="-5" r="4" fill="#ffd93d"/>
+      <text class="step" x="0" y="0">A person approves the scenarios. No code before that.</text>
+      <animate attributeName="opacity" values="0.18;0.18;1;1;1;1;0.18" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </g>
-    <circle cx="110" cy="-5" r="7" fill="#ffd93d">
-      <animate attributeName="cx" values="110;110;165;165;275;275;110" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
-    </circle>
+    <g transform="translate(60,244)">
+      <text class="step" x="0" y="0">The agent writes the tests and the code.</text>
+    </g>
+    <g transform="translate(60,276)">
+      <text class="cmd" x="0" y="0">compass quick-fix finish</text>
+    </g>
+    <g transform="translate(60,296)">
+      <text class="small" x="0" y="0">proves the tests fail without the change and pass with it</text>
+    </g>
+    <circle cx="46" cy="325" r="4" fill="#ffd93d"/>
+    <text class="step" x="60" y="330">
+      A person approves the change; finish commits it.
+      <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
+    </text>
+    <text class="step" x="60" y="330" opacity="0">
+      A person approves the change; finish commits it.
+      <animate attributeName="opacity" values="0;0;1;1;0;0;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
+    </text>
+    <text class="step" x="60" y="330" opacity="0">
+      A person approves the change and signs it off; finish commits it.
+      <animate attributeName="opacity" values="0;0;0;0;1;1;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
+    </text>
   </g>
 
-  <g transform="translate(400,215)">
-    <line x1="0" y1="0" x2="70" y2="0" stroke="#9a9a9a" stroke-width="2"/>
-    <polygon points="70,-6 82,0 70,6" fill="#9a9a9a"/>
-    <text class="eq" x="41" y="-12" text-anchor="middle">policy</text>
-    <text class="small" x="41" y="22" text-anchor="middle">deterministic</text>
-  </g>
-
-  <text class="small" x="510" y="126">COMPUTED: the evidence each stage of the path judges</text>
+  <text class="small" x="510" y="126">THE RECORD: the evidence each stage of the path judges</text>
 
   <g>
     <text class="appr" x="510" y="156">
-      the common row: 8 pieces of evidence
+      8 pieces of evidence: the same for every change
       <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
     <text class="appr" x="510" y="156" opacity="0">
-      the common row and the scenario approval: 9 pieces of evidence
+      9 pieces of evidence: the same, plus the scenario approval
       <animate attributeName="opacity" values="0;0;1;1;0;0;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
     <text class="appr" x="510" y="156" opacity="0">
-      the common row, the scenario approval and the sign-off: 10 pieces of evidence
+      10 pieces of evidence: the same, plus two approvals
       <animate attributeName="opacity" values="0;0;0;0;1;1;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </text>
   </g>
@@ -129,10 +118,11 @@
       <animate attributeName="y" values="265;265;265;265;252;252;265" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/>
     </rect>
     <circle cx="860" cy="198" r="4" fill="#ffd93d" opacity="0">
-      <animate attributeName="opacity" values="0;0;0;0;1;1;0" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;1;1;1;1;1;1" keyTimes="0.0;0.3;0.3333;0.6333;0.6667;0.9667;1.0" dur="18s" repeatCount="indefinite"/>
     </circle>
     <text class="stage" x="860" y="350">ship</text>
-    <text class="small" x="925" y="202" text-anchor="end" fill="#ffd93d">● a person decides</text>
+    <circle cx="790" cy="368" r="4" fill="#ffd93d"/>
+    <text class="small" x="800" y="373">a person decides</text>
   </g>
 
   <g transform="translate(40,400)">

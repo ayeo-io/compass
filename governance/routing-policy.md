@@ -103,11 +103,9 @@ The shipped defaults (see `governance/check-set.yml` for the live, id-tagged set
 - **floors** - `RP-FLOOR-002` brownfield-unmapped familiarity at medium size
   or more, with cross-cutting or critical risk, or with one of the four domain
   labels → the `atdd` skill is required, for its behavior mapping (below
-  that, `RP-ADV-002` gives the skill as advice); `RP-REQUIRE-003` cross-cutting or critical risk
-  and `RP-REQUIRE-004` one of the four domain labels name the gate
-  `verify.architecture`, and add nothing to a 9.0.0 issue: the check set
-  keeps them for the 8.x evaluator and compatibility contract 1 (ADR-099
-  decision 9). `RP-FLOOR-001` and `RP-FLOOR-003`, whose only effect
+  that, `RP-ADV-002` gives the skill as advice). The check set holds no floor that adds a gate (ADR-099 decision 9);
+  the comparison with 8.0.4 puts `RP-REQUIRE-003` and `RP-REQUIRE-004` back in
+  the test helper. `RP-FLOOR-001` and `RP-FLOOR-003`, whose only effect
   was a minimum approach, are gone since 9.0.0 (ADR-092).
 - **caps** - none since 9.0.0.
 - **immovable_gates** - `RP-GATE-001..003`: `verify.correctness`,
@@ -462,9 +460,8 @@ validation` or `refactor`.
 The configuration adds only what a project can still set for a new issue:
 the gate of each floor of the project's own that matches (`add_gate`) and
 each immovable gate, the skill a floor asks for (`require_skill`, such as
-`atdd` from `RP-FLOOR-002`) and the advisory strategies. The shipped floors
-`RP-REQUIRE-003` and `RP-REQUIRE-004` add no gate
-(`evidence_required.PATH_RETIRED_FLOORS`). A gate that a token stands for
+`atdd` from `RP-FLOOR-002`) and the advisory strategies. The shipped check set
+holds no floor that adds a gate. A gate that a token stands for
 joins as that token, so `gates` stays derived from `evidence_required`. The
 function never reads the configuration's approaches, shapes, stage modes or
 caps.

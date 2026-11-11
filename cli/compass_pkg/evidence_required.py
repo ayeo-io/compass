@@ -19,10 +19,8 @@ gates of its floors (`add_gate`) and immovable gates, the skills its floors
 ask for (`require_skill`), its advisory strategies, and the two tighten-only
 settings the policy can carry (`signoff_labels`, read as more `G5` labels, and
 `require_evidence`, read as more tokens). The shipped check set
-(`governance/check-set.yml`) keeps two floors that add the architecture gate,
-`PATH_RETIRED_FLOORS`, because the 8.x evaluator and its compatibility
-contract read them. They add nothing here, so a project with no settings owes
-the common row and the two approvals, and nothing else.
+(`governance/check-set.yml`) holds no floor that adds a gate. So a project
+with no settings owes the common row and the two approvals, and nothing else.
 This module never reads the configuration's approaches, shapes, stage modes or
 caps.
 
@@ -96,13 +94,6 @@ ROWS = (
     ("RP-EVID-SPIKE", {"goal": "exploration"}, (), "suspended"),
     ("RP-EVID-COMMON", {}, EVERY_ISSUE, GUIDANCE),
 )
-
-#: The floors of the shipped check set that add no gate on the path (ADR-099
-#: decision 4: risk and labels add no review). The check set keeps them for the
-#: 8.x evaluator, `routing.evaluate_route`, which compatibility contract 1
-#: compares with 8.0.4. A floor with any other id is the project's own and adds
-#: its gate.
-PATH_RETIRED_FLOORS = ("RP-REQUIRE-003", "RP-REQUIRE-004")
 
 #: The additions to the delivery row, in order: `(rule id, when, token)`. Each is
 #: an approval a person gives.
@@ -254,7 +245,7 @@ def evaluate(assessment, policy, acceptance_state="on", expected_acceptance="non
         # a floor that adds a gate is.
         named = [(None, ig.get("gate")) for ig in guard.get("immovable_gates") or []]
         named += [(fl.get("id"), fl.get("add_gate")) for fl in guard.get("floors") or []
-                  if fl.get("add_gate") and fl.get("id") not in PATH_RETIRED_FLOORS
+                  if fl.get("add_gate")
                   and reading_matches(fl.get("when"), readings, orders)]
         for rule_id, gate in named:
             if not gate or gate in REMOVED_GATES:

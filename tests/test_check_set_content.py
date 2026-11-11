@@ -93,7 +93,8 @@ def test_dp_2_every_catalogue_is_filled_and_the_approach_catalogue_is_not_named_
     assert list(preset["stages"]) == ["assess", "specify", "build", "ship"]
     floors = preset["rules"]["floors"]
     effects = {k for rule in floors["rules"].values() for k in rule["then"]}
-    assert effects == {"require_skill", "add_gate"}
+    # ADR-099: no shipped floor adds a gate; a project's own floor can.
+    assert effects == {"require_skill"}
     assert "force_minimum_approach" not in floors["hit"]
     assert "caps" not in preset["rules"]
 

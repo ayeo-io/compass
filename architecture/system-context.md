@@ -109,9 +109,8 @@ Logical surface: **strategies**
    is refused rather than run on the copy (`governance-copy-removed`,
    ADR-098). Adopters declare
    architecture checks as `project_checks` in `compass.yml`, which run the
-   generic `command-passes` check (see ADR-009); the `verify.architecture` gate is
-   added by `RP-REQUIRE-003` and `RP-REQUIRE-004` when risk or labels
-   warrant it.
+   generic `command-passes` check (see ADR-009); a project owes the `verify.architecture` gate through
+   the `architecture` token in `require_evidence` or a floor of its own.
 
 4. **The shipped core is framework-owned.** Changing a shipped delivery
    approach, assessment dimension, stage or guardrail needs a framework

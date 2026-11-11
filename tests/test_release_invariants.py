@@ -97,7 +97,7 @@ def test_no_fifth_routing_dimension_added():
 
 def test_verify_fitness_only_introduced_via_routing_floors():
     """verify.architecture is not in any route_shape's gates list - it is only
-    added by the RP-REQUIRE-003 and RP-REQUIRE-004 floors.
+    added by a floor (the check set holds none now; a project's own floor can).
     """
     policy = shipped_view("routing-policy.yml")
     for shape_name, shape in policy["route_shapes"].items():
@@ -107,15 +107,14 @@ def test_verify_fitness_only_introduced_via_routing_floors():
         )
 
 
-def test_verify_fitness_promotion_floors_exist():
-    """RP-REQUIRE-003 and RP-REQUIRE-004 are present and use add_gate: verify.architecture."""
+def test_the_shipped_check_set_has_no_floor_that_adds_the_architecture_gate():
+    """The check set holds no floor with add_gate: verify.architecture (ADR-099). The
+    gate is owed only through a project's `architecture` token or its own floor."""
     policy = shipped_view("routing-policy.yml")
     floors = policy["routing_guardrails"]["floors"]
-    by_id = {f["id"]: f for f in floors}
-    assert "RP-REQUIRE-003" in by_id, "RP-REQUIRE-003 (verify.architecture on cross-cutting/critical) must exist"
-    assert "RP-REQUIRE-004" in by_id, "RP-REQUIRE-004 (verify.architecture on irreversible touches) must exist"
-    assert by_id["RP-REQUIRE-003"]["add_gate"] == "verify.architecture"
-    assert by_id["RP-REQUIRE-004"]["add_gate"] == "verify.architecture"
+    assert [f["id"] for f in floors if f.get("add_gate") == "verify.architecture"] == []
+    assert "RP-REQUIRE-003" not in {f["id"] for f in floors}
+    assert "RP-REQUIRE-004" not in {f["id"] for f in floors}
 
 
 # -----------------------------------------------------------------------------

@@ -400,8 +400,10 @@ def test_the_command_prints_the_path_for_a_delivery_assessment(run_cli, name):
     assert not [t for t in data["evidence_required"] if t in S17_EVIDENCE]
     assert data["evidence_required"] == ["request"] + owed + ["ship-approval"]
     assert [f["id"] for f in data["policy_rules_fired"]] == fired
-    # The gates are derived from the evidence (ADR-092).
-    path = er.evaluate(_as_read(readings), cb.policy_8_0_4())
+    # The gates are derived from the evidence (ADR-092). The policy is the shipped
+    # one: the 8.0.4 copy still holds the two floors that add the architecture
+    # gate, which the check set no longer holds (ADR-099).
+    path = er.evaluate(_as_read(readings), cb.shipped_policy())
     assert data["gates"] == path["gates"]
     for key in ("stages", "subtask_ceiling", "max_worktrees"):
         assert key not in data, f"the path does not print {key!r}"

@@ -125,10 +125,42 @@ REMOVED_RULES_9_0_0 = (
 )
 REMOVED_GATE_9_0_0 = "verify.analyze"
 
+# ADR-099 also removed `RP-REQUIRE-003` and `RP-REQUIRE-004` from the check set. They
+# added `verify.architecture` when risk or labels matched, and risk and labels add no
+# review now. The baseline still records them. So a policy that holds neither is
+# compared with both put back at the end of the floors, as they stood in the check set.
+# A copied older policy that holds either is returned as it is.
+REMOVED_ARCHITECTURE_FLOORS_9_0_0 = (
+    {"id": "RP-REQUIRE-003", "when": {"risk": ["cross-cutting", "critical"]},
+     "add_gate": "verify.architecture",
+     "rationale": "Architecture checked before cross-cutting or critical changes land."},
+    {"id": "RP-REQUIRE-004", "when": {"labels_any": ["auth", "payments", "personal-data",
+                                                      "migrations"]},
+     "add_gate": "verify.architecture",
+     "rationale": "Irreversible-surface issues have architecture checked before they ship."},
+)
+
+
+def _with_architecture_floors_removed_in_9_0_0(policy):
+    """`policy` with the two floors ADR-099 removed put back after its other floors,
+    when it holds neither; a policy that holds either is returned as it is."""
+    floors = (policy.get("routing_guardrails") or {}).get("floors")
+    if not isinstance(floors, list):
+        return policy
+    ids = [rule.get("id") for rule in floors if isinstance(rule, dict)]
+    if any(rule["id"] in ids for rule in REMOVED_ARCHITECTURE_FLOORS_9_0_0):
+        return policy
+    policy = copy.deepcopy(policy)
+    policy["routing_guardrails"]["floors"].extend(
+        copy.deepcopy(list(REMOVED_ARCHITECTURE_FLOORS_9_0_0)))
+    return policy
+
 
 def _with_rules_removed_in_9_0_0(policy):
     """`policy` with the two rules 9.0.0 removed put back before `RP-REQUIRE-003`, when it
-    has neither; a copied older policy that still has them is returned as it is."""
+    has neither; a copied older policy that still has them is returned as it is. The
+    floors ADR-099 removed are put back first, so the anchor exists."""
+    policy = _with_architecture_floors_removed_in_9_0_0(policy)
     floors = (policy.get("routing_guardrails") or {}).get("floors")
     if not isinstance(floors, list):
         return policy

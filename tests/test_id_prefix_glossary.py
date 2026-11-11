@@ -265,9 +265,8 @@ def test_routing_ids_are_rp_and_kinds_are_distinct():
 
 def _two_architecture_rules(root):
     """The two rules that added the architecture review before 9.0.0 (the
-    shipped floors `RP-REQUIRE-003` and `RP-REQUIRE-004`), now a project's own
-    `require_evidence` rules: since ADR-099 the shipped floors add no gate on a
-    path issue."""
+    floors `RP-REQUIRE-003` and `RP-REQUIRE-004`), now a project's own
+    `require_evidence` rules: since ADR-099 the check set holds neither."""
     (root / "compass.yml").write_text(
         "schema: 1\n"
         "require_evidence:\n"

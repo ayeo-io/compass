@@ -1140,6 +1140,9 @@ _register(Rule(
         Exemption("architecture/decisions/README.md",
                    "RP-REQUIRE-001/002, verify.analyze",
                    "RP-REQUIRE is an id prefix, not the verb."),
+        Exemption("tests/fixtures/check-set-digests.yml",
+                   "RP-REQUIRE-003 and RP-REQUIRE-004 removed",
+                   "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("governance/strategies-rationale.md",
                    "[RP-REQUIRE-003] requirement:",
                    "RP-REQUIRE is an id prefix, not the verb; this is a "
@@ -1214,17 +1217,6 @@ _register(Rule(
             "tests/test_tdd_evidence.py",
             "No smuggling - a passing command with no --verified-by records no red",
             "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_release_invariants.py",
-            "added by the RP-REQUIRE-003 and RP-REQUIRE-004 floors.",
-            "the same rule-id false match as the RP-REQUIRE exemptions "
-            "above - RP-REQUIRE is an id prefix, not the verb."),
-        Exemption(
-            "tests/test_release_invariants.py",
-            "RP-REQUIRE-003 and RP-REQUIRE-004 are present and use "
-            "add_gate: verify.architecture.",
-            "the same rule-id false match as the RP-REQUIRE exemptions "
-            "above - RP-REQUIRE is an id prefix, not the verb."),
         Exemption(
             "tests/test_release_invariants.py",
             "A landed issue's test-run evidence (no attempts field) must "

@@ -9,4 +9,5 @@
 # Repinned for #356 step 2: the check request-recorded and its display name.
 # Repinned for #360 step 2: RP-FLOOR-002 and RP-ADV-002 name the `atdd`
 # skill, which absorbed `behavior-mapping` and `bdd-specification`.
-compass-checks@9.0.0: 446c1cf864df46a525c0e12050681aee9a8799be4db2f4074835d01060b48b5b
+# Repinned for ADR-099: RP-REQUIRE-003 and RP-REQUIRE-004 removed; they added no gate on the path.
+compass-checks@9.0.0: 10d9443cbd6f850c4a9dc5ef25da2e50bd4fd6bd8cce8a671d20734af24f607f

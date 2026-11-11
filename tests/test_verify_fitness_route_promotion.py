@@ -34,8 +34,8 @@ def _run_cli(*args: str, cwd: Path,
 
 
 #: The project's own rules that owe the architecture review. On a 9.0.0
-#: delivery issue the shipped floors `RP-REQUIRE-003` and `RP-REQUIRE-004` add no
-#: gate (ADR-099 decision 4); a project adds the `architecture` token itself
+#: delivery issue the check set holds no floor that adds a gate (ADR-099 decision 4);
+#: a project adds the `architecture` token itself
 #: with `require_evidence`, and the token's gate is `verify.architecture`.
 #: The rules fire as `RP-SETTING-1` and `RP-SETTING-2`, in file order.
 ARCHITECTURE_RULES = [

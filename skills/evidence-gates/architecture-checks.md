@@ -15,8 +15,8 @@ Adopters declare each architecture check in `project_checks` of
 
 - is owed only where the project's settings add it: the token
   `architecture` in `require_evidence`, or a floor of the project's own that
-  adds the gate. The shipped floors `RP-REQUIRE-003` and `RP-REQUIRE-004`
-  add no gate to an issue assessed on 9.0.0
+  adds the gate. The shipped check set holds
+  no floor that adds this gate
   (`architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md`
   holds the floor mechanism);
 - clears without checking anything when no project guardrails declare

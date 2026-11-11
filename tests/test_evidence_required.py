@@ -347,6 +347,20 @@ def test_a_floor_of_the_configuration_adds_its_gate(live):
     assert spike["gates"] == ["spike.conclude"]
 
 
+def test_a_project_floor_that_adds_the_architecture_gate_adds_it_whatever_its_id(live):
+    """The check set no longer holds `RP-REQUIRE-003` (ADR-099), so a floor with that id
+    is the project's own and adds its gate like any other floor."""
+    plain = er.evaluate(_assess(risk="critical"), live)
+    assert "architecture" not in plain["evidence_required"]
+    policy = copy.deepcopy(live)
+    policy["routing_guardrails"]["floors"].append(
+        {"id": "RP-REQUIRE-003", "when": {"risk": ["cross-cutting", "critical"]},
+         "add_gate": "verify.architecture"})
+    out = er.evaluate(_assess(risk="critical"), policy)
+    assert "architecture" in out["evidence_required"], out["evidence_required"]
+    assert "RP-REQUIRE-003" in out["rules_fired"], out["rules_fired"]
+
+
 def test_a_removed_gate_is_never_owed_and_its_rule_does_not_fire(policy_8_0_4):
     out = er.evaluate(_assess(risk="critical"), policy_8_0_4)
     assert "verify.analyze" not in out["gates"]

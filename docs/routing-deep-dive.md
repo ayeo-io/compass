@@ -42,9 +42,8 @@ Every issue, every time, assess runs the same four steps:
    The policy in force then adds the gate of each floor of the project's own
    that matches (`add_gate`), the evidence of each `require_evidence` setting
    of `compass.yml` that matches (`RP-SETTING-<n>`), each gate it holds
-   immovable, and the skill a floor asks for (`require_skill`). The two
-   shipped floors that name the architecture gate, `RP-REQUIRE-003` and
-   `RP-REQUIRE-004`, add nothing on the path. The records of the four-layer
+   immovable, and the skill a floor asks for (`require_skill`). The
+   shipped check set holds no floor that adds a gate. The records of the four-layer
    acceptance strategy (`S17`), `outer-loop`, `isolation` and `layering`,
    are owed only where a `require_evidence` setting adds them. Every rule
    that fires is recorded with its rationale. Which documents the issue

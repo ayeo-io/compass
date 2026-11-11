@@ -801,11 +801,7 @@ def test_trc_s3_routing_deep_dive_matches_the_evaluator():
     text = _flat(_read("docs/routing-deep-dive.md"))
 
     # The `G5` label list names the labels the rules read, and no others.
-    from check_set_files import view as shipped_view
-    policy = shipped_view("routing-policy.yml")
-    floor = next(r for r in policy["routing_guardrails"]["floors"] if r["id"] == "RP-REQUIRE-004")
-    labels = floor["when"]["labels_any"]
-    assert list(G5_LABELS) == labels, (G5_LABELS, labels)
+    labels = list(G5_LABELS)
     listed = re.search(r"not a `G5` label \(([^)]*)\)", text)
     assert listed, "the `G5` label list sentence is gone"
     assert re.findall(r"`([a-z-]+)`", listed.group(1)) == labels, listed.group(1)
@@ -829,8 +825,8 @@ def test_trc_s3_routing_deep_dive_matches_the_evaluator():
     case = _case_3(_read("docs/routing-deep-dive.md"))
     verbose = _evaluate_verbose(**CASE_3)
     fired = _fired_rules(verbose)
-    # The shipped floors `RP-REQUIRE-003` and `RP-REQUIRE-004` add no gate on a
-    # path issue (ADR-099), so they no longer fire. The row and the sign-off
+    # The check set no longer holds `RP-REQUIRE-003` and `RP-REQUIRE-004` (ADR-099),
+    # so they do not fire. The row and the sign-off
     # rows are what fire, and each adds evidence.
     assert fired == [("RP-EVID-COMMON", True), ("RP-EVID-SIGNOFF", True), ("G5", True)], fired
     assert not case_3_findings(case, verbose), case_3_findings(case, verbose)

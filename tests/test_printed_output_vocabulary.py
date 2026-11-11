@@ -186,8 +186,8 @@ def test_trc_e1_shared_effect_printed_once(tmp_path):
     """Two rules of a project's `require_evidence` both add the architecture
     review. The rules are NOT merged - they fire on different conditions and
     both conditions are worth seeing - so each still prints, and the evidence
-    and the gate they share are each named once. (The shipped floors
-    `RP-REQUIRE-003` and `RP-REQUIRE-004` add no gate on a path issue since
+    and the gate they share are each named once. (The check set
+    no longer holds the floors `RP-REQUIRE-003` and `RP-REQUIRE-004` since
     ADR-099, so a project's own rules carry the case.)
     """
     (tmp_path / "compass.yml").write_text(

@@ -125,18 +125,6 @@ rules:
           - labels_any: [auth, payments, personal-data, migrations]
         then: {require_skill: atdd}
         rationale: You cannot safely change behaviour you have not first written down.
-      RP-REQUIRE-003:
-        order: 2
-        when:
-          risk: [cross-cutting, critical]
-        then: {add_gate: verify.architecture}
-        rationale: Architecture checked before cross-cutting or critical changes land.
-      RP-REQUIRE-004:
-        order: 3
-        when:
-          labels_any: [auth, payments, personal-data, migrations]
-        then: {add_gate: verify.architecture}
-        rationale: Irreversible-surface issues have architecture checked before they ship.
   loop_ceilings:
     kind: ceilings
     hit: {limit: min}

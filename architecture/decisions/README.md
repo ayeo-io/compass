@@ -138,7 +138,7 @@ Rules:
 | [ADR-096](ADR-096-the-issue-record-ships-with-the-code.md) | The issue record ships with the code | accepted | with ADR-089, ADR-094 and ADR-095 |
 | [ADR-097](ADR-097-resident-text-stays-under-600-words-and-each-refusal-names-its-fix.md) | Resident text stays under 600 words and each refusal names its fix | accepted | with ADR-091, ADR-093 and ADR-094 |
 | [ADR-098](ADR-098-compass-migrate-moves-an-8x-project-and-the-legacy-readers-end.md) | Compass migrate moves an 8.x project and the legacy readers end | accepted | with ADR-088, ADR-092, ADR-094, ADR-096 and ADR-097 |
-| [ADR-099](ADR-099-compass-keeps-the-record-itself-and-a-change-takes-two-commands.md) | Compass keeps the record itself and a change takes two commands | proposed | with ADR-092, ADR-094, ADR-095 and ADR-096 |
+| [ADR-099](ADR-099-compass-keeps-the-record-itself-and-a-change-takes-two-commands.md) | Compass keeps the record itself and a change takes two commands | accepted | with ADR-092, ADR-094, ADR-095 and ADR-096 |
 
 ## Principle → ADR mapping
 

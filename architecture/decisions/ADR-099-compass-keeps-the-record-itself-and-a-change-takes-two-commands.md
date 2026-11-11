@@ -1,7 +1,7 @@
 ---
 id: ADR-099
 title: Compass keeps the record itself and a change takes two commands
-status: proposed
+status: accepted
 date: 2026-11-10
 supersedes: ''
 superseded_by: ''
@@ -27,6 +27,8 @@ The transcripts show one cause. The session keeps the record by hand, one comman
 Each tool call sends the whole context again, so the tokens grow with the number of calls.
 
 An experiment branch, `exp-lean`, moved the record keeping into Compass. On the same four scenarios it used 0.77 to 1.29 times the tokens of a session without Compass, all 12 runs reached the target, and all 12 records passed the checker (its results page for the four scenarios, same date, in sdd-bench). The owner chose on 10 November to make it the basis of 9.0.0.
+
+The built version (v9 `ac859818`) was measured on 11 November 2026, with both arms side by side. It passed the three rules on all four scenarios: 1.48, 1.32, 0.61 and 0.76 times the tokens of a session without Compass, all 12 runs reached the target, and all 12 records passed the checker (its results page for the two-command record, dated 11 November 2026, in sdd-bench). The owner accepted this record on 11 November 2026.
 
 ## Decision
 
@@ -75,7 +77,7 @@ An experiment branch, `exp-lean`, moved the record keeping into Compass. On the 
 - The digest of decision 6 is written by `finish` only. An issue whose record is kept by hand with the commands of decision 10 has no digest, so its approvals are not compared with the change.
 - A new approval after a change is written to the manifest in the working tree. `finish` does not run again for it, so the next commit that holds the record carries it.
 - ADR-092 (one path of four stages) and ADR-095 (the ship approval from the merged pull request) stay. This record changes who writes the evidence, not which approvals a change owes.
-- The measurement runs again on the built version, with both arms side by side, before 9.0.0 is released.
+- The smallest scenario passes at 1.48 against the limit of 1.5. A change that adds a fixed cost to every session must be measured before it is released.
 
 ## Open questions
 

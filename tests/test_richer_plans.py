@@ -77,16 +77,18 @@ def test_trc_c4_selection_rules_scale_by_route():
     )
     text = PLAN_SKILL.read_text(encoding="utf-8")
 
-    # The path has no approaches (ADR-092): the rule scales with the evidence
-    # row the issue owes instead of the 8.x quick fix, regular and full.
-    express = _route_rule(text, "**The light row**")
+    # The path has no approaches (ADR-092) and, since ADR-099, one evidence
+    # row for every delivery issue: the rule scales with the design decisions
+    # the change holds and with the `architecture` token a project adds.
+    express = _route_rule(text, "**A change with no design decision**")
     assert re.search(r"\b(none|no)\b", express, re.I), (
-        f"the skill does not say a light-row change uses none of them: {express!r}")
+        f"the skill does not say a change with no design decision uses none of them: "
+        f"{express!r}")
 
-    standard = _route_rule(text, "**The standard row**")
+    standard = _route_rule(text, "**A change with some**")
     assert re.search(r"\b(clarity|clarify|helps?|add)\b", standard, re.I), (
-        f"the skill does not say a standard-row design uses the ones that help: "
-        f"{standard!r}")
+        f"the skill does not say a change with some design decisions uses the ones "
+        f"that help: {standard!r}")
 
     expedition = _route_rule(text, "owes `architecture`**")
     assert re.search(r"\b(all|freely|every)\b", expedition, re.I), (

@@ -23,14 +23,16 @@ Six sections are optional, and choosing which to use is the craft:
 | **The shape of the change** (code) | The shape of an interface, type, or API is itself a decision worth arguing with. | The shape is obvious from the approach. |
 | **Cross-cutting concerns** | The change touches security, privacy, or what you can see in production. | It touches none of them, or the team keeps a threat model or rollback plan of its own; link that instead. |
 
-How many to use scales with the evidence the issue owes:
+How many to use scales with the change:
 
-- **The light row** - none of them. There is no design to write.
-- **The standard row** - the ones that add clarity: typically one diagram
+- **A change with no design decision** - none of them. There is no design to
+  write.
+- **A change with some** - the ones that add clarity: typically one diagram
   and one other section. Reaching for all six is a sign the assessment was
   too low, not a sign of thoroughness.
-- **A change that owes `architecture`** - all of them, freely, where the
-  work warrants it. A reviewer is expected to spend real time in it. The
+- **A change that owes `architecture`** - all of them, freely, where the work
+  warrants it. Only the project's `require_evidence` adds that token. A
+  reviewer is expected to spend real time in it. The
   cross-cutting section also names the well-architected pillars the change
   touches and what the design does about each: that is the well-architected
   alignment strategy, `S15`, and the pillars come from

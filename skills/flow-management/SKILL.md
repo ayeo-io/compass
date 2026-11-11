@@ -45,8 +45,8 @@ severity, worst first:
    The fix is to run `/compass:assess` now and reconcile.
 
 2. **Assessment outgrown** - the records show the issue outgrowing its assessment
-   (a small change whose scenarios keep growing; a change on the light
-   evidence row still open after days). The fix is `/compass:assess --reassess`, not
+   (a small change whose scenarios keep growing; a change assessed
+   `small` still open after days). The fix is `/compass:assess --reassess`, not
    pushing on. An assessment quietly outgrown is the failure mode Compass exists to
    prevent - flow management is where it gets caught when the issue itself
    missed it.

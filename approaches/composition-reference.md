@@ -24,21 +24,23 @@ same list, every time.
 
 The computation, in order:
 
-1. **Match one row.** The spike row for `goal: exploration`; the light row
-   for a small change with trivial or contained risk; the defect row for a
-   small fix under `urgency: live-defect`; the standard row for every other
-   delivery assessment.
-2. **Apply the additions.** Cross-cutting or critical risk and the `G5`
-   labels add `architecture`; a `G5` label or critical risk adds
-   `scenario-approval`; a `G5` label adds `human-approval`; `urgency:
-   live-defect` adds `reproduce-first`.
-3. **Add the `S17` tokens** the row's routing owes, unless the project turns
-   the strategy off or assess is told `--expected-acceptance validation` or
-   `refactor`.
-4. **Add what the configuration adds.** Each floor that matches adds its gate
-   (`add_gate`) or asks for a skill (`require_skill`, such as
-   `atdd` from `RP-FLOOR-002`). Each immovable gate and project
-   guardrail is added. The advisory strategies are listed.
+1. **Match one row.** The spike row for `goal: exploration`; the common row
+   (`RP-EVID-COMMON`) for every other assessment. Risk, size, familiarity and
+   urgency add nothing to it.
+2. **Apply the additions.** A `G5` label (`auth`, `payments`, `personal-data`,
+   `migrations`, and each label in `signoff_labels`) or critical risk adds
+   `scenario-approval`; a `G5` label adds `human-approval`.
+3. **Add what the configuration adds.** Each `require_evidence` rule that
+   matches adds its tokens; it fires as `RP-SETTING-<n>`. Each floor of the
+   project's own that matches adds its gate (`add_gate`) or asks for a skill
+   (`require_skill`, such as `atdd` from `RP-FLOOR-002`). Each immovable gate
+   and project guardrail is added. The advisory strategies are listed. The
+   shipped check set has no floor that adds a gate.
+4. **Route the `S17` strategy** from the tokens owed. With no `S17` token
+   owed (`outer-loop`, `isolation`, `layering`) the routing is `guidance` and
+   no check of the strategy runs. A token owed turns it on, unless the
+   project turns the strategy off or assess is told `--expected-acceptance
+   validation` or `refactor`.
 
 The function never reads a configuration's approaches, shapes, stage modes
 or caps. A frozen preset or a stored generation can still hold them; they
@@ -49,25 +51,23 @@ The rows, the additions and the tokens of each are in
 `governance/routing-policy.md`, "The evidence rows". This file does not copy
 them.
 
-## The review dimensions by row
+## The review dimensions
 
-The gates are the review dimensions. A row owes the gate of each dimension
-it lists:
+The gates are the review dimensions. A delivery issue owes three by default:
 
-| Dimension | Light row | Defect row | Standard row | Spike |
-|---|---|---|---|---|
-| correctness | yes | yes | yes | - |
-| governance | yes | yes | yes | - |
-| traceability | yes | yes | yes | - |
-| regression | - | yes | yes | - |
-| security | - | yes | yes | - |
-| clarity | - | - | yes | - |
-| architecture | - | with cross-cutting risk | with cross-cutting or critical risk, or a `G5` label | - |
+| Dimension | Common row | Spike |
+|---|---|---|
+| correctness | yes | - |
+| governance | yes | - |
+| traceability | yes | - |
+| regression, security, clarity, architecture | only where `require_evidence` adds the token | - |
 
 `correctness`, `governance` and `traceability` are on for every delivery
-issue because they *are* the default guardrails in review form. A spike runs
-none of them: it ships nothing, so it has only its own gate,
-`spike.conclude` ("was the question answered?"); see `approaches/spike.md`.
+issue because they *are* the default guardrails in review form. `compass
+quick-fix finish` passes them from the test records and the output of
+`compass check`. A spike runs none of them: it ships nothing, so it has only
+its own gate, `spike.conclude` ("was the question answered?"); see
+`approaches/spike.md`.
 
 ## The configuration bounds the evidence
 

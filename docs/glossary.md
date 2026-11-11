@@ -438,7 +438,7 @@ A hard rule cleared with evidence; a failed guardrail stops the work. Few by des
 
 ### hotfix
 
-The setting `urgency: live-defect` on the assessment, for a fix to a defect that is live. It adds `reproduce-first` to the evidence required: the first scenario is the reproduction, and its red is recorded before anything else. It also adds the regression, security and Definition of Done evidence. After the ship, the follow-up promotes the reproduction into proper acceptance criteria, with an optional postmortem. Before 9.0.0 the hotfix was a delivery approach, and an issue assessed then keeps that approach.
+The setting `urgency: live-defect` on the assessment, for a fix to a defect that is live. It records the urgency and adds no evidence by default: a hotfix owes what every delivery issue owes (ADR-099). A project that wants the reproduction recorded first, or the regression, security or Definition of Done evidence, adds `reproduce-first` or that token in the `require_evidence` of its `compass.yml`. Before 9.0.0 the hotfix was a delivery approach, and an issue assessed then keeps that approach.
 
 **Related:** `evidence-required`, `incident`, `follow-up`, `postmortem`
 
@@ -782,7 +782,7 @@ The atomic unit of acceptance: one behavior, one Given/When/Then, one executable
 
 ### scenario-freeze
 
-The manifest's `scenario_freeze` block, written by the first `compass tdd-red` of a path delivery issue and never rewritten: the time, the red record, the spec's path, the `sha256sum` digest of the spec and the scenario ids (ADR-095). Each red record also holds the spec digest. `compass check` prints a line, not a row, when the spec has changed since.
+The manifest's `scenario_freeze` block of a path delivery issue: the time, the red record, the spec's path, the `sha256sum` digest of the spec and the scenario ids (ADR-095). `compass quick-fix finish` writes it when it proves the red, and writes it again each time it proves the red again, so the block names the red that stands now (ADR-099). On a record kept by hand, the first `compass tdd-red` writes it and no later one rewrites it. Each red record also holds the spec digest. `compass check` prints a line, not a row, when the spec has changed since.
 
 **Related:** `scenario`, `acceptance-criteria`, `evidence`
 

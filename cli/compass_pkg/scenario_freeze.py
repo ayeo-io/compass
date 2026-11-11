@@ -15,7 +15,9 @@ Three rules, each for a path issue (ADR-092) only, so an issue assessed before
   (`fields`).
 - **The freeze.** The first red of a delivery issue writes `scenario_freeze`
   into the manifest: the time, the red record, the spec's path, its digest and
-  the scenario ids. It is never rewritten. Each red record holds `spec_sha256`
+  the scenario ids. A later `compass tdd-red` never rewrites it. `compass
+  quick-fix finish` writes it again each time it proves the red again, so it
+  names the red that stands now (ADR-099). Each red record holds `spec_sha256`
   too, inside its `content_digest`. `compass check` prints `check_line`: a note,
   not a row, so no verdict moves.
 
@@ -127,7 +129,7 @@ def check_line(task, task_dir):
     if not isinstance(held, dict):
         return None
     frozen = held.get("spec_sha256")
-    text = f"Scenarios: frozen at the first red (sha256 {short(frozen)})"
+    text = f"Scenarios: frozen at the red on record (sha256 {short(frozen)})"
     changed = spec_digest(task_dir)[1] != frozen
     if changed:
         text += "; the spec has changed since"

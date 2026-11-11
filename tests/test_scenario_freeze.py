@@ -82,7 +82,7 @@ def test_check_notes_a_spec_changed_since_the_freeze_without_a_row(tmp_path):
     assert run(root, *RED).returncode == 0
     frozen = manifest(root)["scenario_freeze"]["spec_sha256"]
     before = json.loads(_check(root, "--json").stdout)
-    line = f"Scenarios: frozen at the first red (sha256 {frozen[:12]})"
+    line = f"Scenarios: frozen at the red on record (sha256 {frozen[:12]})"
     assert line in before["notices"], before["notices"]
     # Unchanged, the default view leaves the notice out.
     unchanged = _check(root)

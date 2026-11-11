@@ -82,9 +82,11 @@ On a path issue that owes `scenario-approval`, `compass tdd-red` refuses
 marker, until the `specify` checkpoint has a person's answer (ADR-095). On a
 path delivery issue each red's `content_digest` holds `spec_sha256`, the
 `sha256sum` of the spec file (null with no file). The first red writes the
-manifest's `scenario_freeze`, never rewritten: `at`, `red` (relative to the
-issue folder), `spec`, `spec_sha256` and the scenario ids (`scenarios`).
-`compass check` prints `Scenarios: frozen at the first red (sha256 <12
+manifest's `scenario_freeze`: `at`, `red` (relative to the issue folder),
+`spec`, `spec_sha256` and the scenario ids (`scenarios`). A later `compass
+tdd-red` never rewrites it; `compass quick-fix finish` writes it again each
+time it proves the red again.
+`compass check` prints `Scenarios: frozen at the red on record (sha256 <12
 characters>)` as a notice, not a row, adding "the spec has changed since" when
 the digest differs; the default view shows it only then. An issue assessed
 before the path writes neither (module `scenario_freeze`).

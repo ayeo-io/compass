@@ -599,7 +599,8 @@ has nothing to check for the Definition of Ready.
 A `when` on a check reads the assessment. Evaluation adds one derived key,
 `ships`, whether the approach the issue was given ships. Each Definition of
 Done check in the check set says `when: {ships: true}`, so a spike, which
-does not ship, owes none of them and a delivery owes all seven. The key adds
+does not ship, owes none of them. A delivery owes all seven only where it
+owes `definition-of-done` (see A path issue). The key adds
 no field to the configuration. Since 9.0.0 a project adds a check only as a
 `project_checks` setting, whose `when` takes the keys of the assessment,
 `labels_any` and `any_of`, and not `ships` (`docs/configuration.md`). A

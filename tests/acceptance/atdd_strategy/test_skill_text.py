@@ -94,7 +94,7 @@ def test_trc_001_the_header_names_the_source_and_each_adaptation():
             f"an adaptation runs over two lines: {lines[n]!r} / {after!r}")
     adaptations = _flat("\n".join(lines[n] for n in items))
     for topic in ("stage 1 at specify", "stage-reviews.md", "one dsl call",
-                  "light or defect evidence row", "spike", "failure mode", "never reads",
+                  "reuses existing dsl methods only", "spike", "failure mode", "never reads",
                   "github", "us english"):
         assert topic in adaptations, f"no adaptation names {topic!r}"
 
@@ -223,7 +223,8 @@ def test_trc_005_the_skills_describe_one_chain(skill):
 # --- Scenario `TRC-006` ---
 
 def test_trc_006_a_new_dsl_method_sends_a_quick_fix_back_to_assess():
-    section = _flat(_section(_text(ATDD), "The light and defect rows", "### "))
+    # ADR-099: the rule sits under the routing the project's `S17` tokens give.
+    section = _flat(_section(_text(ATDD), "When it applies", "## "))
     assert "reuse existing dsl methods only" in section
     assert "needs a new dsl method is re-assessed" in section
     assert "`/compass:assess --reassess`" in section

@@ -856,7 +856,7 @@ such as documentation, go through as usual.
 |---|---|---|
 | `scripts/install.sh` | Says none was found, or that it did not run, warns, and installs anyway. | Names the version, warns, and installs anyway. |
 | `hooks/session-start.sh` | Tells the person and the model, in place of the operating contract. Never blocks. | The same, naming the version. |
-| `hooks/pre-tool.sh` | Refuses each code edit, and each edit to a path that is neither built-in code nor exempt in a project that has a settings file (it cannot read `enforcement.code_globs`): `python-missing` when there is no `python3`, `reader-failed` when it does not run. | Its checks run, but the CLI cannot record the assessment and failing test they look for, so a code edit in an issue without them is refused as usual. |
+| `hooks/pre-tool.sh` | Refuses each code edit, and each edit to a path that is neither built-in code nor exempt in a project that has a settings file (it cannot read `enforcement.code_globs`): `python-missing` when there is no `python3`, `reader-failed` when it does not run. | Its checks run, but the CLI cannot record the assessment and scenarios they look for, so a code edit in an issue without them is refused as usual. |
 | `hooks/post-tool.sh` | No change: it does not use Python. | No change. |
 | `hooks/stop.sh` | Says the end-of-session check did not run, and exits 0. | Runs its check as usual. |
 | `compass` | Does not run. | Does not run. |
@@ -1183,7 +1183,7 @@ Three more rules apply with this one:
 - Shell files. A file that `enforcement.code_globs` declares is guarded. A
   shell script, makefile or extensionless script is not a built-in
   production-code file type, so a project declares the ones it wants guarded.
-- Messages. The refusal for a missing failing test (`no-red-on-record`) names
+- Messages. On an issue assessed before 9.0.0, the refusal for a missing failing test (`no-red-on-record`) names
   `compass tdd-red` and `compass acceptance start`, for a change that has no
   natural test. A `.compass/current-task` that names an issue with no folder
   under `.compass/work/` is not a missing pointer: the hook says so, names the
@@ -1201,6 +1201,9 @@ The rules and the reasons are in
 ### Shell-write detection is best-effort
 
 The Claude Code pre-tool hook completely covers supported file-editing tools.
+Where this section says a write needs a failing test on record, that is the
+rule for an issue assessed before 9.0.0. A 9.0.0 delivery issue needs a
+scenario and, where owed, the scenario approval (ADR-099).
 For shell commands it recognizes these write shapes, and only these:
 
 - `>`, `>>` and `>|` redirects, including the `cat > file <<EOF` heredoc

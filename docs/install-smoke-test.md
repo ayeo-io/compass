@@ -154,12 +154,11 @@ problem rather than an uncleared gate.
 
 ## 6. Check the hooks
 
-Start a small delivery issue, define one scenario, then try to edit production
-code before recording a failing test. The pre-tool hook must block the edit
-and explain how to record the red test.
+Assess a small delivery issue with `/compass:assess`, then try to edit
+production code before adding a scenario. The pre-tool hook must block the
+edit and name `compass scenario add`.
 
-Do not run this check on a spike: spikes deliberately suspend the
-red-before-green strategy.
+Do not run this check on a spike: the hook never refuses a spike's edits.
 
 For a source install, confirm the Claude Code settings contain Compass entries
 for:
@@ -193,7 +192,7 @@ runs must succeed without duplicate hook entries.
 |---|---|
 | Command is unknown | Restart Claude Code; check the plugin or source adapter path. |
 | `policy lint` cannot find governance | Run from the project or use the CLI from a complete Compass checkout. |
-| Edit is blocked | Record a failing test first, or confirm the issue is correctly assessed as a spike. |
+| Edit is blocked | Read the refusal. Add a scenario, get the scenario approval it names, or confirm the issue is correctly assessed as a spike. |
 | Hooks were not registered | Install `jq` and rerun the source installer, or follow its manual instructions. |
 | Existing Compass directory is not overwritten | Move the unrelated directory aside; the installer stops with an error and does not overwrite it. |
 

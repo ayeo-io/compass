@@ -23,7 +23,7 @@ scratch projects. The Claude Code entry is `bin/compass`.
 | Local handoff | A second entry reads the same issue and preserves manifest and evidence bytes before continuing. |
 | Regular feature | Stored policy generation, required artifact and gate records, and genuine red/green evidence. Review gates remain pending. |
 | Evidence comparison | Changed policy, gate or approval subjects differ; tampered raw evidence fails the kit check before comparison. |
-| Hook payloads | File, move and shell decisions for unassessed, assessed without red, recorded red and spike states. |
+| Hook payloads | File, move and shell decisions for an unassessed issue (refused), a started issue and one with a recorded red (allowed), an issue that owes approval of its scenarios (refused until it is on record) and a spike (allowed). |
 | Approval scope | Explicitly synthetic inputs distinguish a matching guardrail approval from a missing or unrelated subject. No person signs these fixtures. |
 | Worktree ceiling | The shared provisioner's dry-run permits the boundary and refuses excess requests. No worktrees or agents start. |
 | Isolation | Inherited Git settings cannot select another repository. |

@@ -44,7 +44,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [generation-store.md](generation-store.md) - the stored generation of an issue's policy: its files, the manifest's `policy:` block, the commit order, the states and what reads it.
 - [entry-exit-evaluation.md](entry-exit-evaluation.md) - the capability that evaluates each stage's entry and exit lists: when a list is due, how each kind of check is judged, what `on_skipped` does and where results show.
 - [judged-checks.md](judged-checks.md) - a check of kind `judged`, its review record and `compass evidence review`: what a judged check needs to pass, the four failure causes, how a changed input re-owes the review and the JSON shape.
-- [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`: the entry shape, the nine `until` values, when the block counts at implement, what the hook reads and what it costs, the fail-safe cases, the worktree rule and what each reader shows.
+- [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`: the entry shape, the eleven `until` values, when the block counts at implement, what the hook reads and what it costs, the fail-safe cases, the worktree rule and what each reader shows.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
 

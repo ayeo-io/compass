@@ -62,11 +62,11 @@ this rule describes the trigger.
 
 1. assess - rate the change; the CLI computes the evidence it owes
 2. specify - write the scenarios and declare their tests
-3. build - a red, then a green, for each scenario
-4. ship - the review, the gates with their evidence, and the commit
+3. build - write the tests and the code; the tests fail without the change and pass with it
+4. ship - the gates with their evidence, the approval and the commit
 
-Every delivery change runs the same four stages; the assessment changes the
-evidence each one owes, not which stages run. A spike explores and
+Every delivery change runs the same four stages; the assessment adds only a
+person's approval (scenarios, sign-off), not which stages run. A spike explores and
 concludes, and ships nothing. Each `compass` verb that writes a record of the
 issue prints a `next:` line with the command to run next, and `compass next`
 prints it at any time, so a runtime follows those lines rather than
@@ -81,8 +81,8 @@ manifest, and a team can keep its own notes.
      checkable acceptance criterion.
    - **Traceability:** code → criterion → intent, and claim → criterion.
    - **Evidence, not assertion:** guardrails clear with command output, not
-     claims. The Definition of Done is itself a typed gate - each item is met
-     by a record in the manifest: typed evidence (`--meets <item>`), a
+     claims. Where a project needs the Definition of Done, it is a typed gate -
+     each item is met by a record in the manifest: typed evidence (`--meets <item>`), a
      person's approval, or a follow-up that defers the item and links to the
      GitHub issue that tracks the work (`compass follow-up add FU-<id>
      --defers <item> --github owner/repo#N`). An item with no record fails
@@ -94,18 +94,19 @@ manifest, and a team can keep its own notes.
    **BDD and TDD are default *strategies*, not guardrails** - the strong,
    shipped-on way to satisfy the first two guardrails. A runtime enforces
    the red-before-green strategy *mechanically* when its own mechanism
-   allows it (Claude Code uses a pre-tool hook that is aware of the
-   delivery approach and does not block on a spike); otherwise it enforces
-   it procedurally. But what a runtime must always enforce is the
+   allows it (Claude Code: `compass quick-fix finish` proves the tests fail
+   on a copy of the base commit; the pre-tool hook refuses a code edit only
+   on an issue that needs a person's scenario approval first);
+   otherwise it enforces it procedurally. But what a runtime must always enforce is the
    guardrail *outcome* (tested before it ships), not the ritual.
 
    The guardrail *checks* are mechanism, not judgment - so a portable
    runtime must run them via the kit-layer CLI rather than reimplement
    them: `compass check` runs the checks of the fixed check set
    (`governance/check-set.yml`) against
-   the issue's manifest and `evidence/`, and `compass tdd-red` /
-   `compass tdd-green` run a test, assert fail/pass, and write the evidence
-   records the checks read. Gate evidence in the manifest is **typed** - a
+   the issue's manifest and `evidence/`, and `compass quick-fix
+   finish` runs the tests, asserts fail on the base copy and pass in the
+   working tree, and writes the evidence records the checks read. Gate evidence in the manifest is **typed** - a
    `{type, path}` record, not a bare path - and the check set declares
    which evidence types each gate accepts, so a mechanical gate cannot be
    cleared with a written note; `compass check` enforces that. The runtime's
@@ -145,13 +146,13 @@ re-derive it.
 
 | Methodology concept | Adapter must map it to… |
 |---|---|
-| The four stages | One command that runs them, following each `next:` line, plus a short form for a small change |
+| The four stages | One command that runs them, following each `next:` line, `compass quick-fix start` and `compass quick-fix finish` as the two commands of a change |
 | Assess | A routine that produces the assessment, then *calls the kit* (`compass approach evaluate`) to compose the delivery approach |
-| The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check` and `compass tdd-red/green` for the deterministic parts |
+| The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check` and `compass quick-fix start/finish` for the deterministic parts |
 | CI and the cross-issue view | A shell-out to `compass ci` (honor the exit code) and `compass flow` (cross-issue view; `--digest` writes a dated digest of the backlog) |
 | Role perspectives (product owner, product marketer, architect) | Taken by the session itself; 9.0.0 ships no subagents (ADR-090) and no role entry points (ADR-093). The architect perspective reads the project's `architecture/` artifacts and annotates the design via `architecture-notes.md`; it never writes feature code |
 | Skills | Loadable procedural-knowledge modules |
-| Guardrail enforcement | `compass check` for the mechanical checks; hooks if available for red-before-green, procedural checks otherwise |
+| Guardrail enforcement | `compass check` for the mechanical checks; `compass quick-fix finish` for red-before-green; a hook, if available, for the scenario approval before code |
 | Per-issue next-step + follow-up management | The adapter wires `compass next` (surface the next action on the current issue) and `compass follow-up add --github` (link an owed follow-up to the GitHub issue that tracks it) into its issue-resumption and shipping flows; `compass follow-up resolve` settles a follow-up of an issue assessed before 9.0.0 |
 | Decision-record creation | `compass adr new` (creates a numbered decision record under `architecture/decisions/`) - the adapter exposes this in whatever shape its agents use for recording architectural decisions |
 

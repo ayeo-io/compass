@@ -13,8 +13,8 @@ The line is the manifest's `release_note:` key, an optional string. The manifest
 the only copy. Every document that shows the line renders it from the manifest, so no
 document holds a second copy that could drift.
 
-Write it for a user: one sentence for a quick fix or a hotfix, a paragraph for regular
-or full. No command checks the length.
+Write it for a user: one sentence for a small change, a paragraph for a larger one.
+No command checks the length.
 
 ## Who writes it
 

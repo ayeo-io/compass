@@ -2,7 +2,7 @@
   "name": "compass",
   "displayName": "Compass",
   "version": "8.0.4",
-  "description": "Compass lets a team under change control hand code changes to an AI agent and still show a reviewer, or an auditor, that the process was followed. The agent writes the acceptance tests first, Compass refuses code edits until a failing run is on record, and each change leaves a trail.md of who asked, what was agreed, the failing and passing runs, who approved and what shipped, with a SHA-256 digest for each record that a reviewer checks without Compass installed.",
+  "description": "Compass lets a team under change control hand code changes to an AI agent and still show a reviewer, or an auditor, that the process was followed. The agent writes the acceptance tests, Compass proves they fail without the change and pass with it, and each change leaves a trail.md of who asked, what was agreed, the failing and passing runs, who approved and what shipped, with a SHA-256 digest for each record that a reviewer checks without Compass installed.",
   "author": {
     "name": "ayeo",
     "url": "https://ayeo.io"

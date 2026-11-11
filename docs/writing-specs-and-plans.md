@@ -169,9 +169,9 @@ design before it is built, which is the cheapest moment to disagree with it.
 
 They are optional individually. `skills/governance-check/SKILL.md`,
 "Writing the design down", carries the rule for each; the short version is
-that a change on the light evidence row writes no design at all, the
-standard row uses the one or two that add clarity, and a change that owes
-`architecture` can use all of them. **Delete the ones you do not use** - an empty optional heading
+that a small change writes no design at all, a larger one uses the one or
+two that add clarity, and a change that owes `architecture` can use all of
+them. **Delete the ones you do not use** - an empty optional heading
 reads as an omission rather than a decision.
 
 Below is a complete worked example for an imaginary issue: adding support for a
@@ -318,8 +318,8 @@ without having to name someone to imagine.
 
 **No plan made of small steps, each with the exact commands to run.** Some frameworks make
 the plan a sequence of small steps each with the literal command to run. Compass
-does not, because the build stage already sequences small units through `compass tdd-red`
-and `compass tdd-green`, and duplicating that in the plan inflates it
+does not, because the work between `compass quick-fix start` and `compass quick-fix finish`
+is tests and code, and `finish` proves the red and the green. Duplicating that in the plan inflates it
 while it goes out of date as soon as the code changes. The useful part of that idea -
 that a plan should contain no unfinished promises - is kept as the author's
 self-review in the `governance-check` skill.

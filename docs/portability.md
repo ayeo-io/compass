@@ -113,10 +113,12 @@ prompt, an always-loaded instruction file, or the equivalent of `CLAUDE.md`.
 What must not change is that the contract exists once. Keep one copy: two
 copies drift apart.
 
-BDD and TDD are default strategies. When the runtime supports pre-action hooks,
-the adapter enforces red-before-green mechanically, with the hook made
+BDD and TDD are default strategies. `compass quick-fix finish` proves the red on
+a copy of the base commit, so a hook does not need to. When the runtime supports
+pre-action hooks, the adapter refuses a code edit before the scenarios exist and,
+where the issue owes it, before a person approves them, with the hook made
 aware of the spike so it does not block one. Without hooks, the adapter must
-make the check an explicit step of build.
+make those checks an explicit step of build.
 
 **A person-only approval event.** In Claude Code a person approves by
 typing `/compass:approve`; `hooks/prompt-approval.sh` records it on the

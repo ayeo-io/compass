@@ -158,11 +158,9 @@ keeps its tables.
 
 ## The verification note
 
-A quick fix registers `verification-note` at lightweight depth.
-`compass quick-fix finish` writes `verification-note.md` once the three gates
-have passed, registers it, approves it, traces it to the scenarios and fills its
-block. The file is at most 40 lines. A test that fails gets no note. Prose above
-the block is kept by every render.
+A quick fix completed before 9.0.0 holds `verification-note.md`. `compass quick-fix finish`
+writes none: the red and green records, the changed files and the approvals are in the
+manifest and the trail (`docs/delivery-record.md`).
 
 ## Item records
 
@@ -181,12 +179,12 @@ rendered blocks it only adds lines and records (ADR-020, through ADR-051). The c
 
 | What | Rule |
 |---|---|
-| Marker | An empty `dod` pair goes at the end of the "Definition of Done" section of the verification report. The registry digest of the report, and the `upstream` digest of a document that names it, move from the old masked digest to the new one, so the report keeps its status. A digest that was already stale stays stale. |
+| Marker | Before 9.0.0, an empty `dod` pair went at the end of the "Definition of Done" section of the verification report. 9.0.0 adds none. |
 | Boxes to items | A box is the item whose statement it reads; when the report has as many boxes as the list has items, an unmatched box is the item at its place. A box that reads no item is reported. A box also reads an item through its earlier statement: reports written before 7.0.0 cite the report's sections by number (`§1`, `§2`), and `FORMER_STATEMENTS` in `migrate_blocks.py` holds that wording for the three items that now name the sections. |
 | Records | `meets` on the evidence an `(evidence: ...)` tag names, `defers` on the follow-up a `(follow-up: ...)` tag names (an older tag word and the `BF-` id prefix are read too), and a `page_ticks` entry for each ticked box. A tag naming an id the manifest does not hold, evidence of a type the list does not accept, or a follow-up that already defers another item writes no record. The item stays open and the report names the issue, the item and the id. |
 | Page ticks | Only `item_records` reads one. `human-approval-present` and the approval readers never do, so a ticked box is not a person's approval. |
 | Missing heading | A report with no "Definition of Done" heading gets no marker and no record, and the report says so. A closed issue with neither that heading nor a `dod` block then reads "nothing to check" for `dod-evidence-typed`; an issue still in flight is judged, so every item is open. |
-| Verification note | An empty note, registered, for each quick fix closed as completed. The dry run registers it in its in-memory copy of the manifest, so its artifact status count includes the note, as the apply's does. |
+| Verification note | Before 9.0.0, an empty note, registered, for each quick fix closed as completed. 9.0.0 adds none. |
 | Old page | A work-folder `README.md` whose first line is the old generated marker is renamed to `README.md.v6.bak`, with any text a person added under it. A `README.md` without that line is not touched. The page is not generated again. |
 | Stored generation | An issue, open or closed, whose generation records an implementation major this CLI lacks (`dod-evidence-typed` 1.x) is pinned to the installed versions through the `--config` path. A closed issue keeps its configuration; only the versions change. When the next generation folder holds a file a generation commit does not write, the issue is not pinned and the file is named among the items left for a person. |
 | Open items | The ones above are printed on every run, after the changes, because they need a person. A second `--apply` changes no file. |

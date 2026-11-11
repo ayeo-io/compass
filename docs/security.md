@@ -50,7 +50,7 @@ The Claude Code adapter registers four local hooks:
 
 | Hook | Purpose | Can block? |
 |---|---|---|
-| `pre-tool.sh` | Applies approach-aware red-before-green checks before edits. | Yes |
+| `pre-tool.sh` | Checks before an edit that scenarios exist and, where the issue owes it, that a person approved them. | Yes |
 | `post-tool.sh` | Updates the issue history after relevant actions. | No |
 | `stop.sh` | Warns about unfinished or inconsistent issue state. | No |
 | `session-start.sh` | Loads the operating contract into the session. In every repository, it also keeps two launchers in the plugin's own data folder under `~/.claude/plugins/data/`: `compass-statusline` for the status line, and `compass` for the person's own terminal. It writes nothing else and prints nothing for them. | No |
@@ -252,7 +252,7 @@ enough information for the gate to remain meaningful.
 - Shell commands can hide file writes inside scripts and build tools. Hook
   detection is best-effort for shell activity.
 - Shell scripts, makefiles and extensionless scripts are not part of the
-  default production-file classification for red-before-green checks.
+  default production-file classification of the pre-tool hook.
 - A contributor with trusted push and merge rights is inside the repository's
   trust boundary.
 - Agent instructions are powerful even when they are Markdown rather than

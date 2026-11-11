@@ -2,14 +2,16 @@
 
 A person runs the path with the slash commands, and each slash command
 calls the CLI. `/compass:assess` runs `compass quick-fix start` or `compass
-approach evaluate`, and `/compass:ship` runs `compass check`. Each verb that
+approach evaluate`, and `/compass:ship` runs `compass quick-fix finish`. Each verb that
 writes a record of the issue ends with a `next:` line, which names the one
 command to run next. The CLI does the checks as a program,
 so a check is more than an instruction to the agent.
 
 Every verb describes itself: `compass <verb> --help` says what it does and
 what the result means. This page gives one line per verb; `--help` gives the
-detail.
+detail. A change takes two commands, `compass quick-fix start` and
+`compass quick-fix finish`. The older record commands below, such as
+`tdd-red` and `gate pass`, still work and are not the taught path.
 
 ```text
 compass init               make this directory a Compass project - create .compass/

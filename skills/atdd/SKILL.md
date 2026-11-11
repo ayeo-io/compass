@@ -11,7 +11,7 @@ Adapted from the `atdd` skill of jed72, the Compass maintainer, a personal skill
 - The review that ends each stage is that stage's checkpoint, and its questions moved to `skills/atdd/references/stage-reviews.md`.
 - Stage 1 ends in a recorded red: the driver factory imports the driver inside a pytest fixture, and a red recorded at specify unlocks no production code.
 - Each Given, When or Then line is one DSL call, any role writes scenarios, and engineers own the DSL and the drivers.
-- A change on the light or defect evidence row reuses existing DSL methods only and goes back to assess for a new one; a spike suspends the strategy.
+- Where a project's `require_evidence` adds only `outer-loop` or `isolation`, a change reuses existing DSL methods only and goes back to assess for a new one; a spike suspends the strategy.
 - Edge cases follow the Compass rule for each implied failure mode in place of a list of suggestions for the person.
 - Compass never reads project test code: a layering test the project owns checks the layers.
 - The reference example is linked on GitHub, because `examples/` is not in the plugin copy.
@@ -110,11 +110,11 @@ Keep the two kinds of scenario labeled and distinct: **baseline** is what the co
 
 The four-layer acceptance strategy covers a change to behavior a real client can observe: what a person or a program sees through an interface real clients use, such as an API, a web UI or a CLI. A refactor, a config change or a document change does not use it.
 
-On the standard evidence row the strategy's routing is `on`: all three stages run, as below, and the change owes `outer-loop`, `isolation` and `layering`.
+The routing of the strategy follows the `S17` tokens a project's `require_evidence` adds. With none owed it is `guidance`: this skill is advice and no check of the strategy runs.
 
-### The light and defect rows
-
-On these rows the routing is `existing-dsl` (light) or `existing-dsl-isolation` (defect, the hotfix setting). Reuse existing DSL methods only. Write the scenario with the DSL the project already has, take it red, then green. Add no DSL method, driver method or support code. A change that needs a new DSL method is re-assessed: run `/compass:assess --reassess` and give the reason. A change on the defect row still proves isolation at build.
+- `layering` owed: routing `on`. All three stages run, as below, and the change owes `outer-loop`, `isolation` and `layering`.
+- `isolation` owed: routing `existing-dsl-isolation`. Reuse existing DSL methods only and prove isolation at build.
+- `outer-loop` owed: routing `existing-dsl`. Reuse existing DSL methods only. Write the scenario with the DSL the project already has, take it red, then green. Add no DSL method, driver method or support code. A change that needs a new DSL method is re-assessed: run `/compass:assess --reassess` and give the reason.
 
 ### Spike
 
@@ -171,7 +171,7 @@ The build checkpoint reviews stage 2: the interface is complete and the tests ru
 
 ### Stage 3, the ship stage: tidy up and prove isolation
 
-Run the suite in parallel, then run each scenario twice in a row. Both must give the same result every time. Merge driver methods that do nearly the same thing. Go through `skills/atdd/references/checklist.md` before the review. Record the proof with `compass isolation record` and the layering test with `compass layering record`: they are the last build records, and `compass next` names them before any ship step. The checkpoint of the ship stage reviews stage 3.
+Run the suite in parallel, then run each scenario twice in a row. Both must give the same result every time. Merge driver methods that do nearly the same thing. Go through `skills/atdd/references/checklist.md` before the review. Where the project owes them, record the proof with `compass isolation record` and the layering test with `compass layering record`: they are the last build records, and `compass next` names them before any ship step. The checkpoint of the ship stage reviews stage 3.
 
 ## Isolation
 

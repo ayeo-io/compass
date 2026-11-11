@@ -19,7 +19,7 @@ different questions into one scale. A one-file migration can be small and
 dangerous. A large prototype can be exploratory and disposable.
 
 Compass therefore runs every change on one path and computes the evidence
-the change owes from several dimensions, rather than asking the user to
+the change owes from its assessment and the project's settings, rather than asking the user to
 select a process tier.
 
 ## 2. Assessment and routing
@@ -75,8 +75,8 @@ session with two commands: `compass quick-fix start` opens the issue, and
 `compass quick-fix finish` writes the record (ADR-099). Every call that
 writes a record prints a `next:` line with the one step that comes next.
 
-What changes from one change to the next is the evidence each stage judges,
-not which stages run. Assessment always runs for delivery or exploration work
+What changes from one change to the next is the approvals and the
+project's extra evidence, not which stages run. Assessment always runs for delivery or exploration work
 that will change files.
 
 ## 4. The evidence rows
@@ -118,8 +118,8 @@ The red on a path issue also freezes the scenarios: the manifest
 records the spec's digest and the scenario ids, and `compass check` says when
 the spec changed since.
 
-Risk and size remain independent. Policy can raise the evidence a small auth
-or migration change owes above what its size alone would ask.
+Risk and size remain independent. A small auth or migration change owes the
+same approvals as a large one.
 
 ## 5. Guardrails and strategies
 
@@ -141,7 +141,7 @@ cannot see:
 5. A human approves irreversible work: an issue labelled `auth`, `payments`,
    `personal-data` or `migrations`.
 
-A small change owes less evidence but never loses a guardrail.
+Every change owes the same common evidence, and none loses a guardrail.
 
 ### Strategies
 
@@ -248,8 +248,8 @@ Gate evidence is typed. A correctness gate can need a test run; a written
 note cannot satisfy it. A high-risk gate can need a structured human
 approval rather than a checkbox.
 
-The Definition of Done is therefore checkable state, not narrative status.
-It is the exit list of the build stage. Each item is met by a record in the
+Where a project needs the Definition of Done, it is checkable state, not
+narrative status. Each item is met by a record in the
 manifest: typed evidence, a person's approval, or a follow-up that defers the
 item and links to the GitHub issue that tracks the work (`compass follow-up
 add FU-<id> --defers <item> --github owner/repo#N`). From 9.0.0 there is no Definition of
@@ -262,8 +262,8 @@ software correctness.
 ## 9. One session
 
 From 9.0.0 Compass starts no worktree and no agent per unit of work
-(ADR-090). One session builds the change scenario by scenario: each scenario
-goes through its own red and green before the next one starts. No runtime
+(ADR-090). One session builds the change, and `finish` proves the red and the green
+for all its scenarios in one run. No runtime
 needs isolated workspaces, and Compass records no orchestration or subtask
 count for a new issue.
 

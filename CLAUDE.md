@@ -13,8 +13,8 @@ and the things it does not claim.
 ## Assessment
 
 - `/compass:assess` writes `.compass/current-task`, a one-line pointer to the
-  active issue. `compass check`, `compass tdd-red` and the pre-tool hook all
-  resolve the current issue through it. Move it with `compass issue use
+  active issue. `compass check`, `compass quick-fix finish` and the pre-tool
+  hook all resolve the current issue through it. Move it with `compass issue use
   <slug>`, not by writing the file: the hook records each session's issue,
   and refuses an edit (`pointer-moved`) in the session's own project when
   another session moved it. An edit in a worktree is judged by that
@@ -84,7 +84,11 @@ and the things it does not claim.
 
 ## The pipeline
 
-- Before shipping comes the **Definition of Done**. An open item must link to
+- A change takes two commands: `compass quick-fix start`, then `compass
+  quick-fix finish -m "<message>" -- <test command>`. `finish` writes the
+  record and commits once a person has approved (ADR-099).
+- The **Definition of Done** is owed only where the project's
+  `require_evidence` adds `definition-of-done`. An open item must then link to
   an issue: `compass follow-up add FU-<id> --defers <item> --github
   owner/repo#N --summary "..."`. An item with no record fails `compass check`.
 
@@ -93,13 +97,14 @@ and the things it does not claim.
 These repeat three rules of `compass-contract.md` for this repository. A test
 (`tests/test_contract_claude_md_drift.py`) fails when the two files differ.
 
-- **Approvals.** Approve only under a delegation naming you. Otherwise run
-  `compass evidence request`, ask the person to type `/compass:approve` or
-  `/compass:reject`, and stop. An unattended session ends there.
-- **Commit only what you mean to.** Stage each file by its path, never
-  `.compass/`, and check the staged list and commit authors. If
-  something is staged by mistake, say so and stop; do not retry a refused
-  unstage.
+- **Approvals.** Approve only under a delegation naming you. Otherwise,
+  when a command asks for a person's approval, ask the person to type
+  `/compass:approve <n>` and stop. An unattended session ends there.
+- **Commit only what you mean to.** `compass quick-fix finish` stages the
+  changed files and the record; do not `git add` anything under `.compass/`
+  yourself. For any other commit, stage each file by its path and check the
+  staged list and commit authors. If something is staged by mistake, say so
+  and stop; do not retry a refused unstage.
 - `.compass/private/` and issue state (`.compass/work/<slug>/` and
   `docs/compass/<date>-<slug>/`) stay untracked. Do not force-add them.
 - A lint fix never weakens an assertion; re-run affected tests.

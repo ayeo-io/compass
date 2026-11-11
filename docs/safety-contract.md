@@ -783,13 +783,17 @@ committed path counts only when the manifest traces it already, from an
 earlier `finish` or from `compass changed-file add`, and it differs from the
 commit the issue started from. So a commit that `finish` made stays in the
 change, and a commit that a pull, a rebase or another person adds after
-`start` does not enter it. When the session committed the fix by hand,
-`finish` refuses and names `compass changed-file add`.
+`start` does not enter it. When the session committed the whole fix by hand,
+`finish` refuses and names `compass changed-file add`. When it committed only
+part of it, `finish` goes on and names each such file on an `untraced :`
+line with the same command. That line leaves out a commit that the remote's
+default branch holds, because a pull or a rebase brought it.
 
 `finish` leaves out a path that was already changed or untracked at `start`,
 and names it on a `left out :` line. The files a test run leaves, such as
 `.coverage`, are never part of the change. A tracked file under `.compass/`
-that is not issue state, such as `.compass/config.yml`, is part of it. It
+that is not issue state, such as the 8.x settings file `.compass/config.yml`
+(`compass.yml` since 8.0.0), is part of it. It
 does not guard three cases:
 
 - a file created after `start` is taken as the change's, whoever made it;

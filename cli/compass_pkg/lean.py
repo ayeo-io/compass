@@ -152,7 +152,8 @@ def changed_paths(root, base, slug, doc_prefix, keep=()):
 
     The issue's own state, caches and the files a test run leaves are not the
     change. A tracked file under `.compass/` that is not issue state, such as
-    `.compass/config.yml`, is the project's own and is in the change. A path
+    the 8.x settings file `.compass/config.yml` (`compass.yml` since 8.0.0),
+    is the project's own and is in the change. A path
     that was already changed or untracked when the issue started is left out
     and named, unless `keep` holds it. With no start record nothing shows
     which untracked files were there first, so an untracked path that `keep`
@@ -211,6 +212,27 @@ def changed_paths(root, base, slug, doc_prefix, keep=()):
                 + ". For each file of this change, run compass changed-file add <path> "
                 "--scenario <id>; then run finish again.")
     return code, documents, left_out
+
+
+def committed_untraced(root, base, traced, doc_prefix):
+    """The files that commits since the base commit changed and the manifest
+    does not trace, so `finish` can name them: a fix committed by hand must not
+    land untraced without a word. A commit that the remote's default branch
+    holds came in by a pull or a rebase and is not this session's, so its
+    files are not named."""
+    if not (base and head_commit(root)):
+        return []
+    refs = _git(["for-each-ref", "--format=%(refname)", "refs/remotes/*/HEAD",
+                 "refs/remotes/*/main", "refs/remotes/*/master"], root)
+    log = _git(["log", "--name-only", "--no-renames", "--relative", "--format=", "-z",
+                f"{base}..HEAD", "--not", *refs.stdout.split()], root)
+    if log.returncode != 0:
+        return []
+    tracked = _tracked_paths(root)
+    return sorted(p for p in {n.strip("\n") for n in log.stdout.split("\0")}
+                  if p and p not in traced and not p.startswith(doc_prefix)
+                  and not p.startswith(".compass/") and not _is_issue_state(p, tracked)
+                  and not _is_generated(p) and not _run_output(p))
 
 
 def sync_scenarios(task, spec_path):

@@ -356,6 +356,12 @@ def finish_record(args, task_dir, slug, command, owed_out=None):
         print(f"  left out : {lean.short(', '.join(map(lean.shown, left_out)), 80)} "
               f"(changed before start; "
               f"`compass changed-file add` takes one in)")
+    by_hand = lean.committed_untraced(project_root, base, set(keep) | set(code_paths),
+                                      lean.doc_prefix(task_dir))
+    if by_hand:
+        print(f"  untraced : {lean.short(', '.join(map(lean.shown, by_hand)), 60)} "
+              f"committed since start, not traced - compass changed-file add <path> "
+              f"--scenario <id>")
     if no_request:
         from compass_pkg import request_link
         print(f"  request  : not recorded - `{request_link.command(task_dir)}`")

@@ -852,11 +852,15 @@ def drop_stale_records(task_dir, scenario_ids, kept=(), loop="inner"):
     manifest holds now, with their registry entries, so every record left
     names the files as they are. `finish` calls it before it writes the
     records of `scenario_ids`; the next record written drops the removed
-    files from `SHA256SUMS`."""
+    files from `SHA256SUMS`. A red that `compass tdd-red` wrote with no
+    `--scenario` (`red.json`, as every 8.x quick fix wrote it) is kept: no
+    later record replaces it, and it is the only record that the test was
+    written before the code (ADR-099 decision 2)."""
     from compass_pkg.red_first import is_record_name, record_stem
     evidence = os.path.join(task_dir, "evidence")
     keep = {record_stem(kind, sid, loop) + ".json"
             for kind in ("red", "green") for sid in scenario_ids}
+    keep |= {record_stem("red", None, either) + ".json" for either in ("inner", "outer")}
     # A scenario whose red `compass tdd-red` recorded keeps both loops' records.
     keep |= {record_stem(kind, sid, "outer") + ".json"
              for kind in ("red", "green") for sid in kept}

@@ -560,3 +560,24 @@ def test_a_red_recorded_with_tdd_red_is_kept_by_finish(repo):
                          / "red-TRC-001.json").read_text())
     assert "proved_on" not in record
     assert check(repo)[1] == []
+
+
+def test_a_red_recorded_with_no_scenario_is_not_deleted_by_finish(repo):
+    """Every 8.x quick fix ran `compass tdd-red` with no `--scenario`, which writes
+    `red.json`. A green cannot pair with an unbound red, so `finish` proves the red
+    on the base copy as well; it must not delete the older record, the only one
+    that shows the test came before the code."""
+    start(repo)
+    e2e.write_discount(repo)
+    code = (repo / "shop" / "orders.py").read_text()
+    e2e.sh(["git", "checkout", "--", "shop/orders.py"], repo)   # the test alone, first
+    red = compass(repo, "tdd-red", "--", *PYTEST)
+    assert red.returncode == 0, red.stdout + red.stderr
+    evidence = repo / ".compass" / "work" / "discount" / "evidence"
+    before = (evidence / "red.json").read_bytes()
+    (repo / "shop" / "orders.py").write_text(code)
+    done = finish(repo)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert (evidence / "red.json").read_bytes() == before
+    assert json.loads((evidence / "red-TRC-001.json").read_text())["proved_on"] == "base-copy"
+    assert check(repo)[1] == []

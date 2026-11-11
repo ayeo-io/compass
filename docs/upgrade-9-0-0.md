@@ -86,6 +86,8 @@ The stage follows the records, as on every path issue. The report prints the 8.x
 
 An issue can land earlier than this table when its records say so. For example, a scenario with no declared test, or a listed `specify` checkpoint with no outcome, keeps the issue at specify. `compass migrate` writes no red, green or outcome to move an issue.
 
+An 8.x quick fix ran `compass tdd-red` with no `--scenario`, so its red is `evidence/red.json`, bound to no scenario. A green pairs only with a red of its own scenario, so `compass quick-fix finish` proves the red on the base copy for the issue's scenario as well, in `evidence/red-<scenario>.json`. It keeps `red.json` beside that red: it is the only record that the test was written before the code.
+
 ### What it never does
 
 - It writes no approval, no checkpoint outcome and no delegation copy.

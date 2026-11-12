@@ -67,7 +67,7 @@ def _ok(cwd, *args, env=None):
 
 
 def _pytest():
-    return [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+    return [sys.executable, "-B", "-m", "pytest", "-q", "-p", "no:cacheprovider",
             "-o", "addopts=", "tests/test_f.py"]
 
 

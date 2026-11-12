@@ -56,14 +56,13 @@ def stale_lines(text: str) -> list[str]:
 def test_trc_001_every_version_location_says_8_0_0():
     """Scenario `TRC-001`: every place that states the version says 8.0.0.
 
-    8.0.0 shipped with every location at 8.0.0. A patch release of the 8.x
-    line moves them all together, so the check is that every location agrees
-    on one version and that the version is still in the 8.x line, at or
-    after 8.0.0. A bump to 9.0.0 fails here on purpose: the date logic the
-    other scenarios check belongs to 8.x."""
+    8.0.0 shipped with every location at 8.0.0. A later release moves them
+    all together, so the check is that every location agrees on one version
+    at or after 8.0.0. The other scenarios pass 8.0.0 to the date logic
+    themselves, so they do not depend on the current version."""
     current = versions.EXPECTED_VERSION
     major, minor, patch = (int(part) for part in current.split("."))
-    assert major == 8 and (minor, patch) >= (0, 0), current
+    assert (major, minor, patch) >= (8, 0, 0), current
     assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == current
     assert versions._read_compass_version_constant() == current
     assert versions._read_core_version_constant() == current

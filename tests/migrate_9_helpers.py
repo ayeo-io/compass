@@ -24,7 +24,7 @@ from test_next_stage import assessed_before_the_path  # noqa: E402
 ASSESSMENT = {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
               "goal": "delivery", "urgency": "none", "labels": []}
 SPIKE = dict(ASSESSMENT, goal="exploration")
-PYTEST = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-o", "addopts="]
+PYTEST = [sys.executable, "-B", "-m", "pytest", "-q", "-p", "no:cacheprovider", "-o", "addopts="]
 
 
 def run(root, *args):

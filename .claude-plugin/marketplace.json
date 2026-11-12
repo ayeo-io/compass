@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Acceptance-test-driven development for Claude Code, with a record a reviewer can check.",
-    "version": "8.0.4"
+    "version": "9.0.0"
   },
   "plugins": [
     {
@@ -17,7 +17,7 @@
         "ref": "plugin"
       },
       "description": "Compass lets a team under change control hand code changes to an AI agent and still show a reviewer, or an auditor, that the process was followed. The agent writes the acceptance tests, Compass proves they fail without the change and pass with it, and each change leaves a trail.md of who asked, what was agreed, the failing and passing runs, who approved and what shipped, with a SHA-256 digest for each record that a reviewer checks without Compass installed.",
-      "version": "8.0.4",
+      "version": "9.0.0",
       "author": {
         "name": "ayeo",
         "url": "https://ayeo.io"

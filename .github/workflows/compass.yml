@@ -212,11 +212,13 @@ jobs:
     # On a pull request: the test files the pull request changes and the
     # house-rule tests, listed by scripts/ci-fast-tests.py, instead of the
     # whole suite, which the merge queue runs once. A draft and a title or
-    # body edit run none.
+    # body edit run none. Most pull requests finish in a few minutes. The
+    # limit allows for a release, whose changed test files are most of the
+    # suite: 9.0.0 changed 372 of them and reached 84% at 15 minutes.
     needs: already-tested
     if: ${{ !cancelled() && github.event_name == 'pull_request' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:

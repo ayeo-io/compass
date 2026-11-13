@@ -31,10 +31,16 @@ def _git(root, *args):
                           text=True, check=True).stdout.strip()
 
 
+#: Since 9.0.0 ship-commit commits the issue record (ADR-096), so git needs
+#: an author even where the machine has no git identity, as on CI.
+IDENTITY = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
+
+
 def _cli(root, *args):
     return subprocess.run([sys.executable, str(CLI), *args], cwd=root,
                           capture_output=True, text=True,
-                          env={**os.environ, "CLAUDE_PROJECT_DIR": str(root)})
+                          env={**os.environ, **IDENTITY, "CLAUDE_PROJECT_DIR": str(root)})
 
 
 @pytest.fixture

@@ -58,6 +58,14 @@ from compass_pkg.red_first import is_record_name, load_record
 from compass_pkg.stable_ids import APPROACH_SPIKE, STAGE_SPECIFY
 
 NAME = "trail.md"
+
+#: The two lines before the first sum line that hold text a person wrote, the
+#: goal and the requester, start with these fixed words. The uutils
+#: `sha256sum` (Ubuntu 26.04) takes the first line that starts with hex
+#: characters and a space, such as "Add a cache" or "Abe asked", as the format
+#: for the whole file. It then misreads every real sum line, and plain
+#: `sha256sum -c trail.md` fails.
+LEADING_WORDS = ("Goal: ", "Asked by ")
 VERB = "compass trail"
 
 #: The section headings, in the order of the issue text.
@@ -225,7 +233,8 @@ def _who_asked(w):
     # Only a command that writes the record is named; an older record names none.
     by = held.get("recorded_by") if held.get("recorded_by") in request_link.RECORDED_BY else None
     if link and requester:
-        w.say(f"{_text(requester)} asked at {_text(link, request_link.LINK_MAX)}, recorded "
+        # Starts with fixed words: see LEADING_WORDS.
+        w.say(f"Asked by {_text(requester)} at {_text(link, request_link.LINK_MAX)}, recorded "
               f"{_text(when or 'at an unknown time')}" + (f" with `{by}`" if by else "")
               + ". Compass does not check who the requester is.")
     else:
@@ -478,7 +487,8 @@ def _header(w, slug):
     goal = _goal(w.task_dir)
     where = "repository root" if w.base.in_git else "project root"
     w.lines += [f"# Trail: {_text(slug)}", ""]
-    w.say((f"{goal.rstrip('.')}. " if goal else "")
+    # Starts with fixed words: see LEADING_WORDS.
+    w.say((f"Goal: {goal.rstrip('.')}. " if goal else "")
           + "Written by `compass trail`; do not edit.")
     w.lines += [f"From the {where}, check every file named below:", "",
                 f"    grep -E '^[0-9a-f]{{64}}  ' {trail} | sha256sum -c -", "",

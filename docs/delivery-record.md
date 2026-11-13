@@ -85,7 +85,7 @@ Under each statement are lines in `sha256sum` format, `<64 hex>  <path>`, with e
 grep -E '^[0-9a-f]{64}  ' .compass/work/<slug>/trail.md | sha256sum -c -
 ```
 
-The `-` makes the macOS `sha256sum` read the standard input; `shasum -a 256 -c` reads the same lines. Plain `sha256sum -c .compass/work/<slug>/trail.md` passes too, with a warning about the prose lines.
+The `-` makes the macOS `sha256sum` read the standard input; `shasum -a 256 -c` reads the same lines. Plain `sha256sum -c .compass/work/<slug>/trail.md` passes too, with a warning about the prose lines. The goal and requester lines start with fixed words (`Goal:`, `Asked by`), because the uutils `sha256sum` that Ubuntu 26.04 ships takes the first line that starts with hex characters and a space as the format for the whole file.
 
 - Section 4 names each code and test file with the digest from the newest green record's `file_sha256`, not from the disk, so the check proves the committed code is the code that was tested. That line holds at the commit that holds this version of `trail.md`; a later change to the same file makes it fail at a later commit.
 - The same record gives the same bytes. The file holds no time of its own writing, and a landing whose record is committed with the code (`landed_with_record`) names how to find its commit in git, not a commit id.

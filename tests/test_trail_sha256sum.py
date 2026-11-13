@@ -207,7 +207,7 @@ def test_the_trail_names_the_tested_code_and_the_spec(clone):
                for p in named), named
     code = hashlib.sha256((clone / "src" / "f.py").read_bytes()).hexdigest()
     assert f"{code}  src/f.py" in lines
-    assert "Dana Smith asked at https://example.com/tickets/1" in text
+    assert "Asked by Dana Smith at https://example.com/tickets/1" in text
     assert "Compass does not check who the requester is." in text
     assert "TRC-001 failed at" in text and "TRC-001 passed at" in text
 
@@ -233,3 +233,16 @@ def test_check_says_out_of_date_after_a_manifest_write_and_matches_after_trail(l
         manifest.write_bytes(held)
         _ok(landed, "trail", "--issue", SLUG)
         assert _git(landed, "status", "--porcelain", "--", f".compass/work/{SLUG}") == ""
+
+
+def test_no_line_before_the_first_sum_line_reads_as_a_sum_line(clone):
+    """The uutils `sha256sum` (Ubuntu 26.04) takes the first line that starts
+    with hex characters and a space as the format for the whole file. This
+    issue's goal, "f returns 2", is such a line, so the goal and the requester
+    lines start with fixed words and plain `sha256sum -c` still passes."""
+    lines = (clone / TRAIL).read_text().splitlines()
+    first = next(i for i, line in enumerate(lines) if re.match(r"^[0-9a-f]{64}  ", line))
+    looks_like_a_sum = [line for line in lines[:first]
+                        if re.match(r"^[0-9a-fA-F]+[ \t]", line)]
+    assert looks_like_a_sum == []
+    assert "Goal: f returns 2. Written by `compass trail`; do not edit." in lines

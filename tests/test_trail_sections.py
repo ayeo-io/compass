@@ -139,7 +139,7 @@ def _sums(body):
 def test_who_asked_names_the_requester_as_a_claim_and_hashes_the_manifest(tmp_path):
     root = _issue(tmp_path, "--request", REQUEST, "--requester", "Dana Smith")
     body = section(trail(root), 1)
-    assert f"Dana Smith asked at {REQUEST}, recorded " in body
+    assert f"Asked by Dana Smith at {REQUEST}, recorded " in body
     assert "Compass does not check who the requester is." in body
     assert _sums(body) == [f".compass/work/{SLUG}/manifest.yml"]
 
@@ -170,7 +170,7 @@ def test_who_asked_names_no_command_when_the_record_names_none(tmp_path):
                        "recorded_at": "2026-11-07T10:00:00Z"}
     write_manifest(root, body)
     text = section(trail(root), 1)
-    assert (f"Dana Smith asked at {REQUEST}, recorded 2026-11-07T10:00:00Z. "
+    assert (f"Asked by Dana Smith at {REQUEST}, recorded 2026-11-07T10:00:00Z. "
             "Compass does not check") in text, text
     # The trail is written from the record alone, so a second write is the same.
     assert trail(root) == trail(root)

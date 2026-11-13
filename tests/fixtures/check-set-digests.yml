@@ -1,0 +1,13 @@
+# The sha256sum of governance/check-set.yml for each version of the check set.
+# tests/test_check_set.py fails when the file's bytes change and the pin for
+# its version does not. This is not an owner pin: the change that edits the
+# file raises its `version` and adds the new digest here, in the same commit.
+# Print the digest with: sha256sum governance/check-set.yml
+# 9.0.0 is not released, so the version stays and the pin moves when the file
+# changes before the release. Repinned for #355 step 2: the check
+# ship-approval-present, the evidence type pr-approval and the never_waived entry.
+# Repinned for #356 step 2: the check request-recorded and its display name.
+# Repinned for #360 step 2: RP-FLOOR-002 and RP-ADV-002 name the `atdd`
+# skill, which absorbed `behavior-mapping` and `bdd-specification`.
+# Repinned for ADR-099: RP-REQUIRE-003 and RP-REQUIRE-004 removed; they added no gate on the path.
+compass-checks@9.0.0: 10d9443cbd6f850c4a9dc5ef25da2e50bd4fd6bd8cce8a671d20734af24f607f

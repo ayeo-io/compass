@@ -55,11 +55,6 @@ friction: []
 {extra}"""
 
 
-def _impact(proj):
-    return subprocess.run([sys.executable, str(CLI), "retro", "--impact"],
-                          cwd=str(proj), capture_output=True, text=True, timeout=90)
-
-
 # --- group B: a check that checked nothing ----------------------------------
 
 def test_trc_b1_a_tag_that_binds_to_no_scenario_should_not_be_recorded_as_seen():
@@ -136,49 +131,14 @@ def test_trc_b2_a_record_with_no_spec_hash_should_not_read_as_verified(tmp_path)
 
 # --- group C: a metric is correct or absent --------------------------------
 
-def test_trc_c1_hotfixes_that_declare_no_target_should_not_produce_a_rate(tmp_path):
-    proj = _proj(tmp_path, [
-        ("d1", _task("d1", "standard", "2026-01-02T00:00:00Z")),
-        ("h1", _task("h1", "hotfix", "2026-01-03T00:00:00Z")),
-        ("h2", _task("h2", "hotfix", "2026-01-04T00:00:00Z"))])
-    out = _impact(proj).stdout
-    assert "%" not in out.split("by route")[0], (
-        f"a change-fail percentage was printed when no hotfix declared a "
-        f"target - that reads as perfect stability:\n{out}")
-    assert "none declaring" in out, f"the reason is not stated:\n{out}"
-
-
-def test_trc_c2_repeated_hotfixes_against_one_task_should_count_it_once(tmp_path):
-    proj = _proj(tmp_path, [
-        ("d1", _task("d1", "standard", "2026-01-02T00:00:00Z")),
-        ("d2", _task("d2", "standard", "2026-01-03T00:00:00Z")),
-        ("h1", _task("h1", "hotfix", "2026-01-04T00:00:00Z", "repairs: d1\n")),
-        ("h2", _task("h2", "hotfix", "2026-01-05T00:00:00Z", "repairs: d1\n")),
-        ("h3", _task("h3", "hotfix", "2026-01-06T00:00:00Z", "repairs: d1\n"))])
-    out = _impact(proj).stdout
-    assert "50.0%" in out, (
-        f"three hotfixes against one of two delivery tasks is 50%, not a count "
-        f"of hotfixes:\n{out}")
-    import re
-    for pct in re.findall(r"(\d+(?:\.\d+)?)%", out):
-        assert float(pct) <= 100.0, f"a rate above 100% was printed: {pct}%"
-
-
-def test_trc_c3_a_project_of_hotfixes_alone_should_not_crash(tmp_path):
-    proj = _proj(tmp_path, [
-        ("h1", _task("h1", "hotfix", "2026-01-04T00:00:00Z", "repairs: gone\n"))])
-    r = _impact(proj)
-    assert r.returncode == 0, (
-        f"an advisory report exited {r.returncode}:\n{r.stdout}\n{r.stderr[-600:]}")
-    assert "Traceback" not in r.stderr
-
+# `TRC-C1` to `TRC-C3` were the change-fail rate of `compass retro --impact`,
+# which 9.0.0 removed (ADR-093).
 
 def test_trc_c4_the_repairs_key_should_be_accepted_by_the_task_schema(tmp_path):
     schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text())
     assert "repairs" in schema["properties"], (
         "manifest.schema.json is additionalProperties:false and does not declare "
-        "`repairs`, so declaring it breaks compass issue lint - which makes the "
-        "change-fail metric unusable")
+        "`repairs`, so declaring it breaks compass issue lint")
     assert "repairs:" in (ROOT / "templates" / "manifest.yml").read_text(), (
         "the key is not documented in the shipped task template")
     proj = _proj(tmp_path, [
@@ -186,69 +146,3 @@ def test_trc_c4_the_repairs_key_should_be_accepted_by_the_task_schema(tmp_path):
     r = subprocess.run([sys.executable, str(CLI), "issue", "lint", "--issue", "h1"],
                        cwd=str(proj), capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, f"a task declaring repairs fails lint:\n{r.stdout}"
-
-
-# --- group D: malformed input is reported ----------------------------------
-
-def test_trc_d1_a_malformed_rule_id_should_not_crash_the_router(tmp_path):
-    proj = _proj(tmp_path)
-    rp = proj / "governance" / "routing-policy.yml"
-    d = yaml.safe_load(rp.read_text())
-    d["routing_guardrails"]["floors"].append(
-        {"id": ["a", "b"], "when": {"risk": "critical"},
-         "rationale": "malformed on purpose"})
-    rp.write_text(yaml.safe_dump(d, sort_keys=False))
-    r = subprocess.run(
-        [sys.executable, str(CLI), "approach", "evaluate", "--verbose",
-         "--assessment", "risk=contained", "--assessment", "familiarity=greenfield",
-         "--assessment", "size=small", "--assessment", "intent=delivery",
-         "--assessment", "role=engineer"],
-        cwd=str(proj), capture_output=True, text=True, timeout=60)
-    assert "Traceback" not in r.stderr, (
-        f"a malformed rule id crashed the router:\n{r.stderr[-800:]}")
-    assert "FINAL APPROACH" in r.stdout, f"the approach was not computed:\n{r.stdout}"
-
-
-def test_trc_d2_waiving_a_framework_check_by_name_should_be_accepted(tmp_path):
-    proj = _proj(tmp_path)
-    gp = proj / "governance" / "guardrails.yml"
-    g = yaml.safe_load(gp.read_text())
-    g["checks"].pop("no-trusted-rerun", None)
-    for entry in g["defaults"]:
-        entry["checks"] = [c for c in entry.get("checks", [])
-                           if c != "no-trusted-rerun"]
-    gp.write_text(yaml.safe_dump(g, sort_keys=False))
-    rp = proj / "governance" / "routing-policy.yml"
-    d = yaml.safe_load(rp.read_text())
-    d["routing_guardrails"]["waived"] = [
-        {"id": "no-trusted-rerun", "reason": "this project reruns nothing"}]
-    rp.write_text(yaml.safe_dump(d, sort_keys=False))
-
-    r = subprocess.run([sys.executable, str(CLI), "policy", "lint"],
-                       cwd=str(proj), capture_output=True, text=True, timeout=60)
-    assert "does not exist" not in r.stdout, (
-        f"a legitimate waiver for a framework CHECK was rejected as naming a "
-        f"nonexistent rule:\n{r.stdout}")
-    assert r.returncode == 0, f"a valid waiver failed the lint:\n{r.stdout}"
-
-
-def test_trc_d3_normalisation_should_not_rewrite_unrelated_content(tmp_path):
-    sys.path.insert(0, str(ROOT / "cli"))
-    try:
-        from compass_pkg import flow
-    finally:
-        sys.path.remove(str(ROOT / "cli"))
-
-    proj = tmp_path / "n"
-    (proj / "docs").mkdir(parents=True)
-    tdir = proj / ".compass" / "work" / "t"
-    tdir.mkdir(parents=True)
-    (tdir / "manifest.yml").write_text(_task("t", "standard", "2026-01-02T00:00:00Z")
-        .replace("scenarios: []",
-                 "scenarios:\n- {id: SCN-1, title: 'budget  -  actual variance "
-                 "is reported', intent: INT-1, tests: ['t.py::a']}"))
-    flow.derive_system_spec(str(proj))
-    text = (proj / "docs" / "system-spec.md").read_text()
-    assert "budget  -  actual variance" in text, (
-        "a title containing a padded hyphen and NO em dash was rewritten by the "
-        f"house-style pass:\n{text[:600]}")

@@ -3,7 +3,8 @@
 `ship-commit` commits whatever is staged, even when a file the issue changed
 was edited after its newest green - so the landed files were not the tested
 files, and only a later `compass check` noticed. Before it commits, it now
-compares the newest bound record's `changes_id` with the same files now
+compares the newest bound record's `file_sha256` (`changes_id` on a record
+written before ADR-089) with the same files now
 (`binding.changes_paths`), refuses on a mismatch, and names the paths whose
 content changed. An edit outside the issue's declared files and tests causes
 no refusal.
@@ -219,7 +220,7 @@ def test_sjs6_the_safety_contract_states_the_three_cases():
                     .read_text(encoding="utf-8").split())
     assert "a test the scenario declares is committed" in flat.lower()
     assert "digest record" in flat
-    assert "tracing an already-tracked file changes only `changes_id`" in flat.lower()
+    assert "tracing an already-tracked file changes only `file_sha256`" in flat.lower()
 
 
 def test_sjs1_a_stale_disk_copy_does_not_land_through_a_restage(repo, tmp_path):

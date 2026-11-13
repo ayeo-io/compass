@@ -355,19 +355,42 @@ EXAMPLE = ROOT / "tests" / "fixtures" / "evidence-approve-example.json"
 DOC = ROOT / "docs" / "entry-exit-evaluation.md"
 
 
-def _cli_project(tmp_path):
+def _cli_project(tmp_path, open_check_in_done=False):
     """A project with an owner, a human check that lists `owner` and `maria`,
-    one that lists nobody, both in the `plan` entry list, and the box ticked."""
+    one that lists nobody, both in the `specify` entry list, and the box ticked.
+    With `open_check_in_done`, the one that lists nobody is an item of the
+    Definition of Done (the `build` exit list) in place of the `specify` entry.
+
+    The checks and lists sit in the issue's stored generation: since 9.0.0
+    `compass.yml` cannot add a check (ADR-094), and a generation stored before
+    9.0.0 can hold one. The issue is on the four-stage path (ADR-092), whose
+    specify stage holds what the plan entry list held."""
+    import stored_generation
     human = {"kind": "human", "severity": "blocking", "on_skipped": "fail"}
-    config = {"schema": 1, "owner": "jed72", "capabilities": {"entry-exit-evaluation": True},
+    stages = {"specify": {"set": {"entry": {"add": [SIGN_OFF, "open-check"]}}}}
+    if open_check_in_done:
+        stages = {"specify": {"set": {"entry": {"add": [SIGN_OFF]}}},
+                  "build": {"set": {"exit": {"add": ["open-check"]}}}}
+    parent = {"schema": 1,
               "checks": {SIGN_OFF: dict(human, statement=STATEMENT,
                                         approvers=["owner", "maria"]),
                          "open-check": dict(human, statement="Anyone may tick this."),
                          "unlisted-check": dict(human, statement="Not on any list.")},
-              "stages": {"plan": {"set": {"entry": {"add": [SIGN_OFF, "open-check"]}}}}}
-    root, task_dir = _project(tmp_path, compass_yml=config)
+              "stages": stages}
+    config = {"schema": 1, "owner": "jed72", "capabilities": {"entry-exit-evaluation": True}}
+    (tmp_path / "project").mkdir()
+    root, task_dir = _project(tmp_path / "project", compass_yml=config)
     assert _evaluate_write(root)[0] == 0
-    _write_manifest(task_dir, current_phase="plan")
+
+    def add(resolved):
+        resolved["checks"].update(parent["checks"])
+        for stage, operation in parent["stages"].items():
+            for side, lists in operation["set"].items():
+                body = resolved["stages"][stage]
+                body[side] = list(body.get(side) or []) + lists["add"]
+
+    stored_generation.commit(root, task_dir, add, in_place=True)
+    _write_manifest(task_dir, current_phase="specify")
     (task_dir / "requirements-review.md").write_text(
         f"# R\n\n### Definition of Ready\n\n- [x] {STATEMENT}\n"
         f"- [x] Anyone may tick this.\n\nNext stage: x\n", encoding="utf-8")
@@ -461,7 +484,9 @@ def test_ha_18_a_refusal_names_the_reason(tmp_path):
 
 
 def test_ha_18_an_item_of_the_lists_that_names_no_approvers_is_ticked_by_a_declared_person(tmp_path):
-    root, task_dir = _cli_project(tmp_path)
+    # A path issue owes no Definition of Ready (ADR-092 decision D6), so the
+    # item it lists is one of its Definition of Done.
+    root, task_dir = _cli_project(tmp_path, open_check_in_done=True)
     code, out, err = _approve(root, check="open-check")
     assert code == 0, out + err
     assert _manifest(task_dir)["evidence"][-1]["check"] == "open-check"

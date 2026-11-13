@@ -32,53 +32,38 @@ what the input is. It never holds the detail text, so rewording a message is not
 a change of behaviour. `tests/check_corpus_runner.py` builds each input, runs the
 implementation and computes the verdict; a test fails when a label differs from it.
 
-## The section checks
+## The section check
 
-`nfr-rows-resolved` and `contracts-declared` (`cli/compass_pkg/section_checks.py`, version 1.0.0) are blocking,
-unlocked, `on_skipped: not-applicable` and in no gate. `cli/compass_pkg/outside_gate.py` runs them, and
-`artifacts-approved`, after the gate loop. `governance/guardrails.md` holds the rules; this page holds what the
-corpus pins.
+`nfr-rows-resolved` (`cli/compass_pkg/section_checks.py`, version 1.0.0) is blocking,
+`on_skipped: not-applicable` and in no gate. `cli/compass_pkg/outside_gate.py` runs it after the gate loop.
+9.0.0 removed its sibling `contracts-declared`, `artifacts-approved` and the design-size check with the
+documents they read (ADR-091). `governance/guardrails.md` holds the rules; this page holds what the corpus pins.
 
-Each check declines, with the verdict `nothing-to-check`, when the first of four conditions holds. The order
+The check declines, with the verdict `nothing-to-check`, when the first of four conditions holds. The order
 decides which detail an archived issue shows, and the corpus has one case for each:
 
 | Order | Condition | Corpus case |
 |---|---|---|
 | 1 | The manifest has no `generation` key | `no-generation` |
 | 2 | The issue is closed | `closed` |
-| 3 | The document the check reads is not registered with a path | `not-registered` |
-| 4 | The catalogue of the issue's generation does not list the section at the document's depth; an entry with no `depth` lists nothing | `no-section` and `no-depth` |
+| 3 | No spec is registered with a path, and the issue was created before 2026-11-04; a newer issue is read at `docs/compass/<created>-<slug>/acceptance-criteria.md` and declines while that file is not written | `not-registered` |
+| 4 | For a registered spec, the catalogue of the issue's generation does not list the section at the spec's depth; an entry with no `depth` lists nothing | `no-section` and `no-depth` |
 
-- A spike runs both checks and reads `nothing to check`, because it registers no spec or design.
-- `contracts-declared` also declines when no changed file is a trigger path. The patterns are the check's
-  `params` in the configuration: path globs, and contents patterns that also need the file to hold a text. A glob
-  is `fnmatch` on the project-relative path, where `*` also matches `/`.
-- A project cannot extend `trigger_paths` with `add:`, because `params` is a map and `add:` applies only to a
-  catalogue field. It sets the whole list in its layer. Adding entries needs no waiver, because more trigger paths make
-  the check run on more changes. Removing or replacing an entry needs a project waiver where the check is placed on a gate, a stage or an artifact. The shipped preset places `contracts-declared` on none, so it asks for no waiver until a project places the check.
+- A spike runs the check and reads `nothing to check`, because it registers no spec.
 - `nfr-rows-resolved` reads a Then as numbered when a digit sits on the Then line or on a Then, And or But line
   after it. Its lookahead stops `TRC-1` matching `TRC-10`.
 
-## The design-size check
+## The red for each scenario
 
-`design-within-word-ceiling` (`cli/compass_pkg/design_size.py`, version 1.0.0) is blocking, unlocked,
-`on_skipped: not-applicable` and in no gate. `cli/compass_pkg/outside_gate.py` runs it after the section checks.
-It fails a technical design whose word count is over its `word_ceiling` at the registered depth times
-`params.factor` (1.5 in the shipped default). Unit files never lift the refusal.
+`suite-passed` 1.1.0 needs a red for each scenario on an issue created on or after 2026-11-03 (ADR-088). No
+corpus case exercises it: a new case changes the verdict digest, which needs a new major, and archived issues
+pin major 1. `tests/test_red_per_scenario.py` holds the cases.
 
-It declines, with the verdict `nothing-to-check`, when the first of five conditions holds:
+## The SHA-256 of each file
 
-| Order | Condition | Corpus case |
-|---|---|---|
-| 1 | The manifest has no `generation` key | `no-generation` |
-| 2 | The issue is closed | `closed` |
-| 3 | No `technical-design` is registered with a path, as on a quick fix or a spike | `not-registered`, `quick-fix` and `spike` |
-| 4 | The catalogue of the issue's generation has no `word_ceiling` for the design at its depth | `no-ceiling` |
-| 5 | Plan exit is not yet due: the current stage is `plan` or earlier | `before-plan-exit` |
-
-- The word count is `word_ceiling.count_words`, which `compass issue lint` also uses for its word-limit note.
-- A factor that is not a number of at least 1 fails, naming `params.factor`. A lower factor is tighter.
-- On the full approach the failure names each work unit with no registered low-level design.
+`evidence-matches-tree` 1.1.0 judges a landed issue by the SHA-256 and the mode of each file a record holds in
+`file_sha256` and `file_modes`, read from the commit as a checkout writes it, and a record written before that by its `changes_id` (ADR-089). No corpus case holds a
+record with `file_sha256`, for the same reason. `tests/test_evidence_sha256sums.py` holds the cases.
 
 ## The cases
 
@@ -96,25 +81,19 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `restored` | pass | a block that says the strategy applies, and a red record on the issue |
 | `suspended` | nothing-to-check | a block whose routing is suspended on an approach that ships, and a red record on the issue |
 
-### `artifacts-approved` (version 1.0.0)
+### `acceptance-support-present` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
-| `broken` | fail | a registered document left as a draft when every gate has passed |
-| `restored` | pass | the same document approved |
+| `broken` | fail | an in-scope issue with a green, in a project that names every piece of support code but has no alias helper |
+| `restored` | pass | an in-scope issue with a green, in a project that names every piece of support code, each one present |
+| `suspended` | nothing-to-check | a block whose routing is suspended on an approach that ships, in a project with no support code |
 
-### `backfills-paid` (version 1.0.0)  <!-- vocabulary-scan: allow - the check's identifier, not prose -->
+### `backfills-paid` (version 1.1.0)  <!-- vocabulary-scan: allow - the check's identifier, not prose -->
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
 | `broken` | fail | the input the mutation proof breaks: a follow-up left owed |
-| `restored` | pass | the same input put right |
-
-### `borrowed-documents-answered` (version 1.0.0)
-
-| Case | Verdict | What the input exercises |
-|---|---|---|
-| `broken` | fail | the input the mutation proof breaks: a threat in the threat model with no scenario or accepted risk |
 | `restored` | pass | the same input put right |
 
 ### `changed-code-traces-to-scenario` (version 1.0.0)
@@ -138,25 +117,6 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a declared project command that exits non-zero |
 | `restored` | nothing-to-check | no project guardrail declares a command, so there is nothing to run |
 
-### `consistency-check-passes` (version 1.0.0)
-
-| Case | Verdict | What the input exercises |
-|---|---|---|
-| `broken` | fail | the input the mutation proof breaks: consistency-check evidence that records findings, or none on record |
-| `restored` | pass | the same input put right |
-
-### `contracts-declared` (version 1.0.0)
-
-| Case | Verdict | What the input exercises |
-|---|---|---|
-| `broken` | fail | a schema change and a Data and interfaces section holding only prose and a commented-out table |
-| `closed` | nothing-to-check | a closed issue on a generation that declares the check, with a schema change and a design lacking the section |
-| `no-depth` | nothing-to-check | an open issue on a generation that declares the check, with a schema change, whose design entry has no depth key |
-| `no-generation` | nothing-to-check | an issue with no generation key and a schema change, whose design lacks the section |
-| `no-section` | nothing-to-check | an open issue on a generation that declares the check, with a schema change, whose catalogue does not list the section |
-| `not-registered` | nothing-to-check | an open issue on a generation that declares the check, with a schema change and the design not registered with a path |
-| `restored` | pass | the same schema change with a field table of one data row in the section |
-
 ### `declared-tests-resolve` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |
@@ -164,21 +124,7 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a declared test id that names a test not on disk |
 | `restored` | pass | the same input put right |
 
-### `design-within-word-ceiling` (version 1.0.0)
-
-| Case | Verdict | What the input exercises |
-|---|---|---|
-| `before-plan-exit` | nothing-to-check | an open issue at the plan stage, with a 7,000-word design |
-| `broken` | fail | an open full issue at implement whose design holds 6,001 words, over the threshold of 6,000 |
-| `closed` | nothing-to-check | a closed issue on a generation that declares the check, with a 7,000-word design |
-| `no-ceiling` | nothing-to-check | an open issue on a generation whose catalogue has no word_ceiling for the design, with a 7,000-word design |
-| `no-generation` | nothing-to-check | an issue with no generation key, whose 7,000-word design names 3 units |
-| `not-registered` | nothing-to-check | an open issue on a generation that declares the check, with the design not registered with a path |
-| `quick-fix` | nothing-to-check | an open quick fix at implement, which registers no design |
-| `restored` | pass | the same issue with a design of 6,000 words, at the threshold |
-| `spike` | nothing-to-check | an open spike at implement, which registers no design |
-
-### `dod-evidence-typed` (version 2.0.0)
+### `dod-evidence-typed` (version 2.2.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
@@ -193,7 +139,7 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a green record replaced after it was cited |
 | `restored` | pass | the same input put right |
 
-### `evidence-matches-tree` (version 1.0.0)
+### `evidence-matches-tree` (version 1.1.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
@@ -207,12 +153,20 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a gate cleared with evidence of a type it does not accept |
 | `restored` | pass | the same input put right |
 
-### `human-approval-present` (version 1.2.0)
+### `human-approval-present` (version 1.3.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
 | `broken` | fail | the input the mutation proof breaks: an issue needing sign-off with no approval on record |
 | `restored` | pass | the same input put right |
+
+### `isolation-proven` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | an in-scope issue whose isolation proof shows the `parallel` run failed with `exit_code` 1 |
+| `quick-fix` | nothing-to-check | an in-scope issue on the `existing-dsl` routing of a quick fix, which needs no isolation proof |
+| `restored` | pass | an in-scope issue whose isolation proof shows the `parallel` run and both `runs` of each `repeat` entry passed |
 
 ### `landed-by-resolves` (version 1.0.0)
 
@@ -221,12 +175,13 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a landed_by pointer at an issue that does not exist |
 | `restored` | pass | the same input put right |
 
-### `multiagent-run-recorded` (version 1.1.0)
+### `layering-test-passed` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
-| `broken` | fail | the input the mutation proof breaks: a subtask left not done |
-| `restored` | pass | the same input put right |
+| `broken` | fail | an in-scope issue whose layering record has `exit_code` 1 |
+| `hotfix` | nothing-to-check | an in-scope issue on the `existing-dsl-isolation` routing of a hotfix, with no layering record |
+| `restored` | pass | an in-scope issue whose layering record has `exit_code` 0 and `tests_ran` 3 |
 
 ### `nfr-rows-resolved` (version 1.0.0)
 
@@ -247,20 +202,31 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a test marked rerun-without-change with no quarantine |
 | `restored` | pass | the same input put right |
 
+### `outer-loop-attempts-recorded` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | an in-scope issue whose outer-loop green has no `attempts` field |
+| `restored` | pass | an in-scope issue whose outer-loop green has `attempts` 1 |
+| `validation` | nothing-to-check | an issue whose acceptance is of kind validation, with no red, so the strategy does not apply |
+
 ### `outer-loop-recorded` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
 | `broken` | fail | an in-scope issue whose red and green records have no loop field, so both read as inner |
-| `restored` | pass | an in-scope issue with an outer-loop red and an outer-loop green |
+| `restored` | pass | an in-scope issue with an outer-loop red and an outer-loop green that names its candidate and client |
 | `suspended` | nothing-to-check | a block whose routing is suspended on an approach that ships, with inner-loop records |
 
-### `rendered-blocks-current` (version 1.0.0)
+### `request-recorded` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
-| `broken` | fail | the input the mutation proof breaks: a block edited by hand after the last render |
-| `restored` | pass | the same input put right |
+| `broken` | fail | the input the mutation proof breaks: an issue that owes `request` with no request on record |
+| `github-link` | pass | an issue that owes `request` with a requester and a linked GitHub issue, which gives the link |
+| `no-requester` | fail | an issue that owes `request` with a request link and no requester |
+| `not-owed` | nothing-to-check | an issue whose `evidence_required` does not list `request` |
+| `restored` | pass | the same issue with a request link and a requester on record |
 
 ### `scenario-has-id-and-intent` (version 1.0.0)
 
@@ -283,6 +249,18 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a scenario with its tests removed |
 | `restored` | pass | the same input put right |
 
+### `ship-approval-present` (version 1.1.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | the input the mutation proof breaks: an issue that owes `ship-approval` whose linked pull request merged with no approval on record |
+| `g5-signoff` | fail | the same merged pull request with only a sign-off of guardrail `G5` on record, which does not count |
+| `in-flight` | nothing-to-check | an issue in flight that owes `ship-approval`, with no merge recorded |
+| `landed-unmerged` | nothing-to-check | a landed issue that owes `ship-approval`, with no merge recorded |
+| `not-owed` | nothing-to-check | a merged pull request on an issue whose `evidence_required` does not list `ship-approval` |
+| `restored` | pass | the merged pull request with a `pr-approval` record for it |
+| `typed` | pass | the merged pull request with a typed `human-approval` record with `ship:` for this issue and generation |
+
 ### `spike-conclusion-present` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |
@@ -297,7 +275,7 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a spike that changed production files |
 | `restored` | pass | the same input put right |
 
-### `suite-passed` (version 1.0.0)
+### `suite-passed` (version 1.1.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|

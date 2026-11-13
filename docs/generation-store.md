@@ -12,16 +12,18 @@ resolution).
 
 The store, its commit, the readers, the refusal of a check whose implementation
 major differs, the refusal of a generation whose resolver or schema major
-differs and the commands that change what it holds are built:
-`compass issue migrate --config`, `compass issue configure` (propose, preview,
-`--discard`, `--commit`) and `--reset-config` on the reassess
-([issue-configure.md](issue-configure.md)). The modules that read
-configuration (`routing`, `check_cmd`, `checks`, `receipt`, `manifest`,
+differs and the command that changes what it holds, `compass issue migrate
+--config`, are built. An issue has no configuration layer of its own since
+9.0.0 (ADR-094): `compass issue configure` and `--reset-config` on the reassess
+are removed, and a manifest's `config:` is not read. The modules that read
+configuration (`routing`, `check_cmd`, `checks`, `manifest`,
 `calibration`, `flow`, `quick_fix_cmd`, `loop_ceilings`, `lessons`,
-`review_rules` and `approach_diagram`) ask `effective.view_or_legacy` first.
+`review_rules` and `approach_diagram`) ask `effective.effective_for` first.
 An issue with a generation is judged by that generation, whatever the project's
-`compass.yml` or governance files now say. See "Reading" for the one case that
-reads the governance files.
+`compass.yml` now says. A new generation is resolved from the one fixed check
+set (`governance/check-set.yml`, ADR-094) with the tighten-only settings of
+`compass.yml` applied. A project with a copy of the 8.x governance files and no
+`compass.yml` is refused (see "Reading").
 
 ## The manifest keys
 
@@ -30,7 +32,8 @@ reads the governance files.
 | `generation: n` | The generation the issue runs against. The manifest names it, and it is the authority. |
 | `generation: 0` | The issue was assessed under 6.x and has no generation yet. A command that needs its configuration refuses and names `compass approach evaluate --write`. |
 | no `generation` key | The issue predates 6.0.0. It reads live governance as 5.6.0 did, and `compass approach evaluate --write` gives it generation 1. |
-| `config:` | The issue's own configuration layer. It is an input: editing it changes nothing until a commit. |
+| `policy:` | The policy the generation in force was committed under (ADR-094): `check_set` (`compass-checks@9.0.0`), `check_set_sha256` and `settings_sha256` (the sha256 of the check set file and of `compass.yml`, lowercase hex as `sha256sum` prints it; `settings_sha256` is null without a `compass.yml`), `tightened` (the tighten-only settings applied, as written), `autonomy` (the autonomy `resolved.yml` holds, from `compass.yml`, else `balanced`) and `resolved` (the digest the generation's `complete` marker holds for `resolved.yml`). Each generation commit writes it, and a reassess that commits nothing writes it for the generation in force. A manifest written before 9.0.0 has none and stays valid. #356 keeps the generation folders out of the commit, so this block is the copy a reviewer reads, and the source a missing folder is rebuilt from (see "A missing folder"). A block written on v9 before `autonomy` was recorded has none, and stays valid. |
+| `config:` | The issue's own configuration layer in 8.x. It stays valid in the schema and is not written or read since 9.0.0 (ADR-094): a generation committed with it keeps its effect, and a new or changed `config:` changes nothing. `compass check` names one the generation in force was not committed with, and `compass issue lint` warns about it. |
 
 `templates/manifest.yml` ships `generation: 0`.
 
@@ -40,13 +43,13 @@ reads the governance files.
 
 | File | Holds | Written |
 |---|---|---|
-| `resolved.yml` | The configuration after every layer is merged: the nine catalogues, the evidence types, the capability switches, the approach and the ceilings the issue's overlay names, the autonomy value, and the conformance status. | At commit, then fixed. |
+| `resolved.yml` | The resolved configuration: since 9.0.0 the check set with the tighten-only settings applied, before it the result of merging every layer. It holds the catalogues, the evidence types, the capability switches, the approach and the ceilings an 8.x issue's overlay named (`approach` is empty since 9.0.0), the autonomy value, and the conformance status. | At commit, then fixed. |
 | `provenance.yml` | `fields`: for each field, the layers that wrote it and the operation of each. Each rule has a path of its own, `rules.<set>.rules.<id>`, with a step for the layer that added, changed or removed it, because the rule set is one field and would not show which layer a rule came from. A generation stored before this has no such paths, and a reader must not guess a rule's layer from the rule set. `waivers`: each waiver with the parent value it saw. `classification`: for the project and issue layers, that the lint raised no error (`result: accepted`) and which waivers the layer holds. It holds no classifier points: a generation stored by this version has no `points` key, and a reader must treat absent points as "not recorded", never as zero. | At commit, then fixed. |
-| `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source; a git parent adds `sha`, with `source: git`, and the `classification` of the chain through it against the shipped default, see [git-parents.md](git-parents.md)), `project` (path, digest, git blob), `issue_overlay_digest`, and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
+| `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source; since 9.0.0 the one parent is the check set, `{ref: compass:checks@9, version, digest, sha256, source: shipped}`; an 8.x git parent added `sha`, with `source: git`, and the `classification` of the chain through it), `project` (path, digest, git blob), `issue_overlay_digest` (empty since 9.0.0), and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
 | `records.yml` | The status of each approval, waiver and check result at commit: `valid`, `superseded` or `invalidated`, with a reason. | At commit, then fixed. |
 | `complete` | A marker holding a digest of each of the four files above. | Last of the four-file commit. |
 | `results.yml` | The latest `compass check` verdict for each check: `verdict` (`pass`, `fail`, `advisory` or `nothing-to-check`), `at`, the implementation id and version, a digest of the check's definition, and `status`. | After each `compass check`, replacing the file. The marker does not cover it. |
-| `proposed.yml` | A pending change to the issue's `config:` layer: `schema`, `issue`, `base_generation`, `base_config_digest` and `overlay`. The state table below recognises it, and a reassess applies it. | By `compass issue configure`, in the folder above the generation in force. Removed by the reassess that applies it, or by `--discard`. |
+| `proposed.yml` | An 8.x pending change to the issue's `config:` layer. Nothing reads it since 9.0.0 (ADR-094); the state table below still names a folder that holds only it, and a commit leaves it in place. | By `compass issue configure` in 8.x, in the folder above the generation in force. Not written since 9.0.0. |
 
 Every file begins `schema: 1`. A digest is `sha256:` and the hex digest of the
 file's parsed content in canonical JSON, so a comment or a line ending does
@@ -58,13 +61,11 @@ generation recorded (see "Implementation versions" below).
 
 ## A commit
 
-`compass approach evaluate --write` commits. It checks each layer alone and
-merges them, which stops a layer that does not load or merge. Then, holding an
-exclusive lock on `.compass/work/<slug>/.generation.lock`, it compares the
-result with the generation in force. When something changed and a write
-follows, it runs the layered lint first, because the lint includes the
-classifier and is slow on a project layer. If the lint reports an error,
-nothing is written. Then:
+`compass approach evaluate --write` commits. It resolves the configuration
+first, which runs the settings lint of `compass.yml` and stops a file the lint
+refuses. Then, holding an exclusive lock on
+`.compass/work/<slug>/.generation.lock`, it compares the result with the
+generation in force. When something changed and a write follows:
 
 1. It writes `resolved.yml`, `provenance.yml`, `versions.yml` and `records.yml`
    into `generations/<n+1>/`, each atomically.
@@ -73,70 +74,60 @@ nothing is written. Then:
    computed outcome fields. This is the commit point.
 
 A crash before step 3 leaves the manifest naming generation n, which is still
-whole. If the resolved configuration, the issue overlay and the computed
-outcome all equal generation n, nothing is committed and the command says
+whole. If the resolved configuration, the digest of the issue overlay (null
+since 9.0.0, which reads no issue layer) and the computed outcome all equal
+generation n, nothing is committed and the command says
 "no change"; the manifest is still replaced, as before. The manifest on disk
 must still name the generation the command read, or the commit refuses.
 
 The manifest's `readiness:` key, the repository's readiness summary, is not an
-outcome field. Every `--write` writes it into the manifest, on the "no change"
-path too, and no generation file or digest in `complete` holds it. A new
-`compass readiness` measurement therefore never forces a new generation
-(ADR-060).
+outcome field, and no generation file or digest in `complete` holds it
+(ADR-060). From 7.0.0 to 8.x every `--write` wrote it. Since 9.0.0 nothing
+writes or reads it (ADR-093); an older manifest keeps it.
 
 The commit refuses, writing nothing, when:
 
-- generation n+1 already exists and is complete. The message gives the folder's
-  path, then the two commands that resolve it: `compass issue configure
-  --issue <slug> --commit n+1` to adopt it (with `--reason "..."` to keep the
-  reason of the interrupted reassess) and `compass issue configure --issue
-  <slug> --discard n+1` to remove it.
 - the next folder holds anything a commit does not write: a file other than
   the four files, the `complete` marker, `proposed.yml` and the temporary files
   an interrupted write of one of them leaves (`.<name>-` and the eight
   characters `mkstemp` adds), or any subfolder. A commit cannot tell a
   person's file from debris, and nothing else protects it: the copy check of
   `compass issue migrate --apply` never judges a generation folder. The message
-  names each entry and `compass issue configure --issue <slug> --discard n+1`,
-  which removes the folder and everything in it.
+  names each entry and says to move them out, or to remove the folder and
+  everything in it.
 - `generations/`, the next folder or anything inside the next folder is a
   symbolic link. Compass never follows a link there, because the next folder is
   cleared before it is written.
 - the issue is closed and the result would be a new generation. A closed issue
   keeps the configuration it closed under. "No change" is still allowed.
-- the layered lint rejects the configuration. The message names the file, the
-  first error and `compass policy lint`, which shows the rest. `approach
-  evaluate` without `--write` still works on such a project.
+- the settings lint rejects `compass.yml`. Then nothing resolves, so the
+  refusal comes before the commit: the message names the file, the first
+  error and `compass policy lint`, which shows the rest. Every command that
+  resolves a policy refuses such a file the same way.
 
-It overwrites an incomplete folder, including one whose marker does not match
-its files, when the folder holds only files a commit writes. It keeps
-`proposed.yml` until the manifest is replaced. Each file keeps the mode of the file it
-replaces, and a new file gets the mode the umask gives.
+It overwrites a leftover folder when the folder holds only files a commit
+writes: an incomplete one, one whose marker does not match its files, and a
+complete one the manifest does not name, which a crash between the marker and
+the manifest replace leaves. It writes that folder again from the
+configuration resolved now, as the interrupted commit would have. It keeps
+`proposed.yml`. Each file keeps the mode of the file it replaces, and a new
+file gets the mode the umask gives.
 
 The gate comments (`# accepts: ...`) are added to the manifest text inside the
 same replace, under the lock.
 
-Three more things the commit takes from the reassess that calls it, described
-in [issue-configure.md](issue-configure.md):
-
-- a **proposal** it applies: under the lock the commit checks that
-  `proposed.yml` is still the file the reassess read, and removes it after the
-  manifest replace (a last step, `proposal`, that a crash can follow);
-- a **leftover to adopt**, named by `compass issue configure --commit`: the
-  commit writes no file but the manifest, and only when the folder is whole and
-  its four files equal what a fresh resolution gives;
-- a **stamp** that adds `generation: {from, to}` to the `reassessments:` entry
-  the reassess appended, in the same replace.
+The reassess that calls the commit can also give it a **stamp**, which adds
+`generation: {from, to}` to the `reassessments:` entry the reassess appended,
+in the same replace.
 
 ## Commit paths
 
-A new generation is committed in three ways. Each goes through `generation.commit`.
+A new generation is committed in two ways. Each goes through `generation.commit`.
 
 | Path | Command | Stores |
 |---|---|---|
 | Reassess | `compass approach evaluate --write` | The configuration resolved now. The normal path. |
 | Migrate | `compass issue migrate --config` | The stored configuration, pinned to the installed versions. |
-| Recovery | `compass issue configure --commit` | A leftover generation folder nobody adopted, when it still matches what a fresh resolution gives. |
 
 ## Implementation versions
 
@@ -159,7 +150,7 @@ the schema of its files in `versions.yml`.
   "guardrail": "G1",
   "name": "suite-passed",
   "status": "refused",
-  "detail": "refused: suite-passed 0.9.0 is recorded, 1.0.0 is installed, a different major, so it did not run. Run `compass issue migrate --config --issue feature` to store a new generation pinned to the installed versions; it invalidates the results recorded under the old ones, so each check runs again."
+  "detail": "refused: suite-passed 0.9.0 is recorded, 1.1.0 is installed, a different major, so it did not run. Run `compass issue migrate --config --issue feature` to store a new generation pinned to the installed versions; it invalidates the results recorded under the old ones, so each check runs again."
 }
 ```
 
@@ -179,11 +170,10 @@ so the refusal opens no file. It raises `MajorRefusal`, which `main` prints as
 
 - `MajorRefusal` derives from `BaseException`, as `SystemExit` does. Several
   readers turn any fault in the configuration into a fallback with `except
-  Exception`, such as the issue page render and the entry checks of `compass
-  next`. A refusal they caught would let the command run on rules it must not use.
-- A command that changes the issue's records (`record_triggers.RENDER_TRIGGERS`,
+  Exception`, such as the entry checks of `compass next`. A refusal they caught would let the command run on rules it must not use.
+- A command that changes the issue's records (`record_triggers.RECORD_TRIGGERS`,
   such as `tdd-green` or `scenario add`) is refused before it runs, by
-  `render_after_entry.before_command`. It can write before it reads the
+  `command_guard.before_command`. It can write before it reads the
   generation, so the refusal comes first and nothing is written. It reads the
   manifest and `versions.yml` only. A command that only reads, such as `compass
   next`, adds no cost for it.
@@ -195,8 +185,7 @@ so the refusal opens no file. It raises `MajorRefusal`, which `main` prints as
   start` on the refused issue is refused.
 - A command over every issue refuses that issue only. `compass flow` lists it as
   unreadable with the message, and `compass ci` reports it as refused, counts a
-  failure and goes on. The project index that a render of any issue rewrites
-  lists the refused issue from its manifest.
+  failure and goes on.
 - A recorded version that is not a version, such as `v2`, is refused with a
   message that says so. A `versions.yml` that is not a mapping makes the
   generation broken.
@@ -207,7 +196,7 @@ so the refusal opens no file. It raises `MajorRefusal`, which `main` prints as
     stale implementation major. It does not pin an issue refused for its
     resolver or schema major, and prints a line that names the issue and
     `compass issue migrate --config --issue <slug>`;
-  - `compass readiness`, `compass policy update`, `--help` and `--version`,
+  - `compass policy lint`, `--help` and `--version`,
     which read no issue's generation.
 
 Deliberate limits:
@@ -219,9 +208,7 @@ Deliberate limits:
   `tests/test_impl_refusal.py` fails at the first resolver or schema major
   bump, so this is decided before then.
 - A command that saves the manifest and renders nothing is not refused by the
-  pre-check (`record_triggers.EXEMPT`: `issue friction`, `friction capture`,
-  `checkpoint add`, `subtask package`, `intent ingest`, and `analyze` in
-  gate-clearing mode). It writes to an issue whose generation is refused. A command
+  pre-check (`record_triggers.EXEMPT`: `checkpoint add`). It writes to an issue whose generation is refused. A command
   that loads the generation still refuses.
 
 `compass issue migrate --config [--issue SLUG]` fixes both. It stores a new
@@ -254,16 +241,75 @@ the only evidence of compatibility.
 |---|---|---|
 | `current` | The number the manifest names, with a matching marker | prints the line |
 | `superseded` | A lower number, with a marker | prints nothing |
-| `proposal` | Only `proposed.yml`, above the current number | prints the line |
+| `proposal` | Only an 8.x `proposed.yml`, above the current number | prints the line |
 | `incomplete` | Some files and no matching marker (above the current number, or below it with no marker); also a folder that holds `proposed.yml` and anything else | prints the line |
 | `complete-unreferenced` | A matching marker above the current number | prints the line |
 | `broken` | The manifest names a number whose folder, marker or files do not match | fails the run |
 
-`compass check` refuses an issue whose generation is broken. The CLI never
-adopts a leftover folder on its own: `compass issue configure --commit`
-adopts a complete one when a person runs it, and `compass issue configure
---discard` removes a proposal or a leftover. [issue-configure.md](issue-configure.md)
-has the recovery for a crash after each step.
+A missing folder is rebuilt from the manifest's `policy:` block before it is
+judged broken (see "A missing folder"). Only when that fails is it `broken`;
+`compass ci` then adds the reason to the line.
+
+`compass check` refuses an issue whose generation is broken. A reader never
+takes a leftover folder as the generation in force: only the manifest names
+it. After a crash before the manifest replace, the next `compass approach
+evaluate --write` writes the leftover folder again; after the replace, the new
+generation is in force and the next one says "no change".
+
+## A missing folder
+
+#356 keeps the generation folders out of the commit, so a fresh clone of a
+committed issue has the manifest and no `generations/<n>/`. Every reader in
+`effective` (`effective_for`, `require_whole`, `stored_documents`,
+`record_check_results`, `stored_versions`, `generation_report`,
+`migrate_generation`, and the reassess before it commits) first calls
+`effective.restore_from_policy`. It acts only when the manifest names generation
+n, the folder `generations/<n>/` does not exist at all, and the manifest holds
+a `policy:` block:
+
+1. It finds the check set `policy.check_set` names whose file has the sha256
+   `policy.check_set_sha256` (`check_set.held`): the shipped file, or an
+   earlier release's copy at `governance/check-sets/<id>@<version>.yml`. No
+   release has copied one yet.
+2. It resolves that check set with `policy.autonomy` and applies
+   `policy.tightened` with `tighten.apply`, the function that applies
+   `compass.yml`. It does not read `compass.yml`, so a settings change made
+   since does not stop the rebuild. A block with no `autonomy` is tried with
+   each of `controlled`, `balanced` and `autonomous`.
+3. It uses the result only when the digest of the rebuilt `resolved.yml`
+   equals `policy.resolved`.
+4. `generation.restore` writes the folder under the generation lock: into a
+   hidden folder beside it, then renamed into place, so an interrupted rebuild
+   never leaves a partial folder.
+
+The rebuilt folder holds:
+
+- `resolved.yml` with the same bytes as the original;
+- `provenance.yml` with no field history and `restored_from: policy` and
+  `restored_at`;
+- `versions.yml` with the installed resolver, CLI and implementation versions,
+  the check set as the parent, and a `project` entry without a `git_blob`;
+- `records.yml` with no record, because the records a lower generation
+  carried forward are not in the manifest.
+
+The folder is written to disk, not kept in memory, because every reader of a
+generation reads its files: `compass check` rewrites `results.yml` after each
+run, and `compass ci` and `compass record restore` read the folder. In a
+project that commits its issue record, the folder is ignored, so it shows in no
+`git status`. The manifest is not changed.
+
+When the check set is not held, its sha256 differs, `tightened` cannot be
+applied, or no digest matches, nothing is written and the issue stays broken:
+the refusal says "its folder is missing" and adds why the rebuild failed, with
+both digests when they differ. A folder that exists but is not whole is never
+rebuilt, and neither is one in a manifest with no `policy:` block (written
+before 9.0.0). `compass issue migrate --config` drops the two `restored_`
+keys from the provenance it carries into the next generation.
+
+`autonomy` is in the block because it is the one input of `resolved.yml` that
+`tightened` does not hold. The #356 measurement of 13 issue shapes found that
+the rebuild gives the same digest in every case once the autonomy is known
+(ADR-096 decision 5).
 
 ## Reading
 
@@ -272,37 +318,50 @@ has the recovery for a crash after each step.
 | Issue | `source` | What it reads |
 |---|---|---|
 | `generation: n`, n at least 1 | `generation` | `generations/<n>/`, checked against its marker, and nothing else |
-| no `generation:` key | `live` | the shipped default or the project's copies of the two governance files, then `compass.yml`, then the issue's `config:`, resolved now |
+| no `generation:` key | `live` | the check set with the tighten-only settings of `compass.yml` applied, or the project's copies of the two governance files, resolved now; the issue's `config:` is not read (ADR-094) |
 | `generation: 0` | none | refuses and names the fix |
-| no issue (`task_dir=None`) | `live` | the project layers, resolved now |
+| no issue (`task_dir=None`) | `live` | the same, resolved now |
 
-A project with no `compass.yml` and its own `governance/` copies is resolved
-through the legacy adapter in place of the shipped default. The adapter also
-converts the `project:` guardrails of such a copy: each becomes a guardrail gate
-with its own checks and its stage from `checked_at`, and a `command-passes`
-check becomes a check named for the guardrail id and name (`PG-E-command-and-suite`)
-that carries the guardrail's `params`. A guardrail that omits a default the
-framework ships is still reported as absent by `compass check` and
-`compass approach evaluate --verbose`, with or without a generation.
+`effective.resolve_live` reads the check set (`check_set.resolved`) and applies
+the tighten-only settings (`tighten.apply`). Nothing merges: a catalogue key in
+`compass.yml` is a removed setting and is not read, and an `extends:` that
+names a git parent is refused with exit 2 (`L-PARENT-REMOVED`). The resolver
+version is `1.1.0`: the stored shape did not change, so a generation that names
+`1.0.0` still loads. Every resolution runs the settings lint first: a
+`compass.yml` with a lint error resolves nothing, so no command reads it and no
+commit stores it (exit 2). The check set is parsed once per process while the
+file is unchanged, and a resolution copies it once: `compass flow` resolves
+every issue on the board.
+
+A project with no `compass.yml` and a copy of `routing-policy.yml` or
+`guardrails.yml` is refused with exit 2 (`governance-copy-removed`,
+`effective.refuse_governance_copy`): 9.0.0 does not read the copy (ADR-098), and
+the project runs `compass policy migrate` on 8.x first. A stored generation is
+read as stored, so only a live read is refused. The 8.x reader of a copy is the
+test helper `tests/legacy_copy.py`, for compatibility contracts 1 and 2.
 
 `EffectiveView.evaluator_policy()` returns the routing policy in the shape
 `evaluate_route` takes, built by `obligations.policy_adapter` from the resolved
-configuration. `effective` and `classify` are the only modules that may import
-`obligations` (ADR-037); readers call the view.
+configuration, with the two tighten-only settings the evidence evaluator reads,
+`signoff_labels` and `require_evidence` (`tighten.with_settings`). `effective`
+is the only module that may import `obligations` (ADR-037); readers call the
+view.
 
 ### What a reader calls
 
-A reader module calls `effective.view_or_legacy(task_dir)`. It returns a view,
-or None when the module must read the governance files as before. That is only
-an issue with no `generation:` key (or no issue) in a project with no
-`compass.yml`. A generation of 0, or one that is not whole, raises.
+A reader module calls `effective.effective_for(task_dir)`. It returns a view:
+the stored generation, or a live view of the check set for an issue with none
+(or no issue). With `live=True` a stored generation is not read, and with no
+issue `start` names the directory whose project is meant. A generation of 0,
+one that is not whole, and a live read of a project with copied governance
+raise.
 
 | Call on the view | Returns | Used by |
 |---|---|---|
 | `evaluator_policy()`, `autonomy` | the routing policy and the autonomy value | `routing`, `quick_fix_cmd`, `flow`, `calibration`, `approach_diagram` |
-| `evaluator_issue()` | the issue's own layer as the evaluator takes it: the approach it names, the stage modes it sets, the stages among them that an issue waiver in the provenance covers (`waived_stages`) and its subtask ceiling, or None | `routing` |
+| `evaluator_issue()` | the 8.x issue layer a stored generation holds, as the evaluator takes it (a live view holds none since 9.0.0): the approach it names, the stage modes it sets, the stages among them that an issue waiver in the provenance covers (`waived_stages`) and its subtask ceiling, or None | `routing` |
 | `guardrail_gates()` | the guardrails in the legacy shape: `defaults`, `spike_guardrails`, `checks` (each check's `severity`, `on_skipped` and `blocking_when`) and `impl` (the implementation each check runs) | `check_cmd` |
-| `gate_requirements()` | the evidence types each gate accepts, and the known types | `checks`, `manifest`, `receipt` |
+| `gate_requirements()` | the evidence types each gate accepts, and the known types | `checks`, `manifest` |
 | `command_checks()` | the checks that run a command the project wrote | `checks` |
 | `loop_ceiling_rules()` | the loop-ceiling rules | `loop_ceilings` |
 | `known_ids()` | the ids of the guardrails that apply to a shipping approach | `lessons`, `review_rules` |
@@ -316,20 +375,27 @@ A check that a project adds under its own id (for example `arch-rule` with
 check's id.
 
 `compass approach evaluate --write` computes the outcome from the project's
-live configuration when the project has a `compass.yml`, because the commit
-stores that configuration. Without `--write` it reads the generation.
+live configuration, because the commit stores that configuration. Without `--write` it reads the generation.
 
 The quarantine registry (`governance/quarantine.yml`) is a project file, not
-catalogue data, and stays where it is.
+catalogue data, and stays where it is. The check `no-trusted-rerun` reads it by
+path: the project's own, else the framework's (`checks._quarantine_dir`).
 
 ## The `compass check` header
 
-An issue with a generation gets a line `generation <n> (parent <version>)`
+Every run names the policy it judges by, ahead of the other notices: `Policy:
+compass-checks@9.0.0 (sha256 <hex>)`, and `Tightened:` with the names of the
+tighten-only settings applied when there are any. An issue with a generation
+takes the line from its manifest's `policy:` block, and one committed before
+9.0.0 has no such block and gets no line. No conformance line is printed:
+no lock exists to unlock (ADR-094).
+
+An issue with a generation also gets a line `generation <n> (parent <version>)`
 ahead of the other notices, and in the `--json` document as `generation` and
 `parent_version`. When the manifest's `config:` is not the overlay the
-generation was committed with, a second line says `pending: config: is not
-committed yet; run compass approach evaluate --write`. The line is a notice and
-does not change the exit code. An issue with no generation gets neither.
+generation was committed with, a second line says `config: differs from the
+generation in force and is not read: an issue has no config layer (ADR-094)`.
+The line is a notice and does not change the exit code. An issue with no generation gets neither.
 
 ## Severity and `on_skipped` in `compass check`
 
@@ -386,7 +452,7 @@ only when `failed` is above zero.
 
 ## Limits
 
-- `policy show --issue` still resolves the live files and does not read
-  the generation.
+- `policy show --issue` prints the issue's `policy:` block and its waivers; it
+  does not read the generation folder.
 - The leftover-generation states are reported by `compass ci`, not by
   `compass check`.

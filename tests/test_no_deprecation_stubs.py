@@ -15,7 +15,7 @@ What stays either way is the migrator's v1-to-v2 mapping. That is a
 translation table rather than a redirect: a stub answers a caller who used the
 old name, a mapping reads a file that used it.
 
-Scenario ids: see docs/system-spec.md (group F).
+Scenario ids: see the issue's acceptance criteria (group F).
 """
 from __future__ import annotations
 

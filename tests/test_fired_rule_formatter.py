@@ -2,9 +2,9 @@
 
 `approach evaluate` (its summary and its verbose view) and `issue receipt`
 each built the line themselves, and the copies drifted: a plain-language
-fix reached one screen and not the other (#109). They now share
+fix reached one screen and not the other (#109). They shared
 `render.fired_rule_line`, and each screen prints exactly what it printed
-before, pinned below.
+before, pinned below. 9.0.0 removed the receipt (ADR-091).
 
 Scenario id: FR-1 (issue `one-fired-rule-formatter-shared`).
 """
@@ -45,21 +45,52 @@ def _project(tmp_path):
     return root
 
 
-FLOOR = "Domain risk overrides size. A one-line auth change is not small"
+# ADR-099: the architecture review is no longer owed to a `G5` surface by
+# default; the label adds the person's approval of the scenarios (row
+# `RP-EVID-SIGNOFF`) and the `G5` sign-off.
+SCENARIO_APPROVAL = ("A change to a `G5` surface, or with critical risk, owes a "
+                     "person's approval of its scenarios")
+SIGN_OFF = "A change to a `G5` surface owes a person's sign-off before it ships"
 
 
 def test_fr_1_each_screen_prints_what_it_printed_before(tmp_path):
+    # The issue is on the four-stage path (ADR-092): an auth label adds evidence,
+    # and each rule is named by the evidence it adds. The summary cuts a long
+    # rule at 70 characters.
     root = _project(tmp_path)
     summary = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--summary")
-    assert f"  - {FLOOR} (RP-FLOOR-003, floor)\n" in summary
+    cut = SCENARIO_APPROVAL[:SCENARIO_APPROVAL.index("owes a person's") + len("owes a person's")]
+    assert f"  - {cut} \u2026 (RP-EVID-SIGNOFF, evidence)\n" in summary
     verbose = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--verbose")
-    assert f"    {FLOOR} (RP-FLOOR-003, floor)\n" in verbose
-    assert ("    Irreversible-surface issues have consistency checked before "
-            "they ship (RP-REQUIRE-002, requirement)\n") in verbose
-    receipt = _cli(root, "issue", "receipt", "--issue", "auth-fix")
-    assert f"    {FLOOR} (RP-FLOOR-003)\n" in receipt
-    assert ("    Work on a trust boundary states the threats it considered "
-            "(RP-REQUIRE-005)\n") in receipt
+    assert f"    {SCENARIO_APPROVAL} (RP-EVID-SIGNOFF, evidence)\n" in verbose
+    # A guardrail code is in backticks, as its rationale writes it.
+    assert f"    {SIGN_OFF} (`G5`, guardrail)\n" in verbose
+
+
+def test_fr_1_the_verbose_view_on_the_path_uses_path_words(tmp_path):
+    root = _project(tmp_path)
+    verbose = _cli(root, "approach", "evaluate", "--issue", "auth-fix", "--verbose")
+    assert "  evidence row    : RP-EVID-COMMON\n" in verbose, verbose
+    assert "first approach" not in verbose and "quick fix" not in verbose, verbose
+    assert "(G5," not in verbose, verbose
+
+
+def test_fr_1_a_floor_on_the_path_keeps_only_the_effects_the_path_has(tmp_path):
+    """`RP-FLOOR-002` forced the define stage to thorough and required a skill. The
+    path has no stage modes, so its entry keeps the skill alone."""
+    root = tmp_path / "p"
+    root.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    _cli(root, "quick-fix", "start", "unmapped", "--risk", "contained - x",
+         "--familiarity", "brownfield-unmapped - x", "--size", "medium - x",
+         "--intent", "i", "--scenario", "Given a, when b, then c", "--test", "tests/test_x.py")
+    import yaml
+    manifest = yaml.safe_load(
+        (root / ".compass" / "work" / "unmapped" / "manifest.yml").read_text())
+    floor = next(f for f in manifest["policy_rules_fired"] if f["id"] == "RP-FLOOR-002")
+    assert floor["changed"] == ["skill 'atdd' required"], floor
+    verbose = _cli(root, "approach", "evaluate", "--issue", "unmapped", "--verbose")
+    assert "forced to thorough" not in verbose, verbose
 
 
 def test_fr_1_the_formatter_covers_each_shape():
@@ -69,10 +100,13 @@ def test_fr_1_the_formatter_covers_each_shape():
     assert fired_rule_line(rule, with_kind=False) == "Says why (RP-X-1)"
     assert fired_rule_line({"id": "RP-X-2"}, with_kind=False) == "(RP-X-2)"
     assert fired_rule_line("RP-X-3", with_kind=False) == "(RP-X-3)"
+    assert fired_rule_line({"id": "G5", "kind": "guardrail", "rationale": "Why."}) == \
+        "Why (`G5`, guardrail)"
+    assert fired_rule_line({"id": "S17"}, with_kind=False) == "(`S17`)"
 
 
-def test_fr_1_both_modules_use_the_one_formatter():
-    for name in ("routing.py", "receipt.py"):
+def test_fr_1_the_evaluator_uses_the_one_formatter():
+    for name in ("routing.py",):
         src = (ROOT / "cli" / "compass_pkg" / name).read_text(encoding="utf-8")
         assert "fired_rule_line" in src, name
         assert "rationale']).rstrip().rstrip('.')" not in src, name

@@ -66,7 +66,7 @@ The path routes/ held the retired artifact.
 Run `/compass:specify`, then `/compass:clarify`, `/compass:distribute` and
 `/compass:land`.
 
-# Specify
+# Clarify
 
 The manifest recorded touches: as a list of the domains a change reaches.
 

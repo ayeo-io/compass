@@ -3,7 +3,7 @@
 
 import sys
 import compass_pkg
-from compass_pkg import stable_ids, word_map
+from compass_pkg import path_stages, stable_ids, word_map
 try:
     import yaml
     with open(sys.argv[1], encoding="utf-8") as fh:
@@ -20,6 +20,26 @@ except Exception:
     # Any non-zero status below is the check being unable to RUN (a broken
     # install), which is a different thing from the manifest being
     # unreadable.
+    sys.exit(0)
+# A path issue (ADR-092) owes scenarios whatever its size: it has no stage modes,
+# so `define: thorough` cannot say so. `block-path` gives the refusal that names
+# `compass scenario add`. A spike is never a path issue, so it stays exempt.
+if path_stages.is_path_issue(task) and not (task.get("scenarios") or []):
+    print("block-path")
+    sys.exit(0)
+# A delivery issue on the path needs no red before a code edit, because
+# `compass quick-fix finish` proves the red itself (ADR-099 decision 2). One
+# thing still comes before code: where the scenarios owe a person's approval
+# (a `G5` label, a `signoff_labels` label or critical risk), the `specify`
+# checkpoint has a person's answer (decision 5).
+if path_stages.is_path_issue(task):
+    from compass_pkg import scenario_freeze
+    if scenario_freeze.owes_signoff(task) and not scenario_freeze.signed_off(task):
+        print("block-approval")
+    elif task.get("depends_on") not in (None, []):
+        print("path-depends")
+    else:
+        print("path")
     sys.exit(0)
 stages = task.get("stages") or task.get("phases") or {}  # vocabulary-scan: allow - reads the key an archived pre-v2 manifest holds
 # Read both: `define` is the current key, and archived manifests still carry

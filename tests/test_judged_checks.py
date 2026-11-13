@@ -22,6 +22,8 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
@@ -426,13 +428,37 @@ def _cli_config(reviewers=None, extra_check=None):
     check = _judged(reviewers=reviewers)
     return {"schema": 1, "capabilities": {CAPABILITY: True},
             "checks": {CHECK: check, **(extra_check or {})},
-            "stages": {"plan": {"set": {"entry": {"add": [CHECK]}}}}}
+            "stages": {"specify": {"set": {"entry": {"add": [CHECK]}}}}}
+
+
+def _cli_layers(tmp_path, config):
+    """A scratch project for `config` and its issue directory, evaluated. Its
+    settings sit in `compass.yml`; its checks and stage lists sit in a stored
+    generation, because since 9.0.0 `compass.yml` cannot add a check (ADR-094)
+    and a generation stored before 9.0.0 can hold one. The issue is on the
+    four-stage path (ADR-092), whose specify stage holds what the plan entry
+    list held."""
+    import stored_generation
+    catalogue = {key: config[key] for key in ("checks", "stages")}
+    project = {key: value for key, value in config.items() if key not in catalogue}
+    (tmp_path / "project").mkdir()
+    root, task_dir = _project(tmp_path / "project", compass_yml=dict(project, schema=1))
+    assert _evaluate_write(root)[0] == 0
+
+    def add(resolved):
+        resolved["checks"].update(copy.deepcopy(catalogue["checks"]))
+        for stage, operation in catalogue["stages"].items():
+            body = resolved["stages"][stage]
+            for side, lists in operation["set"].items():
+                body[side] = list(body.get(side) or []) + lists["add"]
+
+    stored_generation.commit(root, task_dir, add, in_place=True)
+    return root, task_dir
 
 
 def _cli_project(tmp_path, reviewers=None, documents=True):
-    root, task_dir = _project(tmp_path, compass_yml=_cli_config(reviewers))
-    assert _evaluate_write(root)[0] == 0
-    _write_manifest(task_dir, current_phase="plan")
+    root, task_dir = _cli_layers(tmp_path, _cli_config(reviewers))
+    _write_manifest(task_dir, current_phase="specify")
     if documents:
         _documents(task_dir)
     return root, task_dir
@@ -471,7 +497,9 @@ def test_jc_7_the_verb_writes_a_record_that_makes_the_check_pass(tmp_path):
     assert entry == [{"id": "EV-REVIEW-design-review-1", "type": "manual-review",
                       "path": "evidence/review-design-review-1.yml", "check": CHECK}]
     row = _plan_row(root)
-    assert row["status"] == "pass" and row["guardrail"] == "stage:plan:entry"
+    # On a path issue the plan entry list is judged at specify, the path stage that
+    # shows plan (ADR-092).
+    assert row["status"] == "pass" and row["guardrail"] == "stage:specify:entry"
 
 
 def test_jc_7_a_second_review_is_numbered_and_the_newest_decides(tmp_path):
@@ -512,9 +540,6 @@ def test_jc_7_a_changed_input_after_the_verb_re_owes_it_end_to_end(tmp_path):
 
 def test_jc_7_the_verb_leaves_the_other_checks_as_they_were(tmp_path):
     root, task_dir = _cli_project(tmp_path, reviewers=["jed72"])
-    # The verb renders the issue's documents afterwards (ADR-051), so render first: the
-    # question is whether the verb moves any other check, not whether the page was current.
-    assert _run(root, "issue", "render", "--issue", SLUG)[0] == 0
     before = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])["checks"]
     assert _review(root)[0] == 0
     after = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])["checks"]
@@ -532,7 +557,7 @@ def _tree(task_dir):
 
 @pytest.mark.parametrize("name, args, needle", [
     ("unknown check", dict(check="no-such-check"), "no such check"),
-    ("not judged", dict(check="dor-summary-filled"), "not a judged check"),
+    ("not judged", dict(check="dod-suite-green"), "not a judged check"),
     ("empty reason", dict(reason="  "), "reason"),
     ("empty reviewer", dict(reviewer=" "), "reviewer"),
 ])
@@ -557,8 +582,7 @@ def test_jc_8_an_input_that_cannot_be_found_is_named(tmp_path):
 def test_jc_8_a_check_with_no_inputs_cannot_be_reviewed(tmp_path):
     config = _cli_config()
     config["checks"][CHECK]["inputs"] = []
-    root, task_dir = _project(tmp_path, compass_yml=config)
-    assert _evaluate_write(root)[0] == 0
+    root, task_dir = _cli_layers(tmp_path, config)
     code, out, err = _review(root, reviewer="agent")
     assert code == 2 and "declares no inputs" in err
 
@@ -726,9 +750,8 @@ def test_jc_10_the_corpus_has_the_verb_with_its_exit_codes():
 # --- JC-11: a project with no judged check is unchanged --------------------------------
 
 def test_jc_11_the_shipped_default_names_no_judged_or_evidence_check_in_any_list():
-    preset = ROOT / "governance" / "presets" / "default"
-    checks = yaml.safe_load((preset / "checks.yml").read_text(encoding="utf-8"))["checks"]
-    stages = yaml.safe_load((preset / "stages.yml").read_text(encoding="utf-8"))["stages"]
+    checks = shipped("checks.yml")["checks"]
+    stages = shipped("stages.yml")["stages"]
     listed = {c for body in stages.values() for side in ("entry", "exit")
               for c in (body.get(side) or [])}
     assert listed
@@ -757,7 +780,10 @@ def test_jc_11_check_output_and_the_manifest_are_unchanged_without_a_judged_chec
     before = (task_dir / "manifest.yml").read_bytes()
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
     rows = [r for r in data["checks"] if r["guardrail"].startswith("stage:")]
-    assert len(rows) == 7 and {r["status"] for r in rows} == {"pass"}
+    # The seven rows were plan's Definition of Ready. A path issue owes none (ADR-092
+    # decision 6), and its Definition of Done is due only at ship, so no stage list is
+    # judged here.
+    assert rows == [], rows
     assert not [r for r in data["checks"] if "review record" in r["detail"]]
     assert (task_dir / "manifest.yml").read_bytes() == before
     assert not list((task_dir / "evidence").glob("review-*")) if (task_dir / "evidence").exists() else True
@@ -808,19 +834,10 @@ def test_jc_12_an_advisory_judged_check_with_no_record_reports_the_advisory_stat
 
 
 def test_jc_12_policy_lint_does_not_warn_about_a_judged_check_in_a_list(tmp_path):
-    root, task_dir = _project(tmp_path, compass_yml=_cli_config())
+    """`agent_review: on` lists the judged check `agent-review` at the ship
+    entry (ADR-094); the lint accepts it and warns about nothing."""
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1, "agent_review": "on"})
     code, out, err = _run(root, "policy", "lint", "--json")
     assert code == 0, out + err
-    assert not [f for f in json.loads(out)["findings"]
-                if f["code"] == "M-LIST-KIND-UNEVALUATED"]
-    assert "judged" in __import__("compass_pkg.policy_lint", fromlist=["x"]).EVALUATED_LIST_KINDS
+    assert json.loads(out)["findings"] == []
 
-
-def test_jc_12_the_receipt_shows_the_verdict_of_a_judged_check(tmp_path):
-    root, task_dir = _cli_project(tmp_path, reviewers=["jed72"])
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert code == 0, err
-    assert re.search(r"design-review\s+fail", out), out
-    assert _review(root)[0] == 0
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert re.search(r"design-review\s+pass", out), out

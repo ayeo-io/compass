@@ -234,11 +234,11 @@ def test_rwp_4_a_planted_phrase_is_reported_wherever_the_string_is_built():
         'def floor():\n'
         '    return "stage forced full-weight"\n'
         'def parser(sub):\n'
-        '    sub.add_parser("quick-fix", help="assess, build and ship a fix")\n'
+        '    sub.add_parser("approach", help="see compass route evaluate")\n'
     )
     hits = _retired_phrase_hits("planted.py", planted)
     for name in ("marked landed", "queued", "full-weight",
-                 "assess, build and ship"):
+                 "compass route evaluate"):
         assert any(repr(name) in h for h in hits), (name, hits)
     clean = ('def f():\n    """The issue marked landed is queued."""\n'
              '    return "the commit landed and the queue is empty"\n')

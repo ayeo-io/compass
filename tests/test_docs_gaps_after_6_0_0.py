@@ -1,7 +1,7 @@
 """Documentation gaps reported after 6.0.0 stay closed.
 
-Covers the site pages, the waiver and lock syntax page, the templates and the
-releasing guide (issue `docs-gaps-after-6-0-0`).
+Covers the site pages, the waiver page (the 9.0.0 waiver, ADR-094), the templates
+and the releasing guide (issue `docs-gaps-after-6-0-0`).
 """
 from __future__ import annotations
 
@@ -15,9 +15,10 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 CLI = ROOT / "cli" / "compass"
-PAGE = DOCS / "waivers-and-locks.md"
-THREE = ("github-labels.md", "github-labels-walkthrough.md",
-         "upgrade-7-0-0.md")
+PAGE = DOCS / "waivers.md"
+# 9.0.0 removed the two GitHub label pages with the label sync (ADR-093);
+# github-links.md took over the link they described.
+THREE = ("github-links.md", "upgrade-7-0-0.md")
 
 
 def _config():
@@ -70,24 +71,27 @@ def test_trc_002_links_on_the_three_pages_stay_inside_the_site():
 
 def test_trc_003_syntax_page_is_published_and_linked_from_configuration():
     assert PAGE.exists()
-    assert "waivers-and-locks.md" in set(_nav_pages(_config()["nav"]))
-    assert "waivers-and-locks.md" in _allowed()
+    assert "waivers.md" in set(_nav_pages(_config()["nav"]))
+    assert "waivers.md" in _allowed()
     config_page = (DOCS / "configuration.md").read_text(encoding="utf-8")
-    assert "](waivers-and-locks.md" in config_page
+    assert "](waivers.md" in config_page
+    # The 8.x page of layer waivers, locks and unlocks went with the layers (ADR-094).
+    assert not (DOCS / "waivers-and-locks.md").exists()
 
 
 def test_trc_004_syntax_page_names_every_key():
     text = PAGE.read_text(encoding="utf-8")
-    for key in ("waiver", "reason", "approved_by", "approved_on", "locked",
-                "unlock", "owner", "approvers", "extends", "set", "replace",
-                "remove"):
+    for key in ("id", "check", "reason", "requested_at", "requested_by"):
+        assert re.search(rf"^\s+(?:- )?{key}:", text, flags=re.M), f"page does not show {key}"
+    for key in ("owner", "approvers.waiver", "never_waived"):
         assert re.search(rf"`{key}`", text), f"page does not name {key}"
 
 
 def _page_commands():
     text = PAGE.read_text(encoding="utf-8")
     found = set()
-    for span in re.findall(r"`(compass [^`]+)`", text):
+    for span in re.findall(r"`(compass [^`]+)`", text) + re.findall(
+            r"^(compass [^\n]+)", text, flags=re.M):
         words = []
         for word in span.split()[1:]:
             if word.startswith(("-", "<", "[")) or not re.fullmatch(
@@ -101,8 +105,7 @@ def _page_commands():
 
 def test_trc_005_every_command_on_the_syntax_page_exists():
     commands = _page_commands()
-    for needed in (("policy", "lint"), ("policy", "show"),
-                   ("policy", "update"), ("issue", "configure")):
+    for needed in (("waiver", "add"), ("waiver", "withdraw")):
         assert needed in commands, f"page does not name compass {needed}"
     for words in sorted(commands):
         result = _run([*words, "--help"])
@@ -113,20 +116,12 @@ def test_trc_006_syntax_page_names_no_policy_effective():
     assert "policy effective" not in PAGE.read_text(encoding="utf-8")
 
 
-def test_trc_007_syntax_page_example_passes_policy_lint(tmp_path):
+def test_trc_008_syntax_page_says_a_waiver_does_not_excuse_a_never_waived_check():
+    """8.x said a waiver does not excuse a lock. 9.0.0 has no lock: the check set's
+    `never_waived` holds what the hard locks held (ADR-094)."""
     text = PAGE.read_text(encoding="utf-8")
-    match = re.search(r"```yaml\n(.*?)```", text, flags=re.S)
-    assert match, "page holds no yaml block"
-    example = tmp_path / "compass.yml"
-    example.write_text(match.group(1), encoding="utf-8")
-    result = _run(["policy", "lint", "--file", str(example)])
-    assert result.returncode == 0, result.stdout[-500:] + result.stderr[-300:]
-
-
-def test_trc_008_syntax_page_says_a_waiver_does_not_excuse_a_lock():
-    text = PAGE.read_text(encoding="utf-8")
-    assert "K-LOCK-REFUSED" in text
-    assert re.search(r"waiver does not excuse a lock", text)
+    assert "`never_waived`" in text and "`human-approval-present`" in text
+    assert "`G5`" in text
 
 
 def test_trc_009_no_template_cites_the_strategies_file_as_a_project_path():
@@ -142,38 +137,24 @@ def test_trc_009_no_template_cites_the_strategies_file_as_a_project_path():
     assert hits == []
 
 
-def _orchestration_line():
-    for line in (ROOT / "templates" / "manifest.yml").read_text(
-            encoding="utf-8").splitlines():
-        if line.startswith("orchestration:"):
-            return line
-    raise AssertionError("no orchestration line")
+def _template_lines():
+    return (ROOT / "templates" / "manifest.yml").read_text(encoding="utf-8").splitlines()
 
 
-def test_trc_010_manifest_template_names_breakdown_as_orchestration_recorder():
-    line = _orchestration_line()
-    assert "#" in line
-    comment = line.split("#", 1)[1].lower()
-    assert "breakdown" in comment
-    assert "evaluator" not in comment
+def test_trc_010_manifest_template_has_no_orchestration_line():
+    # The breakdown stage recorded `orchestration:`. The four-stage path has no
+    # breakdown stage and Compass no longer writes `orchestration` (ADR-092
+    # decision 11), so the template holds no such line and names no breakdown.
+    assert not [line for line in _template_lines() if line.startswith("orchestration:")]
+    assert not [line for line in _template_lines() if "breakdown" in line.lower()]
 
 
-def test_trc_011_manifest_template_parses_with_null_orchestration():
+def test_trc_011_manifest_template_parses_without_orchestration():
+    # ADR-092 decision 11: a new manifest has no `orchestration` key. An archived
+    # one keeps it (`schemas/manifest.schema.json`), so the template still parses.
     data = yaml.safe_load(
         (ROOT / "templates" / "manifest.yml").read_text(encoding="utf-8"))
-    assert "orchestration" in data
-    assert data["orchestration"] is None
+    assert isinstance(data, dict)
+    assert "orchestration" not in data
 
 
-def test_trc_012_releasing_guide_names_artifact_freshness_and_links_its_page():
-    assert (DOCS / "artifact-freshness.md").exists()
-    text = (DOCS / "releasing.md").read_text(encoding="utf-8")
-    assert "artifact freshness" in " ".join(text.lower().split())
-    assert "](artifact-freshness.md" in text
-
-
-def test_trc_013_releasing_guide_says_freshness_refusals_are_opt_in():
-    text = (DOCS / "releasing.md").read_text(encoding="utf-8")
-    assert "`artifact-freshness`" in text
-    assert re.search(r"only\s+when\s+the\s+`artifact-freshness`\s+capability"
-                     r"\s+is\s+on", text)

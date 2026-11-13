@@ -14,10 +14,14 @@ Measured at HEAD before this issue: 1,744 words resident (~2,354 tokens) and
 start of every issue. R1 (another Claude Code plugin) is about 900
 tokens resident.
 
+`tests/test_resident_text.py` holds the resident text, as a hard limit of
+600 words (#358), and replaces IV-A1. This file keeps the per-run measure and
+the skill line ceiling.
+
 The ceilings below are the issue's success signals. They are deliberately not
 "whatever it is today plus a bit": a ceiling that tracks the tree cannot fail.
 
-Scenario ids: IV-A1, IV-A2, IV-B1, IV-C1 in
+Scenario ids: IV-A2, IV-B1, IV-C1 in
 instruction-volume/acceptance-criteria.md
 """
 from __future__ import annotations
@@ -25,57 +29,15 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from size_targets import warn_if_over
-
 ROOT = Path(__file__).resolve().parent.parent
 
 # The success signals from intent.md, in words.
-# Raised from 900 by the approval rule in the contract (issue
-# `approve-inside-claude-code`), decided by compass:architect under jed72's
-# overnight delegation. A target, not a limit, since issue
-# `ste100-writing-rule`, as the contract's own size targets are: over it, the
-# test passes and pytest warns. Moved to 960 by that issue's ASD-STE100
-# writing rule: 951 words measured.
-RESIDENT_TARGET = 960
 QUICK_FIX_CEILING = 12000
 SKILL_LINE_CEILING = 200
 
 
 def _words(path):
     return len(path.read_text(encoding="utf-8").split())
-
-
-def _description_words(path):
-    """The frontmatter `description:`, which is what the runtime keeps loaded."""
-    text = path.read_text(encoding="utf-8")
-    m = re.match(r"^---\n(.*?)\n---", text, re.S)
-    if not m:
-        return 0
-    d = re.search(r"description:\s*(.+?)(?=\n[a-z_-]+:|\Z)", m.group(1), re.S)
-    return len(d.group(1).split()) if d else 0
-
-
-def _model_cannot_invoke(path):
-    m = re.match(r"---\n(.*?)\n---", path.read_text(encoding="utf-8"), re.S)
-    return bool(m) and re.search(r"^disable-model-invocation:\s*true\s*$", m.group(1),
-                                 re.M) is not None
-
-
-def _resident_breakdown():
-    out = {}
-    for label, paths in (
-        ("skills", sorted((ROOT / "skills").glob("*/SKILL.md"))),
-        ("commands", sorted((ROOT / "commands").glob("*.md"))),
-        ("agents", sorted((ROOT / "agents").glob("*.md"))),
-    ):
-        # A command with `disable-model-invocation: true` is not in the model's
-        # context: Claude Code keeps only invocable descriptions loaded. The
-        # four approval commands set it (ADR-068), so they cost no resident words.
-        out[label] = sum(_description_words(p) for p in paths
-                         if not _model_cannot_invoke(p))
-    contract = ROOT / "compass-contract.md"
-    out["contract"] = _words(contract) if contract.is_file() else 0
-    return out
 
 
 # What a quick fix reads, following the instructions. Listed rather than
@@ -89,17 +51,6 @@ QUICK_FIX_READS = [
     "CLAUDE.md",
     "commands/quick-fix.md",
 ]
-
-
-def test_iv_a1_resident_cost_is_bounded():
-    """Paid on every turn, used or not."""
-    parts = _resident_breakdown()
-    total = sum(parts.values())
-    # These are frontmatter descriptions and the injected contract -
-    # everything the runtime keeps loaded whether the session uses it or not.
-    breakdown = ", ".join(f"{k} {v}" for k, v in sorted(parts.items()))
-    warn_if_over(f"The resident text ({breakdown})", total,
-                 RESIDENT_TARGET, "words")
 
 
 def test_iv_a2_a_quick_fix_reads_less_than_a_feature_should():

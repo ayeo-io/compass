@@ -17,7 +17,7 @@ Two consequences:
 - `status: parked` became a one-word way to leave the sweep while it still
   reported everything clean.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 

@@ -3,7 +3,9 @@ group B).
 
 `standard` retires as a size only. It is still the retired name of the
 `regular` delivery approach (`delivery_approach: standard`), and that row is
-not a size. Every writer emits `medium`; the readers accept both.
+not a size. Every writer emits `medium`. A stored manifest or generation is
+read in either word; a size typed on the command line takes `medium` only
+(ADR-098, VD-043 decision 9).
 """
 from __future__ import annotations
 
@@ -17,6 +19,8 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 SIZES = ["atomic", "small", "medium", "large", "product"]
 ASSESS = ("--assessment", "risk=contained", "--assessment", "familiarity=brownfield-mapped")
@@ -25,11 +29,9 @@ ASSESS = ("--assessment", "risk=contained", "--assessment", "familiarity=brownfi
 # --- VR-B1 ---------------------------------------------------------------------
 
 def test_vr_b1_the_size_dimension_lists_medium_and_not_standard():
-    dimensions = yaml.safe_load((ROOT / "governance" / "presets" / "default"
-                                 / "dimensions.yml").read_text(encoding="utf-8"))
+    dimensions = shipped("dimensions.yml")
     assert dimensions["dimensions"]["size"]["values"] == SIZES
-    view = yaml.safe_load((ROOT / "governance" / "routing-policy.yml")
-                          .read_text(encoding="utf-8"))
+    view = shipped_view("routing-policy.yml")
     assert view["assessment_vocabulary"]["size"] == SIZES
 
 
@@ -53,7 +55,9 @@ def test_vr_b2_every_baseline_assessment_of_size_standard_routes_alike_as_medium
     wanted = [r for r in rows if r["kind"] in ("grid", "archive")
               and r["assessment"].get("size") == "standard"]
     assert len(wanted) > 200, f"only {len(wanted)} baseline rows have size standard"
-    policy = cb.shipped_policy()
+    # The 8.0.4 governance copy, the last release that routed delivery approaches:
+    # 9.0.0 replaces the live default's approaches (ADR-092).
+    policy = cb.policy_8_0_4()
     wrong = []
     for row in wanted:
         medium = dict(row["assessment"], size="medium")
@@ -86,12 +90,14 @@ def _evaluate(run_cli, size):
                    "--json", timeout=60)
 
 
-def test_vr_b4_size_standard_on_the_command_line_equals_medium_and_says_so(run_cli):
+def test_vr_b4_size_standard_on_the_command_line_fails_as_an_unknown_value(run_cli):
+    """9.0.0 reads no old word typed on the command line: `size=standard` is
+    refused as any value outside the vocabulary is, with no notice."""
     medium = _evaluate(run_cli, "medium")
     assert medium.returncode == 0, medium
-    standard = _evaluate(run_cli, "standard")
-    assert standard.returncode == 0, standard
-    assert json.loads(standard.stdout) == json.loads(medium.stdout)
-    assert "size standard is now medium" in standard.stderr, standard.stderr
     assert medium.stderr == "", "the new word needs no notice"
-    assert "is now medium" not in standard.stdout, "the notice is on standard error only"
+    standard = _evaluate(run_cli, "standard")
+    unknown = _evaluate(run_cli, "enormous")
+    assert standard.returncode == unknown.returncode == 2, (standard, unknown)
+    assert "reading size='standard' is not in the vocabulary" in standard.stderr, standard.stderr
+    assert "is now medium" not in standard.stdout + standard.stderr

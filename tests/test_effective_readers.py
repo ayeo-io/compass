@@ -1,7 +1,7 @@
 """The readers of configuration read the stored generation.
 
 An issue with a generation is judged by its generation, not by the live
-governance files. These tests build a scratch project, commit a generation
+configuration. These tests build a scratch project, commit a generation
 with the real command and run the real functions or CLI against it.
 
 Scenario ids: `EF-1` to `EF-12` (issue `effective-readers`). Each test name
@@ -23,28 +23,51 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_generation_store import (SLUG, _committed_project, _manifest, _project,  # noqa: E402
                                    _run, _write_manifest)
 
-SHIPPED = ROOT / "governance"
-
-
-def _shipped(name):
-    return yaml.safe_load((SHIPPED / name).read_text(encoding="utf-8"))
+from check_set_files import view as _shipped  # noqa: E402
 
 
 # --- EF-1: the reader helper ---------------------------------------------------------------
 
-def test_ef_1_no_generation_and_no_compass_yml_reads_the_governance_files(tmp_path, monkeypatch):
-    from compass_pkg import effective
+def test_ef_1_no_generation_and_no_compass_yml_reads_the_check_set(tmp_path, monkeypatch):
+    """Since 9.0.0 every project reads the check set (ADR-094). A project with
+    its own copy of the governance files and no `compass.yml` is refused
+    (`governance-copy-removed`, ADR-098)."""
+    from compass_pkg import check_set, effective
+    from compass_pkg.core import CompassError
     root, task_dir = _project(tmp_path)
     monkeypatch.chdir(root)
-    assert effective.view_or_legacy(str(task_dir)) is None
-    assert effective.view_or_legacy(None) is None
+    for view in (effective.effective_for(str(task_dir)), effective.effective_for(None)):
+        assert view is not None and view.source == "live"
+        assert view.config["checks"] == check_set.resolved()["checks"]
+    _copy_governance(root)
+    for task in (str(task_dir), None):
+        with pytest.raises(CompassError) as refused:
+            effective.effective_for(task)
+        assert "[governance-copy-removed]" in str(refused.value)
+
+
+@pytest.mark.parametrize("only", ["routing-policy.yml", "guardrails.yml", None])
+def test_ef_1_a_governance_copy_is_refused_by_the_commands(tmp_path, only):
+    """Either copied file alone is refused too: a declared guardrail never
+    becomes silent. A `compass.yml` makes the copy a file nothing reads."""
+    root, task_dir = _project(tmp_path)
+    folder = _copy_governance(root)
+    if only:
+        (folder / only).unlink()
+    for argv in (("check", "--issue", SLUG), ("approach", "evaluate", "--issue", SLUG),
+                 ("policy", "lint"), ("policy", "show")):
+        code, out, err = _run(root, *argv)
+        assert code == 2 and "[governance-copy-removed]" in err, (argv, out + err)
+    (root / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
+    code, out, err = _run(root, "check", "--issue", SLUG)
+    assert "governance-copy-removed" not in err, out + err
 
 
 def test_ef_1_a_generation_gives_the_stored_view(tmp_path, monkeypatch):
     from compass_pkg import effective
     root, task_dir = _committed_project(tmp_path)
     monkeypatch.chdir(root)
-    view = effective.view_or_legacy(str(task_dir))
+    view = effective.effective_for(str(task_dir))
     assert (view.source, view.generation) == ("generation", 1)
 
 
@@ -55,7 +78,7 @@ def test_ef_1_generation_zero_refuses_and_names_the_fix(tmp_path, monkeypatch):
     _write_manifest(task_dir, generation=0)
     monkeypatch.chdir(root)
     with pytest.raises(CompassError) as caught:
-        effective.view_or_legacy(str(task_dir))
+        effective.effective_for(str(task_dir))
     assert "compass approach evaluate --write" in str(caught.value)
 
 
@@ -63,11 +86,21 @@ def test_ef_1_a_compass_yml_gives_a_live_view_with_or_without_an_issue(tmp_path,
     from compass_pkg import effective
     root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
     monkeypatch.chdir(root)
-    assert effective.view_or_legacy(str(task_dir)).source == "live"
-    assert effective.view_or_legacy(None).source == "live"
+    assert effective.effective_for(str(task_dir)).source == "live"
+    assert effective.effective_for(None).source == "live"
 
 
-# --- EF-2: the accessors equal the governance files for the shipped default -----------------
+def test_ef_1_the_governance_readme_says_a_copy_is_refused():
+    """An adopter can find out what happens to a 5.x copy: the section that
+    answered it before 9.0.0 now says the copy is refused, and how to move."""
+    body = (ROOT / "governance" / "README.md").read_text(encoding="utf-8")
+    marker = "## A project that copied governance under 5.x"
+    assert marker in body
+    section = " ".join(body.split(marker, 1)[1].split("\n## ", 1)[0].split())
+    assert "governance-copy-removed" in section and "compass policy migrate" in section
+
+
+# --- EF-2: the accessors of a stored generation equal those of the check set ---------------
 
 ASSESSMENTS = (
     {"risk": "contained", "size": "small", "labels": []},
@@ -81,7 +114,7 @@ def _stored(tmp_path, monkeypatch):
     root, task_dir = _committed_project(tmp_path)
     monkeypatch.chdir(root)
     from compass_pkg import effective
-    return effective.view_or_legacy(str(task_dir))
+    return effective.effective_for(str(task_dir))
 
 
 def test_ef_2_guardrail_gates_equal_the_guardrails_file(tmp_path, monkeypatch):
@@ -144,55 +177,35 @@ def _guardrail_ids(report):
 
 
 def _copy_governance(root):
-    """The project keeps its own copies of the two governance files."""
-    folder = root / "governance"
-    folder.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        (folder / name).write_text((SHIPPED / name).read_text(encoding="utf-8"),
-                                   encoding="utf-8")
-    return folder
+    """The project keeps its own copies of the two 8.x governance files."""
+    import compat_baseline as cb
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
+    return root / "governance"
 
 
 # --- EF-3: check judges an issue by its generation ------------------------------------------
 
-def test_ef_3_editing_the_governance_files_does_not_change_the_verdict(tmp_path):
+def test_ef_3_changing_the_live_configuration_does_not_change_the_verdict(tmp_path):
     root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
     assert code == 0, out + err
     _, before, _ = _check_json(root)
     assert {"G1", "G2", "G3", "G4"} <= _guardrail_ids(before)
-    guardrails = yaml.safe_load((folder / "guardrails.yml").read_text(encoding="utf-8"))
-    guardrails["defaults"] = [g for g in guardrails["defaults"] if g["id"] not in ("G2", "G3")]
-    (folder / "guardrails.yml").write_text(yaml.safe_dump(guardrails, sort_keys=False),
-                                           encoding="utf-8")
+    (root / "compass.yml").write_text(yaml.safe_dump(LAYERED), encoding="utf-8")
     _, after, _ = _check_json(root)
+    assert "PX" not in _guardrail_ids(after)
     assert _guardrail_ids(after) == _guardrail_ids(before)
     assert after["checks"] == before["checks"]
 
 
-def test_ef_3_an_issue_with_no_generation_still_reads_the_edited_files(tmp_path):
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
-    guardrails = yaml.safe_load((folder / "guardrails.yml").read_text(encoding="utf-8"))
-    guardrails["defaults"] = [g for g in guardrails["defaults"] if g["id"] != "G2"]
-    (folder / "guardrails.yml").write_text(yaml.safe_dump(guardrails, sort_keys=False),
-                                           encoding="utf-8")
-    _, report, _ = _check_json(root)
-    assert "G2" not in _guardrail_ids(report) and "G1" in _guardrail_ids(report)
-
-
 # --- EF-4: a command check from the generation ------------------------------------------------
 
+#: A project check (ADR-094): one `command-passes` check and one guardrail gate,
+#: both under the entry's id.
 COMMAND_PROJECT = {
     "schema": 1, "allow_project_commands": True,
-    "checks": {"arch-rule": {
-        "statement": "A project rule.", "kind": "deterministic", "impl": "command-passes",
-        "severity": "blocking", "on_skipped": "fail",
-        "params": {"command": "touch ran.flag"}}},
-    "gates": {"P1": {
-        "kind": "guardrail", "name": "Project rule", "statement": "A project rule.",
-        "stage": "verify", "applies_to": {"ships": True}, "checks": ["arch-rule"]}},
+    "project_checks": [{"id": "arch-rule", "name": "Project rule",
+                        "command": "touch ran.flag", "stage": "ship"}],
 }
 
 
@@ -204,138 +217,11 @@ def test_ef_4_a_check_with_its_own_id_runs_its_command_from_the_generation(tmp_p
     (root / ".compass" / "config.yml").write_text("allow_project_commands: true\n",
                                                   encoding="utf-8")
     _, report, _ = _check_json(root)
-    rows = [c for c in report["checks"] if c["guardrail"] == "P1"]
+    rows = [c for c in report["checks"] if c["guardrail"] == "arch-rule"]
     assert [c["name"] for c in rows] == ["arch-rule"], report
     assert rows[0]["status"] == "pass", rows
     assert (root / "ran.flag").exists()
     assert not any(c["detail"].endswith("NO CLI implementation") for c in report["checks"])
-
-
-def test_ef_4_a_project_guardrail_of_a_copied_governance_file_runs_from_the_generation(tmp_path):
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
-    _edit_guardrails(folder, lambda body: body.update(project=[{
-        "id": "ARCH-1", "name": "Layer rule", "statement": "A rule.", "checks": ["command-passes"],
-        "params": {"command": "touch ran.flag"}}]))
-    (root / ".compass" / "config.yml").write_text("version: 1.0.0\nallow_project_commands: true\n",
-                                                  encoding="utf-8")
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
-    (folder / "guardrails.yml").unlink()
-    (folder / "routing-policy.yml").unlink()
-    _, report, _ = _check_json(root)
-    rows = [c for c in report["checks"] if c["guardrail"] == "ARCH-1"]
-    assert rows and all(c["status"] == "pass" for c in rows), report
-    assert (root / "ran.flag").exists()
-
-
-PROJECT_GUARDRAILS = [
-    {"id": "PG-A", "name": "Needs tests", "statement": "A project rule.",
-     "checks": ["scenarios-have-tests"]},
-    {"id": "PG-E", "name": "Command and suite", "statement": "A project rule.",
-     "checks": ["command-passes", "suite-passed"], "params": {"command": "true"}},
-]
-
-
-def _project_rows(report):
-    return sorted((c["guardrail"], c["name"], c["status"]) for c in report["checks"]
-                  if c["guardrail"].startswith("PG-"))
-
-
-def _project_with_guardrails(tmp_path):
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
-    _edit_guardrails(folder, lambda body: body.update(project=PROJECT_GUARDRAILS))
-    (root / ".compass" / "config.yml").write_text("version: 1.0.0\nallow_project_commands: true\n",
-                                                  encoding="utf-8")
-    return root, task_dir, folder
-
-
-def test_ef_4_every_project_guardrail_shows_the_same_rows_before_and_after_a_commit(tmp_path):
-    root, task_dir, folder = _project_with_guardrails(tmp_path)
-    _, before, _ = _check_json(root)
-    rows = _project_rows(before)
-    assert [r[:2] for r in rows] == [("PG-A", "scenarios-have-tests"),
-                                     ("PG-E", "command-passes"), ("PG-E", "suite-passed")], rows
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
-    for name in ("guardrails.yml", "routing-policy.yml"):
-        (folder / name).unlink()
-    _, after, _ = _check_json(root)
-    # The command check is named for its own id once stored; the rows and their
-    # verdicts are the same.
-    assert [(g, v) for g, _, v in _project_rows(after)] == [(g, v) for g, _, v in rows]
-    assert [n for _, n, _ in _project_rows(after)] == [
-        "scenarios-have-tests", "PG-E-command-and-suite", "suite-passed"]
-
-
-def test_ef_4_the_shipped_coverage_floor_example_is_refused_not_misreported(tmp_path):
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
-    _edit_guardrails(folder, lambda body: body.update(project=[{
-        "id": "Q1", "name": "Coverage floor", "statement": "Line coverage does not drop.",
-        "checks": ["coverage-floor"], "params": {"min_line_coverage": 80},
-        "checked_at": ["verify"]}]))
-    _, before, _ = _check_json(root)
-    rows = [c for c in before["checks"] if c["guardrail"] == "Q1"]
-    assert [(c["name"], c["status"]) for c in rows] == [("coverage-floor", "fail")]
-    assert "NO CLI implementation" in rows[0]["detail"], rows
-    # The commit refuses a check nothing implements, and writes nothing.
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 2 and "coverage-floor" in err and "nothing was written" in err, out + err
-    assert not (task_dir / "generations").exists()
-
-
-def test_ef_4_a_project_guardrail_gate_stores_its_stage_and_its_checks(tmp_path):
-    import yaml as _yaml
-    root, task_dir, folder = _project_with_guardrails(tmp_path)
-    guardrails = _yaml.safe_load((folder / "guardrails.yml").read_text(encoding="utf-8"))
-    guardrails["project"][0]["checked_at"] = ["verify"]
-    (folder / "guardrails.yml").write_text(_yaml.safe_dump(guardrails, sort_keys=False),
-                                           encoding="utf-8")
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
-    stored = _yaml.safe_load((task_dir / "generations" / "1" / "resolved.yml")
-                             .read_text(encoding="utf-8"))
-    assert stored["gates"]["PG-A"]["stage"] == "verify"
-    assert stored["gates"]["PG-E"]["checks"] == ["PG-E-command-and-suite", "suite-passed"]
-    assert stored["checks"]["PG-E-command-and-suite"]["params"] == {"command": "true"}
-
-
-# --- EF-3 (continued): a copy that omits what the framework ships is still reported ----------
-
-def _copy_missing_a_default(tmp_path):
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
-    _edit_guardrails(folder, lambda body: body.update(
-        defaults=[g for g in body["defaults"] if g["id"] != "G2"]))
-    return root, task_dir, folder
-
-
-def test_ef_3_a_guardrail_missing_from_a_governance_copy_is_reported_with_or_without_a_generation(tmp_path):
-    root, task_dir, folder = _copy_missing_a_default(tmp_path)
-    code, before, err = _run(root, "check", "--issue", SLUG)
-    assert "G2" in before and "ABSENT" in before, before + err
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
-    code, after, err = _run(root, "check", "--issue", SLUG)
-    assert "G2" in after and "ABSENT" in after, after + err
-    other = tmp_path / "other"
-    other.mkdir()
-    code, plain, err = _run(_project(other)[0], "check", "--issue", SLUG)
-    assert "ABSENT" not in plain, plain
-
-
-def test_ef_3_policy_drift_is_reported_by_evaluate_with_or_without_a_generation(tmp_path):
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
-    _edit_policy(folder, lambda body: body["routing_guardrails"]["floors"].pop())
-    code, before, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--verbose")
-    assert "POLICY DRIFT" in before, before + err
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
-    code, after, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--verbose")
-    assert "POLICY DRIFT" in after, after + err
 
 
 # --- EF-9: the verdict header and the pending change ------------------------------------------
@@ -354,16 +240,18 @@ def test_ef_9_check_names_the_generation_and_the_parent_version(tmp_path):
     assert (document["generation"], document["parent_version"]) == (1, parent)
 
 
-def test_ef_9_a_changed_config_is_a_pending_change_that_does_not_fail(tmp_path):
+def test_ef_9_a_changed_config_is_named_as_not_read_and_does_not_fail(tmp_path):
+    """9.0.0 has no issue layer (ADR-094): a `config:` the generation was not
+    committed with is named as not read, and changes nothing."""
     root, task_dir = _committed_project(tmp_path)
     code, clean, _ = _run(root, "check", "--issue", SLUG)
-    assert "pending" not in clean
+    assert "config: differs" not in clean
     _write_manifest(task_dir, config={"checks": {"extra": {
         "statement": "A check.", "kind": "deterministic", "impl": "suite-passed",
         "severity": "advisory", "on_skipped": "fail"}}})
     code2, out, err = _run(root, "check", "--issue", SLUG)
-    assert "pending" in out and "config:" in out, out + err
-    assert "compass approach evaluate --write" in out
+    assert "config: differs from the generation in force and is not read" in out, out + err
+    assert "ADR-094" in out
     assert code2 == code
 
 
@@ -402,67 +290,35 @@ def test_ef_10_check_on_an_issue_with_no_generation_matches_the_legacy_reading(t
 
 # --- EF-5: evidence requirements from the generation ------------------------------------------
 
-def _edit_guardrails(folder, edit):
-    path = folder / "guardrails.yml"
-    body = yaml.safe_load(path.read_text(encoding="utf-8"))
-    edit(body)
-    path.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+def test_ef_5_the_accepts_comments_come_from_the_configuration_committed(tmp_path, monkeypatch):
+    """The commit writes each gate's `# accepts` comment from the configuration it
+    stores, not from the governance files. Since 9.0.0 `compass.yml` cannot change
+    what a gate accepts (ADR-094), so the commit is given a resolution that does,
+    as a generation stored before 9.0.0 could."""
+    import dataclasses
 
-
-def _with_artifact_evidence(task_dir):
-    _write_manifest(
-        task_dir,
-        evidence=[{"id": "EV-A", "type": "artifact", "path": "evidence/a.md"}],
-        gates=[{"id": "verify.correctness", "status": "pending", "evidence": []}])
-
-
-def _widen_correctness(body):
-    body["gate_evidence_requirements"]["verify.correctness"] = ["test-run", "artifact"]
-    body["evidence_types"]["custom-type"] = {"description": "A type added after the commit."}
-
-
-def test_ef_5_gate_pass_refuses_the_type_the_generation_does_not_accept(tmp_path):
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
+    from compass_pkg import effective
+    from compass_pkg.manifest import annotate_gate_accepts_text
+    # The security review is owed only where the project's settings add it
+    # (ADR-099 decision 9), so the gate `verify.security` exists here by a rule.
+    root, task_dir = _project(tmp_path, compass_yml={
+        "schema": 1, "require_evidence": [
+            {"when": {"size": ["medium"]}, "add": ["security"]}]})
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
     assert code == 0, out + err
-    _with_artifact_evidence(task_dir)
-    _edit_guardrails(folder, _widen_correctness)
-    code, out, err = _run(root, "gate", "pass", "verify.correctness", "--issue", SLUG,
-                          "--evidence", "EV-A")
-    assert code != 0 and "accepts evidence of type ['test-run']" in err, out + err
-    code, out, err = _run(root, "evidence", "add", "EV-B", "--issue", SLUG,
-                          "--type", "custom-type", "--path", "evidence/b.md")
-    assert code != 0 and "not a known evidence type" in err, out + err
-
-
-def test_ef_5_an_issue_with_no_generation_reads_the_widened_file(tmp_path):
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
-    _with_artifact_evidence(task_dir)
-    _edit_guardrails(folder, _widen_correctness)
-    code, out, err = _run(root, "gate", "pass", "verify.correctness", "--issue", SLUG,
-                          "--evidence", "EV-A")
-    assert code == 0, out + err
-
-
-def test_ef_5_the_receipt_flags_a_type_the_generation_does_not_accept(tmp_path):
-    root, task_dir = _committed_project(tmp_path)
-    _write_manifest(
-        task_dir,
-        evidence=[{"id": "EV-A", "type": "artifact", "path": "evidence/a.md"}],
-        gates=[{"id": "verify.correctness", "status": "pass", "evidence": ["EV-A"]}])
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert "TYPE-MISMATCH" in out, out + err
-
-
-def test_ef_5_the_accepts_comments_come_from_the_configuration_committed(tmp_path):
-    changed = {"schema": 1, "gates": {"verify.security": {"set": {"accepts": ["security-review"]}}}}
-    root, task_dir = _project(tmp_path, compass_yml=changed)
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
+    monkeypatch.chdir(root)
+    manifest = _manifest(task_dir)
+    resolution = effective.resolve_live(str(root), manifest, SLUG, str(task_dir))
+    resolved = dict(resolution.resolved)
+    resolved["gates"] = dict(resolved["gates"])
+    resolved["gates"]["verify.security"] = dict(resolved["gates"]["verify.security"],
+                                                accepts=["security-review"])
+    done = effective.commit_generation(
+        str(task_dir), manifest, render=annotate_gate_accepts_text,
+        resolution=dataclasses.replace(resolution, resolved=resolved))
+    assert done.committed, done.message
     manifest_text = (task_dir / "manifest.yml").read_text(encoding="utf-8")
-    stored = yaml.safe_load((task_dir / "generations" / "1" / "resolved.yml")
+    stored = yaml.safe_load((task_dir / "generations" / str(done.number) / "resolved.yml")
                             .read_text(encoding="utf-8"))
     assert stored["gates"]["verify.security"]["accepts"] == ["security-review"]
     comments = [l.strip() for l in manifest_text.splitlines() if "# accepts" in l]
@@ -477,17 +333,6 @@ def _evaluate_json(root, slug=SLUG):
     return json.loads(out)
 
 
-def _edit_policy(folder, edit):
-    path = folder / "routing-policy.yml"
-    body = yaml.safe_load(path.read_text(encoding="utf-8"))
-    edit(body)
-    path.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
-
-
-def _add_gate(body):
-    body["route_shapes"]["regular"]["gates"].append("verify.analyze")
-
-
 def test_ef_6_the_result_matches_the_one_the_governance_files_give(tmp_path):
     root, task_dir = _project(tmp_path)
     _project(tmp_path, slug="other")
@@ -497,25 +342,20 @@ def test_ef_6_the_result_matches_the_one_the_governance_files_give(tmp_path):
     # The stored generation also carries the delivery-approach record every approach owes
     # (the catalogue flag `every_approach`); the governance files do not declare the flag.
     stored["artifacts"] = [a for a in stored["artifacts"] if a["kind"] != "delivery-approach"]
+    # On the four-stage path the preview owes what a write would store (ADR-092).
+    # No record of `S17` is owed unless a setting adds it (ADR-099 decision 9).
+    assert stored["acceptance_strategy"]["applies"] is False
+    assert not {"outer-loop", "isolation", "layering"} & set(live["evidence_required"])
     assert stored == live
-
-
-def test_ef_6_editing_the_live_policy_does_not_change_the_issue_with_a_generation(tmp_path):
-    root, task_dir = _project(tmp_path)
-    _project(tmp_path, slug="other")
-    folder = _copy_governance(root)
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
-    before = _evaluate_json(root)
-    _edit_policy(folder, _add_gate)
-    assert _evaluate_json(root) == before
-    assert "verify.analyze" in _evaluate_json(root, "other")["gates"]
-    assert "verify.analyze" not in before["gates"]
 
 
 def test_ef_6_the_autonomy_is_the_one_the_generation_stored(tmp_path):
     root, task_dir = _project(tmp_path)
     _project(tmp_path, slug="other")
+    # On the path balanced autonomy lists no checkpoint on this change (ADR-092 open
+    # question 7), so the issue is assessed under controlled autonomy, which does.
+    (root / ".compass" / "config.yml").write_text("version: 1.0.0\nautonomy: controlled\n",
+                                                  encoding="utf-8")
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
     assert code == 0, out + err
     before = _evaluate_json(root)
@@ -526,52 +366,15 @@ def test_ef_6_the_autonomy_is_the_one_the_generation_stored(tmp_path):
     assert _evaluate_json(root, "other")["checkpoints"] != before["checkpoints"]
 
 
-# --- EF-7: loop ceilings from the generation -----------------------------------------------------
-
-def _ceiling_rule(rules, ceiling):
-    return next(r for r in rules if r["ceiling"] == ceiling)
-
-
-def test_ef_7_the_ceiling_in_force_is_the_one_the_generation_stored(tmp_path, monkeypatch):
-    from compass_pkg import loop_ceilings
-    root, task_dir = _project(tmp_path)
-    folder = _copy_governance(root)
-    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
-    assert code == 0, out + err
-    task = _manifest(task_dir)
-    monkeypatch.chdir(root)
-    stored = loop_ceilings.loop_ceilings(task, str(task_dir))
-    assert stored
-
-    def lower(body):
-        for rule in body["routing_guardrails"]["loop_ceilings"]:
-            rule["limit"] = 1
-    _edit_policy(folder, lower)
-    assert loop_ceilings.loop_ceilings(task, str(task_dir)) == stored
-    assert loop_ceilings.loop_ceilings(task) != stored
-    assert {limit for limit, _ in loop_ceilings.loop_ceilings(task).values()} == {1}
-
-
-def test_ef_7_the_callers_pass_the_issue(tmp_path):
-    import re
-    for name in ("subtasks", "run_cmd", "multiagent_check"):
-        text = (ROOT / "cli" / "compass_pkg" / f"{name}.py").read_text(encoding="utf-8")
-        calls = re.findall(r"\bloop_ceilings\(([^)]*)\)", text)
-        calls = [c for c in calls if c.strip() and "def " not in c]
-        assert calls and all("task_dir" in c for c in calls), (name, calls)
-
-
 # --- EF-8: readers with no issue ------------------------------------------------------------------
 
+#: Two tighten-only settings (ADR-094): a project check, which adds the guardrail
+#: gate `PX`, and evidence owed for the label `zzz-label`.
 LAYERED = {
     "schema": 1,
-    "checks": {"p-rule": {"statement": "A rule.", "kind": "deterministic",
-                          "impl": "suite-passed", "severity": "blocking", "on_skipped": "fail"}},
-    "gates": {"PX": {"kind": "guardrail", "name": "Project rule", "statement": "A rule.",
-                     "stage": "verify", "applies_to": {"ships": True}, "checks": ["p-rule"]}},
-    "rules": {"floors": {"set": {"rules": {"set": {"RP-PROJECT-FLOOR": {
-        "order": 99, "when": {"labels_any": ["zzz-label"]},
-        "then": {"force_minimum_approach": "full"}, "rationale": "A project floor."}}}}}},
+    "project_checks": [{"id": "PX", "name": "Project rule", "command": "true",
+                        "stage": "ship"}],
+    "require_evidence": [{"when": {"labels_any": ["zzz-label"]}, "add": ["architecture"]}],
 }
 
 
@@ -601,9 +404,6 @@ def test_ef_8_review_rules_know_the_guardrail_the_compass_yml_adds(tmp_path):
     (plain / ".compass").mkdir()
     (plain / "governance" / "review-rules.yml").write_text(
         yaml.safe_dump({"rules": [rule]}), encoding="utf-8")
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        (plain / "governance" / name).write_text((SHIPPED / name).read_text(encoding="utf-8"),
-                                                 encoding="utf-8")
     assert any("PX" in e for e in review_rules.lint_errors(str(plain / "governance")))
 
 
@@ -619,33 +419,24 @@ def test_ef_8_flow_knows_the_label_the_compass_yml_names(tmp_path, monkeypatch):
     assert "auth" in flow._routing_labels()
 
 
-def test_ef_8_retro_weights_come_from_the_effective_policy(tmp_path, monkeypatch):
-    from compass_pkg import calibration
-    root, _ = _project(tmp_path, compass_yml=LAYERED)
-    monkeypatch.chdir(root)
-    layered = calibration._route_weights()
-    assert layered and layered["regular"] == _shipped("routing-policy.yml")[
-        "route_shapes"]["regular"]["weight"]
-    plain = tmp_path / "plain"
-    (plain / ".compass").mkdir(parents=True)
-    monkeypatch.chdir(plain)
-    assert calibration._route_weights() == layered
-
-
 def test_ef_8_quick_fix_blockers_read_the_policy_through_effective(tmp_path, monkeypatch):
+    # The shipped default has no quick-fix shape since 9.0.0 (ADR-092), so the view's
+    # policy is the 8.0.4 governance copy's, and the plain project carries that copy.
+    import compat_baseline as cb
     from compass_pkg import effective, quick_fix_cmd
     root, _ = _project(tmp_path, compass_yml=LAYERED)
     monkeypatch.chdir(root)
     readings = {"risk": "critical", "familiarity": "brownfield-mapped", "size": "standard",
                 "labels": []}
     asked = []
-    real = effective.view_or_legacy
-    monkeypatch.setattr(effective, "view_or_legacy",
+    real = effective.effective_for
+    monkeypatch.setattr(effective, "effective_for",
                         lambda *a, **k: asked.append(a) or real(*a, **k))
+    v8 = cb.policy_8_0_4()
+    monkeypatch.setattr(effective.EffectiveView, "evaluator_policy", lambda self: v8)
     layered = quick_fix_cmd._quick_fix_blockers(readings, {})
     assert asked, "the blockers did not ask the effective view"
     assert any(line.startswith("blocked: risk is critical") for line in layered), layered
-    monkeypatch.undo()
     plain = tmp_path / "plain"
     (plain / ".compass").mkdir(parents=True)
     monkeypatch.chdir(plain)
@@ -660,51 +451,25 @@ import re  # noqa: E402
 PACKAGE = ROOT / "cli" / "compass_pkg"
 POLICY_READ = re.compile(r"os\.path\.join\([^\n]*[\"'](routing-policy|guardrails)\.yml[\"']")
 
-#: Modules that may name a policy file without reading it for an issue: the
-#: loaders of the files themselves, the lint, the migration (which reads a
-#: project's copies to convert them), the views generated from the preset and
-#: the text of help messages.
-POLICY_FILE_OWNERS = frozenset({
-    "core", "effective", "governance", "legacy_adapter", "legacy_views",
-    "legacy_views_template", "policy_cmd", "policy_migrate", "project_commands",
-    "verb_help"})
-
-#: Each read of a policy file outside the owners: `(module, function)` and how
-#: many reads that function makes. Every one of these functions asks
-#: `view_or_legacy` first, and a new read, or a second read in one of them, fails.
-EXPECTED_READS = {
-    ("approach_diagram", "cmd_approach_diagram"): 1, ("calibration", "_route_weights"): 1,
-    # judged reads guardrails.yml only after view_or_legacy returns None (ADR-050); it
-    # runs every check outside a gate (ADR-064).
-    ("outside_gate", "judged"): 1, ("check_cmd", "cmd_check"): 2, ("checks", "_check_gate_evidence"): 1,
-    ("github_labels", "declared_labels"): 1, ("execution_profile", "ceilings"): 1,
-    ("checks", "_check_command_passes"): 1, ("flow", "_routing_labels"): 1,
-    ("lessons", "_guardrail_ids"): 1, ("loop_ceilings", "loop_ceilings"): 1,
-    ("manifest", "_load_gate_requirements"): 1, ("quick_fix_cmd", "_quick_fix_blockers"): 1,
-    ("quick_fix_cmd", "cmd_quick_fix_start"): 1, ("receipt", "_receipt_gate_requirements"): 1,
-    ("review_rules", "_known_ids"): 1, ("routing", "cmd_route_evaluate"): 2,
-}
+#: Modules that may name a policy file without reading it: `effective`, which
+#: names the two files of a governance copy to refuse it, and the text of help
+#: messages.
+POLICY_FILE_OWNERS = frozenset({"effective", "project_commands", "verb_help"})
 
 
 def _reads(name, text):
-    """`{function: [line, ...]}` for each read of a policy file in `text`, and
-    the functions whose body does not mention `view_or_legacy`."""
+    """`{function: [line, ...]}` for each read of a policy file in `text`."""
     tree = ast.parse(text)
     lines = text.splitlines()
     functions = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]
-    found, unguarded = {}, set()
+    found = {}
     for number, line in enumerate(lines, 1):
         if not POLICY_READ.search(line):
             continue
         enclosing = sorted((n for n in functions if n.lineno <= number <= n.end_lineno),
                            key=lambda n: n.end_lineno - n.lineno)
-        owner = enclosing[0] if enclosing else None
-        key = owner.name if owner else "<module>"
-        found.setdefault(key, []).append(number)
-        body = "\n".join(lines[owner.lineno - 1:owner.end_lineno]) if owner else ""
-        if "view_or_legacy" not in body:
-            unguarded.add(key)
-    return found, unguarded
+        found.setdefault(enclosing[0].name if enclosing else "<module>", []).append(number)
+    return found
 
 
 def _all_reads():
@@ -712,39 +477,26 @@ def _all_reads():
     for path in PACKAGE.glob("*.py"):
         if path.stem in POLICY_FILE_OWNERS:
             continue
-        found, unguarded = _reads(path.stem, path.read_text(encoding="utf-8"))
-        for function, hits in found.items():
-            out[(path.stem, function)] = (len(hits), function in unguarded)
+        for function, hits in _reads(path.stem, path.read_text(encoding="utf-8")).items():
+            out[(path.stem, function)] = len(hits)
     return out
 
 
-def test_ef_11_every_read_of_a_policy_file_is_in_a_function_that_asks_effective_first():
-    reads = _all_reads()
-    assert {k for k, (_, bad) in reads.items() if bad} == set()
-    assert {k: n for k, (n, _) in reads.items()} == EXPECTED_READS
+def test_ef_11_no_module_reads_a_governance_policy_file():
+    """9.0.0 reads no copy of `routing-policy.yml` or `guardrails.yml` (ADR-098):
+    every reader asks `effective.effective_for`."""
+    assert _all_reads() == {}
 
 
 def test_ef_11_the_scan_can_fail():
-    direct = 'policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))\n'
-    guarded = ("def f():\n    view = effective.view_or_legacy()\n    if view is None:\n        "
-               + direct.replace("\n", "") + "\n")
-    found, unguarded = _reads("m", guarded)
-    assert found == {"f": [4]} and unguarded == set()
-    # A second read in a function beside a guarded one is caught by name.
-    planted = guarded + "\n\ndef planted():\n    " + direct
-    found, unguarded = _reads("m", planted)
-    assert unguarded == {"planted"}
-    # A real reader with a second read planted in its guarded function is caught
-    # by the count; with its view lines removed, by the guard.
+    direct = 'policy = load_yaml(os.path.join(gov, "routing-policy.yml"))\n'
+    planted = "def planted():\n    " + direct
+    assert _reads("m", planted) == {"planted": [2]}
     text = (PACKAGE / "lessons.py").read_text(encoding="utf-8")
-    assert _reads("lessons", text)[1] == set()
-    assert _reads("lessons", text.replace("view_or_legacy", "something_else"))[1] == {
-        "_guardrail_ids"}
-    doubled = text.replace(
-        "    try:\n        gr = load_yaml(os.path.join(find_governance(), \"guardrails.yml\"))",
-        "    load_yaml(os.path.join(find_governance(), \"guardrails.yml\"))\n    try:\n"
-        "        gr = load_yaml(os.path.join(find_governance(), \"guardrails.yml\"))")
-    assert len(_reads("lessons", doubled)[0]["_guardrail_ids"]) == 2
+    assert _reads("lessons", text) == {}
+    doubled = text.replace("def _guardrail_ids():\n",
+                           "def _guardrail_ids():\n    " + direct + "    " + direct)
+    assert len(_reads("lessons", doubled)["_guardrail_ids"]) == 2
 
 
 # --- EF-11 (continued): the header comments name what a module imports -----------------------
@@ -777,3 +529,50 @@ def test_ef_11_the_obligations_header_names_every_module_that_imports_it():
     sentence = next(line for line in header.splitlines() if "import this module" in line)
     assert [m for m in importers if f"compass_pkg.{m}" not in sentence] == [], (
         importers, sentence)
+
+
+# --- the 8.x copy reader refuses a malformed field value ------------------------------
+#
+# The contracts read the 8.0.4 and 5.6.0 copies through `tests/legacy_copy.py`, the
+# reader 8.x ran. A field value of the wrong type or outside its closed set is refused
+# by name, as the 8.x layer check refused it, so a planted fault is never read
+# silently.
+
+def _copy_8_0_4(tmp_path):
+    import compat_baseline as cb
+    root = tmp_path / "copy"
+    (root / ".compass" / "work").mkdir(parents=True)
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
+    return root
+
+
+def test_a_governance_copy_with_a_wrong_type_field_is_refused_by_path(tmp_path):
+    import legacy_copy
+    from compass_pkg.core import CompassError
+    root = _copy_8_0_4(tmp_path)
+    legacy_copy.resolved_from_copy(str(root))      # the copy as shipped resolves
+    path = root / "governance" / "guardrails.yml"
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    doc["checks"]["scenarios-are-executable"]["blocking_when"] = 7
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    with pytest.raises(CompassError) as raised:
+        legacy_copy.resolved_from_copy(str(root))
+    assert str(raised.value) == ("legacy: checks.scenarios-are-executable.blocking_when: "
+                                 "expected map, found 7")
+
+
+@pytest.mark.parametrize("catalogue, field, value", [
+    ("checks", "severity", "sometimes"),
+    ("checks", "kind", "magic"),
+])
+def test_a_governance_copy_with_a_value_outside_its_set_is_refused_by_path(
+        catalogue, field, value):
+    import legacy_copy
+    from compass_pkg.core import CompassError
+    entry = {"statement": "x", "kind": "deterministic", "severity": "blocking",
+             "on_skipped": "fail", field: value}
+    with pytest.raises(CompassError) as raised:
+        legacy_copy._legacy_config({catalogue: {"c-1": entry}})
+    message = str(raised.value)
+    assert message.startswith(f"legacy: {catalogue}.c-1.{field}: '{value}' is not one of "), \
+        message

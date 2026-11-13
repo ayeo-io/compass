@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import json
 
-from test_github_label_sync import FakeGh, edit_manifest, make_issue, run  # noqa: F401
-from test_github_label_sync import gh  # noqa: F401  (fixture)
+from test_issue_link import FakeGh, edit_manifest, make_issue, run  # noqa: F401
+from test_issue_link import gh  # noqa: F401  (fixture)
 from test_quick_fix_verbs import _git, _manifest, repo  # noqa: F401  (fixture)
 
 SLUG = "sync-me"
@@ -48,6 +48,13 @@ def _set_pr(gh, value, key=PR_KEY):
     (gh.dir / "state.json").write_text(json.dumps(state))
 
 
+def _merged_pr(merge_commit):
+    """`gh pr view`'s answer for pull request 7, merged as `merge_commit`."""
+    return {"number": 7, "state": "MERGED", "url": "https://github.com/acme/widgets/pull/7",
+            "mergeCommit": {"oid": merge_commit}, "mergedAt": "2026-11-07T01:48:47Z",
+            "author": {"login": "author-dev", "is_bot": False}, "headRefOid": merge_commit}
+
+
 def _link_pr(root, gh, target="7"):
     return run(root, gh, "issue", "link", "set", f"--pr={target}", "--issue", SLUG)
 
@@ -71,14 +78,15 @@ def test_trc_lc1_a_merged_pr_moves_land_commit_to_its_merge_commit(repo, gh):
     _git(repo, "checkout", "-q", "-")
     merged = _commit(repo, "squashed.txt")
     _landed(repo, gh, local)
-    _set_pr(gh, {"number": 7, "state": "MERGED", "url": "https://github.com/acme/widgets/pull/7",
-                 "mergeCommit": {"oid": merged}})
+    _set_pr(gh, _merged_pr(merged))
 
     result = _link_pr(repo, gh)
 
     assert result.returncode == 0, result.stdout + result.stderr
     data = _manifest(repo, SLUG)
-    assert data["pull_request"] == {"repo": "acme/widgets", "number": 7}
+    assert data["pull_request"] == {"repo": "acme/widgets", "number": 7,
+                                    "merged_at": "2026-11-07T01:48:47Z",
+                                    "merge_commit": merged, "author": "author-dev"}
     assert data["land_commit"] == merged
     assert local[:8] in result.stdout and merged[:8] in result.stdout
     views = [c for c in gh.calls() if c[:2] == ["pr", "view"]]
@@ -105,14 +113,13 @@ def test_trc_lc2_an_open_pr_records_the_link_only(repo, gh):
 def test_trc_lc2_an_issue_not_landed_gets_no_land_commit(repo, gh):
     make_issue(repo, gh, labels="infra")
     merged = _git(repo, "rev-parse", "HEAD")
-    _set_pr(gh, {"number": 7, "state": "MERGED", "url": "https://github.com/acme/widgets/pull/7",
-                 "mergeCommit": {"oid": merged}})
+    _set_pr(gh, _merged_pr(merged))
 
     result = _link_pr(repo, gh, "acme/widgets#7")
 
     assert result.returncode == 0, result.stdout + result.stderr
     data = _manifest(repo, SLUG)
-    assert data["pull_request"] == {"repo": "acme/widgets", "number": 7}
+    assert data["pull_request"]["merge_commit"] == merged
     assert "land_commit" not in data
     assert "has not landed" in result.stdout
 

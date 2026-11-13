@@ -146,7 +146,9 @@ def test_mq_2_the_house_rules_are_real_and_fast():
 
 def test_mq_3_the_job_runs_the_listed_files():
     job = _job()
-    assert job["timeout-minutes"] <= 15
+    # Room for a release, whose changed test files are most of the suite: as
+    # long as one full-suite shard.
+    assert job["timeout-minutes"] <= 45
     assert job["env"]["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] == "1"
     assert job["steps"][0]["with"]["fetch-depth"] == 0
     listing = _step(job, "List the test files this pull request runs")

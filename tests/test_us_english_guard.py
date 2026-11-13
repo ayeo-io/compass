@@ -5,8 +5,8 @@ file checks that the list is one constant, that each scan reads what it must
 and ignores what it must, that a planted British word fails in each file
 group, and that an exemption marker works on its own line only.
 
-The guard is live for every file group: the shipped prose, the hooks,
-schemas and adapters, the CLI string literals and the `--help` text. A
+The guard is live for every file group: the shipped prose, the hooks and
+schemas, the CLI string literals and the `--help` text. A
 row's `live` field turns its scan off only while its files are not
 converted.
 """
@@ -234,12 +234,16 @@ def test_trc_063():
     assert words.scan_source("governance/decisions2/x.md", "the behaviour\n", "text") != []
     assert words.scan_source("governance/presets/default/x.yml", "the behaviour\n",
                              "text") != []
+    assert words.scan_source("tests/fixtures/presets/default@8/x.yml", "the behaviour\n",
+                             "text") != []
 
 
 def test_trc_063_a_group_walk_skips_the_excluded_folders(tmp_path):
     for prefix in words.EXCLUDED:
         target = tmp_path / prefix
-        if prefix.endswith("/") or prefix in ("cli/vendor", "governance/presets/default@6"):
+        if prefix.endswith("/") or prefix in (
+                "cli/vendor", "tests/fixtures/presets/default@6",
+                "tests/fixtures/presets/default@7"):
             target.mkdir(parents=True, exist_ok=True)
             target = target / "planted.py"
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -334,16 +338,15 @@ NINE_GROUPS = [
     ("the adopter docs", ["docs/quickstart.md", "docs/five-minutes.md", "docs/install-smoke-test.md",
                           "docs/releasing.md", "docs/release-notes.md", "docs/upgrade-6-0-0.md",
                           "docs/upgrade-7-0-0.md", "docs/configuration.md", "docs/safety-contract.md",
-                          "docs/policy-lint.md", "docs/readiness.md", "docs/refusal-codes.md",
-                          "docs/glossary.md", "docs/policy-migrate.md", "docs/routing-deep-dive.md",
-                          "docs/roles-guide.md"]),
+                          "docs/policy-lint.md", "docs/refusal-codes.md",
+                          "docs/glossary.md", "docs/routing-deep-dive.md"]),
     ("the house files", ["CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"]),
     ("the review workflow", [".github/workflows/claude-review.yml"]),
     ("skills", ["skills"]),
-    ("commands and agents", ["commands", "agents"]),
+    ("commands", ["commands"]),
     ("approaches and templates", ["approaches", "templates"]),
     ("the contract", ["compass-contract.md"]),
-    ("hooks, schemas and adapters", ["hooks", "schemas", "adapters"]),
+    ("hooks and schemas", ["hooks", "schemas"]),
 ]
 
 
@@ -404,9 +407,9 @@ def test_trc_034(tmp_path):
 def test_trc_038(tmp_path):
     """Scenario id: `TRC-038` in language-key-and-us-english/acceptance-criteria.md
 
-    Every heading of a template is in US English, and a project that sets
-    another language gets the same headings, with a body written in German
-    under them left alone."""
+    Every heading of a template is in US English. The second half, that a
+    project setting another language got the same headings from `compass issue
+    template show`, went with that verb in 9.0.0 (ADR-091)."""
     headings = []
     for template in sorted((ROOT / "templates").rglob("*.md")):
         for number, line in enumerate(template.read_text(encoding="utf-8").splitlines(), 1):
@@ -415,26 +418,6 @@ def test_trc_038(tmp_path):
     assert len(headings) > 40
     for path, number, line in headings:
         assert words.scan_text(line) == [], f"{path}:{number}: {line}"
-    # The fixed headings the CLI writes into the living spec (the `###` headings
-    # of that page are issue names, which are identifiers).
-    spec = (ROOT / "docs" / "system-spec.md").read_text(encoding="utf-8")
-    fixed = [ln for ln in spec.splitlines() if ln.startswith(("# ", "## "))]
-    assert fixed and words.scan_text("\n".join(fixed)) == []
-
-    import test_generation_store as store
-    shown = []
-    for language in (None, "de"):
-        root = tmp_path / (language or "plain")
-        root.mkdir()
-        cfg = {"schema": 1} if language is None else {"schema": 1, "language": language}
-        store._project(root, compass_yml=cfg)
-        assert store._evaluate_write(root)[0] == 0
-        code, out, err = store._run(root, "issue", "template", "show", "requirements-review",
-                                    "--issue", store.SLUG)
-        assert code == 0, out + err
-        german = out.rstrip("\n") + "\n\nDer deutsche Text unter der Ueberschrift.\n"
-        shown.append([ln for ln in german.splitlines() if ln.startswith("#")])
-    assert shown[0] == shown[1] and shown[0]
 
 
 def test_a_kept_line_of_a_json_file_is_covered_in_that_file_and_that_line_only():

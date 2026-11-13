@@ -62,7 +62,7 @@ def project():
     task_dir = root / ".compass" / "work" / SLUG
     (task_dir / "evidence").mkdir(parents=True)
     (root / ".compass" / "current-task").write_text(SLUG)
-    (task_dir / "delivery-approach.md").write_text("# Approach\n")
+    (task_dir / "manifest.yml").write_text("delivery_approach: regular\n")
     yield root, task_dir
     shutil.rmtree(root, ignore_errors=True)
 
@@ -188,7 +188,7 @@ def install():
     task_dir = root / ".compass" / "work" / SLUG
     (task_dir / "evidence").mkdir(parents=True)
     (root / ".compass" / "current-task").write_text(SLUG)
-    (task_dir / "delivery-approach.md").write_text("# Approach\n")
+    (task_dir / "manifest.yml").write_text("delivery_approach: regular\n")
     yield root, task_dir
     shutil.rmtree(root, ignore_errors=True)
 

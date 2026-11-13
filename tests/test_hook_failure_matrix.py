@@ -5,8 +5,8 @@ a message naming what could not run. The scenarios a client observes - each
 reader that cannot run, a missing python3, a settings file that does not
 parse, a missing approach record, a temporary file that cannot be made, a
 missing helper - are executable specifications in
-`tests/acceptance/hooks/test_hook_refusals.py`, run through both the Claude
-Code and the Codex hook clients (ayeo-io/compass-delivery#306).
+`tests/acceptance/hooks/test_hook_refusals.py`, run through the Claude Code
+hook client (ayeo-io/compass-delivery#306).
 
 What stays here reads text a client never sees: the safety contract (HFM-5)
 and the hooks' source (HFM-6).

@@ -21,8 +21,11 @@ SEARCH_DIRS = ("skills", "commands", "docs", "routes", "governance", "templates"
 
 # Proposals and analyses argue for commands that do not exist yet, or compare
 # Compass to other tools - naming a hypothetical command is the point there.
-# This test covers the surfaces that tell a reader what to run *today*.
-EXCLUDED_DIRS = ("docs/proposals", "docs/analysis", "docs/compass/")
+# This test covers the surfaces that tell a reader what to run *today*. A
+# decision record keeps the commands of the day it was decided, so a command
+# a later release removed stays named there (`compass spec sync`, ADR-091).
+EXCLUDED_DIRS = ("docs/proposals", "docs/analysis", "docs/compass/",
+                 "governance/decisions/")
 
 # `compass --help` renders positional choices as {a,b,c}; anything else after
 # `compass` in a code span is either a global flag or a typo.

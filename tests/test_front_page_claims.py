@@ -19,11 +19,11 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 FRONT_PAGE = ("README.md", "docs/index.md", "docs/quickstart.md")
-PRESET = ROOT / "governance" / "presets" / "default"
 
 _NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
             "seven": 7, "eight": 8, "nine": 9, "ten": 10}
@@ -39,10 +39,9 @@ _NOT_A_NAME = {"delivery", "computed", "final", "same", "first", "lighter",
 
 
 def _truth() -> dict:
-    gates = yaml.safe_load((PRESET / "gates.yml").read_text(encoding="utf-8"))["gates"]
-    stages = yaml.safe_load((PRESET / "stages.yml").read_text(encoding="utf-8"))["stages"]
-    approaches = yaml.safe_load(
-        (PRESET / "approaches.yml").read_text(encoding="utf-8"))["approaches"]
+    gates = shipped("gates.yml")["gates"]
+    stages = shipped("stages.yml")["stages"]
+    approaches = shipped("approaches.yml")["approaches"]
     help_text = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "--help"],
                                capture_output=True, text=True, timeout=60).stdout
     verbs = set(re.search(r"\{([a-z,_-]+)\}", help_text).group(1).split(","))
@@ -129,14 +128,12 @@ def test_trc_002_the_repository_map_names_every_agent_and_hook():
 
 @pytest.mark.parametrize("rel", FRONT_PAGE)
 def test_trc_003_versions_match_the_code(rel):
-    """Scenario `TRC-003`: the Python floor and the shipped default's major
-    version the page states are the ones the code uses. The default has its
-    own version, which can lag the CLI's: CLI 8.0.0 ships default 7."""
+    """Scenario `TRC-003`: the Python floor the page states is the one the code
+    uses. 9.0.0 ships one check set and no default preset (ADR-094), so a page
+    names no `compass:default@<major>` to extend."""
     text = (ROOT / rel).read_text(encoding="utf-8")
-    preset = yaml.safe_load((PRESET / "preset.yml").read_text(encoding="utf-8"))
-    major = str(preset["version"]).split(".")[0]
-    for found in re.findall(r"compass:default@(\d+)", text):
-        assert found == major, f"{rel} names compass:default@{found}; this is {major}"
+    found = re.findall(r"compass:default@\d+", text)
+    assert not found, f"{rel} names {found}; 9.0.0 ships no default preset to extend"
     floor = re.search(r"Python (3\.\d+) or later",
                       (ROOT / "hooks" / "session-start.sh").read_text(encoding="utf-8"))
     for stated in re.findall(r"needs Python ([0-9.]+)", text):

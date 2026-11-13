@@ -1,0 +1,4 @@
+{
+  "exit": 2,
+  "message": "compass: compass tdd-red: NO TEST FAILED - pytest's report shows no failed test. An error in setup, or a flag that changes the exit code, is not a failing test.\nA .red marker means a real, observed failure is on record; the pre-tool hook unlocks code edits on the strength of it. Make a test fail for the missing behavior, then try again."
+}

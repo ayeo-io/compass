@@ -3,23 +3,20 @@
 `compass approach evaluate --write --reason "..."` printed that the reason was
 NOT recorded when nothing computed had changed, so a reassess made for a reason
 (a fixed configuration, a new catalogue) left no evidence in the manifest. It
-now appends a `reassessments` entry of kind `unchanged`. `compass retro` and
-friction capture ignore that kind: no one misread the work.
+now appends a `reassessments` entry of kind `unchanged`: no one misread the
+work.
 
 Scenario id: `TRC-001` in unchanged-reassess-records-reason/acceptance-criteria.md
 """
 from __future__ import annotations
 
 import datetime
-import json
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 import yaml
-
-from test_retro_weighs_current_route_names import _task
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CLI = REPO_ROOT / "cli" / "compass"
@@ -65,12 +62,6 @@ def _manifest(project: Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
-def _bare(slug):
-    task = _task(slug, [("regular", "regular")])
-    task["reassessments"] = []
-    return task
-
-
 def _evaluated(project: Path) -> None:
     code, out, err = _run(project, "approach", "evaluate", "--issue", "sample", "--write")
     assert code == 0, out + err
@@ -110,43 +101,6 @@ def test_trc_001_an_unchanged_reassess_without_a_reason_writes_nothing():
     assert "RE-ASSESSMENT" not in out, out
 
 
-def test_trc_001_retro_counts_are_the_same_with_and_without_the_entry(run_cli, make_task):
-    unchanged = {"from_route": "regular", "to_route": "regular", "kind": "unchanged",
-                 "changed": {}, "reason": "x", "date": "2026-09-25"}
-    real = _task("t1", [("quick-fix", "regular")])
-
-    def snapshot():
-        payload = json.loads(run_cli("retro", "--json").stdout)
-        data = payload.get("data", payload)
-        text = [line for line in run_cli("retro").stdout.splitlines()
-                if "total re-assessments" in line]
-        return data, text
-
-    make_task("t1", real)
-    make_task("t2", _bare("t2"))
-    before, before_text = snapshot()
-    assert before["reframed"] == 1 and len(before_text) == 1, (before, before_text)
-
-    # One entry beside a real one, and one issue that holds only the entry.
-    make_task("t1", {**real, "reassessments": real["reassessments"] + [unchanged]})
-    make_task("t2", {**_bare("t2"), "reassessments": [unchanged]})
-    after, after_text = snapshot()
-    for key in ("issues", "reframed", "reframe_pct", "up", "down", "sideways",
-                "unweighed", "transitions"):
-        assert after[key] == before[key], (key, before, after)
-    assert after_text == before_text
-
-
-def test_trc_001_derived_friction_ignores_unchanged_and_configuration(tmp_path):
-    from compass_pkg.calibration import derive_friction
-    task = {"reassessments": [
-        {"from_route": "regular", "to_route": "regular", "kind": "unchanged",
-         "changed": {}, "reason": "x"},
-        {"from_route": "regular", "to_route": "regular", "kind": "configuration",
-         "changed": {}, "reason": "y"}]}
-    assert derive_friction("demo", task, str(tmp_path)) == []
-
-
 def test_trc_001_a_manifest_with_the_entry_passes_lint():
     with tempfile.TemporaryDirectory() as raw:
         project = _project(Path(raw))
@@ -160,8 +114,8 @@ def test_trc_001_a_manifest_with_the_entry_passes_lint():
 def test_a_person_cannot_label_a_real_change_unchanged():
     """The CLI assigns `unchanged` itself, so `--kind unchanged` is refused.
 
-    A real route change labelled `unchanged` would be skipped by `compass retro`
-    and friction capture, hiding a true re-assessment.
+    A real route change labelled `unchanged` would read as no one having
+    misread the work, hiding a true re-assessment.
 
     Scenario id: `TRC-001` in unchanged-reassess-records-reason/acceptance-criteria.md
     """

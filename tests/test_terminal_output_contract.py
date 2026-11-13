@@ -45,7 +45,7 @@ def _leaf_parsers():
 
     Recursive on purpose. The tree has 13 nested subparser groups under 47
     `add_parser` calls, so anything that walks only the top level reaches
-    `issue` and misses `issue render` entirely - which is exactly how a
+    `issue` and misses `issue lint` entirely - which is exactly how a
     guard over this tree passes without checking most of it.
     """
     import argparse
@@ -92,7 +92,7 @@ def test_trc_c1_every_verb_accepts_every_mode_flag():
     # stops, so it never sees anything nested. Naming a nested verb catches
     # that directly and does not go out of date as verbs are added, which a
     # bare count would. The floor is a second, cruder net.
-    for nested in ("issue render", "gate pass", "evidence add", "bdd verify"):
+    for nested in ("issue lint", "gate pass", "evidence add", "bdd verify"):
         assert nested in leaves, (
             "%r was not reached, so the walk over the parser tree is not "
             "recursing into nested subcommand groups. Found: %s"
@@ -208,14 +208,15 @@ def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path):
 
     ADR-006 makes backward compatibility non-negotiable within a major version,
     so this verb's existing keys are public surface. New keys may appear; none
-    of these may be renamed or removed.
+    of these may be renamed or removed. The one exception is the 9.0.0 major:
+    on the four-stage path (ADR-092) an issue's evaluation has no stage modes,
+    no `subtask_ceiling`, no candidate approach (`candidate_route`,
+    `candidate_via`) and no blocked stage (`blocked_phases`), so those keys go,
+    and the evidence owed is added in their place.
     """
     import yaml
     proj = tmp_path / "p"
     (proj / "governance").mkdir(parents=True)
-    for f in ("routing-policy.yml", "guardrails.yml"):
-        (proj / "governance" / f).write_text(
-            (REPO_ROOT / "governance" / f).read_text())
     td = proj / ".compass" / "work" / "t"
     td.mkdir(parents=True)
     (proj / ".compass" / "current-task").write_text("t\n")
@@ -238,12 +239,18 @@ def test_trc_c3_existing_json_verb_keeps_its_keys(tmp_path):
     # version of this list guessed `final_route` and `phases`, which have
     # never existed - a compatibility assertion against invented names checks
     # nothing and would have failed for the wrong reason.
-    for key in ("candidate_route", "candidate_via", "delivery_approach",
-                "gates", "stages", "policy_rules_fired", "subtask_ceiling"):
+    for key in ("delivery_approach", "gates", "policy_rules_fired",
+                "evidence_required"):
         assert key in doc, (
             "`approach evaluate --json` lost the key %r, which shipped before "
             "this change and is public surface (ADR-006). Keys present: %s"
             % (key, sorted(doc)))
+    # ADR-092: the path has no stage modes, no `subtask_ceiling`, no candidate
+    # approach and no stage a rule can block. These keys, and only these, go at
+    # the 9.0.0 major.
+    for key in ("stages", "subtask_ceiling", "candidate_route", "candidate_via",
+                "blocked_phases"):
+        assert key not in doc, (key, sorted(doc))
 
 
 def test_trc_c5_verbose_adds_detail_without_relaxing_the_default():
@@ -503,10 +510,10 @@ def test_trc_e1_the_budget_guard_names_the_verb_it_caught():
     """An unactionable failure gets suppressed rather than fixed (`TRC-E1`)."""
     from compass_pkg.terminal import over_budget
 
-    findings = over_budget({"issue render": "\n".join("x" * 3 for _ in range(20))})
+    findings = over_budget({"issue lint": "\n".join("x" * 3 for _ in range(20))})
     assert findings, "a 20-line hand-off was not reported as over budget"
     text = " ".join(findings)
-    assert "issue render" in text, "the finding does not name the verb"
+    assert "issue lint" in text, "the finding does not name the verb"
     assert "20" in text, "the finding does not give the actual line count"
     assert str(HANDOFF_LINES) in text, "the finding does not give the budget"
 
@@ -555,9 +562,6 @@ def _failing_issue(tmp_path):
     import yaml
     proj = tmp_path / "proj"
     (proj / "governance").mkdir(parents=True)
-    for f in ("routing-policy.yml", "guardrails.yml"):
-        (proj / "governance" / f).write_text(
-            (REPO_ROOT / "governance" / f).read_text())
     td = proj / ".compass" / "work" / "t"
     td.mkdir(parents=True)
     (proj / ".compass" / "current-task").write_text("t\n")
@@ -785,7 +789,7 @@ def _report_verbs():
 # The reports that read an issue tree and produce enough output to be worth
 # testing. `migrate` and the linters need an argument or a broken tree to say
 # anything, so they are exercised by their own suites.
-_LIVE_REPORTS = ["retro", "flow", "terminology", "analyze"]
+_LIVE_REPORTS = ["flow", "terminology"]
 
 
 @pytest.fixture(scope="module")
@@ -802,12 +806,6 @@ def report_project(tmp_path_factory):
 
     proj = tmp_path_factory.mktemp("reports")
     (proj / "governance").mkdir()
-    # terminology.yml too: `compass terminology` reads the project's copy, and
-    # without it the verb says "not found" and these tests would assert against
-    # an error message instead of a glossary.
-    for f in ("routing-policy.yml", "guardrails.yml", "terminology.yml"):
-        (proj / "governance" / f).write_text(
-            (REPO_ROOT / "governance" / f).read_text())
     work = proj / ".compass" / "work"
     work.mkdir(parents=True)
     (proj / ".compass" / "config.yml").write_text(
@@ -830,11 +828,6 @@ def report_project(tmp_path_factory):
             "delivery_approach": "feature", "stages": {"specify": "full"},
             "gates": [], "evidence": [], "scenarios": [], "changed_files": [],
         }, sort_keys=False))
-    # `analyze` reads the current issue's artifacts, so one issue needs them.
-    (proj / ".compass" / "current-task").write_text("issue-00\n")
-    (work / "issue-00" / "delivery-approach.md").write_text("# Delivery approach\n")
-    (work / "issue-00" / "acceptance-criteria.md").write_text(
-        "# Spec\n\n## Summary\n\n**Goal:** something\n")
     return proj
 
 
@@ -959,9 +952,7 @@ def test_trc_c6_the_report_list_is_not_empty():
 # Verbs excluded from the run, each with the reason. Kept short and named -
 # an unexplained exclusion is how a guard stops covering things.
 _TAIL_EXEMPT = {
-    "_friction-capture": "private, and writes to the manifest as a side effect",
     "_migrate-archive": "private, and rewrites a whole work tree",
-    "_derive-system-spec": "private, and writes a tracked doc",
     "_derive-glossary": "private, and writes a tracked doc",
     "issue migrate": "rewrites a work tree, or with --config stores a new generation; its own suites cover its output",
     "ship-commit": "writes a git commit",
@@ -972,11 +963,9 @@ _TAIL_EXEMPT = {
     # Prints one bare path on stdout and nothing else, on purpose: the two
     # hooks read it in a command substitution, and a hand-off tail in the
     # middle of that would end up in the variable.
-    "issue artifact-path": "prints a bare path for a shell caller to consume",
     "evidence approve": "needs a terminal on standard input and, for each of its --check, --artifact and --decisions forms, a human check, a document awaiting approval or a decision, which this fixture lacks; test_human_checks.py runs it under a pseudo-terminal and pins its --json output",
     # Prints the document and nothing else, on purpose: an agent writes the
     # output to the issue's document, so a hand-off tail would end up in it.
-    "issue template show": "prints a document for a caller to write, with no hand-off tail",
     "lesson add": "writes .compass/lessons.yml and needs a git user name the fixture does not set; test_lessons.py runs it",
     "lesson propose": "writes .compass/lessons-pending.yml; test_lessons.py runs it",
     "lesson accept": "needs a pending proposal and a git user name; test_lessons.py runs it",
@@ -990,31 +979,22 @@ _TAIL_EXEMPT = {
     "decision list": "prints the ledger's entries verbatim, one line each; test_decisions_ledger.py runs it",
     "decision show": "prints one entry's text verbatim; test_decisions_ledger.py runs it",
     "issue status remove": "needs an issue held in backlog, which the fixture does not build; test_workflow_states.py runs it, without measuring its output against this contract",
-    "issue link set": "needs a GitHub issue target and writes one manifest key; test_github_label_sync.py runs it, without measuring its output against this contract",
-    "issue github sync": "needs a linked issue and a gh command on PATH; test_github_label_sync.py and test_github_issue_page.py run it against a fake gh, without measuring its output against this contract",
+    "issue link set": "needs a GitHub issue target and writes one manifest key; test_issue_link.py runs it, without measuring its output against this contract",
     "issue blocked remove": "needs an issue that is blocked, which the fixture does not build; test_workflow_states.py runs it, without measuring its output against this contract",
-    "issue subtask add": "needs a git repository and a brief file the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
-    "issue subtask set": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "record sync": "needs a record repository to push to; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "record restore": "needs a record repository to read; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
-    "run": "starts claude sessions, so it needs a stub executable the fixture does not have; test_headless_runner.py runs it against one, without measuring its output against this contract",
+    # #356, ADR-096: the follow-up commit of a record committed with the code.
+    "record commit": "writes a git commit, and needs a git repository whose landed record is committed with the code, which this fixture is not; test_record_commit.py runs it, without measuring its output against this contract",
     "issue use": "writes the pointer and the session record of an existing issue; test_current_task_lease.py runs it, without measuring its output against this contract",
-    "spec sync": "merges a base branch and commits; test_living_spec_refresh.py runs it in a temporary repository, without measuring its output against this contract",
     "issue decision add": "writes one manifest key and needs an issue with a requirements review or full flags; test_decisions_taken.py runs it, without measuring its output against this contract",
     "issue decision set": "needs a terminal on standard input and an existing decision; test_decisions_taken.py runs it under a pseudo-terminal",
     "issue checkpoint add": "needs an issue whose first assessment recorded checkpoint outcomes and a stage the route runs; test_checkpoint_outcomes.py runs it and checks its one line, without measuring it against this contract",
-    "issue friction": "needs evidence inside an existing issue folder and writes one manifest key; test_agent_friction.py runs it, without measuring its output against this contract",
     "issue raised-by": "writes one key to an existing issue's manifest and prints one line, or two with the chain hint; test_lineage.py runs it, without measuring its output against this contract",
-    "issue subtask replan": "writes the manifest of an existing multiagent issue; test_loop_ceilings.py runs it, without measuring its output against this contract",
-    "issue subtask package": "needs a git history to diff, which the fixture does not have; test_subtask_record.py runs it, without measuring its output against this contract",
-    "plan lint": "needs a design with placeholders to say anything",
     "next": "advisory pointer; its own suite covers it",
-    "rework-scan": "its own suite covers it",
     "follow-up resolve": "needs an owed follow-up planted first",
     "bdd verify": "needs a project BDD runner wired",
     "acceptance record": "needs an acceptance already started",
-    "analyze": "a report, measured above",
-    "retro": "a report, measured above",
+    "isolation record": "needs scenarios that declare tests, and runs the suite 1 + 2N times",
     "flow": "a report, measured above",
     "terminology": "a report, measured above",
     # These say WHY the verb is not run here, not what kind it is - two of
@@ -1022,8 +1002,6 @@ _TAIL_EXEMPT = {
     # hand-offs, and nothing caught the contradiction.
     "ci": "runs the whole mechanical suite over every issue; too slow here, and "
           "its own suite covers it",
-    "issue receipt": "renders a landed issue's record; needs a landed issue with "
-                     "cleared gates to say anything",
     "quick-fix start": "needs a project with no issue yet, which the shared "
                        "fixture already has one for; test_quick_fix_verbs.py "
                        "runs it, without measuring its output against this "
@@ -1043,7 +1021,6 @@ _TAIL_ARGV = {
     # registry in cli/compass_pkg/refusals.py with the params given on argv.
     "_refusal": ["_refusal", "no-delivery-approach", "slug=demo"],
     "approach evaluate": ["approach", "evaluate"],
-    "issue render": ["issue", "render"],
     # The fixture issue has a test record, so it is in progress and can be
     # blocked; `issue blocked set` sorts before `issue status set`, which holds it.
     "issue blocked set": ["issue", "blocked", "set", "--reason", "waiting on a review"],
@@ -1052,12 +1029,6 @@ _TAIL_ARGV = {
     "issue depends add": ["issue", "depends", "add", "later", "--reason", "needs later"],
     "issue depends remove": ["issue", "depends", "remove", "later"],
     "issue status set": ["issue", "status", "set", "backlog"],
-    "issue subtask next": ["issue", "subtask", "next"],
-    # The artifact set is computed by the evaluator, so the fixture runs
-    # `approach evaluate --write` first and this names a document the
-    # assessment actually earned.
-    "issue artifact set": ["issue", "artifact", "set", "acceptance-criteria",
-                       "--status", "draft"],
     "scenario add": ["scenario", "add", "TRC-9", "--title", "a new one",
                      "--intent", "INT-1"],
     "changed-file add": ["changed-file", "add", "src/a.py", "--scenario", "TRC-1"],
@@ -1076,8 +1047,17 @@ _TAIL_ARGV = {
                          "--", "true"],
     "tdd-red": ["tdd-red", "--scenario", "TRC-1", "--", "sh", "-c", "echo '1 failed'; exit 1"],
     "tdd-green": ["tdd-green", "--scenario", "TRC-1", "--", "true"],
-    "follow-up add": ["follow-up", "add", "FU-9", "--summary", "settle this at ship"],
-    "issue render": ["issue", "render"],
+    "layering record": ["layering", "record", "--", "true"],
+    # `waiver add` sorts before `waiver withdraw`, which removes the waiver it wrote.
+    "waiver add": ["waiver", "add", "--check", "suite-passed", "--reason",
+                   "the suite runs only in the nightly job"],
+    "waiver withdraw": ["waiver", "withdraw", "W-1"],
+    # A path issue's follow-up must link to a GitHub issue (ADR-093).
+    "follow-up add": ["follow-up", "add", "FU-9", "--github", "ayeo-io/compass#9",
+                      "--summary", "settle this at ship"],
+    # #356, ADR-096: writes the fixture issue's trail.md, outside git, so the
+    # sum paths start at the project root.
+    "trail": ["trail"],
 }
 
 
@@ -1102,9 +1082,6 @@ def tail_project(tmp_path):
 
     proj = tmp_path / "tail"
     (proj / "governance").mkdir(parents=True)
-    for f in ("routing-policy.yml", "guardrails.yml", "terminology.yml"):
-        (proj / "governance" / f).write_text(
-            (REPO_ROOT / "governance" / f).read_text())
     td = proj / ".compass" / "work" / "t"
     (td / "evidence").mkdir(parents=True)
     (proj / ".compass" / "current-task").write_text("t\n")

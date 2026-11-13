@@ -1,8 +1,10 @@
 """What a person reads at a terminal: the route as a rail, and a line fitted
 to the terminal's width.
 
-`compass next` opens with the route's stages in a row - done, current,
-pending, skipped by policy - when a person runs it. The model must see no
+`compass next` opens with the issue's stages in a row - done, current,
+pending, skipped by policy - when a person runs it. The row is the four-stage
+path (ADR-092); `next_cmd` gives an issue assessed before the path its legacy
+stages mapped onto the path. The model must see no
 change, so the rail is drawn only when stdout is a terminal and `CLAUDECODE`
 is unset: Claude Code runs commands without a terminal and with that
 variable set. Everything else gets the verb's plain output, byte for byte.
@@ -193,6 +195,9 @@ def strip_ansi(text):
     return _ANSI_SEQUENCE.sub("", text or "")
 
 
+_GUARD_CODE = re.compile(r"^[GS][0-9]+$")
+
+
 def fired_rule_line(rule, with_kind=True):
     """One fired policy rule as a line: its meaning first, then its id, and
     its kind when asked. Every screen that names a fired rule prints it
@@ -201,6 +206,10 @@ def fired_rule_line(rule, with_kind=True):
         return f"({rule})"
     rationale = str(rule.get("rationale") or "").rstrip().rstrip(".")
     code = rule.get("id", "?")
+    # A gate or guardrail code is written in backticks, as the rationale beside
+    # it writes it; a policy rule id is not such a code.
+    if _GUARD_CODE.match(str(code)):
+        code = f"`{code}`"
     if with_kind and rule.get("kind"):
         code = f"{code}, {rule['kind']}"
     return f"{rationale} ({code})" if rationale else f"({code})"

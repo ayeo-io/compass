@@ -1,7 +1,0 @@
-{
-  "command": "pytest tests/",
-  "exit_code": 0,
-  "passed": true,
-  "timestamp": "2026-03-13T15:42:18+00:00",
-  "log_excerpt": "tests/notifications/test_dispatch.py ...                                  [  4%]\ntests/notifications/test_preferences.py ...                              [  9%]\ntests/api/ ..............................................                [ 78%]\ntests/workspace/ .............                                           [100%]\n\n========================== 71 passed in 8.04s =============================\n\n(COMBINED regression after orchestrated integration of subtask-1 + subtask-2.\nThe 6 new notification scenarios pass; the 65 pre-existing tests across api/\nand workspace/ still pass. Per-stream green runs are in verification-report.md\nsection 2.)"
-}

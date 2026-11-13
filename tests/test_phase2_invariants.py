@@ -28,6 +28,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
 sys.path.insert(0, str(ROOT / "tests"))
 from archive import archive_root, checkable_root  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 GOVERNANCE = ROOT / "governance"
 
@@ -130,12 +131,11 @@ EXPECTED_GUARDRAIL_IDS = {"G1", "G2", "G3", "G4", "G5", "S1", "S2"}
 # or https URL, so a team arriving with one does not retype it - a
 # top-level group rather than a subverb, because no subverb owns it.
 EXPECTED_SUBCOMMANDS = {
-    "approach", "bdd", "check", "analyze", "retro", "ci", "tdd-red",
-    "tdd-green", "policy", "plan", "intent", "issue", "adr", "rework-scan", "flow",
+    "approach", "bdd", "check", "ci", "tdd-red",  # 9.0.0 removed `retro` and
+    "tdd-green", "policy", "issue", "adr", "flow",  # `rework-scan` and `intent` (ADR-093)
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
-    "profile",                    # `profile lint|add|show` - execution profiles
+    "review-rule",  # `review-rule list`; 9.0.0 removed `preset`, `spec` and `plan`
     # `init` creates `.compass/config.yml` and `.compass/work/`, and is safe
     # to run twice. It exists because no other command owns initialisation,
     # and the five entry points call it directly.
@@ -152,11 +152,24 @@ EXPECTED_SUBCOMMANDS = {
     # decisions-ledger (ADR-027): a group, record|list|show|check.
     "decision",
     "lesson",  # project-lessons (ADR-029)
-    "run",  # headless-runner (ADR-030)
-    "record",  # delivery-record (ADR-031)
-    "board",  # compass-board (ADR-046): render|refresh - the delivery board page
-    "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
+    "record",  # delivery-record (ADR-031); `record commit` added by #356 (ADR-096)
+    # "readiness" (ADR-061): ADR-093 removed the readiness measure.
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
+    # isolation-and-layering (#328, ADR-086): `isolation record` and `layering
+    # record`, the two strategy records only their commands write. GROUPS, so a
+    # later record verb has a home.
+    "isolation", "layering",
+    # one-check waivers (#357, ADR-094 decision 8): `waiver add` and
+    # `waiver withdraw`, the one route by which an issue owes less.
+    "waiver",
+    # the trail (#356, ADR-096 decision 19): `compass trail [--check]` writes
+    # the issue's trail.md, a file a reviewer checks with sha256sum. It adds
+    # no guardrail or gate. `compass record commit` (#356) is a sub-verb of
+    # the existing `record` group, so it adds no top-level verb.
+    "trail",
+    # #359 (ADR-098): `compass migrate` moves an 8.x project to 9.0.0. It adds
+    # no guardrail, gate or check.
+    "migrate",
 }
 # Role left the assessment at 7.0.0 (ADR-070); nothing took its place.
 EXPECTED_READING_KEYS = {
@@ -166,13 +179,13 @@ EXPECTED_READING_KEYS = {
 
 
 def test_trc_f3_the_framework_should_grow_by_artifacts_and_checks_only():
-    g = yaml.safe_load((GOVERNANCE / "guardrails.yml").read_text())
+    g = shipped_view("guardrails.yml")
     ids = {x["id"] for x in g["defaults"]} | {x["id"] for x in g["spike_guardrails"]}
     ids |= {x["id"] for x in (g.get("project") or [])}
     assert ids == EXPECTED_GUARDRAIL_IDS, (
         f"the guardrail id set changed: {sorted(ids ^ EXPECTED_GUARDRAIL_IDS)}")
 
-    policy = yaml.safe_load((GOVERNANCE / "routing-policy.yml").read_text())
+    policy = shipped_view("routing-policy.yml")
     assert set(policy["assessment_vocabulary"]) == EXPECTED_READING_KEYS, (
         "the reading vocabulary changed")
 

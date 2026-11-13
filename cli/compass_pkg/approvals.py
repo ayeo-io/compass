@@ -32,21 +32,25 @@ The forms:
   one `human-approval` record whose `guardrail` key holds `G5`, with no other
   subject key, which `human-approval-present` counts
   (`approval_records.gives_g5`). It records an approval only.
-- `artifact` approves a document that reads `awaiting-approval`: one
-  `artifact-approval` record for each human check on the document, and the
-  entry's `approved_by` and `approved_at`.
 - `decisions` confirms the decisions an agent took for the person, through
   `decisions_taken.approve_set`.
 - `checkpoint` records a person's answer to a checkpoint hand-off: one
   `checkpoint-approval` record, and the stage's `waited` outcome citing it.
+- `waiver` approves one waiver of the issue (`waiver_records`): one
+  `human-approval` record with `waiver: W-<n>`, the check it excuses and the
+  reason. It records an approval only, and never clears guardrail `G5`.
+- `ship` approves the change of an issue that owes the ship approval
+  (`ship_approval`, #355): one `human-approval` record with `ship: <slug>`,
+  the issue's generation and the `HEAD` commit when it was recorded. It
+  records an approval only. It never clears guardrail `G5`, and a `G5`
+  sign-off is not a ship approval (VD-029).
 
 A record holds the issue, the issue's generation and the time, which the
 writer stamps itself. Callers hold `lock(task_dir)` around a record and any
 state they change with it, so two answers cannot interleave.
 """
 # DEPENDENCY: standard library (contextlib, dataclasses, os); compass_pkg.
-# approval_records, atomic_io, core, effective. artifact_status,
-# checkpoint_outcomes, decisions_taken, item_records and next_cmd are imported
+# approval_records, atomic_io, core, effective. checkpoint_outcomes, decisions_taken, item_records, next_cmd and next_step are imported
 # inside the functions that need them, as approve_cmd did.
 from __future__ import annotations
 
@@ -65,10 +69,11 @@ ARTIFACT_APPROVAL = approval_records.ARTIFACT_APPROVAL
 #: (the check of guardrail `G5`), a human check or a waiver, meets it.
 CHECKPOINT_APPROVAL = "checkpoint-approval"
 
-#: The approval types `compass evidence add` refuses, and why. Each is a
-#: person's act, written only by the writers here. A `human-approval` record
-#: added by hand held only an id, a type and a path, which no approval reader
-#: counts (GitHub issue #571).
+#: The types `compass evidence add` refuses, and why. Each has its own writer:
+#: an approval is a person's act, written only by the writers here, and a record
+#: of the four-layer acceptance strategy only by its command. A `human-approval`
+#: record added by hand held only an id, a type and a path, which no approval
+#: reader counts (GitHub issue #571).
 EVIDENCE_ADD_REFUSALS = {
     CHECKPOINT_APPROVAL: (
         "compass evidence add: a checkpoint-approval record is a person's answer; run "
@@ -79,10 +84,33 @@ EVIDENCE_ADD_REFUSALS = {
         "compass evidence request; an agent the person delegated to runs compass "
         "evidence approve --delegated --as <agent>; at a terminal the person runs "
         "compass evidence approve. Nothing was written."),
+    # A copy of GitHub's record of another person's review (#355): only the read
+    # of the merged pull request writes it, so an agent cannot add one by hand.
+    "pr-approval": (
+        "compass evidence add: a pr-approval record is copied from the merged pull "
+        "request's reviews by compass issue link set --pr <n> after the merge. Without "
+        "a review, a person approves the change at ship with /compass:approve after "
+        "compass evidence request --ship. Nothing was written."),
+    # The records of the four-layer acceptance strategy (ADR-086): each is the run of
+    # the project's own commands, so a file added by hand is a claim, not a record.
+    "isolation-proof": (
+        "compass evidence add: an isolation-proof record is written only by compass "
+        "isolation record, which runs the project's own suite in parallel and each "
+        "scenario's tests twice. A written note does not prove isolation. Nothing was "
+        "written."),
+    "layering": (
+        "compass evidence add: a layering record is written only by compass layering "
+        "record, which runs the project's own layering test. A written note does not "
+        "prove the layer rules hold. Nothing was written."),
 }
 
-#: The five subject forms, as `Answer.form` names them.
-FORMS = ("check", "guardrail", "artifact", "checkpoint", "decisions")
+#: The subject forms, as `Answer.form` names them. 9.0.0 removed `artifact`, which
+#: approved a document, with the document statuses (ADR-091), and added `waiver`
+#: (ADR-094), and 9.0.0 added `ship`, the typed ship approval (#355).
+FORMS = ("check", "guardrail", "checkpoint", "decisions", "waiver", "ship")
+#: What every refusal of a missing or doubled form says.
+ONE_FORM = ("give exactly one of --check, --guardrail, --decisions, --checkpoint, --waiver "
+            "or --ship")
 
 #: Held while an answer is recorded and the state that goes with it changes.
 LOCK = ".approval.lock"
@@ -98,6 +126,9 @@ class Answer:
     role: str
     scope: str = ""
     provenance: dict = field(default_factory=dict)
+    # For an answer under a delegation: `(id, copy)` from `delegations.copy_of`,
+    # which each writer keeps in the manifest in the same save as the record.
+    authority: tuple | None = None
 
 
 @dataclass
@@ -143,13 +174,20 @@ def checked(answer):
     """The answer with its text normalised, or the refusal every path gives
     before reading the issue."""
     if answer.form not in FORMS:
-        raise CompassError(f"{VERB}: give exactly one of --check, --guardrail, --artifact, "
-                           f"--decisions or --checkpoint.")
+        raise CompassError(f"{VERB}: {ONE_FORM}.")
     if answer.decision not in DECISIONS:
         raise CompassError(f"{VERB}: the decision must be one of {' or '.join(DECISIONS)}, "
                            f"not '{answer.decision}'.")
     if answer.form == "guardrail":
         _guardrail_form(answer)
+    if answer.form == "waiver" and answer.decision != approval_records.APPROVED:
+        raise CompassError(f"{VERB}: --waiver records an approval only, not --decision "
+                           f"{answer.decision}. A waiver nobody approves excuses nothing, "
+                           f"and `compass waiver withdraw` removes it. Nothing was written.")
+    if answer.form == "ship" and answer.decision != approval_records.APPROVED:
+        raise CompassError(f"{VERB}: --ship records an approval only, not --decision "
+                           f"{answer.decision}. To hold the change back, say so to the "
+                           f"agent. Nothing was written.")
     approver = None if answer.approver is None else approver_name(answer.approver)
     role, scope = text(answer.role), text(answer.scope)
     required = ((("--role", role), ("--scope", scope)) if answer.form in ("check", "guardrail")
@@ -161,7 +199,16 @@ def checked(answer):
             raise CompassError(f"{VERB}: {flag} must not be empty; a record says in what role "
                                f"and for what the person approved.")
     return Answer(answer.form, answer.value, answer.decision, approver, role, scope,
-                  dict(answer.provenance))
+                  dict(answer.provenance), answer.authority)
+
+
+def keep_authority(task, answer):
+    """Copy the delegation that authorized `answer`, if any, into the manifest
+    dict (`delegations.keep_copy`). Each writer calls it just before the save
+    that writes the record, so the record and its authority land together."""
+    if answer.authority is not None:
+        from compass_pkg import delegations
+        delegations.keep_copy(task, answer.authority)
 
 
 def _guardrail_form(answer):
@@ -182,8 +229,9 @@ def record(task_dir, answer, save=True):
     every refusal and writes nothing."""
     answer = checked(answer)
     writer = {"check": _record_check, "guardrail": _record_guardrail,
-              "artifact": _record_artifact, "checkpoint": _record_checkpoint,
-              "decisions": _record_decisions}[answer.form]
+              "checkpoint": _record_checkpoint,
+              "decisions": _record_decisions, "waiver": _record_waiver,
+              "ship": _record_ship}[answer.form]
     return writer(task_dir, answer, save)
 
 
@@ -210,7 +258,7 @@ def _taken(task):
 
 # --- the forms ----------------------------------------------------------------------
 
-def _check_of(view, check_id):
+def _check_of(view, check_id, task=None):
     if view is None:
         raise CompassError(f"{VERB}: this issue has no configuration to read its checks from. "
                            f"Run `compass approach evaluate --write`.")
@@ -231,7 +279,7 @@ def _check_of(view, check_id):
         # An item of the Definition of Ready or Done is ticked by a person even when
         # its check lists no approvers (the declared approvers, or the owner, tick it).
         from compass_pkg import item_records
-        if item_records.unlisted_problem(view, check_id, VERB) is None:
+        if item_records.unlisted_problem(view, check_id, VERB, task=task) is None:
             return check
         raise CompassError(f"{VERB}: '{check_id}' lists no approvers and is not an item of "
                            f"this issue's Definition of Ready or Done, so an approval would "
@@ -263,7 +311,7 @@ def _may_tick(task_dir, approver, check_id):
 def _record_check(task_dir, answer, save):
     check_id = answer.value
     task, task_path = load_manifest(task_dir)
-    check = _check_of(effective.view_or_legacy(task_dir), check_id)
+    check = _check_of(effective.effective_for(task_dir), check_id, task)
     owner = approval_records.project_owner(task_dir)
     if answer.approver is None:
         pass
@@ -289,6 +337,7 @@ def _record_check(task_dir, answer, save):
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)
+        keep_authority(task, answer)
         save_manifest(task, task_path)
     return Recorded(
         f"{VERB}: {check_id} - {answer.decision} by {answer.approver} recorded as "
@@ -319,9 +368,11 @@ def _record_guardrail(task_dir, answer, save):
              "approver": answer.approver, "role": answer.role, "scope": answer.scope,
              "decision": approval_records.APPROVED, "timestamp": _stamp(),
              "issue": _slug(task_dir), "generation": task.get("generation")}
+    entry.update(approval_records.change_fields(task))
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)
+        keep_authority(task, answer)
         save_manifest(task, task_path)
     return Recorded(
         f"{VERB}: guardrail `G5` - signed off by {answer.approver} recorded as "
@@ -336,15 +387,16 @@ def _record_guardrail(task_dir, answer, save):
         [evidence_id])
 
 
-def _checkpoint_approver(task_dir, approver):
-    """Refuse a name that may not answer a checkpoint: a name in any
-    `approvers:` list of the project file, else its owner. Returns the line to
-    print when the project declares neither, so any person may answer."""
+def _checkpoint_approver(task_dir, approver, subject="answer a checkpoint"):
+    """Refuse a name that may not answer a checkpoint (or give the ship
+    approval): a name in any `approvers:` list of the project file, else its
+    owner. Returns the line to print when the project declares neither, so any
+    person may answer."""
     from compass_pkg import decisions_taken
     declared, owner = decisions_taken.project_approvers(task_dir)
     if not declared and not owner:
         return (f"{VERB}: this project declares no approvers or owner, so any person may "
-                f"answer a checkpoint.")
+                f"{subject}.")
     allowed = declared or [approval_records.OWNER]
     if approval_records.approver_listed(allowed, approver, owner):
         return None
@@ -354,8 +406,26 @@ def _checkpoint_approver(task_dir, approver):
                        f"the answer would not count. Nothing was written.")
 
 
+def _hand_off_reached(task, task_dir, stage):
+    """True when the stage's work is on record, so its hand-off can be answered.
+    On the four-stage path (ADR-092) specify counts as done only once its listed
+    checkpoint has an outcome, and ship only once the issue is closed, so those
+    two hand-offs are read from the work they hand off: the written scenarios,
+    and a finished build."""
+    from compass_pkg import next_cmd, next_step
+    from compass_pkg.path_stages import is_path_issue
+    from compass_pkg.stable_ids import STAGE_BUILD, STAGE_SHIP, STAGE_SPECIFY
+    typed = next_cmd._typed(task)
+    if is_path_issue(typed) and stage == STAGE_SPECIFY:
+        return next_step.specify_written(typed)
+    done = next_cmd._stages_on_record(typed, task_dir)
+    if is_path_issue(typed) and stage == STAGE_SHIP:
+        return STAGE_BUILD in done
+    return stage in done
+
+
 def _record_checkpoint(task_dir, answer, save):
-    from compass_pkg import checkpoint_outcomes, next_cmd
+    from compass_pkg import checkpoint_outcomes
     stage = answer.value
     if answer.decision != approval_records.APPROVED:
         raise CompassError(f"{VERB}: --checkpoint records an approval only, not "
@@ -364,7 +434,7 @@ def _record_checkpoint(task_dir, answer, save):
     task, task_path = load_manifest(task_dir)
     checkpoint_outcomes.refuse_unjudged(task, task_dir, VERB)
     checkpoint_outcomes.refuse_stage(task, stage, VERB)
-    if stage not in next_cmd._stages_on_record(next_cmd._typed(task), task_dir):
+    if not _hand_off_reached(task, task_dir, stage):
         raise CompassError(f"{VERB}: {stage} has not run: its record is not written, so there "
                            f"is no hand-off to answer yet. Nothing was written.")
     note = (None if answer.approver is None
@@ -380,12 +450,16 @@ def _record_checkpoint(task_dir, answer, save):
              "scope": answer.scope or f"the {stage} hand-off",
              "decision": approval_records.APPROVED, "timestamp": stamp,
              "issue": _slug(task_dir), "generation": task.get("generation")}
+    # The specify answer of a path issue names the spec it approved (ADR-095).
+    from compass_pkg import scenario_freeze
+    entry.update(scenario_freeze.fields(task, task_dir, stage))
     entry.update(answer.provenance)
     if save:
         task.setdefault("evidence", []).append(entry)
         checkpoint_outcomes.set_outcome(task, {
             "stage": stage, "outcome": checkpoint_outcomes.WAITED, "by": answer.approver,
             "at": stamp, "evidence": evidence_id})
+        keep_authority(task, answer)
         save_manifest(task, task_path)
     return Recorded(
         f"{VERB}: the {stage} checkpoint - answered by {answer.approver}, recorded as "
@@ -398,68 +472,127 @@ def _record_checkpoint(task_dir, answer, save):
         [evidence_id], note)
 
 
-def _record_artifact(task_dir, answer, save):
-    from compass_pkg import artifact_status
-    kind = answer.value
-    if answer.decision != approval_records.APPROVED:
-        raise CompassError(f"{VERB}: --artifact records an approval only. To send {kind} "
-                           f"back, run `compass issue artifact set {kind} --status draft`.")
-    task, task_path = load_manifest(task_dir)
-    entry = next((a for a in task.get("artifacts") or []
-                  if isinstance(a, dict) and a.get("kind") == kind), None)
-    if entry is None:
-        raise CompassError(f"{VERB}: '{kind}' is not a document this issue registered.")
-    if entry.get("status") != artifact_status.AWAITING:
-        raise CompassError(
-            f"{VERB}: {kind} reads {entry.get('status')}, not awaiting-approval, so there is "
-            f"nothing to approve. A document with a human check moves to awaiting-approval "
-            f"when the stage after it records its work; to ask for approval now, run "
-            f"`compass issue artifact set {kind} --status awaiting-approval`.")
-    view = effective.view_or_legacy(task_dir)
-    checks = artifact_status.human_checks(view, kind)
-    owner = approval_records.project_owner(task_dir)
-    for check_id in checks if answer.approver is not None else []:
-        listed = [str(one) for one in (view.config["checks"][check_id].get("approvers") or [])]
-        if listed and not approval_records.approver_listed(listed, answer.approver, owner):
-            raise CompassError(
-                f"{VERB}: {answer.approver} is not an approver of '{check_id}', which {kind} "
-                f"carries, so the record would not count. "
-                f"{approval_records.listing(check_id, listed, owner)}.")
-    stamp = _stamp()
-    taken = _taken(task)
-    number = 1
-    records = []
-    for check_id in checks or [None]:
-        while f"EV-APPROVAL-ARTIFACT-{kind}-{number}" in taken:
-            number += 1
-        evidence_id = f"EV-APPROVAL-ARTIFACT-{kind}-{number}"
-        taken.add(evidence_id)
-        fields = dict(artifact=kind, check=check_id, approver=answer.approver,
-                      role=answer.role, decision=answer.decision, timestamp=stamp,
-                      scope=answer.scope)
-        one = {"id": evidence_id, "type": ARTIFACT_APPROVAL}
-        one.update({k: v for k, v in fields.items() if v not in (None, "")})
-        one.update(issue=_slug(task_dir), generation=task.get("generation"))
-        one.update(answer.provenance)
-        records.append(one)
-    ids = [one["id"] for one in records]
-    if save:
-        task.setdefault("evidence", []).extend(records)
-        artifact_status.clear_approver(entry)
-        entry.update(status=artifact_status.APPROVED, approved_by=answer.approver,
-                     approved_at=stamp)
-        save_manifest(task, task_path)
-    return Recorded(
-        f"{VERB}: {kind} - approved by {answer.approver} recorded as {', '.join(ids)}.",
-        [f"record     : {', '.join(ids)} in manifest.yml evidence",
-         f"document   : {kind} -> approved by {answer.approver}"],
-        dict(artifact=kind, answer=answer.decision, evidence_id=ids[0], evidence_ids=ids,
-             approver=answer.approver, role=answer.role, scope=answer.scope or None,
-             at=stamp, status=artifact_status.APPROVED),
-        ids)
-
-
 def _record_decisions(task_dir, answer, save):
     from compass_pkg import decisions_taken
     outcome, detail, data, ids = decisions_taken.approve_set(task_dir, answer, save)
     return Recorded(outcome, detail, data, ids)
+
+
+def _record_waiver(task_dir, answer, save):
+    """The approval of one waiver of the issue. The record copies the check and
+    the reason the waiver names now, so a waiver changed after it was approved
+    no longer reads as approved (`waiver_records.approval`)."""
+    from compass_pkg import waiver_records
+    waiver_id = answer.value
+    if not isinstance(waiver_id, str) or not waiver_records.ID.fullmatch(waiver_id):
+        raise CompassError(f"{VERB}: --waiver takes a waiver id such as W-1, not "
+                           f"'{waiver_id}'. Nothing was written.")
+    task, task_path = load_manifest(task_dir)
+    why = waiver_records.refusal(task, task_dir, waiver_id, answer.approver)
+    if why:
+        raise CompassError(f"{VERB}: {why}. Nothing was written.")
+    waiver = waiver_records.find(task, waiver_id)
+    taken = _taken(task)
+    number = 1
+    while f"EV-WAIVER-{waiver_id}-{number}" in taken:
+        number += 1
+    evidence_id = f"EV-WAIVER-{waiver_id}-{number}"
+    scope = answer.scope or f"waiver {waiver_id} of {waiver['check']}"
+    entry = {"id": evidence_id, "type": "human-approval",
+             waiver_records.SUBJECT: waiver_id,
+             waiver_records.CHECK: waiver["check"],
+             waiver_records.REASON: waiver["reason"],
+             "approver": answer.approver, "role": answer.role, "scope": scope,
+             "decision": approval_records.APPROVED, "timestamp": _stamp(),
+             "issue": _slug(task_dir), "generation": task.get("generation")}
+    entry.update(answer.provenance)
+    if save:
+        task.setdefault("evidence", []).append(entry)
+        keep_authority(task, answer)
+        save_manifest(task, task_path)
+    return Recorded(
+        f"{VERB}: waiver {waiver_id} of {waiver['check']} - approved by {answer.approver} "
+        f"recorded as {evidence_id}.",
+        [f"record     : {evidence_id} in manifest.yml evidence",
+         f"waives     : {waiver['check']} on issue {entry['issue']} only",
+         f"reason     : {waiver['reason']}"],
+        dict(waiver=waiver_id, check=waiver["check"], answer=entry["decision"],
+             evidence_id=evidence_id, approver=answer.approver, role=answer.role,
+             scope=scope, issue=entry["issue"], generation=entry["generation"],
+             at=entry["timestamp"]),
+        [evidence_id])
+
+
+def _head(task_dir):
+    """The project's `HEAD` commit, or None outside a git repository. The record
+    holds it for a reader: no check compares it."""
+    import subprocess
+
+    from compass_pkg import project_settings
+    try:
+        done = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+                              timeout=10, cwd=project_settings.find_project_root(task_dir))
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if done.returncode != 0:
+        return None
+    return done.stdout.strip() or None
+
+
+def _record_ship(task_dir, answer, save):
+    """The typed ship approval (#355): a person approves the change of this
+    issue at ship. The record names the issue under `ship`, a subject key, so
+    it never clears guardrail `G5`; `ship-approval-present` reads it with the
+    issue's generation. It refuses an issue that does not owe the ship
+    approval, and a second approval while one stands."""
+    from compass_pkg import ship_approval
+    task, task_path = load_manifest(task_dir)
+    slug = _slug(task_dir)
+    if not ship_approval.owed(task):
+        raise CompassError(f"{VERB}: issue {slug} does not owe the ship approval: its "
+                           f"`evidence_required` does not list `{ship_approval.TOKEN}`. "
+                           f"Nothing was written.")
+    note = (None if answer.approver is None
+            else _checkpoint_approver(task_dir, answer.approver, "give the ship approval"))
+    evidence = [e for e in task.get("evidence") or [] if isinstance(e, dict)]
+    withdrawn = {e.get("withdraws") for e in evidence
+                 if e.get("type") == approval_records.WITHDRAWAL}
+    standing = [e.get("id") for e in evidence
+                if e.get("type") == "human-approval" and e.get(ship_approval.SHIP) == slug
+                and e.get("generation") == task.get("generation")
+                and e.get("decision") == approval_records.APPROVED
+                and e.get("id") not in withdrawn
+                # An approval of an earlier state of the change no longer
+                # stands, so the new state can be approved (ADR-099 decision 6).
+                and not approval_records.for_earlier_state(task, e)]
+    if standing:
+        raise CompassError(f"{VERB}: the change of issue {slug} is already approved at ship "
+                           f"({standing[0]}). Nothing was written.")
+    taken = _taken(task)
+    number = 1
+    while f"EV-SHIP-APPROVAL-{number}" in taken:
+        number += 1
+    evidence_id = f"EV-SHIP-APPROVAL-{number}"
+    scope = answer.scope or f"the change of issue {slug} at ship"
+    entry = {"id": evidence_id, "type": "human-approval", ship_approval.SHIP: slug,
+             "head": _head(task_dir) if save else None,
+             "approver": answer.approver, "role": answer.role, "scope": scope,
+             "decision": approval_records.APPROVED, "timestamp": _stamp(),
+             "issue": slug, "generation": task.get("generation")}
+    entry.update(approval_records.change_fields(task))
+    entry.update(answer.provenance)
+    if save:
+        task.setdefault("evidence", []).append(entry)
+        keep_authority(task, answer)
+        save_manifest(task, task_path)
+    return Recorded(
+        f"{VERB}: the change of issue {slug} - approved at ship by {answer.approver}, "
+        f"recorded as {evidence_id}.",
+        [f"record     : {evidence_id} in manifest.yml evidence",
+         f"issue      : {slug}",
+         f"generation : {approval_records.shown(entry['generation'])}",
+         f"head       : {entry['head'] or 'none'}"],
+        dict(ship=slug, answer=entry["decision"], evidence_id=evidence_id,
+             approver=answer.approver, role=answer.role, scope=scope, issue=slug,
+             generation=entry["generation"], head=entry["head"], at=entry["timestamp"]),
+        [evidence_id], note)

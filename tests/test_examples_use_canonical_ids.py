@@ -1,12 +1,12 @@
 """The shipped samples use one id prefix, and use it consistently.
 
-The five sample issue directories are how an adopter learns what an artifact
+The sample issue directories are how an adopter learns what an artifact
 looks like. Every sample uses the `TRC-` prefix, and every id a sample's
 prose cites exists in its manifest - a sample whose spec cites an id its
 own manifest does not carry would teach that the traceability chain is
 decorative.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def _sample_dirs() -> list[pathlib.Path]:
 def test_the_samples_exist():
     """Guards the two tests below against silently checking nothing."""
     dirs = _sample_dirs()
-    assert len(dirs) >= 4, (
+    assert len(dirs) >= 2, (
         f"found {len(dirs)} sample issue directories under examples/ - the "
         f"checks below would pass by having nothing to look at"
     )

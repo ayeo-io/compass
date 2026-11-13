@@ -12,7 +12,7 @@ tells a caller what to type instead.
 | `agents/architect-lens.md` | `agents/architect.md` | same <!-- vocabulary-scan: allow - the rename table must name the retired filename --> |
 | `commands/roundtable.md` | `commands/consult.md` | an advisor is "consulted mid-turn" <!-- vocabulary-scan: allow - the rename table must name the retired filename --> |
 | `skills/intent-elicitation` | `skills/intent-interview` | their onboarding doc runs an "interview" <!-- vocabulary-scan: allow - the rename table must name the retired directory --> |
-| `skills/blueprint-distillation` | `skills/behaviour-mapping` | distillation means model distillation to this audience <!-- vocabulary-scan: allow - the rename table must name the retired directory --> |
+| `skills/blueprint-distillation` | `skills/behavior-mapping` | distillation means model distillation to this audience <!-- vocabulary-scan: allow - the rename table must name the retired directory --> |
 | `skills/worktree-swarm` | `skills/worktree-multiagent` | swarm is another vendor's framework name <!-- vocabulary-scan: allow - the rename table must name the retired directory --> |
 
 Scenario ids: anthropic-aligned-vocabulary/acceptance-criteria.md
@@ -49,8 +49,13 @@ RENAMED_AGENTS = {
 }
 RENAMED_SKILLS = {
     "intent-elicitation": "intent-interview",
-    "blueprint-distillation": "behaviour-mapping",
+    # Renamed again in 7.0.0 to the US spelling; the stub under the
+    # British name went in 9.0.0 (#358), so the check follows it here.
+    "blueprint-distillation": "behavior-mapping",
     "worktree-swarm": "worktree-multiagent",
+    # Both merged into `atdd` in 9.0.0 (#360).
+    "bdd-specification": "atdd",
+    "behavior-mapping": "atdd",
 }
 # Retired command name -> replacement. The stub was removed at 4.0.0; the
 # mapping stays so this file can still assert nothing points at the old name.
@@ -86,17 +91,7 @@ def _live_files():
 
 # --- `TRC-C5` / `TRC-C3` - the agents -----------------------------------------
 
-def test_the_routing_agent_is_named_router():
-    """`TRC-C5`: the agent that runs routing-policy.yml is called router."""
-    assert (AGENTS / "router.md").is_file()
-    assert not (AGENTS / "navigator.md").exists()
-
-
-def test_the_role_agents_are_named_after_their_role():
-    """`TRC-C3`: no agent filename ends in -lens; each names a governance role. <!-- vocabulary-scan: allow - names the retired filename suffix the check refuses -->"""
-    names = {p.stem for p in AGENTS.glob("*.md")}
-    assert {"product-owner", "product-marketer", "architect"} <= names
-    assert not [n for n in names if n.endswith("-lens")]
+# The router and role-agent name tests read agents/, which 9.0.0 removed (ADR-090).
 
 
 def test_no_agent_file_keeps_a_retired_name():
@@ -105,11 +100,6 @@ def test_no_agent_file_keeps_a_retired_name():
 
 
 # --- `TRC-C1` / `TRC-C2` - the command, and the absence of its stub -----------
-
-def test_the_renamed_command_exists():
-    """`TRC-C1`."""
-    assert (COMMANDS / "consult.md").is_file()
-
 
 def test_the_retired_command_name_no_longer_resolves():
     """`TRC-C2`: removed at 4.0.0, the boundary ADR-019 scheduled it for.
@@ -120,9 +110,10 @@ def test_the_retired_command_name_no_longer_resolves():
     assert not (COMMANDS / "roundtable.md").is_file(), (
         "`/compass:roundtable` still ships. It was a redirect stub through "
         "3.x and was removed at 4.0.0")
-    assert (COMMANDS / "consult.md").is_file(), (
-        "the retired name is gone but `/compass:consult` does not exist, so "
-        "the rename left a reader nowhere to go")
+    # Its replacement, `/compass:consult`, went with the role entry points
+    # in 9.0.0 (ADR-093), so no stub may point at it either.
+    assert not (COMMANDS / "consult.md").is_file(), (
+        "`/compass:consult` still ships; 9.0.0 removed it (ADR-093)")
 
 
 # --- `TRC-C6` - the skills --------------------------------------------------
@@ -130,7 +121,10 @@ def test_the_retired_command_name_no_longer_resolves():
 def test_the_renamed_skills_exist_under_their_new_names():
     """`TRC-C6`."""
     for old, new in RENAMED_SKILLS.items():
-        assert (SKILLS / new / "SKILL.md").is_file(), f"{new} missing"
+        # worktree-multiagent itself was removed in 9.0.0 (ADR-090), and
+        # behavior-mapping merged into atdd (#360).
+        if new not in ("worktree-multiagent", "behavior-mapping"):
+            assert (SKILLS / new / "SKILL.md").is_file(), f"{new} missing"
         assert not (SKILLS / old).exists(), f"{old} still present"
 
 
@@ -154,6 +148,15 @@ def test_no_live_surface_points_at_a_retired_name():
         # The upgrade table names the removed command beside its replacement,
         # because a reader whose script broke has to find their spelling here.
         REPO_ROOT / "docs" / "releasing.md": {"roundtable"},
+        # The 7.0.0 guide records the rename to `behavior-mapping`, and the
+        # 9.0.0 guide tells a project that names either merged skill in its
+        # own text to name `atdd` instead.
+        REPO_ROOT / "docs" / "upgrade-7-0-0.md": {"behavior-mapping"},
+        REPO_ROOT / "docs" / "upgrade-9-0-0.md": {"bdd-specification", "behavior-mapping"},
+        # The skill that absorbed both says which skills it replaced, and its
+        # behavior mapping procedure is the reference file of that name.
+        REPO_ROOT / "skills" / "atdd" / "SKILL.md": {"bdd-specification",
+                                                     "behavior-mapping"},
         # Generated from governance/terminology.yml. Hand-editing a derived
         # page is how a derivation silently stops matching its source -
         # terminology.yml records the check that compares this page with its

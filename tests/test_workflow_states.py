@@ -293,8 +293,8 @@ def test_vr_c16_queue_ageing_counts_a_backlog_hold_with_no_parked_reason(tmp_pat
     assert "No backlog issues" not in top
 
 
-def test_vr_c16_the_living_spec_keeps_only_completed_issues(tmp_path):
-    from compass_pkg import flow
+def test_vr_c16_the_release_notes_reader_keeps_only_completed_issues(tmp_path):
+    from compass_pkg import shipped_issues
     for slug, status, extra in (("kept", "done", {"close_reason": "completed"}),
                                 ("not-planned", "done", {"close_reason": "not-planned"}),
                                 ("held", "backlog", {})):
@@ -307,14 +307,12 @@ def test_vr_c16_the_living_spec_keeps_only_completed_issues(tmp_path):
             "status": status, **extra,
             "scenarios": [{"id": "ID-" + slug.upper(), "title": "behaviour of " + slug,
                            "intent": "INT-1"}]}))
-    flow.derive_system_spec(str(tmp_path))
-    spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
-    assert "ID-KEPT" in spec
-    assert "ID-NOT-PLANNED" not in spec and "ID-HELD" not in spec
+    found = [item["slug"] for item in shipped_issues.completed_issues(str(tmp_path))]
+    assert found == ["kept"], found
 
 
-# --- the readers of the checks: checks, compliance, the ci sweep, diagnose,
-# --- multiagent_check, binding, landed_by ------------------------------------
+# --- the readers of the checks: checks, the ci sweep, diagnose,
+# --- binding, landed_by ------------------------------------
 
 DONE_WORDS = [("landed", {}), ("done", {"close_reason": "completed"}),
               ("done", {"close_reason": "not-planned"}), ("abandoned", {})]
@@ -372,23 +370,6 @@ def test_vr_c16_a_missing_human_approval_is_reported_only_when_the_issue_is_not_
     assert ok is reported
 
 
-@pytest.mark.parametrize("status,extra,counted", [
-    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
-    ("active", {}, True), (None, {}, True), ("in-progress", {}, True),
-    ("done", {"close_reason": "not-planned"}, False), ("abandoned", {}, False),
-    ("queued", {}, False), ("parked", {}, False), ("backlog", {}, False)])
-def test_vr_c16_the_compliance_report_reads_completed_and_open_issues(
-        tmp_path, status, extra, counted):
-    import yaml
-    from compass_pkg import compliance
-    work = tmp_path / "work"
-    (work / "the-issue").mkdir(parents=True)
-    (work / "the-issue" / "manifest.yml").write_text(yaml.safe_dump(
-        _with(status, extra, created="2026-10-08")))
-    found = compliance._issues(str(work), None, 3650)
-    assert bool(found) is counted
-
-
 def _ci_output(tmp_path, status_lines):
     import subprocess
     sys.path.insert(0, str(ROOT / "tests"))
@@ -426,15 +407,6 @@ def test_vr_c16_the_diagnosis_lists_a_failed_gate_of_a_completed_issue_only(tmp_
         out = diagnose._deviations(str(tmp_path), _with(status, extra, gates=gates),
                                    {}, shown, [])
         assert any("verify.correctness is fail" in line for line in out) is listed, status
-
-
-@pytest.mark.parametrize("status,extra,ready", [
-    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
-    ("done", {"close_reason": "not-planned"}, False), ("active", {}, False)])
-def test_vr_c16_a_completed_issue_is_ready_whatever_its_gates_say(status, extra, ready):
-    from compass_pkg import multiagent_check
-    m = _with(status, extra, gates=[{"id": "g", "status": "pending"}])
-    assert multiagent_check._ready(m) is ready
 
 
 @pytest.mark.parametrize("status,extra", [("landed", {}),
@@ -481,8 +453,7 @@ def test_vr_c16_a_landed_by_pointer_holds_between_completed_issues(
     assert (ran is True) is holds
 
 
-# --- the readers of the configuration: generation, effective, policy,
-# --- issue_config_cmd, run_cmd ----------------------------------------------
+# --- the readers of the configuration: generation, effective, policy ------------
 
 # A closed issue keeps the configuration it closed under; a hold and work in
 # flight can still change it.
@@ -496,15 +467,15 @@ OPEN_FOR_CONFIG = [(None, {}),("active", {}), ("queued", {}), ("backlog", {})]
 
 def _stored_issue(tmp_path, monkeypatch, status, extra):
     sys.path.insert(0, str(ROOT / "tests"))
-    from test_generation_store import _commit, _new_check, _project, _write_manifest
+    from test_generation_store import _commit, _project, _write_manifest
     import yaml
     root, task_dir = _project(tmp_path)
     monkeypatch.chdir(root)
     _commit(root, task_dir)
     # A configuration unlike the stored one, so a later commit has a change
-    # to refuse.
+    # to refuse: a tighten-only setting (ADR-094).
     (root / "compass.yml").write_text(
-        yaml.safe_dump({"schema": 1, "checks": {"extra": _new_check()}}), encoding="utf-8")
+        yaml.safe_dump({"schema": 1, "signoff_labels": ["billing"]}), encoding="utf-8")
     changes = dict(extra, status=status) if status else dict(extra)
     _write_manifest(task_dir, **changes)
     return root, task_dir, _commit
@@ -545,18 +516,6 @@ def test_vr_c16_preflight_refuses_a_closed_issue_before_anything_is_printed(
 
 
 @pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
-def test_vr_c16_a_closed_issue_cannot_be_given_a_proposal(tmp_path, monkeypatch, status, extra):
-    from compass_pkg import generation
-    from compass_pkg.core import CompassError
-    root, task_dir, _commit = _stored_issue(tmp_path, monkeypatch, status, extra)
-    import yaml
-    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    with pytest.raises(CompassError) as caught:
-        generation.write_proposal(str(task_dir), manifest, {"checks": {}})
-    assert CLOSED_REFUSAL in str(caught.value) and "landed" not in str(caught.value)
-
-
-@pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
 def test_vr_c16_a_closed_issue_cannot_migrate_its_configuration(
         tmp_path, monkeypatch, status, extra):
     from compass_pkg import effective
@@ -565,17 +524,6 @@ def test_vr_c16_a_closed_issue_cannot_migrate_its_configuration(
     with pytest.raises(CompassError) as caught:
         effective.migrate_generation(str(task_dir))
     assert CLOSED_REFUSAL in str(caught.value) and "landed" not in str(caught.value)
-
-
-@pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
-def test_vr_c16_a_closed_issue_cannot_be_configured(tmp_path, monkeypatch, status, extra):
-    import subprocess
-    root, task_dir, _commit = _stored_issue(tmp_path, monkeypatch, status, extra)
-    r = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "issue", "configure",
-                        "--issue", task_dir.name, "--mode", "implement=lightweight"],
-                       cwd=root, capture_output=True, text=True, timeout=120)
-    assert r.returncode != 0
-    assert CLOSED_REFUSAL in r.stderr and "landed" not in r.stderr, r.stdout + r.stderr
 
 
 @pytest.mark.parametrize("status,extra,needs_assessment", [
@@ -597,8 +545,9 @@ def test_vr_c16_lint_asks_for_an_assessment_only_from_an_issue_that_started(
     assert ("assessment" in (run.stdout + run.stderr)) is needs_assessment, run.stdout + run.stderr
 
 
-# --- the last readers: manifest, receipt, calibration, receipt_provenance,
-# --- replay -------------------------------------------------------------------
+# --- the last readers: manifest, replay ---------------------------
+# (The receipt and its provenance section read the states too, until 9.0.0
+# removed them, ADR-091.)
 
 @pytest.mark.parametrize("status,extra,judged", [
     ("landed", {}, False), ("done", {"close_reason": "completed"}, False),
@@ -761,7 +710,9 @@ def test_vr_c12_ship_commit_records_done_with_the_completed_reason(cli_path, tmp
     assert done.returncode == 0, done.stdout + done.stderr
     saved = _saved(task_dir)
     assert saved["status"] == "done" and saved["close_reason"] == "completed"
-    assert saved["land_timestamp"] and saved["land_commit"]
+    # The record is committed with the code (#356), so git names the land commit.
+    from compass_pkg import landing
+    assert saved["land_timestamp"] and landing.land_commit(saved, str(task_dir))
     assert "blocked" not in saved
 
 
@@ -949,15 +900,14 @@ def test_vr_c18_status_remove_ends_a_hold_and_refuses_when_there_is_none(tmp_pat
     assert (task / "manifest.yml").read_text() == before
 
 
-def test_vr_c19_done_with_no_close_reason_is_left_out_of_the_spec_and_lint_names_it(
+def test_vr_c19_done_with_no_close_reason_is_not_completed_and_lint_names_it(
         tmp_path):
     import subprocess
-    from compass_pkg import flow
-    task = _project(tmp_path, status="done", assessment={
+    from compass_pkg import shipped_issues
+    _project(tmp_path, status="done", assessment={
         "risk": "contained", "familiarity": "greenfield", "size": "small"},
         scenarios=[{"id": "S-1", "title": "kept out", "intent": "INT-1"}])
-    flow.derive_system_spec(str(tmp_path))
-    assert "S-1" not in (tmp_path / "docs" / "system-spec.md").read_text()
+    assert shipped_issues.completed_issues(str(tmp_path)) == []
     env = {"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)}
     lint = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "issue", "lint",
                            "--issue", "the-issue"], cwd=tmp_path, capture_output=True,
@@ -1037,59 +987,6 @@ def test_vr_c22_duplicate_of_refuses_itself_an_unknown_issue_and_another_reason(
     assert _saved(task)["close_reason"] == "duplicate"
 
 
-@pytest.mark.parametrize("status,extra,header", [
-    ("landed", {}, "(landed)"), ("done", {"close_reason": "completed"}, "(landed)"),
-    ("active", {}, "(IN PROGRESS - not yet landed)"), (None, {}, "(IN PROGRESS - not yet landed)"),
-    ("in-progress", {}, "(IN PROGRESS - not yet landed)"),
-    ("backlog", {}, "(BACKLOG)"), ("done", {"close_reason": "not-planned"}, "(DONE)")])
-def test_vr_c16_the_receipt_header_reads_both_word_sets(status, extra, header):
-    from compass_pkg import receipt
-    text = receipt._receipt_render(_with(status, extra, schema_version="2.0"), "the-issue", {})
-    assert header in text.splitlines()[1]
-    assert ("Verdict: not yet landed" in text) is (header != "(landed)")
-
-
-@pytest.mark.parametrize("status,extra,counted", [
-    ("landed", {}, 1), ("done", {"close_reason": "completed"}, 1),
-    ("done", {"close_reason": "not-planned"}, 0), ("abandoned", {}, 0),
-    ("active", {}, 0), (None, {}, 0)])
-def test_vr_c16_the_impact_report_counts_completed_issues(status, extra, counted):
-    from compass_pkg import calibration
-    impact = calibration.compute_impact([("the-issue", _with(
-        status, extra, delivery_approach="feature", created="2026-10-01",
-        land_timestamp="2026-10-08T09:00:00Z"))])
-    assert impact["n_landed"] == counted
-
-
-@pytest.mark.parametrize("status,extra,expired", [
-    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
-    ("done", {"close_reason": "not-planned"}, False), ("active", {}, False)])
-def test_vr_c16_a_completed_issue_shows_its_issue_waiver_as_expired_at_land(
-        tmp_path, status, extra, expired):
-    import yaml
-    sys.path.insert(0, str(ROOT / "tests"))
-    from test_receipt_provenance import CHECK, ISSUE, _issue_waiver_case, _one, _receipt
-    root, task_dir = _issue_waiver_case(tmp_path)
-    path = task_dir / "manifest.yml"
-    manifest = yaml.safe_load(path.read_text(encoding="utf-8"))
-    manifest.update(extra, status=status, land_timestamp="2026-10-08T10:00:00+00:00")
-    path.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
-    row = _one(_receipt(root), "waiver", f"issue:checks.{CHECK}")
-    assert ("expired at land 2026-10-08" in row.text) is expired
-
-
-def test_vr_c16_the_policy_diff_examines_every_issue_that_is_not_closed():
-    sys.path.insert(0, str(ROOT / "tests"))
-    from test_policy_diff import _advisory, _diff, _issue
-    archive = [_issue("a-done", status="done"), _issue("b-landed", status="landed"),
-               _issue("c-backlog", status="backlog"), _issue("d-queued", status="queued"),
-               _issue("e-flight", status="in-progress"), _issue("f-abandoned", status="abandoned")]
-    document = _diff(_advisory, archive=archive, open=True)["open"]
-    assert [i["issue"] for i in document["issues"]] == ["c-backlog", "d-queued", "e-flight"]
-    assert [i["status"] for i in document["issues"]] == ["backlog", "queued", "in-progress"]
-    assert document["examined"] == 3
-
-
 # --- VR-G9: no retired word in its retired meaning in shipped prose -----------
 # Each pattern names a field, so `full` as a delivery approach, the machine
 # names `landed_by`, `land_commit`, `land_timestamp` and `landed-by-resolves`,
@@ -1166,9 +1063,11 @@ RETIRED_PROSE = {
         r"|\bcan be light on the (?:regular|quick)\b",
     "a depth word printed as the value of a mismatch":
         r"[\"']?\b(?:expected|actual)[\"']?\s*:\s*[\"'`]?(?:full|light)\b",
+    # "The build stage" alone is no longer retired: build is a stage of the
+    # four-stage path (ADR-092 decision 1). The old word still shows where it is
+    # paired with `verify`, which the path does not keep.
     "the run stage named by its old word":
-        r"\bthe `?build`? stage\b|`build` stage\b"
-        r"|`?\bbuild\b`? (?:or|and) `?verify\b`? stages?\b"
+        r"`?\bbuild\b`? (?:or|and) `?verify\b`? stages?\b"
         r"|`?\bverify\b`? (?:or|and) `?build\b`? stages?\b",
     "a verb under the name it had before it was renamed":
         r"\bpolicy effective\b|\bsubtask update\b|\bissue set-status\b|\bapproach summary\b"
@@ -1245,7 +1144,6 @@ def test_vr_g9_shipped_prose_uses_no_retired_word_in_its_retired_meaning():
     "A stage runs `light` or `full`.",
     "The requirements review is a light to full pass.",
     "The requirements review is a `light`-to-`full` pass.",
-    "The slow stage is the `build` stage.",
     "Teams run the build and verify stages in turn.",
     "Teams run the `build` or `verify` stage.",
     "    expected: light",
@@ -1280,6 +1178,9 @@ def test_vr_g9_a_planted_retired_use_is_reported(tmp_path, line):
     "compass run   run the implement or verify stage of one issue unattended",
     "Compass fails the build if the page goes stale, and the light path is short.",
     '"mismatches": [{"field": "stages.implement", "expected": "lightweight", "actual": "thorough"}],',
+    # The path's build stage (ADR-092 decision 1).
+    "The slow stage is the `build` stage.",
+    "One no-pass sends the work back to the build stage.",
     # Ordinary English that shares a word with a retired use.
     "Your CI build stage must run the suite.",
     "Agents can build or verify a claim.",
@@ -1306,7 +1207,6 @@ def test_vr_g9_an_allowed_use_is_not_reported(tmp_path, line):
 
 
 @pytest.mark.parametrize("argv,retired", [
-    (["policy", "diff", "--help"], "active, queued or parked"),
     (["issue", "migrate", "--help"], "A landed issue is refused"),
 ])
 def test_vr_g9_help_text_names_no_retired_state(argv, retired):

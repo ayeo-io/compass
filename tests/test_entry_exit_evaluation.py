@@ -24,13 +24,18 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 
 from test_generation_store import (SLUG, _evaluate_write, _manifest, _project,  # noqa: E402
                                    _run, _write_manifest)
-from test_ready_and_done_data import DONE_IDS, READY_IDS, statements  # noqa: E402
+from test_ready_and_done_data import DONE_IDS, FROZEN, READY_IDS, statements  # noqa: E402
+
+import stored_generation  # noqa: E402
 
 CAPABILITY = "entry-exit-evaluation"
-READY = statements(READY_IDS)
+# The shipped default holds no Definition of Ready since 9.0.0 (ADR-092); the
+# frozen preset `default@7`, which a stored 8.x generation resolves to, keeps it.
+READY = statements(READY_IDS, FROZEN)
 DONE = statements(DONE_IDS)
 
 
@@ -82,15 +87,73 @@ def _config_project(tmp_path, capability=True, manifest=None, **manifest_changes
     return root, task_dir
 
 
-def _view(root, monkeypatch, mutate=None):
+def _assessed_before_the_path(task_dir):
+    """Rewrite the issue's manifest with the keys 8.x stored for its assessment, in
+    place of the path keys `approach evaluate --write` now writes (ADR-092). Only
+    such an issue owes a Definition of Ready (decision D6) and is judged by its
+    verification report."""
+    from test_next_stage import assessed_before_the_path
+    body = _manifest(task_dir)
+    body.pop("evidence_required", None)
+    old = assessed_before_the_path(body["assessment"])
+    old.pop("evidence")
+    body.update(old)
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                           encoding="utf-8")
+
+
+def _legacy_catalogue(resolved):
+    """Give `resolved` the eight legacy stages and the Definition of Ready of the
+    frozen preset `default@7`, as a stored 8.x generation holds them. The shipped
+    default declares the four path stages and no Definition of Ready since 9.0.0
+    (ADR-092), and the issues these tests judge were assessed before it. A stage
+    list or check the project's own layers added is kept."""
+    frozen = {name: yaml.safe_load((FROZEN / f"{name}.yml").read_text(encoding="utf-8"))[name]
+              for name in ("stages", "checks")}
+    own = resolved.get("stages") or {}
+    stages = copy.deepcopy(frozen["stages"])
+    added = {(side, c) for body in own.values() for side in ("entry", "exit")
+             for c in body.get(side) or [] if c not in DONE_IDS}
+    for side, check in sorted(added):
+        target = stages["plan" if side == "entry" else "verify"]
+        target[side] = list(target.get(side) or []) + [check]
+    resolved["stages"] = stages
+    for check_id in READY_IDS:
+        resolved["checks"].setdefault(check_id, copy.deepcopy(frozen["checks"][check_id]))
+
+
+#: The stage map a spike assessed before 9.0.0 recorded.
+SPIKE_8X_STAGES = {"assess": "lightweight", "define": "collapsed", "refine": "skipped",
+                   "plan": "collapsed", "breakdown": "skipped", "implement": "explore",
+                   "verify": "conclude", "ship": "graduate-or-discard"}
+
+
+def _legacy_generation(root, task_dir, slug=SLUG):
+    """Commit the issue's next generation with the legacy catalogue of a stored 8.x
+    generation (`_legacy_catalogue`), so a command run on it reads those lists.
+    Other test files call it for an issue of their own, named by `slug`."""
+    from compass_pkg import effective, generation
+    manifest = _manifest(task_dir)
+    resolution = effective.resolve_live(str(root), manifest, slug, str(task_dir), validate=True)
+    resolved = copy.deepcopy(resolution.resolved)
+    _legacy_catalogue(resolved)
+    generation.commit(str(task_dir), dataclasses.replace(resolution, resolved=resolved),
+                      manifest, force=True)
+
+
+def _view(root, monkeypatch, mutate=None, legacy=True):
     """The live view of the project at `root`, with its resolved configuration
-    changed by `mutate` (a function of the dict)."""
+    changed by `mutate` (a function of the dict). With `legacy`, the view holds
+    the legacy stages and lists of a stored 8.x generation (`_legacy_catalogue`)."""
     from compass_pkg import effective
     monkeypatch.chdir(root)
-    view = effective.view_or_legacy(None)
-    if mutate:
+    view = effective.effective_for(None)
+    if mutate or legacy:
         resolved = copy.deepcopy(view.resolved)
-        mutate(resolved)
+        if legacy:
+            _legacy_catalogue(resolved)
+        if mutate:
+            mutate(resolved)
         view = dataclasses.replace(view, resolved=resolved)
     return view
 
@@ -105,6 +168,38 @@ def _by_check(rows):
     return {row.check: row for row in rows}
 
 
+def _add(resolved, added):
+    """Add to `resolved` the checks of `added` and the ids of its stage lists,
+    as `{"checks": {...}, "stages": {stage: {"entry": [...]}}}`."""
+    resolved["checks"].update(copy.deepcopy(added.get("checks") or {}))
+    for stage, lists in (added.get("stages") or {}).items():
+        body = resolved["stages"].setdefault(stage, {})
+        for side, ids in lists.items():
+            body[side] = list(body.get(side) or []) + [i for i in ids
+                                                      if i not in (body.get(side) or [])]
+
+
+def _stored_project(tmp_path, added, project_doc, legacy=False):
+    """A scratch project whose `compass.yml` is `project_doc`, with its issue
+    evaluated and a stored generation that adds `added` (`_add`). Since 9.0.0 a
+    project cannot add a check through `compass.yml` (ADR-094); a generation
+    stored before 9.0.0 can hold one, so the tests store it. With `legacy`, the
+    generation also holds the legacy catalogue of an 8.x issue
+    (`_legacy_catalogue`)."""
+    (tmp_path / "project").mkdir()
+    root, task_dir = _project(tmp_path / "project", compass_yml=project_doc)
+    code, out, err = _evaluate_write(root)
+    assert code == 0, out + err
+
+    def mutate(resolved):
+        _add(resolved, added)
+        if legacy:
+            _legacy_catalogue(resolved)
+
+    stored_generation.commit(root, task_dir, mutate)
+    return root, task_dir
+
+
 # --- EE-1: the capability off changes nothing ---------------------------------------
 
 def test_ee_1_with_the_capability_off_no_reader_shows_a_list(tmp_path):
@@ -117,8 +212,6 @@ def test_ee_1_with_the_capability_off_no_reader_shows_a_list(tmp_path):
     assert not [r for r in rows if r["name"] in READY_IDS + DONE_IDS], rows
     code, out, err = _run(root, "next", "--issue", SLUG)
     assert "entry" not in out and "exit" not in out, out
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert "Stage lists" not in out, out
 
 
 def test_ee_1_a_view_with_the_capability_off_gives_no_rows(tmp_path, monkeypatch):
@@ -153,97 +246,30 @@ def test_ee_1_a_project_check_that_requires_the_capability_waits_for_it(tmp_path
 
 
 def test_ee_1_check_runs_a_project_deterministic_check_with_the_capability_off(tmp_path):
-    config = _project_check_config()
-    del config["capabilities"]
-    root, task_dir = _project(tmp_path, compass_yml=config)
-    assert _evaluate_write(root)[0] == 0
+    root, task_dir = _project_check_project(tmp_path, capability=False)
     _write_manifest(task_dir, current_phase="plan")
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
+    # A path issue reads the plan entry list at specify, the path stage that
+    # shows plan (ADR-092).
     rows = {r["name"]: r for r in json.loads(out)["checks"]
-            if r["guardrail"] == "stage:plan:entry"}
+            if r["guardrail"] == "stage:specify:entry"}
     assert list(rows) == ["list-scenarios-have-tests"]
     assert rows["list-scenarios-have-tests"]["status"] == "fail" and code != 0
 
 
 # --- EE-2: the Definition of Done is not owed by an approach that does not ship -------------
 
-def test_ee_2_a_spike_owes_no_done_check_and_a_delivery_owes_all_seven(tmp_path, monkeypatch):
-    from compass_pkg import obligations
-    root, _ = _config_project(tmp_path)
-    config = _view(root, monkeypatch).config
-    on = (CAPABILITY,)
-    spike = obligations.obligations(config, {"risk": "trivial", "familiarity": "greenfield",
-                                             "size": "small", "goal": "exploration"},
-                                    capabilities=on)
-    assert spike.approach == "spike"
-    assert spike.exit["verify"] == ()
-    delivery = obligations.obligations(config, {"risk": "contained",
-                                                "familiarity": "brownfield-mapped",
-                                                "size": "medium", "goal": "delivery"},
-                                       capabilities=on)
-    assert delivery.exit["verify"] == tuple(sorted(DONE_IDS))
-    assert delivery.entry["plan"] == tuple(sorted(READY_IDS))
 
-
-def test_ee_2_a_check_can_name_ships_in_its_when(tmp_path, monkeypatch):
-    from compass_pkg import obligations
-    root, _ = _config_project(tmp_path)
-
-    def mutate(resolved):
-        resolved["checks"]["only-shipping"] = {
-            "statement": "x", "kind": "human", "severity": "blocking",
-            "on_skipped": "fail", "when": {"ships": True}}
-        resolved["checks"]["only-not-shipping"] = {
-            "statement": "y", "kind": "human", "severity": "blocking",
-            "on_skipped": "fail", "when": {"ships": False}}
-        resolved["stages"]["verify"]["exit"] += ["only-shipping", "only-not-shipping"]
-
-    config = _view(root, monkeypatch, mutate).config
-    spike = obligations.obligations(config, {"risk": "trivial", "familiarity": "greenfield",
-                                             "size": "small", "goal": "exploration"})
-    regular = obligations.obligations(config, {"risk": "contained",
-                                               "familiarity": "greenfield",
-                                               "size": "medium"})
-    assert "only-not-shipping" in spike.exit["verify"]
-    assert "only-shipping" not in spike.exit["verify"]
-    assert "only-shipping" in regular.exit["verify"]
-    assert "only-not-shipping" not in regular.exit["verify"]
-
-
-@pytest.mark.parametrize("assessment", [
-    {"risk": "trivial", "familiarity": "greenfield", "size": "small", "goal": "exploration"},
-    {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
-     "goal": "delivery"},
-    {"risk": "trivial", "familiarity": "greenfield", "size": "small", "goal": "delivery"},
-])
-def test_ee_2_the_stage_lists_and_the_obligations_read_ships_alike(
-        tmp_path, monkeypatch, assessment):
-    """Whatever the approach, the checks the evaluator lists as owed are the
-    checks the stage lists run."""
-    from compass_pkg import obligations
-    root, task_dir = _config_project(tmp_path)
-    view = _view(root, monkeypatch)
-    owed = obligations.obligations(view.config, assessment, capabilities=(CAPABILITY,))
-    _write_manifest(task_dir, assessment=assessment, delivery_approach=owed.approach,
-                    current_phase="ship", stages=dict(owed.stage_mode))
-    rows = _rows(view, task_dir)
-    assert {r.check for r in rows if r.side == "exit" and r.stage == "verify"} \
-        == set(owed.exit["verify"])
-    assert {r.check for r in rows if r.side == "entry" and r.stage == "plan"} \
-        == set(owed.entry["plan"])
-
-
-def test_ee_2_a_project_check_can_use_ships_in_its_when_and_lint_accepts_it(tmp_path, monkeypatch):
-    config = {"schema": 1,
-              "checks": {"shipping-only": {
-                  "statement": "Release notes written.", "kind": "human",
-                  "severity": "blocking", "on_skipped": "fail", "when": {"ships": True}}},
-              "stages": {"ship": {"set": {"entry": {"add": ["shipping-only"]}}}}}
-    root, task_dir = _project(tmp_path, compass_yml=config)
-    code, out, err = _run(root, "policy", "lint", "--json")
-    assert code == 0, out + err
-    assert not json.loads(out)["counts"]["errors"], out
-    view = _view(root, monkeypatch)
+def test_ee_2_a_stored_check_can_use_ships_in_its_when(tmp_path, monkeypatch):
+    """A check a stored generation holds can read `ships` in its `when`. A
+    project check of 9.0.0 needs no such clause: its gate applies only to an
+    approach that ships (`tighten`)."""
+    added = {"checks": {"shipping-only": {
+                 "statement": "Release notes written.", "kind": "human",
+                 "severity": "blocking", "on_skipped": "fail", "when": {"ships": True}}},
+             "stages": {"ship": {"entry": ["shipping-only"]}}}
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
+    view = _view(root, monkeypatch, lambda resolved: _add(resolved, added))
     for approach, assessment, listed in (
             ("regular", {"risk": "contained", "familiarity": "greenfield",
                          "size": "medium", "goal": "delivery"}, True),
@@ -260,25 +286,16 @@ def test_ee_2_ships_is_not_a_dimension(tmp_path):
     from compass_pkg.core import CompassError
     with pytest.raises(CompassError, match="ships"):
         obligations.assessment_vocabulary({"ships": {"type": "enum", "values": ["yes", "no"]}})
+    # Since 9.0.0 `compass.yml` cannot declare a dimension at all (ADR-094): the key
+    # is a removed setting, read as if absent, so the check set's dimensions stand.
     config = {"schema": 1, "dimensions": {"ships": {
         "type": "enum", "values": ["yes", "no"]}}}
     root, task_dir = _project(tmp_path, compass_yml=config)
     code, out, err = _run(root, "policy", "lint", "--json")
-    assert code != 0 and "ships" in out
-
-
-def test_ee_2_the_classifier_sees_the_ships_condition_come_and_go(tmp_path, monkeypatch):
-    from compass_pkg import classify
-    root, _ = _config_project(tmp_path)
-    parent = _view(root, monkeypatch).config
-    child = copy.deepcopy(parent)
-    for check_id in DONE_IDS:
-        del child["checks"][check_id]["when"]
-    on = (CAPABILITY,)
-    tighter = classify.classify(parent, child, parent_capabilities=on, child_capabilities=on)
-    assert tighter.result == "tightening", tighter.reason
-    looser = classify.classify(child, parent, parent_capabilities=on, child_capabilities=on)
-    assert looser.result == "loosening", looser.reason
+    found = json.loads(out)["findings"]
+    assert [(f["code"], f["path"]) for f in found] == [("L-SETTING-REMOVED", "dimensions")]
+    from compass_pkg import effective
+    assert "ships" not in effective.resolve_live(str(root)).resolved["dimensions"]
 
 
 # --- EE-3: a human check is a tick ---------------------------------------------------------
@@ -422,8 +439,13 @@ QUICK_FIX = {"risk": "trivial", "familiarity": "greenfield", "size": "small",
 
 def test_ee_4_a_quick_fix_owes_no_verification_report_so_the_done_checks_have_nothing_to_check(
         tmp_path, monkeypatch):
+    # The live default owes the report by the stage modes since 9.0.0 (ADR-091), so the
+    # manifest holds the quick fix's own modes, as approach evaluate writes them.
     root, task_dir = _config_project(
-        tmp_path, delivery_approach="quick-fix", assessment=QUICK_FIX, current_phase="ship")
+        tmp_path, delivery_approach="quick-fix", assessment=QUICK_FIX, current_phase="ship",
+        stages={"assess": "thorough", "define": "lightweight", "refine": "collapsed",
+                "plan": "collapsed", "breakdown": "skipped", "implement": "thorough",
+                "verify": "lightweight", "ship": "lightweight"})
     rows = [r for r in _rows(_view(root, monkeypatch), task_dir)
             if r.side == "exit" and r.due]
     assert {r.check for r in rows} == set(DONE_IDS)
@@ -436,27 +458,6 @@ def test_ee_4_a_route_that_owes_the_document_fails_when_it_is_missing(tmp_path, 
     rows = [r for r in _rows(_view(root, monkeypatch), task_dir)
             if r.side == "exit" and r.due]
     assert rows and all(r.status == "fail" and "not recorded" in r.detail for r in rows)
-
-
-def test_ee_4_growing_the_quick_fix_artifacts_makes_the_done_checks_owed_everywhere(tmp_path):
-    """The classifier's artifact set and the stage lists read one source."""
-    from compass_pkg import obligations
-    config = {"schema": 1, "capabilities": {CAPABILITY: True},
-              "approaches": {"quick-fix": {"set": {"artifacts": {
-                  "delivery-approach": "light", "verification-note": "light",
-                  "verification-report": "full"}}}}}
-    root, task_dir = _project(tmp_path, manifest=dict(
-        _manifest_for(QUICK_FIX)), compass_yml=config)
-    code, out, err = _evaluate_write(root)
-    assert code == 0, out + err
-    _write_manifest(task_dir, current_phase="ship")
-    assert _manifest(task_dir)["delivery_approach"] == "quick-fix"
-    assert "verification-report" in {a["kind"] for a in _manifest(task_dir)["artifacts"]}
-    data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
-    rows = [r for r in data["checks"] if r["guardrail"] == "stage:verify:exit"]
-    assert [r["name"] for r in rows] == DONE_IDS
-    assert {r["status"] for r in rows} == {"fail"}
-    assert "not recorded" in rows[0]["detail"]
 
 
 def _manifest_for(assessment):
@@ -588,18 +589,16 @@ def test_ee_7_a_blocking_when_that_does_not_match_makes_a_list_failure_advisory(
 
 
 def test_ee_7_an_advisory_list_failure_is_shown_counted_and_recorded_as_advisory(tmp_path):
-    root, task_dir = _config_project(tmp_path, capability=False)
-    config = _project_check_config()
-    del config["capabilities"]
-    config["checks"]["list-scenarios-have-tests"]["severity"] = "advisory"
-    (root / "compass.yml").write_text(yaml.safe_dump(config), encoding="utf-8")
-    assert _evaluate_write(root)[0] == 0
+    root, task_dir = _project_check_project(tmp_path, capability=False,
+                                                 severity="advisory")
     _write_manifest(task_dir, current_phase="plan")
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
     row = [r for r in data["checks"] if r["name"] == "list-scenarios-have-tests"][0]
-    assert row["status"] == "advisory" and row["guardrail"] == "stage:plan:entry"
+    # The plan entry list is read at specify on a path issue (ADR-092).
+    assert row["status"] == "advisory" and row["guardrail"] == "stage:specify:entry"
     assert data["advisory"] >= 1
-    results = yaml.safe_load((task_dir / "generations" / "1" / "results.yml")
+    held = _manifest(task_dir)["generation"]
+    results = yaml.safe_load((task_dir / "generations" / str(held) / "results.yml")
                              .read_text(encoding="utf-8"))
     assert results["runs"]["list-scenarios-have-tests"]["verdict"] == "advisory"
     text = _run(root, "check", "--issue", SLUG, "--verbose")[1]
@@ -674,13 +673,6 @@ def test_ee_9_next_names_only_the_current_stages_entry_checks(tmp_path):
     assert "entry not met" not in out, out
 
 
-def test_ee_10_the_stage_lists_come_before_the_verdict(tmp_path):
-    root, task_dir = _committed(tmp_path)
-    _write_review(task_dir)
-    out = _run(root, "issue", "receipt", "--issue", SLUG)[1]
-    assert out.index("Stage lists") < out.index("Verdict:")
-
-
 def test_ee_8_a_spike_check_counts_its_nothing_to_check_rows(tmp_path):
     root, task_dir = _config_project(
         tmp_path, assessment={"risk": "trivial", "familiarity": "greenfield",
@@ -688,6 +680,13 @@ def test_ee_8_a_spike_check_counts_its_nothing_to_check_rows(tmp_path):
                               "labels": []})
     assert _evaluate_write(root)[0] == 0
     _write_manifest(task_dir, current_phase="ship")
+    # On the shipped default a spike owes no list: there is no Definition of
+    # Ready, and the Definition of Done holds only for a change that ships (ADR-092).
+    data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
+    assert not [r for r in data["checks"] if r["guardrail"].startswith("stage:")]
+    # A spike assessed before 9.0.0 still counts its Definition of Ready rows.
+    _legacy_generation(root, task_dir)
+    _write_manifest(task_dir, stages=SPIKE_8X_STAGES)
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
     listed = [r for r in data["checks"] if r["guardrail"].startswith("stage:")]
     assert data["nothing_to_check"] >= len(listed) >= 7
@@ -700,50 +699,28 @@ def test_ee_2_an_unknown_approach_ships_by_default(tmp_path, monkeypatch):
     assert view.listing_assessment({"risk": "trivial"}, None)["ships"] is True
 
 
-def test_ee_2_obligations_read_ships_in_blocking_when_and_in_a_gate_condition(
-        tmp_path, monkeypatch):
-    from compass_pkg import obligations
-    root, _ = _config_project(tmp_path)
-
-    def mutate(resolved):
-        resolved["checks"]["ship-blocks"] = {
-            "statement": "x", "kind": "human", "severity": "blocking",
-            "on_skipped": "fail", "blocking_when": {"ships": True}}
-        resolved["stages"]["verify"]["exit"] += ["ship-blocks"]
-        resolved["gates"]["GX"] = {"kind": "guardrail", "name": "x", "statement": "x",
-                                   "stage": "verify", "checks": [], "when": {"ships": False}}
-
-    config = _view(root, monkeypatch, mutate).config
-    spike = obligations.obligations(config, {"risk": "trivial", "familiarity": "greenfield",
-                                             "size": "small", "goal": "exploration"})
-    regular = obligations.obligations(config, {"risk": "contained",
-                                               "familiarity": "greenfield",
-                                               "size": "medium"})
-    assert spike.checks["ship-blocks"]["severity"] == "advisory"
-    assert regular.checks["ship-blocks"]["severity"] == "blocking"
-    assert "GX" not in regular.gate_set
-    assert "GX" in spike.gate_set
-
-
 def test_ee_2_check_reads_ships_in_a_gate_check_blocking_when(tmp_path):
-    config = {"schema": 1,
-              "checks": {"extra-tests": {
-                  "statement": "Every scenario has a test.", "kind": "deterministic",
-                  "impl": "scenarios-have-tests", "severity": "blocking",
-                  "blocking_when": {"ships": True}, "on_skipped": "fail"}},
-              "gates": {"G1": {"set": {"checks": {"add": ["extra-tests"]}}}}}
-    root, task_dir = _project(tmp_path, compass_yml=config)
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
     code, out, err = _evaluate_write(root)
     assert code == 0, out + err
+
+    def add(resolved):
+        resolved["checks"]["extra-tests"] = {
+            "statement": "Every scenario has a test.", "kind": "deterministic",
+            "impl": "scenarios-have-tests", "severity": "blocking",
+            "blocking_when": {"ships": True}, "on_skipped": "fail"}
+        resolved["gates"]["G1"]["checks"] = list(resolved["gates"]["G1"]["checks"]) + [
+            "extra-tests"]
+
+    stored_generation.commit(root, task_dir, add)
     data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
     row = [r for r in data["checks"] if r["name"] == "extra-tests"][0]
     assert row["status"] == "fail", row
 
 
 def test_ee_7_the_shipped_default_names_no_judged_or_evidence_check_in_a_list():
-    preset = ROOT / "governance" / "presets" / "default"
-    checks = yaml.safe_load((preset / "checks.yml").read_text(encoding="utf-8"))["checks"]
-    stages = yaml.safe_load((preset / "stages.yml").read_text(encoding="utf-8"))["stages"]
+    checks = shipped("checks.yml")["checks"]
+    stages = shipped("stages.yml")["stages"]
     listed = [c for body in stages.values() for side in ("entry", "exit")
               for c in body.get(side, [])]
     assert listed
@@ -751,21 +728,14 @@ def test_ee_7_the_shipped_default_names_no_judged_or_evidence_check_in_a_list():
 
 
 def _judged_list_config():
-    return {"schema": 1,
-            "checks": {"design-reviewed": {
+    """An evidence check in the specify entry list, as `_add` takes it. The
+    check set has no plan stage since 9.0.0 (ADR-092); an issue assessed before
+    it reads the check in its plan entry list (`_legacy_catalogue`)."""
+    return {"checks": {"design-reviewed": {
                 "statement": "A test run is on record.", "kind": "evidence",
                 "accepts": ["test-run"], "severity": "blocking",
                 "on_skipped": "fail"}},
-            "stages": {"plan": {"set": {"entry": {"add": ["design-reviewed"]}}}}}
-
-
-def test_ee_7_lint_warns_when_a_list_names_a_kind_this_version_does_not_evaluate(tmp_path):
-    root, task_dir = _project(tmp_path, compass_yml=_judged_list_config())
-    code, out, err = _run(root, "policy", "lint", "--json")
-    assert code == 0, out + err
-    found = [f for f in json.loads(out)["findings"] if f["code"] == "M-LIST-KIND-UNEVALUATED"]
-    assert len(found) == 1 and found[0]["level"] == "warning"
-    assert "design-reviewed" in found[0]["message"] and "evidence" in found[0]["message"]
+            "stages": {"specify": {"entry": ["design-reviewed"]}}}
 
 
 def test_ee_7_lint_is_quiet_for_the_shipped_default(tmp_path):
@@ -777,22 +747,27 @@ def test_ee_7_lint_is_quiet_for_the_shipped_default(tmp_path):
 
 
 def test_ee_7_an_evidence_check_a_project_adds_fails_with_the_capability_off(tmp_path, monkeypatch):
-    root, task_dir = _project(tmp_path, compass_yml=_judged_list_config())
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
     body = _manifest(task_dir)
     body.update({"delivery_approach": "regular", "current_phase": "plan",
                  "stages": {"refine": "light", "plan": "full"}})
     (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
                                            encoding="utf-8")
-    rows = _by_check(_rows(_view(root, monkeypatch), task_dir))
+    view = _view(root, monkeypatch, lambda resolved: _add(resolved, _judged_list_config()))
+    rows = _by_check(_rows(view, task_dir))
     assert rows["design-reviewed"].status == "fail"
 
 
 # --- EE-8: compass check reports the rows and counts them ----------------------------------------
 
 def _committed(tmp_path, **changes):
+    """An issue at plan, committed at generation 1 and assessed before the path:
+    the tests that use it read the Definition of Ready, the plan entry list."""
     root, task_dir = _config_project(tmp_path, **changes)
     code, out, err = _evaluate_write(root)
     assert code == 0, out + err
+    _legacy_generation(root, task_dir)
+    _assessed_before_the_path(task_dir)
     _write_manifest(task_dir, current_phase="plan")
     return root, task_dir
 
@@ -821,6 +796,8 @@ def test_ee_8_a_failed_list_check_adds_one_to_the_failed_count(tmp_path):
     (tmp_path / "off").mkdir()
     capability_off, off_dir = _config_project(tmp_path / "off", capability=False)
     assert _evaluate_write(capability_off)[0] == 0
+    _assessed_before_the_path(off_dir)
+    _write_manifest(off_dir, current_phase="plan")
     off = json.loads(_run(capability_off, "check", "--issue", SLUG, "--json")[1])
     assert ticked["ran"] == off["ran"] + 7
 
@@ -846,7 +823,9 @@ def test_ee_8_the_results_file_records_the_list_checks(tmp_path):
     root, task_dir = _committed(tmp_path)
     _write_review(task_dir)
     _run(root, "check", "--issue", SLUG)
-    results = yaml.safe_load((task_dir / "generations" / "1" / "results.yml")
+    # `_committed` stores the legacy catalogue as the issue's next generation.
+    number = str(_manifest(task_dir)["generation"])
+    results = yaml.safe_load((task_dir / "generations" / number / "results.yml")
                              .read_text(encoding="utf-8"))
     assert results["runs"]["dor-summary-filled"]["verdict"] == "pass"
 
@@ -857,7 +836,8 @@ def test_ee_8_a_spike_check_reports_the_ready_list_as_not_applicable(tmp_path):
                               "size": "small", "goal": "exploration", "role": "engineer",
                               "labels": []})
     assert _evaluate_write(root)[0] == 0
-    _write_manifest(task_dir, current_phase="ship")
+    _legacy_generation(root, task_dir)
+    _write_manifest(task_dir, current_phase="ship", stages=SPIKE_8X_STAGES)
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
     data = json.loads(out)
     assert data["approach"] == "spike"
@@ -875,42 +855,59 @@ def test_ee_9_next_names_the_unmet_entry_checks_of_the_current_stage(tmp_path):
     code, out, err = _run(root, "next", "--issue", SLUG)
     assert code == 0, err
     line = out.strip()
-    assert line.startswith("Plan")
+    # The legacy plan stage shows as Specify (ADR-092); the Definition of Ready
+    # checks named below are plan's entry list, so the stage is still plan.
+    assert line.startswith("Specify")
     assert "entry not met: dor-no-open-questions, dor-approach-still-fits" in line, line
     _write_review(task_dir)
     code, out, err = _run(root, "next", "--issue", SLUG)
     assert "entry" not in out, out
 
 
-# --- EE-10: the receipt lists the checks and their state -----------------------------------------
-
-def test_ee_10_the_receipt_shows_each_list_with_its_state(tmp_path):
-    root, task_dir = _committed(tmp_path)
-    _write_review(task_dir, ticked=range(6))
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert code == 0, err
-    assert "Stage lists" in out
-    assert "plan entry (due)" in out and "verify exit (not yet due)" in out
-    assert re.search(r"dor-approach-still-fits\s+fail", out), out
-    assert re.search(r"dor-summary-filled\s+pass", out), out
+# --- EE-10: check runs a list's deterministic check ----------------------------------------------
+#
+# The receipt also showed each list and its state; 9.0.0 removed it (ADR-091).
 
 
-def _project_check_config():
-    return {"schema": 1, "capabilities": {CAPABILITY: True},
-            "checks": {"list-scenarios-have-tests": {
+def _project_check_added(severity="blocking"):
+    """A deterministic check in the specify entry list, as `_add` takes it. The
+    check set has no plan stage since 9.0.0 (ADR-092); an issue assessed before
+    it reads the check in its plan entry list (`_legacy_catalogue`)."""
+    return {"checks": {"list-scenarios-have-tests": {
                 "statement": "Every scenario has a test.", "kind": "deterministic",
-                "impl": "scenarios-have-tests", "severity": "blocking",
+                "impl": "scenarios-have-tests", "severity": severity,
                 "on_skipped": "fail"}},
-            "stages": {"plan": {"set": {"entry": {"add": ["list-scenarios-have-tests"]}}}}}
+            "stages": {"specify": {"entry": ["list-scenarios-have-tests"]}}}
 
 
-def test_ee_10_the_receipt_does_not_run_a_deterministic_check_but_check_does(tmp_path):
-    root, task_dir = _project(tmp_path, compass_yml=_project_check_config())
-    assert _evaluate_write(root)[0] == 0
+def _project_check_project(tmp_path, capability=True, severity="blocking", legacy=False):
+    """A scratch project whose stored generation adds `_project_check_added`, and
+    its issue directory."""
+    config = {"schema": 1}
+    if capability:
+        config["capabilities"] = {CAPABILITY: True}
+    return _stored_project(tmp_path, _project_check_added(severity), config, legacy=legacy)
+
+
+def test_ee_10_check_runs_a_deterministic_check_a_project_adds(tmp_path):
+    root, task_dir = _project_check_project(tmp_path)
     _write_manifest(task_dir, current_phase="plan")
     _write_review(task_dir)
-    code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-    assert re.search(r"list-scenarios-have-tests\s+pending", out), out
+    code, out, err = _run(root, "check", "--issue", SLUG, "--json")
+    checks = json.loads(out)["checks"]
+    # A path issue reads the plan entry list at specify and owes no
+    # Definition of Ready (ADR-092 decision D6), so no `dor-*` check is listed.
+    rows = {r["name"]: r for r in checks if r["guardrail"] == "stage:specify:entry"}
+    assert rows["list-scenarios-have-tests"]["status"] == "fail"
+    assert not [r for r in checks if r["guardrail"].startswith("stage:")
+                and r["name"].startswith("dor-")], checks
+
+
+def test_ee_10_an_issue_assessed_before_the_path_runs_it_beside_the_ready_list(tmp_path):
+    root, task_dir = _project_check_project(tmp_path, legacy=True)
+    _assessed_before_the_path(task_dir)
+    _write_manifest(task_dir, current_phase="plan")
+    _write_review(task_dir)
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
     rows = {r["name"]: r for r in json.loads(out)["checks"]
             if r["guardrail"] == "stage:plan:entry"}
@@ -932,12 +929,15 @@ def test_ee_11_dod_evidence_typed_still_runs_with_the_capability_on(tmp_path):
 # --- EE-12: the default preset, help text and owning doc -----------------------------------------
 
 def test_ee_12_every_done_check_carries_the_ships_condition():
-    checks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "checks.yml")
-                            .read_text(encoding="utf-8"))["checks"]
+    checks = shipped("checks.yml")["checks"]
+    frozen = yaml.safe_load((FROZEN / "checks.yml").read_text(encoding="utf-8"))["checks"]
     for check_id in DONE_IDS:
         assert checks[check_id].get("when") == {"ships": True}, check_id
+        assert frozen[check_id].get("when") == {"ships": True}, check_id
+    # The shipped default holds no Definition of Ready (ADR-092); the frozen one does.
     for check_id in READY_IDS:
-        assert "when" not in checks[check_id], check_id
+        assert check_id not in checks, check_id
+        assert "when" not in frozen[check_id], check_id
 
 
 def test_ee_12_the_help_text_and_the_owning_doc_describe_the_lists():

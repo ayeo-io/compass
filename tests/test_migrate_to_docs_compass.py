@@ -253,16 +253,15 @@ def test_trc_g2_the_offer_is_taken_up_by_apply(tmp_path):
 
 # --- `TRC-E4` ------------------------------------------------------------------
 
-#: The five worked examples the scenario names. `examples/bdd-adapters/` holds
-#: four adapter reference fixtures rather than worked examples: each is a
+#: The worked examples that remain of the five the scenario named. ADR-093
+#: removed the feature, hotfix and initiative examples.
+#: `examples/bdd-adapters/` holds four adapter reference fixtures rather than worked examples: each is a
 #: minimal `reset-password` issue that shows how one BDD runner is wired, and
 #: none of them has ever had gates or a recorded green, so `compass check`
 #: fails on all four and did before this change. They hold documents an
 #: adopter reads, so the layout check below covers every example issue.
-#: Only the `compass check` clause is scoped to the five.
-WORKED_EXAMPLES = ("feature-api-change", "hotfix-regression",
-                   "initiative-new-subsystem", "quick-fix-typo",
-                   "spike-technical-unknown")
+#: Only the `compass check` clause is scoped to the worked examples.
+WORKED_EXAMPLES = ("quick-fix-typo", "spike-technical-unknown")
 
 
 def _example_issue_dirs():

@@ -3,14 +3,26 @@
 Every reason code the pre-tool hook can refuse with, and the landing refusals
 of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`,
 `release-line-missing` and `release-line-heading`, which `docs/release-line.md`
-describes, and `project-decision-unrecorded`, which ADR-072 describes), generated
-from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not hand-edit
-the list below - regenerate it after any change to the registry, and
+describes, and `definition-of-done-open`, which only `compass ship-commit`
+gives), the refusal of `compass tdd-red` before the scenario sign-off
+(`scenarios-not-approved`), the refusal of `compass check` when a setting or
+an open waiver names a deleted check (`names-deleted-check`), and the project
+refusals of `compass migrate` (`governance-copy-removed` and
+`git-parent-removed`), generated from `cli/compass_pkg/refusals.py` by
+`compass _refusal --list`. Do not hand-edit the list below - regenerate it after any change to the registry, and
 `tests/test_refusal_registry.py` fails the build if it is out of date.
 
 A refusal always has three lines - `Blocked:`, `Why:`, `Fix:` - and ends
 with its code in brackets, e.g. `[no-red-on-record]`. Search this page for the
 code of a refusal you get.
+
+Each `Fix:` line names a command the CLI accepts as written, with only its
+placeholders to fill, or says what clears the refusal when no command can.
+`tests/test_refusal_fix_commands.py` parses each named command with the CLI's
+own parser. The code that refuses fills a placeholder in braces, such as
+`{slug}`; the reader fills one in angle brackets, such as `<slug>`. A filled
+value is cut to 20 words, to 12 for `definition-of-done-open`, whose fix
+line is long, and to 16 for `names-deleted-check`, which lists each item.
 
 ## When `/compass:approve` cannot name an approver
 
@@ -23,7 +35,7 @@ reason code and are not in the generated list.
 
 | Cause | Message |
 |---|---|
-| `compass.yml` cannot be read | `compass.yml` cannot be read: {the loader's reason}. Fix that file, or set `COMPASS_APPROVER` before starting Claude Code. |
+| `compass.yml` cannot be read, or has a settings lint error | `compass.yml` cannot be read: {the loader's reason, or the first lint error}. Fix that file, or set `COMPASS_APPROVER` before starting Claude Code. |
 | `owner` is not text | `owner` in `compass.yml` is {a number, a boolean, a list or a mapping}, not text. Quote it, for example `owner: "123"`, or set `COMPASS_APPROVER`. |
 | `owner` is set only in `.compass/config.yml` | `owner` is set only in `.compass/config.yml`. Add `owner: <your id>` to `compass.yml`, or set `COMPASS_APPROVER`. |
 | `compass.yml` is above the project root | `compass.yml` is in {the folder where it is}, but `.compass` is in {the project root}. Copy it there, or set `COMPASS_APPROVER`. |
@@ -37,19 +49,13 @@ reason code and are not in the generated list.
 
 **Blocked:** {target} (tool: {tool})
 **Why:** an approval binds to the request a person was shown.
-**Fix:** do not read, change or run these files. Ask with compass evidence request; the person answers with /compass:approve.
-
-### `artifact-rule-not-applied`
-
-**Blocked:** landing of issue '{slug}'
-**Why:** {documents} is on disk, so {rules} applies, but the recorded approach was evaluated before the document was there.
-**Fix:** run compass approach evaluate --issue {slug} --write, pass any gate it adds, then ship again.
+**Fix:** do not read, change or run these files. Ask with compass evidence request --checkpoint <stage>; the person answers with /compass:approve.
 
 ### `bad-current-task`
 
 **Blocked:** this edit
 **Why:** '.compass/current-task' names '{slug}', which is not one path segment - a slug names a directory directly under .compass/work/.
-**Fix:** fix .compass/current-task to name a real issue slug, then retry.
+**Fix:** run compass issue use <slug> with a real issue slug, then retry. To list the issues, run compass flow.
 
 ### `bad-session-issue`
 
@@ -79,7 +85,13 @@ reason code and are not in the generated list.
 
 **Blocked:** landing of issue '{slug}'
 **Why:** {stages} {is} listed in checkpoints with no outcome recorded, so nothing shows a person answered {it}.
-**Fix:** the person who answers runs compass evidence approve --checkpoint {stage} --approver <you> --role <role>, for each stage named, then ship again.
+**Fix:** for each stage named, run compass evidence request --checkpoint {stage} --issue {slug} and stop; the person answers with /compass:approve. Then ship again.
+
+### `code-before-approval`
+
+**Blocked:** edit to {target} (tool: {tool})
+**Why:** the scenarios of {slug} need a person's approval before code, and the specify checkpoint has no answer from a person.
+**Fix:** write the scenarios in the issue's acceptance-criteria.md, run compass evidence request --checkpoint specify and stop; the person answers with /compass:approve.
 
 ### `config-invalid`
 
@@ -87,11 +99,17 @@ reason code and are not in the generated list.
 **Why:** '{file}' could not be read: {detail}
 **Fix:** fix {file} and retry.
 
+### `definition-of-done-open`
+
+**Blocked:** landing of issue '{slug}'
+**Why:** the check dod-evidence-typed failed: {detail}
+**Fix:** for each open item, run compass follow-up add FU-<n> --issue {slug} --defers <item> --github <owner/repo#N> --summary "<why>", or compass evidence add EV-<n> --issue {slug} --type <type> --path <file> --meets <item>. Then ship again.
+
 ### `delegation-caller-mismatch`
 
 **Blocked:** delegated approval (--as {named})
 **Why:** Claude Code reports this call as {caller}, and a delegated approval must name exactly the agent that makes it. A word the shell could build is refused too.
-**Fix:** run it from the agent the delegation names, with --as set to that agent's full name, or ask with compass evidence request.
+**Fix:** run it as the named agent, with --as set to its full name, or ask with compass evidence request --checkpoint <stage> --issue <slug>.
 
 ### `delegation-protected`
 
@@ -99,23 +117,47 @@ reason code and are not in the generated list.
 **Why:** a delegation is a person's decision, and its folder holds the check for its confirmation code.
 **Fix:** do not read or write these files; the person types /compass:delegate or /compass:revoke.
 
+### `git-parent-removed`
+
+**Blocked:** {verb} in this project
+**Why:** compass.yml extends the git parent {parent}, and Compass 9.0.0 removed git parents.
+**Fix:** move the checks the parent adds into compass.yml (signoff_labels, require_evidence, agent_review, project_checks), delete extends:, then run compass migrate again.
+
+### `governance-copy-removed`
+
+**Blocked:** {verb} in this project
+**Why:** governance/ holds a copy of routing-policy.yml or guardrails.yml and there is no compass.yml. Compass 9.0.0 does not read copied governance.
+**Fix:** on Compass 8.x, run compass policy migrate to write compass.yml, then run compass migrate again. docs/upgrade-9-0-0.md lists the steps.
+
+### `names-deleted-check`
+
+**Blocked:** compass check of issue {slug}
+**Why:** {named} - each names a check Compass no longer has.
+**Fix:** {fix}; then rerun compass check --issue {slug}.
+
 ### `no-acceptance-criteria`
 
 **Blocked:** edit to {target} (tool: {tool})
 **Why:** the acceptance-before-code guardrail blocks this: define: thorough is set but manifest.yml has no scenarios.
-**Fix:** add the scenarios to acceptance-criteria.md and manifest.yml (compass scenario add), or run /compass:assess --reassess if this is exploratory.
+**Fix:** add the first scenario to acceptance-criteria.md with compass scenario add TRC-001 --issue {slug} --intent "<one sentence>", or run /compass:assess --reassess if this is exploratory.
 
 ### `no-delivery-approach`
 
 **Blocked:** this edit
-**Why:** issue '{slug}' has no delivery-approach.md - its assessment did not finish.
+**Why:** issue '{slug}' has no delivery approach in its manifest - its assessment did not finish.
 **Fix:** run /compass:assess.
 
 ### `no-red-on-record`
 
 **Blocked:** edit to {target} (tool: {tool}, guarded by {guard})
 **Why:** no failing test is recorded for issue '{slug}' in {project}.
-**Fix:** run compass tdd-red --scenario <id> -- <failing test command>, or compass acceptance start if none fits, then retry.
+**Fix:** run compass tdd-red --scenario <id> -- <failing test command>, or compass acceptance start --kind <kind> if none fits.
+
+### `no-scenario`
+
+**Blocked:** edit to {target} (tool: {tool})
+**Why:** the acceptance-before-code guardrail blocks this: the issue is on the four-stage path, which owes scenarios before code, and manifest.yml has none.
+**Fix:** add the first scenario with compass scenario add TRC-001 --issue {slug} --intent "<one sentence>", or run /compass:assess --reassess if this is exploratory.
 
 ### `not-initialized`
 
@@ -123,19 +165,17 @@ reason code and are not in the generated list.
 **Why:** no issue has been assessed yet - {detail}.
 **Fix:** run /compass:assess before changing code, or /compass:quick-fix for a small, low-risk change.
 
-**Old code:** `not-initialised` is read until 9.0.0. <!-- us-english-scan: allow - old code, read until 9.0.0 -->
-
 ### `pointer-moved`
 
 **Blocked:** this edit
 **Why:** another session moved .compass/current-task in this session's own project from this session's issue '{previous}' to '{slug}', so this edit would count against the wrong issue.
 **Fix:** in this session, run `compass issue use {previous}` to carry on, or `compass issue use {slug}` to switch, then retry.
 
-### `project-decision-unrecorded`
+### `pr-review-protected`
 
-**Blocked:** landing of issue '{slug}'
-**Why:** technical-design.md scopes {decisions} to the whole project, and no record in architecture/decisions/ names {it}.
-**Fix:** write {path} with compass adr new, cite its id under the decision, then ship again.
+**Blocked:** {target} (tool: {tool})
+**Why:** an approving review of a pull request is a person's approval of the change, and the agent runs gh with that person's login.
+**Fix:** ask a person to review and approve the pull request; a comment review and a read of the reviews are allowed.
 
 ### `python-missing`
 
@@ -164,14 +204,20 @@ reason code and are not in the generated list.
 ### `release-line-heading`
 
 **Blocked:** the release line of issue '{slug}'
-**Why:** it starts with #, and the living spec reads a line such as ### <slug> (completed <date>) as one of its issue headings.
-**Fix:** write the release line as plain text that does not start with #, then run the command again.
+**Why:** it starts with #, so the release notes would print it as a heading.
+**Fix:** run {verb} again with --release-note "<plain text>".
 
 ### `release-line-missing`
 
 **Blocked:** landing of issue '{slug}'
 **Why:** issue '{slug}' has no release line, and its approach owes one: a sentence for users that the release notes list.
-**Fix:** give it with --release-note "<text written for a user>", then run the command again.
+**Fix:** run {verb} again with --release-note "<a sentence for users>".
+
+### `scenarios-not-approved`
+
+**Blocked:** red for issue '{slug}'
+**Why:** the scenarios of {slug} need a person's approval before code, and the specify checkpoint has no answer from a person.
+**Fix:** run compass evidence request --checkpoint specify --issue {slug} and stop; the person answers with /compass:approve. Then run the red again.
 
 ### `settings-conflict`
 

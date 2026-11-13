@@ -3,7 +3,7 @@
 prose rewrite changed no behaviour: no printed string, no asserted string
 and no code body. `prose-breaks-the-writing-style` needs this because
 `verify.architecture` accepts only a `test-run` or a `command-output`
-(`gate_evidence_requirements` in `governance/guardrails.yml`), and this is the command that produces one.
+(`gate_evidence_requirements` in `guardrails.yml`), and this is the command that produces one.
 
 Comparison, per file type:
 
@@ -329,7 +329,7 @@ def _blank_yaml_prose(text: str) -> str:
     - **A sequence.** Each item blanks to one `-` marker and its wrapped
       continuation lines go, so an item can be reworded and rewrapped freely
       while the item COUNT is still compared. Deleting a tie-breaker from
-      `governance/routing-policy.yml`'s `biases:` is not a rewording, and a
+      `routing-policy.yml`'s `biases:` is not a rewording, and a
       reader would never see it go. An item that is itself a mapping
       (`- name: x`) is left alone, because its keys are values.
     - **A mapping.** Left entirely alone. Its keys are values, not prose, and

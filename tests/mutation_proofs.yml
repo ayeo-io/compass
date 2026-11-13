@@ -1,6 +1,5 @@
-# Mutation proofs for every check under `checks:` in
-# governance/presets/default/checks.yml (governance/guardrails.yml is generated
-# from it).
+# Mutation proofs for every deterministic check under `checks:` in
+# governance/check-set.yml (ADR-094).
 #
 # The mutation-proof strategy in governance/strategies.md accepts a guard only
 # on a demonstrated failure. Here a proof is a pair of tests that run on
@@ -16,17 +15,6 @@
 # named here does not exist. .github/scripts/check_mutation_runner.py, run by
 # the check-mutation CI job, breaks each check in a copy of the checkout and
 # fails when its `fails` or `restores` test does not go red.
-
-- check: borrowed-documents-answered
-  broken: a threat in the threat model with no scenario or accepted risk
-  fails: tests/test_borrowed_document_shapes.py::test_trc_a2
-  restores: tests/test_borrowed_document_shapes.py::test_trc_a2
-  record: .compass/work/adaptive-artifact-composition/evidence/mutation-round.txt
-
-- check: rendered-blocks-current
-  broken: a rendered block edited by hand after the last render
-  fails: tests/test_rendered_blocks_check.py::test_dcj_14_stale_block_fails_at_verify
-  restores: tests/test_rendered_blocks_check.py::test_dcj_15_stale_block_before_verify_is_advisory
 
 - check: landed-by-resolves
   broken: a landed_by pointer at an issue that does not exist
@@ -84,35 +72,50 @@
   fails: tests/test_check_guardrails.py::test_check_fails_on_unpaid_backfill
   restores: tests/test_check_guardrails.py::test_check_passes_with_paid_backfill
 
-- check: artifacts-approved
-  broken: a registered document left as a draft when every gate has passed
-  fails: tests/test_ship_commit_refuses_unapproved.py::test_asw_16_ship_commit_refuses_draft_design
-  restores: tests/test_ship_commit_refuses_unapproved.py::test_asw_18_omitted_with_reason_passes_ship_commit
-
 - check: nfr-rows-resolved
   broken: a concern row with neither a scenario nor a reason, a missing row, an unknown id
   fails: tests/test_document_set_sections.py::test_dss_10_nfr_fails_bad_rows
   restores: tests/test_document_set_sections.py::test_dss_9_nfr_passes_resolved_table
-
-- check: contracts-declared
-  broken: a schema change with a Data and interfaces section that declares no contract
-  fails: tests/test_document_set_sections.py::test_dss_14_contracts_fails_undeclared
-  restores: tests/test_document_set_sections.py::test_dss_15_contracts_passes_declared
-
-- check: design-within-word-ceiling
-  broken: a 6,001-word technical design at implement, over the threshold of 6,000
-  fails: tests/test_word_ceilings_check.py::test_wcl_7_check_refuses_far_over
-  restores: tests/test_word_ceilings_check.py::test_wcl_16_prd_measure_full_fixture
 
 - check: acceptance-applicability-agrees
   broken: an issue assessed as out of scope that then records a red
   fails: tests/acceptance/atdd_strategy/test_strategy_routing.py::test_trc_a5
   restores: tests/acceptance/atdd_strategy/test_strategy_routing.py::test_trc_a3
 
+- check: outer-loop-attempts-recorded
+  broken: an in-scope issue whose outer-loop green has no `attempts` field
+  fails: tests/acceptance/atdd_strategy/test_attempts.py::test_trc_g2
+  restores: tests/acceptance/atdd_strategy/test_attempts.py::test_trc_g2_restored
+
 - check: outer-loop-recorded
   broken: an in-scope issue whose only red and green records are inner
   fails: tests/acceptance/atdd_strategy/test_loop_marking.py::test_trc_e3
   restores: tests/acceptance/atdd_strategy/test_loop_marking.py::test_trc_e5
+
+- check: acceptance-support-present
+  broken: an in-scope issue in a project with no alias helper
+  fails: tests/acceptance/atdd_strategy/test_readiness.py::test_trc_i2
+  restores: tests/acceptance/atdd_strategy/test_readiness.py::test_trc_i2_all_four_pieces_pass_the_check
+
+- check: isolation-proven
+  broken: an in-scope issue at verify with no `isolation-proof` record
+  fails: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f2
+  restores: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f7
+
+- check: layering-test-passed
+  broken: an in-scope issue at verify with no `layering` record
+  fails: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f7
+  restores: tests/acceptance/atdd_strategy/test_isolation_layering.py::test_trc_f5
+
+- check: request-recorded
+  broken: an issue that owes `request` with no request on record
+  fails: tests/test_request_recorded_check.py::test_no_request_fails_and_names_both_parts_and_the_command
+  restores: tests/test_request_recorded_check.py::test_a_link_and_a_requester_pass_and_the_requester_is_named_as_a_claim
+
+- check: ship-approval-present
+  broken: an issue that owes `ship-approval` whose linked pull request merged with no approval on record
+  fails: tests/test_ship_approval_check.py::test_a_merged_pull_request_with_no_approval_fails_and_names_the_typed_approval
+  restores: tests/test_ship_approval_check.py::test_an_approving_review_of_the_linked_pull_request_passes
 
 - check: spike-conclusion-present
   broken: a spike with no conclusion evidence
@@ -128,11 +131,6 @@
   broken: an unchecked Definition of Done box with no evidence tag
   fails: tests/test_check_guardrails.py::test_dod_unbacked_fails
   restores: tests/test_check_guardrails.py::test_dod_with_evidence_passes
-
-- check: consistency-check-passes
-  broken: consistency-check evidence that records findings, or none on record
-  fails: tests/test_consistency_check_passes.py::test_findings_or_no_evidence_fail_the_check
-  restores: tests/test_consistency_check_passes.py::test_zero_findings_pass_the_check
 
 - check: no-trusted-rerun
   broken: a test marked rerun-without-change with no quarantine
@@ -156,7 +154,3 @@
   restores: tests/test_fitness_functions.py::TestCommandPassesSuccess::test_command_passes_succeeds_in_check_output
   record: .compass/work/project-commands-are-a-trust-boundary/evidence/mutation-proofs.md
 
-- check: multiagent-run-recorded
-  broken: a subtask left not done
-  fails: tests/test_multiagent_run_recorded.py::test_row_5_a_subtask_not_done_fails_and_names_it
-  restores: tests/test_multiagent_run_recorded.py::test_row_2_a_subtasks_key_created_2026_09_25_with_a_complete_record_passes

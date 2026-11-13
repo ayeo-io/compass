@@ -3,7 +3,8 @@
 The worked example's assessment is fed to the real CLI, and the documented
 approach and gates are compared with what it returns, so the transcript in
 this onboarding document - the first thing an adopter runs - cannot
-silently drift from the code again.
+silently drift from the code again. The trail headings in the README and
+in the walkthrough are compared with the file `compass trail` writes.
 """
 import pathlib
 import re
@@ -61,3 +62,47 @@ def test_worked_example_route_and_gates_match_the_cli():
             f"docs/five-minutes.md's transcript does not show the real {label} "
             f"({actual!r}). Re-run `compass approach evaluate` and paste the output."
         )
+
+
+def _real_trail_headings(tmp_path):
+    """The section headings `compass trail` writes, from a scratch issue."""
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path),
+           "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True, env=env)
+
+    def compass(*args):
+        result = subprocess.run([sys.executable, str(COMPASS_CLI), *args], cwd=tmp_path,
+                                capture_output=True, text=True, timeout=60, env=env)
+        assert result.returncode == 0, result.stdout + result.stderr
+    compass("init", "--quiet")
+    compass("quick-fix", "start", "fix-it", "--risk", "trivial - one string",
+            "--familiarity", "greenfield - new", "--size", "atomic - one line",
+            "--intent", "The message is spelled right",
+            "--scenario", "Given a bad token When it is checked Then the message is right",
+            "--test", "tests/test_x.py::test_x", "--quiet")
+    compass("trail", "--issue", "fix-it")
+    trail = (tmp_path / ".compass" / "work" / "fix-it" / "trail.md").read_text(encoding="utf-8")
+    headings = re.findall(r"^## (\d+\. .+)$", trail, re.M)
+    assert len(headings) == 6, trail
+    return headings
+
+
+def test_trail_headings_in_the_readme_and_the_walkthrough_are_real(tmp_path):
+    """The README lists the sections of trail.md, and the walkthrough shows
+    them as `grep '^## '` prints them. Both are compared with the file
+    `compass trail` writes, so a renamed or reordered section cannot leave
+    the first page a reader sees describing a trail that no longer exists.
+    """
+    headings = _real_trail_headings(tmp_path)
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    section = readme.split("## What one change leaves", 1)
+    assert len(section) == 2, "README.md has no '## What one change leaves' section"
+    listed = re.findall(r"^(\d+\. .+)$", section[1].split("\n## ", 1)[0], re.M)
+    assert listed == headings, (
+        "README.md lists the trail sections as\n  " + "\n  ".join(listed)
+        + "\nbut `compass trail` writes\n  " + "\n  ".join(headings))
+
+    shown = "\n".join(f"## {h}" for h in headings)
+    assert f"```text\n{shown}\n```" in DOC.read_text(encoding="utf-8"), (
+        "docs/five-minutes.md does not show the real trail headings:\n" + shown)

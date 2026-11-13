@@ -138,10 +138,8 @@ def _ids(pairs):
 NEW_SPELLINGS = [
     (["approach", "show"], 0, "Approach:  (risk contained"),
     (["approach", "render"], 0, "<!doctype html>"),
-    (["policy", "show"], 0, "capabilities.artifact-freshness"),
+    (["policy", "show"], 0, "Policy: compass-checks@"),
     (["review-rule", "list", "--changed-files", "cli/compass"], 0, "RR-001"),
-    (["issue", "template", "show", "requirements-review"], 0,
-     "TEMPLATE: requirements-review.md"),
     (["issue", "migrate"], 0, "nothing to do"),
     (["issue", "migrate", "--config"], 0, "committed generation 1"),
     (["issue", "status", "set", "backlog"], 0, "sample -> backlog"),
@@ -182,7 +180,10 @@ RETIRED_SPELLINGS = [
     r"compass approach summary", r"compass approach diagram",
     r"compass policy effective", r"compass policy review-rules",
     r"compass issue set-status", r"compass issue refresh-spec",
-    r"compass issue migrate-config", r"compass migrate(?![\w-])",
+    # `compass migrate` is not here: #359 gives the name to the 9.0.0 upgrade
+    # verb (plan open question 18). The 6.x verb of that name is `compass issue
+    # migrate`, and its alias ended at 7.0.0.
+    r"compass issue migrate-config",
     r"compass issue subtask update",
     r"compass issue dashboard",
     r"compass issue artifact(?![\w-]| set)",
@@ -195,8 +196,8 @@ RETIRED_SPELLINGS = [
 # Paths that record history or are derived from it, so they name old spellings.
 NOT_SCANNED = (
     "tests/", "docs/compass/", "governance/decisions/", "architecture/decisions/",
-    "CHANGELOG.md", "docs/system-spec", "cli/aliases.yml", "cli/compass_pkg/aliases.py",
-    "docs/upgrade", "evals/",
+    "CHANGELOG.md", "cli/aliases.yml", "cli/compass_pkg/aliases.py",
+    "docs/upgrade",
 )
 
 # Markers written into pages on disk. A page made before the rename holds the
@@ -318,19 +319,22 @@ def _choices(args, cwd):
 def test_vr_e4_group_help_lists_new_verbs_and_no_alias(tmp_path):
     p = _project(tmp_path / "p")
     top = _choices([], p)
-    assert {"review-rule", "spec"} <= top
-    assert "migrate" not in top
+    assert {"review-rule"} <= top and "spec" not in top
+    # #359: the top-level `migrate` is the 9.0.0 upgrade verb, not the 6.x
+    # spelling of `issue migrate`, whose alias ended at 7.0.0.
+    assert "migrate" in top
     assert {"show", "render", "evaluate"} == _choices(["approach"], p)
     issue = _choices(["issue"], p)
-    assert {"status", "migrate", "render", "artifact", "template"} <= issue
+    assert {"status", "migrate"} <= issue
+    assert "artifact" not in issue and "artifact-path" not in issue  # removed in 9.0.0 (ADR-091)
+    assert "template" not in issue  # removed in 9.0.0 (ADR-091)
     assert "dashboard" not in issue
+    assert "render" not in issue    # removed in 9.0.0 (ADR-091)
     assert not issue & {"set-status", "migrate-config", "refresh-spec"}
-    assert {"set", "add"} <= _choices(["issue", "subtask"], p)
-    assert "update" not in _choices(["issue", "subtask"], p)
+    assert "subtask" not in issue   # removed in 9.0.0 (ADR-090)
     assert "show" in _choices(["policy"], p)
     assert not _choices(["policy"], p) & {"effective", "review-rules"}
     assert _choices(["review-rule"], p) == {"list"}
-    assert _choices(["issue", "artifact"], p) == {"set"}
 
 
 def test_vr_e4_no_alias_old_spelling_is_a_verb_in_any_help(tmp_path):
@@ -389,7 +393,8 @@ def test_vr_e6_a_planted_hint_row_names_the_new_spelling_and_runs_nothing():
     assert aliases.hint_for(["policy", "show"], PLANTED_HINTS) is None
     assert aliases.hint_for(
         ["issue", "friction", "--category", "tooling", "--phase=assess"], PLANTED_HINTS) == (
-        "'issue friction --phase' is now 'issue friction --stage'.")
+        "'issue friction --phase' is now 'issue friction --stage', which was removed "
+        "in 9.0.0 (ADR-093).")
     assert aliases.hint_for(["policy", "effective"], {"aliases": [], "hints": []}) is None
     assert aliases.rewrite(["policy", "effective"], PLANTED_HINTS) == (
         ["policy", "effective"], None)
@@ -434,32 +439,26 @@ def test_vr_e6_no_hint_spelling_is_held_by_a_release(tmp_path):
 
 FIXED = {"show", "list", "add", "remove", "set", "render", "lint", "test", "diff",
          "update", "migrate", "sync", "init"}
-TOP = {"init", "check", "ci", "run", "next", "retro", "flow", "analyze"}
+TOP = {"init", "check", "ci", "run", "next", "flow"}
 
 EXCEPTIONS = {
     "tdd-red": "named for the red step of red-green-refactor, which the pre-tool hook and every command file call by this name",
     "tdd-green": "the green step, paired with tdd-red",
     "ship-commit": "the commit step inside shipping; named in the contract and the ship command",
-    "rework-scan": "a report verb named for what it scans; renaming it needs an alias no release owes yet",
     "terminology": "prints the vocabulary; a noun that is its own command",
-    "readiness": "measures the repository and writes the readiness record; a noun that is its own command, named by the spec that added it",
+    "migrate": "moves a whole 8.x project to 9.0.0, so it belongs to no group; the #359 plan names it (open question 18)",
+    "trail": "writes or checks the issue's trail.md; a noun that is its own command, which ADR-096 decision 19 names (#356)",
     "release notes": "prints the release lines since a ref; the spelling the requirement that added it names",
     "approach evaluate": "applies the routing policy; the determinism boundary is named by this verb in the contract",
     "bdd extract": "turns acceptance criteria into a feature file; a verb of the bdd group",
     "bdd verify": "runs the BDD suite and records the result; a verb of the bdd group",
-    "intent ingest": "reads an existing brief; a verb of the intent group",
     "issue diagnose": "explains one run from its records; a verb of the issue group",
     "issue use": "moves the current-issue pointer; the pointer verb every session reads",
-    "issue friction": "records one process-friction entry; a noun the retro report groups by",
-    "issue configure": "proposes a change to one issue's configuration",
     "issue raised-by": "records the issue this one was found in; the maintainer named it an exception",
-    "issue receipt": "renders a landed issue's receipt; the maintainer named it an exception",
-    "issue artifact-path": "prints where a document is; two hooks read its exit code, so its name stays",
-    "issue subtask next": "prints the next subtask to dispatch; a verb of the subtask group",
-    "issue subtask replan": "re-plans the subtasks; a verb of the subtask group",
-    "issue subtask package": "packages a subtask's brief; a verb of the subtask group",
     "acceptance start": "opens an acceptance record for a change with no natural red",
     "acceptance record": "closes an acceptance record",
+    "isolation record": "runs the suite and writes the isolation proof; record is the verb ADR-086 names for the only writer of the type (#328)",
+    "layering record": "runs the layering test and writes the layering record; record is the verb ADR-086 names for the only writer of the type (#328)",
     "adr new": "creates the next numbered decision record",
     "follow-up resolve": "marks an owed follow-up settled",
     "gate pass": "marks a gate passed with typed evidence",
@@ -475,7 +474,8 @@ EXCEPTIONS = {
     "lesson accept": "turns a pending proposal into a lesson",
     "lesson decline": "drops a pending proposal",
     "record restore": "restores a record from its sync",
-    "board refresh": "rewrites the board page in place and never opens a browser; the maintainer chose two commands, so refresh is not a flag of render",
+    "record commit": "commits the issue record alone after the merge, as git commit does; ADR-096 and the #356 plan name this verb",
+    "waiver withdraw": "removes an unapproved waiver but only marks an approved one withdrawn, so `remove` would misdescribe it; ADR-094 decision 8 names this verb",
 }
 
 
@@ -540,33 +540,6 @@ def test_vr_e10_a_planted_verb_in_neither_list_fails():
     _subparsers_action(issue).add_parser("frobnicate")
     problems = convention_problems(root)
     assert any(p.startswith("issue frobnicate:") for p in problems), problems
-
-
-# --- VR-E11: issue artifact-path is untouched --------------------------------
-
-def test_vr_e11_artifact_path_keeps_its_name_and_exit_codes(tmp_path):
-    from compass_pkg import aliases
-    argv = ["issue", "artifact-path", "design"]
-    assert aliases.rewrite(argv) == (argv, None)
-    project = _project(tmp_path / "p")
-    (project / ".compass" / "work" / "sample" / "design.md").write_text("# design\n")
-    rc, out, err = _run(["issue", "artifact-path", "design"], project)
-    assert rc == 0 and out.strip().endswith("design.md"), (rc, out, err)
-    assert not _notices(err)
-    rc, out, err = _run(["issue", "artifact-path", "requirements-review"], project)
-    assert rc != 0 and out == "", (rc, out, err)
-    assert not _notices(err)
-
-
-# --- VR-E12: spec sync says what it does -------------------------------------
-
-def test_vr_e12_spec_sync_help_says_merge_derive_and_commit(tmp_path):
-    project = _project(tmp_path / "p")
-    rc, out, err = _run(["spec", "sync", "--help"], project)
-    assert rc == 0, err
-    text = " ".join(out.split()).lower()
-    for phrase in ("merges the base branch", "re-derives the living spec", "commits"):
-        assert phrase in text, (phrase, text)
 
 
 # --- VR-E13: the table agrees with the release tag ---------------------------
@@ -710,57 +683,9 @@ def test_vr_e14_the_rewrite_reads_arguments_only_from_the_command_line():
     assert aliases.rewrite(["issue", "dashboard", "render"]) == (["issue", "dashboard", "render"], None)
 
 
-# --- VR-E7, VR-E8, VR-E14 (the run half): the run stage implement -------------
-# The headless-runner tests own the stub `claude` and the project it runs in.
-
-sys.path.insert(0, str(ROOT / "tests"))
-from test_headless_runner import project as headless_project  # noqa: E402,F401
-from test_headless_runner import (_calls as _stub_calls,  # noqa: E402
-                                  _last_run as _stub_last_run,
-                                  _run as _stub_run)
-
-
-def test_vr_e7_run_stage_implement_runs_the_implement_stage(headless_project):
-    result = _stub_run(headless_project, "--max-cycles", "1", plan=("touch",),
-                       stage="implement")
-    assert result.returncode == 4, result.stdout + result.stderr   # one cycle, no stage done
-    assert not _notices(result.stderr), result.stderr
-    assert "usage:" not in result.stderr
-    message = _stub_calls(headless_project)[0]
-    assert "/compass:implement" in message[message.index("-p") + 1]
-    assert _stub_last_run(headless_project)["stage"] == "implement"
-    assert "build" not in result.stdout
-    # The run is a writer too: the manifest it saved holds no old word.
-    from compass_pkg import word_map
-    saved = yaml.safe_load((headless_project / ".compass" / "work" / "multi"
-                            / "manifest.yml").read_text(encoding="utf-8"))
-    assert word_map.old_words(saved) == [], word_map.old_words(saved)
-
-
-def test_vr_e7_the_stage_help_lists_implement_and_not_build(tmp_path):
-    rc, out, err = _run(["run", "--help"], _project(tmp_path / "p"))
-    assert rc == 0, err
-    words = out.lower().replace("|", " ").replace(",", " ").split()
-    assert "implement" in words and "verify" in words, out
-    assert "build" not in words, out
-
-
-def test_vr_e8_run_stage_build_is_refused_and_runs_no_stage(headless_project):
-    result = _stub_run(headless_project, "--max-cycles", "1", plan=("touch",),
-                       stage="build")
-    assert result.returncode == 2, result.stdout + result.stderr
-    assert not _notices(result.stderr), result.stderr
-    assert "is now '" not in result.stderr, result.stderr
-    assert _stub_calls(headless_project) == []
-
-
-def test_vr_e8_the_equals_form_is_refused_too(headless_project):
-    import subprocess as sp
-    done = sp.run([sys.executable, str(CLI), "run", "multi", "--stage=build"],
-                  cwd=str(headless_project), capture_output=True, text=True)
-    assert done.returncode == 2, done.stderr
-    assert not _notices(done.stderr), done.stderr
-    assert "cannot run unattended" in done.stderr, done.stderr
+# --- VR-E14 (the run half): a planted value row ---------------------------------
+# 9.0.0 removed `compass run` (ADR-090), so the value row is proved on a
+# planted table only.
 
 
 def test_vr_e14_a_planted_value_row_is_rewritten_in_both_forms():
@@ -793,40 +718,3 @@ def test_vr_e13_a_planted_value_row_for_an_unreleased_value_fails(tmp_path):
     assert release_problems([held], cli, p) == []
     planted = dict(held, old=["run", "--stage", "implement"], new=["run", "--stage", "x"])
     assert release_problems([planted], cli, p), "a value the tag does not list must fail"
-
-
-# --- VR-E9: issue friction takes --stage; --phase is an unknown option ---------
-
-def test_vr_e9_issue_friction_with_stage_records_an_entry_keyed_stage(tmp_path):
-    project = _project(tmp_path / "p")
-    task = project / ".compass" / "work" / "sample"
-    (task / "evidence").mkdir()
-    (task / "evidence" / "red.log").write_text("1 failed\n", encoding="utf-8")
-    rc, out, err = _run(["issue", "friction", "--category", "tooling", "--stage",
-                         "implement", "--observed", "evidence/red.log",
-                         "--fix", "Run the suite once"], project)
-    assert rc == 0, (out, err)
-    assert "(tooling, implement)" in out and not _notices(err), (out, err)
-    [entry] = yaml.safe_load((task / "manifest.yml").read_text())["friction"]
-    assert entry["stage"] == "implement" and "phase" not in entry, entry
-
-
-def test_vr_e9_the_stage_flag_lists_the_stage_ids_and_the_help_has_no_phase_flag(tmp_path):
-    rc, out, err = _run(["issue", "friction", "--help"], _project(tmp_path / "p"))
-    assert rc == 0, err
-    assert "--stage" in out and "--phase" not in out, out
-
-
-def test_vr_e9_the_phase_flag_records_nothing(tmp_path):
-    project = _project(tmp_path / "p")
-    task = project / ".compass" / "work" / "sample"
-    (task / "evidence").mkdir()
-    (task / "evidence" / "red.log").write_text("1 failed\n", encoding="utf-8")
-    before = (task / "manifest.yml").read_text()
-    rc, out, err = _run(["issue", "friction", "--category", "tooling", "--phase",
-                         "implement", "--observed", "evidence/red.log",
-                         "--fix", "Run the suite once"], project)
-    assert rc == 2 and out == "", (rc, out, err)
-    assert "is now '" not in err, err
-    assert "works until 7.0.0" not in err
-    assert (task / "manifest.yml").read_text() == before

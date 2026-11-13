@@ -7,8 +7,8 @@ losing or failing to record information.
     exist must not pass `compass check`. Scoped to issues that are still `active`
     AND have already claimed `verify.correctness: pass`, because TDD writes a
     test id at define before the test exists.
-  * friction merge (group B) - `_friction-capture` appends human notes instead
-    of overwriting the list.
+  * friction merge (group B) - `_friction-capture` appended human notes instead
+    of overwriting the list; 9.0.0 removed it (ADR-093).
   * provenance column (group C) - the review-dimensions table records who
     assessed each judgement dimension.
 
@@ -136,7 +136,6 @@ def test_trc_a3_resolvable_test_id_passes(run_cli, make_task, project):
     task_dir = make_task("resolve-me",
                          _task_claiming_correctness(["tests/test_real.py::test_present"]))
     _green(task_dir)
-    run_cli("issue", "render", "--issue", "resolve-me")
 
     r = run_cli("check", "--verbose", "--issue", "resolve-me")
 
@@ -151,7 +150,6 @@ def test_trc_a3_parametrised_id_resolves(run_cli, make_task, project):
         "resolve-me",
         _task_claiming_correctness(["tests/test_real.py::test_present[case-1]"]))
     _green(task_dir)
-    run_cli("issue", "render", "--issue", "resolve-me")
 
     assert run_cli("check", "--verbose", "--issue", "resolve-me").returncode == 0
 
@@ -163,7 +161,6 @@ def test_trc_a3_non_file_shaped_id_is_skipped(run_cli, make_task, project):
         "resolve-me",
         _task_claiming_correctness(["grep: governance/strategies.md carries S7"]))
     _green(task_dir)
-    run_cli("issue", "render", "--issue", "resolve-me")
 
     r = run_cli("check", "--verbose", "--issue", "resolve-me")
     assert r.returncode == 0, r
@@ -225,7 +222,8 @@ def test_trc_a8_landed_task_not_rechecked(run_cli, make_task, project):
 def test_trc_a5_registered_under_g1_no_new_guardrail():
     """ADR-002: the framework grows by adding artifacts, not rules. The
     check registers under `G1`; the count stays at five."""
-    gy = yaml.safe_load(_read("governance/guardrails.yml"))
+    from check_set_files import view as shipped_view
+    gy = shipped_view("guardrails.yml")
 
     defaults = {g["id"]: g for g in gy["defaults"]}
     assert set(defaults) == {"G1", "G2", "G3", "G4", "G5"}, (
@@ -242,119 +240,19 @@ def test_trc_a6_policy_lint_accepts_the_check(run_cli):
 
 
 # ---------------------------------------------------------------------------
-# Group B - friction is appended, not overwritten
+# Group B - friction capture
 # ---------------------------------------------------------------------------
 
-def _friction_task(slug, make_task, friction=None):
-    body = {
-        "task": slug, "created": "2026-08-03", "status": "active",
-        "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
-                     "size": "small", "intent": "delivery"},
-        "delivery_approach": "express", "scenarios": [], "gates": [], "follow_ups": [],
-    }
-    if friction is not None:
-        body["friction"] = friction
-    return make_task(slug, body)
-
-
-def test_trc_b1_second_note_appends(run_cli, make_task):
-    """The defect: `task['friction'] = entries` discarded the first note."""
-    task_dir = _friction_task("fric", make_task, friction=[
-        {"phase": "verify", "category": "tooling", "source": "human",
-         "observation": "the first note"},
-    ])
-
-    r = run_cli("_friction-capture", "--internal", "--issue", "fric",
-                "--note", "the second note", "--note-category", "tooling",
-                "--note-stage", "land")
-    assert r.returncode == 0, r
-
-    got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
-    observations = [e["observation"] for e in got]
-    assert "the first note" in observations, (
-        "the earlier note was destroyed - this is the bug:\n" + str(got))
-    assert "the second note" in observations
-    assert len(got) == 2, got
-
-
-def test_trc_b2_derived_entries_not_duplicated(run_cli, make_task):
-    """Derived entries are recomputed each run, so a plain append would
-    duplicate them (DD-3)."""
-    task_dir = _friction_task("fric", make_task, friction=[
-        {"phase": "plan", "category": "over-ceremony", "source": "derived",
-         "observation": "a derived observation"},
-    ])
-
-    run_cli("_friction-capture", "--internal", "--issue", "fric",
-            "--note", "a human note", "--note-category", "tooling")
-
-    got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
-    derived = [e for e in got if e.get("observation") == "a derived observation"]
-    assert len(derived) <= 1, f"derived entry duplicated: {got}"
-
-
-def test_trc_b1_identical_note_not_appended_twice(run_cli, make_task):
-    task_dir = _friction_task("fric", make_task, friction=[
-        {"phase": "verify", "category": "tooling", "source": "human",
-         "observation": "same note"},
-    ])
-
-    run_cli("_friction-capture", "--internal", "--issue", "fric",
-            "--note", "same note", "--note-category", "tooling",
-            "--note-stage", "verify")
-
-    got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
-    assert len([e for e in got if e["observation"] == "same note"]) == 1, got
-
-
-def test_trc_b3_nothing_captured_stays_absent(run_cli, make_task):
-    """An issue that hit no friction stays a clean no-op (ADR-006)."""
-    task_dir = _friction_task("fric", make_task)
-
-    r = run_cli("_friction-capture", "--internal", "--issue", "fric")
-
-    assert r.returncode == 0, r
-    body = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert "friction" not in body or not body["friction"], body
-    assert "nothing recorded" in r.stdout.lower(), r
-
-
-def test_trc_f2_task_without_friction_key_loads(run_cli, make_task):
-    """A manifest written before the friction key existed must still accept a note."""
-    task_dir = _friction_task("fric", make_task)   # no friction key at all
-
-    r = run_cli("_friction-capture", "--internal", "--issue", "fric",
-                "--note", "a note", "--note-category", "tooling")
-
-    assert r.returncode == 0, r
-    got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
-    assert [e["observation"] for e in got] == ["a note"], got
+# `TRC-B1` to `TRC-B3` and `TRC-F2` ran `_friction-capture`, which 9.0.0
+# removed (ADR-093).
 
 
 # ---------------------------------------------------------------------------
 # Group C - who assessed the judgement
 # ---------------------------------------------------------------------------
 
-def test_trc_c1_review_table_has_assessor_column():
-    tpl = _read("templates/verification-report.md")
-
-    m = re.search(r"^\|\s*Dimension\s*\|.*$", tpl, re.M)
-    assert m, "review-dimensions table header not found"
-    header = m.group(0).lower()
-    assert "assessed by" in header, (
-        f"no column recording who assessed the dimension:\n{m.group(0)}")
-
-
-def test_trc_c2_template_explains_assessor_column():
-    tpl = _read("templates/verification-report.md")
-    i = tpl.find("## Review dimensions")
-    assert i >= 0
-    flat = _flat(tpl[i:i + 2000])
-
-    assert "reviewer" in flat, "guidance does not mention the reviewer agent"
-    assert "author" in flat, "guidance does not mention the author case"
-    assert re.search(r"weaker|less independent|not independent", flat), (
-        "guidance does not say an author-assessed dimension is weaker evidence")
+# `TRC-C1` and `TRC-C2` read the verification report template, which 9.0.0
+# deleted (ADR-091).
 
 
 # ---------------------------------------------------------------------------

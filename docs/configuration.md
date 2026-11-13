@@ -2,41 +2,48 @@
 
 A project's settings: what each one does, its values, its default and which
 file holds it. The Python reader is `cli/compass_pkg/project_settings.py`
-(ADR-043). The pre-tool hook and the two multiagent scripts call it too, so
-every reader of a setting follows the same file.
+(ADR-043). The pre-tool hook calls it too, so every reader of a setting
+follows the same file. It also finds the project root
+(`project_settings.find_project_root`: the first folder at or above the start
+that holds `.compass` or `.git`), and reads the `owner` and `approvers` of
+`compass.yml` for the approval rules (`project_settings.project_file`).
 
 ## Where the settings live
 
 - **`compass.yml` at the project root** holds the settings, and from 6.0.0 it
   is the one file a person edits. The CLI reads it when it is Compass's file,
   and refuses a key that appears twice. It is Compass's file when it has a
-  top-level `schema:` key, or when it is the only settings file. The same file
-  can also hold the project's edits to the shipped governance (see
-  `docs/policy-lint.md`; for waivers, locks and approvers see
-  [waivers-and-locks.md](waivers-and-locks.md)). `/compass:init` writes a minimal one for a new
-  project, and `compass policy migrate` writes one for an existing project.
+  top-level `schema:` key, or when it is the only settings file. It holds
+  settings only: Compass runs one fixed check set (ADR-094), and the
+  tighten-only settings below are the one way to change what an issue owes.
+  A catalog key or `extends:` is a removed setting (see `docs/policy-lint.md`;
+  for waivers and approvers see [waivers.md](waivers.md)). `/compass:init` writes a minimal one for a new
+  project. `compass policy migrate` on 8.x wrote one for an existing project;
+  9.0.0 removed that command (ADR-094).
 - **`.compass/config.yml`** holds the same settings for a project from 5.x that
   has not moved. The CLI reads it when `compass.yml` is absent, or present
-  without `schema:`, until 9.0.0. `compass policy migrate` moves its settings
-  into `compass.yml`, and 9.0.0 stops reading it. In this file
+  without `schema:`, and 9.0.0 still reads it. `compass policy migrate` on
+  8.x moves its settings into `compass.yml`; `compass migrate` does not move
+  them, and says that 9.0.0 still reads the file. In this file
   the adoption setting is called `mode`; in `compass.yml` it is called
   `adoption`. No 6.0.0 command writes this file.
 - **The state file in `.compass/`** holds what the CLI writes, not what a
   person edits: `initialized` (what created the project, and when) and
   `records_signed_since`. Do not edit it. `compass init` writes this file and
-  no other, so a new project has `.compass/state.yml` and no
-  `.compass/config.yml`. A project created before ADR-043 keeps both values in
+  no other settings or state file, so a new project has `.compass/state.yml`
+  and no `.compass/config.yml`. It also writes the ignore lines of the record
+  (see `record` below). A project created before ADR-043 keeps both values in
   `.compass/config.yml`, and the CLI and the hook read them there. `init` adds
-  nothing to such a project, and `compass policy migrate` moves them to the
-  state file.
+  nothing to such a project, and `compass policy migrate` on 8.x moves them to
+  the state file.
 
 ### What a new project and an existing project get
 
 | Project | Gets | Reads |
 |---|---|---|
-| New (no `.compass/`) | `compass init`, run by any entry point, creates `.compass/state.yml` and `.compass/work/`. `/compass:init` then writes a minimal `compass.yml` (`schema`, `extends`, `owner`, `project.name`, `project.test_command`) and copies nothing. | `compass.yml`, over the shipped default |
-| From 5.x with a `.compass/config.yml` or copied governance | Nothing changes until it runs `compass policy migrate`. `/compass:init` runs that command (a dry run, then `--apply` on a yes) in place of writing a fresh file. | The old files, as 5.x did |
-| This repository | A hand-written `compass.yml` that holds settings keys, the owner, the readiness commands and one readiness override that times its micro suite, and `.compass/state.yml`. `compass policy migrate` refuses here, because the repository's governance files are generated from the shipped default. | `compass.yml` |
+| New (no `.compass/`) | `compass init`, run by any entry point, creates `.compass/state.yml`, `.compass/work/` and `.compass/work/.gitignore`. Its `settings` line names `compass.yml` when the project has one, and otherwise says the defaults are in force. `/compass:init` then writes a minimal `compass.yml` (`schema`, `owner`, `project.name`, `project.test_command`) and copies nothing. | `compass.yml`, over the check set |
+| From 5.x with a `.compass/config.yml` or copied governance | Nothing changes until it runs `compass policy migrate` on 8.x. `/compass:init` stops and says so in place of writing a fresh file; the upgrade guide names the 9.0.0 settings. | The old files, as 5.x did |
+| This repository | A hand-written `compass.yml` that holds settings keys and the owner, and `.compass/state.yml`. It also holds a `readiness:` override and two readiness commands, which 9.0.0 no longer reads (see `readiness` below). | `compass.yml` |
 
 A missing file means every default below. A file the CLI cannot read, or a
 duplicate key in `compass.yml`, is a broken file. Each command then does what
@@ -57,27 +64,25 @@ The state decides what Compass reads, and no state loses a setting silently:
 
 - **What counts as a settings key in the old file:** `mode`, `autonomy`,
   `allow_project_commands`, `enforcement`, `record`, `project`, `prices`,
-  `models`, `multiagent`, `preset_index`, `governance_drift`, `github_labels`, `language`
-  and `acceptance_strategy`. The three keys the
-  multiagent scripts read, `worktree_root`, `max_worktrees` and `test_command`,
-  also count when they are outside `multiagent:` and `project:`, because the
-  scripts find them at any depth in the old file.
+  `models`, `multiagent`, `preset_index`, `governance_drift`, `github_labels`, `language`,
+  `acceptance_strategy`, `signoff_labels`, `require_evidence`, `agent_review`
+  and `project_checks`. The three keys the multiagent scripts read
+  before 9.0.0, `worktree_root`, `max_worktrees` and `test_command`, also
+  count when they are outside `multiagent:` and `project:`, because the
+  scripts found them at any depth in the old file.
 - **How the refusal shows.** The pre-tool hook exits 2 with `settings-conflict`
   for an edit to a path its built-in rules neither guard nor exempt. Each CLI
   command that reads settings stops with the same text, and `compass check`
   fails. The text names the keys, up to five and then "and N more".
 - **The way out.** Move those keys into `compass.yml` (write `mode` as
   `adoption`) and delete them from `.compass/config.yml`. The text names no
-  migration command, because `compass policy migrate` refuses a project that
-  already has a `compass.yml` Compass reads.
+  migration command: 9.0.0 has none (ADR-094).
 - **A broken file.** A file that cannot be parsed is refused and named, in
   either position, as for a lone file. A `compass.yml` that cannot be parsed
   counts as Compass's file, so Compass does not read the old file in its place.
 - **The marker.** Every `compass.yml` that Compass creates carries `schema:`.
-  `compass init` writes no `compass.yml`. `/compass:init` and
-  `compass policy migrate` write a project's first one. `compass policy update`
-  rewrites it, and `compass preset init` writes one inside the new preset
-  folder it scaffolds.
+  `compass init` writes no `compass.yml`. `/compass:init` writes a project's
+  first one, as `compass policy migrate` did on 8.x.
 
 ## Settings
 
@@ -85,19 +90,19 @@ The state decides what Compass reads, and no state loses a setting silently:
 |---|---|---|---|
 | `adoption` (`mode` in `.compass/config.yml`) | Whether a failed check blocks | `enforced`, `advisory` | `enforced` |
 | `autonomy` | How often a session stops for a person | `controlled`, `balanced`, `autonomous` | `balanced` |
-| `project` | The project's name, commands and declarations | `name`, `test_command`, `test_micro_command`, `bdd_run_command`, `lint_command`, `format_check_command`, `build_command`, `typecheck_command`, `secret_scan`, `structured_logging` | none |
+| `project` | The project's name and commands, and the untracked paths the base copy links | `name`, `test_command`, `test_micro_command`, `bdd_run_command`, `base_copy_links`; six readiness keys that 9.0.0 no longer reads (see `project` below) | none |
 | `enforcement` | Extra paths the pre-tool hook guards | `code_globs`: a list of patterns | none |
-| `record` | Where the delivery record is kept | `remote`, `paths`, `names_key` | no record |
-| `prices` | Dollars per million tokens, to price a quick fix's usage | a mapping from model name | no cost recorded |
-| `models` | The model and effort of each model tier (see `models` below) | `strong`, `standard`, `fast`: a model name, or `{model, effort}` | `strong` inherit at high, `standard` sonnet at medium, `fast` haiku at low |
-| `multiagent` | Where multiagent worktrees go | `worktree_root`, `max_worktrees` | `../.compass-worktrees`, 6 |
-| `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
-| `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
-| `living_spec` | When a landing re-derives the living spec (see `living_spec` below) | `land`, `refresh` | `land` |
+| `record` | Where the delivery record is kept, and whether each issue's record is committed with its code | `remote`, `paths`, `names_key`, `commit` | no record repository; the record is committed |
+| `prices` | Removed in 9.0.0 and not read (see `prices` below) | - | - |
+| `models` | Removed in 9.0.0 and not read (see `models` below) | - | - |
+| `multiagent` | Removed in 9.0.0 and not read (see `multiagent` below) | - | - |
+| `allow_project_commands` | Lets `compass check` run commands the project declares | `true`, `false` | `false` |
+| `governance_drift` | Removed in 9.0.0 and not read (see `governance_drift` below) | - | - |
+| `living_spec` | Removed in 9.0.0 and not read (see `living_spec` below) | - | - |
 | `language` | The language the agent writes prose in (see `language` below) | a BCP 47 tag such as `en-US` | unset: no instruction |
 | `acceptance_strategy` | Whether the four-layer acceptance strategy (`S17`) is on for the project (see `acceptance_strategy` below) | `state`: `on` or `off`; `reason`: text, needed with `off` | unset: on |
-| `preset_index` | Reserved for published presets; no behavior yet | - | - |
-| `github_labels` | Whether Compass writes an issue's labels and page to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`, `page`: `true` or `false` each | all `false`; no GitHub call |
+| `preset_index` | Removed in 9.0.0 and not read (ADR-094); `compass policy lint` names it with `L-SETTING-REMOVED` | - | - |
+| `github_labels` | Removed in 9.0.0 and not read (see `github_labels` below) | - | - |
 
 ### `adoption`
 
@@ -106,61 +111,64 @@ The state decides what Compass reads, and no state loses a setting silently:
 - `advisory`: `compass check` and `compass ci` report every failure clearly
   but exit 0, so CI does not fail. The `compass ci` summary line still says
   FAIL when a check failed. The pre-tool hook still refuses a code edit
-  with no failing test on record.
+  before the scenarios exist or, where owed, a person has approved them.
 
 Use advisory mode to try Compass without blocking delivery. A value other
 than these two reads as `enforced`.
 
 ### `autonomy`
 
-How often a session stops to wait for a person at a stage hand-off: confirming
-the approach, and approving the acceptance criteria, the requirements review
-and the technical design. The routing policy's `autonomy_checkpoints:` table
-says which hand-offs wait for each value and delivery approach. `compass approach show`
-shows the answer for an issue. No value changes a gate, evidence, the pre-tool
-hook or `compass check`.
+How often a session stops to wait for a person at a checkpoint, the end of a
+stage of the path: confirming the assessment, approving the scenarios, and,
+where the four-layer acceptance strategy (`S17`) applies to the issue, its
+stage 2 and 3 reviews.
+Assess writes the checkpoints of each issue to its manifest, and `compass
+approach show` shows the answer for an issue. No value changes a gate,
+evidence, the pre-tool hook or `compass check`.
 
-- `controlled`: wait at every hand-off the table lists. That is all four on the
-  regular or full approach, assess and define on a hotfix, and assess on a
-  quick fix or spike.
-- `balanced`: a quick fix does not stop. The regular approach waits at define
-  and plan. The full approach waits at all four.
-- `autonomous`: never wait. Every hand-off is shown and logged instead. From
-  7.0.0 an issue on `autonomous` must meet the readiness floor:
-  `compass approach evaluate --write` refuses it, with exit 2, while the
-  repository is below the floor, has no fresh readiness record, or the CI
-  runner reports an untrusted contribution. The session-start hook adds one
-  warning line, and never blocks. `balanced` and `controlled` are never
-  refused. See `docs/readiness.md`.
+- `controlled`: a delivery issue waits at assess and specify, and also at
+  build and ship where `S17` applies. A spike waits at assess.
+- `balanced`: a delivery issue does not stop, except at specify when its
+  scenarios owe a person's approval (a `G5` label or critical risk).
+- `autonomous`: never wait, except at specify when the scenarios owe a
+  person's approval, as under `balanced`. Every other hand-off is shown and
+  logged instead. From 7.0.0 to 8.x an issue on `autonomous` had to meet
+  the readiness floor. 9.0.0 removed the floor (ADR-093), so no value is
+  refused.
 
 Any other value is refused, naming the file, because a typo that silently
 changed how often a session stops would give no sign.
 
 ### `project`
 
-- `name`: shown in artifact headers and the devlog.
+- `name`: the project's name. `/compass:init` asks for it; no check reads it.
 - `test_command`: the command `compass tdd-red` and `compass tdd-green` run
   when none is given. Left empty, `tdd-red` and `tdd-green` need the command
-  after `--`, and refuse without it. `scripts/integrate.sh` falls back to
-  `npm test` or `make test` for the combined regression run.
+  after `--`, and refuse without it.
 - `test_micro_command`: used before `test_command` for those two commands.
 - `bdd_run_command`: the command the `compass bdd` run step uses when none is given.
-- `lint_command`, `format_check_command`, `build_command` and `typecheck_command`:
-  the commands that decide the repository's readiness signals (see the
-  `readiness` catalog in `governance/presets/default/readiness.yml`). Each is
-  optional. Declare the check form of a formatter in `format_check_command`, the
-  one that reports a difference and changes no file. `compass readiness` runs
-  them, with `test_command`, only when `allow_project_commands` is `true` and the
-  contribution is trusted. Each command runs in a clean checkout of HEAD, so it
-  must set up its own dependencies. See `docs/readiness.md` for the order and the
-  time budget.
-- `secret_scan` and `structured_logging`: a one-line declaration of the secret
-  scanner the project runs and of its logging convention. A non-empty string makes the
-  matching readiness signal present. Compass runs nothing for either.
+- `base_copy_links`: a list of untracked paths, each relative to the project
+  root, that `compass quick-fix finish` links into the copy of the base
+  commit on which it shows that the tests fail without the change. Name
+  build output or generated files the tests need. `node_modules`, `.venv`
+  and `venv` are linked without it. The default is none. `finish` refuses a
+  path that is absolute or leaves the project. See `docs/base-copy.md`.
 
-A value of any of these six keys that is not a string is refused, naming the key and
-the file. An empty string reads as not declared. `compass tdd-red` and
-`compass tdd-green` read `test_micro_command` and `test_command` only.
+  ```yaml
+  project:
+    base_copy_links:
+      - build
+  ```
+- `lint_command`, `format_check_command`, `build_command`, `typecheck_command`,
+  `secret_scan` and `structured_logging`: removed in 9.0.0 (ADR-093) and not
+  read. Only the `readiness` verb read them, and it is gone. Each stays valid,
+  so a project that holds one keeps working, and nothing reads it.
+  `compass policy lint` names each with `L-SETTING-REMOVED`. Delete them from
+  `compass.yml`.
+
+`compass tdd-red` and `compass tdd-green` read `test_micro_command` and
+`test_command` only. `compass quick-fix finish` takes its test command after
+`--`.
 
 ### `enforcement`
 
@@ -178,51 +186,24 @@ initialized the project.
 
 ### `models`
 
-The routing policy gives each seat of an issue a model tier
-(`governance/routing-policy.md`, "Model tiers"). This setting maps each tier
-to the model, and optionally the effort, a stage command passes when it
-invokes an agent. The shipped mapping is:
-
-```yaml
-models:
-  strong:   {model: inherit, effort: high}   # the session's model
-  standard: {model: sonnet,  effort: medium}
-  fast:     {model: haiku,   effort: low}
-```
-
-- A key you leave out keeps its default, so `models: {standard: opus}`
-  changes only the standard tier.
-- A bare string, such as `standard: opus`, changes the builder's model, and
-  leaves the tier with no effort. A floor can still raise the seat's effort.
-- An effort is `low`, `medium`, `high`, `xhigh` or `max`; another value is
-  refused. Which levels a model accepts depends on the model.
-- `compass approach show --effort <seat>` prints the higher of the tier's
-  effort and a floor's effort, or exits 1 when neither sets one.
-- Claude Code applies an effort in this order: the
-  `CLAUDE_CODE_EFFORT_LEVEL` environment variable, then the effort an Agent
-  call passes, then the agent's frontmatter `effort`, then the session's
-  effort. So `CLAUDE_CODE_EFFORT_LEVEL` overrides what Compass computes.
-  Passing `effort` per call needs Claude Code v2.1.292 or later; an older
-  version uses the frontmatter effort.
-- `inherit` means the model the session runs on. A caller passes its own
-  session's model family for it.
-- A key that is not one of the three tiers is refused, and the message names
-  the tiers.
-- `compass approach show --model <seat>` reads this setting each time it runs, so a
-  change applies to every open issue. `prices` is keyed by the model name, so
-  costing keeps working when a name changes.
+9.0.0 removed model tiers and effort per dispatch (ADR-090). The key stays
+valid, so a project that holds it keeps working, and nothing reads it.
+`compass policy lint` names it with `L-SETTING-REMOVED`. Delete it from
+`compass.yml`.
 
 ### `multiagent`
 
-`scripts/multiagent.sh` reads `worktree_root` and `max_worktrees`, and
-`scripts/integrate.sh` reads `worktree_root` and `test_command` (under
-`project`). In `compass.yml` they read `multiagent.worktree_root`,
-`multiagent.max_worktrees` and `project.test_command` only, so a key of the
-same name elsewhere is ignored. In `.compass/config.yml` they find a key by
-its name at any depth, so a key under `multiagent:`, under an older heading or
-at the top level all work. A missing key gives the default. A file the scripts
-cannot read stops them with exit 1 and a message naming the file, because a
-default would give a silent worktree cap or skip the combined regression run.
+9.0.0 removed the multiagent scripts that read `worktree_root` and
+`max_worktrees` (ADR-090). The key stays valid, so a project that holds it
+keeps working, and nothing reads it. `compass policy lint` names it with
+`L-SETTING-REMOVED`. Delete it from `compass.yml`.
+
+### `prices`
+
+9.0.0 removed the usage record and the cost per change that `prices` priced
+(ADR-093). The key stays valid, so a project that holds it keeps working, and
+nothing reads it. `compass policy lint` names it with `L-SETTING-REMOVED`.
+Delete it from `compass.yml`.
 
 ### `record`
 
@@ -231,51 +212,137 @@ default would give a silent worktree cap or skip the combined regression run.
 the project to a file of names that must not reach the record. See
 `docs/delivery-record.md`.
 
+`commit` sets the record mode: whether each issue's folder
+(`.compass/work/<slug>/`) is committed with its code or kept out of the
+project's git history. It must be `true` or `false`; `compass policy lint`
+refuses any other value. `record: {commit: false}` is valid with no `remote`.
+`record_mode.mode` decides, in this order:
+
+| Condition | Mode | Reason given |
+|---|---|---|
+| `commit: false` | kept out | "record.commit is false" |
+| `remote` set, `commit` not set | kept out | "the record is synced to <remote>; set record.commit to choose" |
+| `commit: true`, or neither set | committed, unless a row below applies | none |
+| not inside a git work tree | kept out | "not a git repository" |
+| git ignores the issue folder | kept out | "<path> is ignored by <file>:<line>:<pattern>" |
+
+A project's own ignore rule wins: Compass does not force-add an ignored
+folder and does not refuse the landing. `compass record sync` runs whenever
+`remote` is set, in either mode. This repository names a `remote` and no
+`commit`, so its record is kept out.
+
+`compass init` writes `.compass/work/.gitignore` in every project. It holds
+the files of an issue folder that belong to one checkout:
+
+```
+# Written by Compass. Each issue folder is the record that ships with the code;
+# these files are per-checkout state and stay out (#356).
+*/generations/
+*/.*.lock
+*/.red
+*/.acceptance
+*/start-state.json
+*/evidence/.tdd-state.json
+*/approval-requests/pending/
+```
+
+In committed mode only, it also adds `delegations/`, `cache/`, `private/`,
+`current-task` and `interruptions.log` to `.compass/.gitignore`. A kept-out
+project can track that file, so it does not change there. Each run adds only
+the lines that are missing and keeps the person's own lines, so running
+`compass init` twice adds nothing.
+
 ### `allow_project_commands`
 
-Project guardrails can declare a command. `compass check` runs one only when
-the contribution is trusted and this setting is `true`. `compass readiness`
-runs the project's build, test, lint, type-check and format-check commands
-under the same two conditions, in the same order; with the setting off, each of
-those readiness signals is absent and names this setting. The setting is read
-from the project's own file only, so a published preset cannot authorize its
-own commands. See `docs/security.md`.
+A project check (`project_checks`, below) declares a command. `compass check`
+runs one only when this setting is `true`. The setting is read from the
+project's own `compass.yml` only. See `docs/security.md`.
 
 ### `github_labels`
 
-Three switches, each `false` unless set to `true`. With all three off, no
-command calls GitHub.
+9.0.0 removed the label sync (ADR-093). Compass writes no label to GitHub, and
+`compass issue github sync` is gone. The key, with its switches `domain`,
+`status` and `page`, stays valid, so a project that holds it keeps working, and
+nothing reads it. `compass policy lint` names it with `L-SETTING-REMOVED`:
+once, by `github_labels.page` (ADR-091) when that switch is `true`, and by
+`github_labels` otherwise. Delete it from `compass.yml`. `compass issue link
+set` still records the link (`docs/github-links.md`).
 
-- `domain`: write the issue's declared domain labels to its linked GitHub
-  issue.
-- `status`: write `status:<state>` and, on a closed issue, `status:done` and
-  `close:<reason>`.
-- `page`: keep one comment on the linked GitHub issue equal to the issue's
-  README, and write the ask into an empty issue body once. It lets everyone
-  who can read the GitHub issue read the issue's documents, which is why it is
-  off by default. A post is refused when it would carry a path
-  the project keeps out of git, or a credential.
+### `readiness`
 
-Any other value, such as `"yes"`, reads as off. The setting is read from the
-project's own file only. See `docs/github-labels.md` for the labels, the
-limits and the failure behavior.
+9.0.0 removed the `readiness` verb, the `--readiness` flag of `compass init`,
+the readiness floor and the session-start readiness line (ADR-093). Nothing measures the
+repository, and the shipped default declares an empty `readiness:` catalog,
+as ADR-091 did for `artifacts:`. A project's `readiness:` stays valid, so a
+file that holds it keeps working. It is read as if absent, and its value is
+not checked. `compass policy lint` names it with
+`L-SETTING-REMOVED`. Delete it from `compass.yml`. An issue's stored
+generation keeps the catalog it was written with, and lint still reads it. A
+`.compass/readiness.yml` left in a checkout is not read.
+
+### `governance_drift`
+
+9.0.0 removed the drift report, which compared a project's copy of the
+governance files with the framework's, and this setting, which made the report
+fail `compass policy lint` (ADR-098). The key stays valid, so a project that
+holds it keeps working, and nothing reads it. `compass policy lint` names it
+with `L-SETTING-REMOVED`. Delete it from `compass.yml`.
 
 ### `living_spec`
 
-When a landing re-derives the living spec, `docs/system-spec.md` and its
-archive:
+9.0.0 removed the living spec, its archive and the command that merged a
+base branch and re-derived them (ADR-091). No landing derives the spec. The key stays
+valid, so a project that holds it keeps working, and nothing reads it.
+`compass policy lint` names it with `L-SETTING-REMOVED`. Delete it from
+`compass.yml`.
 
-- `land`: `compass ship-commit` and `compass quick-fix finish` re-derive the
-  spec after each landing and commit it alone, in a commit after the land
-  commit (ADR-026).
-- `refresh`: a landing leaves the spec as it is and prints one line that
-  says so. A person re-derives it, for example in one pull request before a
-  release, with `compass spec sync`.
+### Governance edits 9.0.0 removed
 
-Use `refresh` when many branches are open at once: each branch that commits
-its own copy of the spec conflicts with every other open branch once one
-merges. Any other value makes `compass policy lint` report the key. The
-Compass repository sets `refresh`.
+9.0.0 runs every new delivery issue on one four-stage path (ADR-092). A
+project's `compass.yml` can no longer change these parts of the governance:
+
+- `approaches`, the whole catalog;
+- a legacy stage the path does not keep, under `stages`: `define`, `refine`,
+  `plan`, `breakdown`, `implement` or `verify`;
+- the caps rule set, `rules.caps`;
+- a Definition of Ready check (`dor-summary-filled`, `dor-problem-traces-up`,
+  `dor-behavior-is-gwt`, `dor-traceability-ids`, `dor-affected-surface-named`,
+  `dor-no-open-questions`, `dor-approach-still-fits`), as an entry under
+  `checks` or as an id in a gate's `checks` or a stage's `entry` or `exit`;
+- the `require_phase` effect of `RP-FLOOR-002`, which forced the define stage
+  to thorough; the path has no stage modes, and the floor keeps its skill.
+
+A file that still holds one keeps working. Since 9.0.0 the whole catalog
+key is a removed setting and is not read (ADR-094), so a `set:` on a stage the
+check set does not declare stops no command, and its value is not checked.
+`compass policy lint` names the key with `L-SETTING-REMOVED`. Delete it from
+`compass.yml`.
+
+An issue's stored generation keeps the configuration it was assessed with:
+the 8.x approaches, stages, caps and lists. 9.0.0 ships no 8.x preset; the
+`default@6` and `default@7` folders are test fixtures. Resolution reads only
+the check set, whatever major
+`extends:` names (decided 2026-10-30), so a project that extends
+`compass:default@6` or `@7` gets the path; `compass policy lint` names
+`extends:` with `L-SETTING-REMOVED`.
+
+Three more rules keep an older file or issue working:
+
+- An issue's `config:` that sets a legacy stage or a Definition of Ready
+  check, or picks an 8.x approach (`approach:`), that its configuration does
+  not hold was merged without it in 8.x, and named with `L-SETTING-REMOVED` on
+  the issue layer by the issue mode of the 8.x `compass policy lint`, which
+  9.0.0 removed. Over a stored generation that
+  holds it, it is kept. 9.0.0 reads no new issue layer (ADR-094): the manifest's
+  `config:` is not read, and `compass issue lint` warns about one that the
+  issue's stored generation was not committed with.
+- A gate a copy of the 9.0.0 governance files places at a
+  legacy stage the configuration does not declare is read at the path stage
+  that shows it (`define`, `refine`, `plan` at specify; `breakdown`,
+  `implement` at build; `verify` at ship). `stages.assess` and `stages.ship` are path stages, so a
+project can still change them. An `autonomy_checkpoints` table can name the
+path stages `specify`, `build` and `ship` beside the legacy ones; an issue
+assessed before 9.0.0 still waits only at the legacy hand-offs.
 
 ### `language`
 
@@ -288,8 +355,7 @@ language: en-US
 Unset means no instruction: Compass says nothing about language, and the
 agent follows the repository's existing prose. When it is set, the session-start
 hook adds one line that names the language. The setting does not apply to code identifiers.
-A preset cannot carry the key. The setting is read from the project's own
-settings file: `compass.yml`, or `.compass/config.yml` when `compass.yml` is
+The setting is read from the project's own settings file: `compass.yml`, or `.compass/config.yml` when `compass.yml` is
 absent or has no `schema:`. A malformed value adds no line to a session.
 `compass policy lint` refuses a malformed `language` key in `compass.yml`; it
 does not check `.compass/config.yml`.
@@ -365,23 +431,231 @@ Quote `"on"` and `"off"`: YAML reads them unquoted as true and false, which
 Compass also accepts. Unset means on. `off` needs a reason that is not blank.
 Any other value makes `compass approach evaluate` and `compass check` exit 2
 with a message that names the key, the file and the accepted values, and
-`compass policy lint` reports it in `compass.yml`. In a project pinned at
-`compass:default@6` or `@7` the strategy never reads the value, but
-`compass.yml` must still pass its schema check. `compass policy lint`,
+`compass policy lint` reports it in `compass.yml`. `compass policy lint`,
 `compass approach evaluate --write` and `compass check` on an issue not yet
-assessed refuse a bad value there. `compass check` on an assessed issue reads
+assessed refuse a bad value. `compass check` on an assessed issue reads
 the configuration stored with the issue, so it does not refuse it. The
 setting needs no
-owner's approval: the delivery-approach record and `compass retro
---acceptance` show the choice. It takes effect for an issue at its next
+owner's approval: the manifest's `acceptance_strategy` block shows the choice. It takes effect for an issue at its next
 `compass approach evaluate --write`; until then `compass check` reports the
 changed setting as advice. The setting is read from `compass.yml`, or
 `.compass/config.yml` when `compass.yml` is absent or has no `schema:`.
 
-The strategy ships in the default preset from major 8. A project whose
-`compass.yml` extends `compass:default@6` or `compass:default@7` does not get
-it: assess stores no applicability and `compass check` adds no row for it. A
-project with no `compass.yml`, no `extends:` or a git parent runs on the live
-default and gets it. The setting is the one way to turn the strategy off:
-`compass policy lint` refuses `acceptance_strategy: suspended` on an approach
-that ships.
+The check set holds the strategy. By default a delivery issue owes no record
+of it (ADR-099): assess stores the routing `guidance`, the `atdd` skill is
+advice, and no check of the strategy runs. The records are owed only where a
+`require_evidence` rule adds one of the strategy's tokens, and the tokens
+set the routing:
+
+| Token added | Routing | What the routing needs |
+|---|---|---|
+| `outer-loop` | `existing-dsl` | the outer-loop records alone |
+| `isolation` | `existing-dsl-isolation` | the isolation proof |
+| `layering` | `on` | the full strategy |
+
+When a rule adds more than one, `layering` decides before `isolation`, and
+`isolation` before `outer-loop`.
+
+With `state: "off"` the strategy does not apply to any issue, whatever a
+`require_evidence` rule adds. The setting is the one way to turn the
+strategy off: no other setting can suspend it on an approach that ships.
+
+## Tighten-only settings
+
+Compass runs one fixed set of checks (ADR-094). Five settings of
+`compass.yml` can change what an issue owes, and each can only make it owe
+more. No value removes a check, lowers a severity or narrows when a check
+applies. Only the project's own `compass.yml` can hold them.
+
+The resolver (`effective.resolve_live`) applies them to the check set with
+`compass_pkg.tighten`, and `compass policy lint` and every generation commit
+check them with `compass_pkg.settings_lint`. Each issue's `policy:` block
+records the ones applied, as written (see `docs/generation-store.md`).
+
+| Setting | What it adds | Values | Default |
+|---|---|---|---|
+| `signoff_labels` | More labels that owe what a `G5` label owes | a list of label names | none: the four shipped labels |
+| `require_evidence` | More evidence a matching delivery issue owes | a list of `{when, add}` rules | none |
+| `agent_review` | The advisory judged check `agent-review` at `ship` | `on` or `true`; `off` or `false` | off |
+| `project_checks` | The project's own commands, each a blocking check | a list of `{id, name, command, stage, when}` | none |
+| `capabilities` | The evaluation of the Definition of Done items | `{entry-exit-evaluation: true}` | `false` |
+
+```yaml
+signoff_labels: [billing]
+require_evidence:
+  - when: {risk: [cross-cutting, critical]}
+    add: [reproduce-first]
+agent_review: on
+project_checks:
+  - id: arch-fitness
+    name: Architecture fitness
+    command: python3 scripts/arch-fitness.py
+    stage: build
+capabilities:
+  entry-exit-evaluation: true
+```
+
+### `signoff_labels`
+
+Each label owes what `auth`, `payments`, `personal-data` and `migrations`
+owe: a person's approval of the scenarios before any code edit
+(`scenario-approval`) and the `G5` sign-off (`human-approval`). The labels join the `when` of gate `G5`. An exploration issue
+with one of them is refused, as for a shipped label. A shipped label cannot be
+taken away.
+
+### `require_evidence`
+
+By default every delivery issue owes the same evidence: `request`,
+`scenarios`, `red-before-green`, `suite-green`, `correctness`, `governance`,
+`traceability` and `ship-approval` (ADR-099). A `G5` label adds
+`scenario-approval` and `human-approval`, and critical risk adds
+`scenario-approval`. No other token is owed unless a rule here adds it: not
+the reviews `regression`, `security`, `clarity` and `architecture`, not
+`definition-of-done`, not `reproduce-first`, and not the `S17` tokens
+`outer-loop`, `isolation` and `layering` (see `acceptance_strategy` above).
+
+Each rule adds evidence tokens to a delivery issue whose assessment matches
+`when`:
+
+- `when` is a condition on the assessment, such as `risk: [critical]`,
+  `size: {at_least: medium}`, `labels_any: [billing]` or `any_of: [...]`.
+  Absent or empty, the rule applies to every delivery issue.
+- `add` is one or more tokens of the closed set: `request`, `scenarios`,
+  `red-before-green`, `suite-green`, `correctness`, `governance`,
+  `traceability`, `regression`, `security`, `clarity`, `architecture`,
+  `outer-loop`, `isolation`, `layering`, `definition-of-done`,
+  `reproduce-first`, `scenario-approval`, `human-approval` and
+  `ship-approval`. Every delivery issue already owes `request` and
+  `ship-approval`, so a rule that adds either changes nothing.
+
+The rules fire as `RP-SETTING-1`, `RP-SETTING-2` and so on, in file order. A
+spike owes none of them, because it ships nothing.
+
+`compass quick-fix finish` does not write the evidence a rule adds. It
+writes its own record, prints one `next:` line for each added item, commits
+nothing and exits 1. The session records each item, then runs the same
+`finish` again.
+
+### `agent_review`
+
+`on` adds the check set's optional judged check `agent-review` at the entry
+of `ship`, as advisory evidence (ADR-090 decision 7). See
+`docs/judged-checks.md`. Write `on` or `true`; YAML reads an unquoted `on` as
+`true`, and both are accepted. `off` and `false` are the default.
+
+### `project_checks`
+
+Each entry adds one blocking check and one guardrail, both under `id`, that
+run `command` from the project root through the `command-passes`
+implementation. Exit 0 passes.
+
+- `id` must not be the id of a shipped check or gate, nor `agent-review`, nor a
+  check Compass deleted (`check_registry.DELETED_CHECKS`). `compass check`
+  refuses a project whose `project_checks` names a deleted check
+  (`names-deleted-check`, `docs/waivers.md`).
+- `stage` is `build` or `ship`.
+- `when` is optional, in the form `require_evidence` uses.
+- `compass check` runs the command only when `allow_project_commands` is
+  `true` (see `docs/security.md`).
+
+### `capabilities`
+
+`entry-exit-evaluation: true` evaluates the Definition of Done items at the
+end of `build` (`docs/entry-exit-evaluation.md`). `false` is the default and
+changes nothing. Any other capability is refused, except
+`artifact-freshness`, which 9.0.0 removed and which lint names with
+`L-SETTING-REMOVED`.
+
+### Removed settings and their replacements
+
+`compass policy lint` names each removed key with what replaces it. One
+table, `removed_parts.REPLACEMENTS`, holds the replacement of every removed
+key, and the lint message and the `replacement` field of `--json` both come
+from it (ADR-098 decision 7). The message ends with one of:
+
+- "Replacement: `<setting>`." when a setting replaces the key;
+- "Removed: nothing replaces it." when nothing does.
+
+It then adds "`compass migrate` rewrites it." when `compass migrate` changes
+the key for you. Otherwise, edit `compass.yml` by hand.
+
+`compass migrate` reads the same table (`cli/compass_pkg/migrate_settings.py`):
+
+- It deletes each key marked "rewrites it", and writes the setting that
+  replaces it where the key held something a setting carries.
+- It leaves each key marked "no" in the file, and names the edit.
+- It leaves whole a rewritten key that holds a key marked "no", such as
+  `rules:` with `rules.caps`.
+
+It edits `compass.yml` line by line, so comments stay, and it writes nothing
+unless this lint passes on the result. `docs/upgrade-9-0-0.md` lists each
+conversion. `tests/test_migrate_settings.py` walks every row of the table.
+
+`extends:` has a row for each pin of the shipped default:
+
+- `extends@6` is a pin at `@6` or below, and `extends@7` a pin at `@7`. The
+  pin kept the acceptance strategy `S17` off in 8.x. 9.0.0 does not read it,
+  and `acceptance_strategy: off` replaces it. From 9.0.0 the strategy owes no
+  record unless a `require_evidence` rule adds one of its tokens.
+- `extends@8` is a pin at `@8` or later, or no pin. Nothing replaces it.
+- `extends` is any other value.
+
+A key with `*` is an effect of any rule that picked a delivery approach.
+`tests/test_lint_names_replacements.py` fails when a removed key has no row,
+or when this table differs from `REPLACEMENTS`.
+
+<!-- compass:replacements-table -->
+| Removed key | Replacement | `compass migrate` |
+|---|---|---|
+| `dimensions` | removed | no |
+| `stages` | removed | no |
+| `rules` | `require_evidence` | rewrites it |
+| `checks` | `project_checks` | rewrites it |
+| `gates` | `signoff_labels` or `project_checks` | rewrites it |
+| `vocabulary` | removed | no |
+| `extends` | removed | no |
+| `extends@6` | `acceptance_strategy: {state: off, reason: ...}` | rewrites it |
+| `extends@7` | `acceptance_strategy: {state: off, reason: ...}` | rewrites it |
+| `extends@8` | removed | rewrites it |
+| `preset` | removed | rewrites it |
+| `preset_index` | removed | rewrites it |
+| `approvers.project-waiver` | removed | rewrites it |
+| `models` | removed | rewrites it |
+| `multiagent` | removed | rewrites it |
+| `living_spec` | removed | rewrites it |
+| `artifacts` | removed | rewrites it |
+| `approaches` | removed | rewrites it |
+| `stages.<id>`: `define`, `refine`, `plan`, `breakdown`, `implement`, `verify` | removed | no |
+| `rules.caps` | removed | no |
+| `checks.<id>`: `dor-summary-filled`, `dor-problem-traces-up`, `dor-behavior-is-gwt`, `dor-traceability-ids`, `dor-affected-surface-named`, `dor-no-open-questions`, `dor-approach-still-fits` | removed | no |
+| `prices` | removed | rewrites it |
+| `github_labels` | removed | rewrites it |
+| `readiness` | removed | rewrites it |
+| `governance_drift` | removed | rewrites it |
+| `github_labels.page` | removed | rewrites it |
+| `project.<id>`: `build_command`, `lint_command`, `format_check_command`, `typecheck_command`, `secret_scan`, `structured_logging` | removed | rewrites it |
+| `rules.floors.rules.RP-FLOOR-002.then.require_phase` | removed | rewrites it |
+| `capabilities.artifact-freshness` | removed | no |
+| `rules.*.force_minimum_approach` | removed | rewrites it |
+| `rules.*.forbid_approach` | removed | rewrites it |
+| `rules.*.never_skip` | removed | rewrites it |
+<!-- /compass:replacements-table -->
+
+### The settings lint
+
+`compass_pkg.settings_lint.lint` reads `compass.yml` as a file of settings.
+It gives each finding a code:
+
+| Code | Level | When |
+|---|---|---|
+| `L-SETTING-UNKNOWN` | error | a key `compass.yml` cannot hold |
+| `L-SETTING-INVALID` | error | a malformed value, or a tighten-only value that would not only add, such as a token outside the closed set, an extra field such as `remove:` or `severity:`, a project check that reuses a shipped id, or an assessment value the check set does not declare |
+| `L-SETTING-REMOVED` | warning | a key 9.0.0 removed, read as if absent: the catalogs (`dimensions`, `stages`, `rules`, `checks`, `gates`, `vocabulary`, and the earlier `approaches`, `artifacts`, `readiness`), `extends: compass:...`, `preset`, `preset_index`, `approvers.project-waiver` and the removed settings above. The message names what replaces the key (see "Removed settings and their replacements" below) |
+| `L-PARENT-REMOVED` | error | `extends:` names a git parent, which could hold checks this file does not show. Every command that resolves a policy refuses with exit 2 and says what to do: move the team's checks into the five settings above and delete `extends:`, or stay on 8.x. `compass migrate` refuses a git parent too |
+| `L-IMPL-UNKNOWN` | error | the integrity rule: a check, after the settings apply, names an implementation the CLI does not hold |
+
+The JSON Schema in `schemas/compass.schema.json` describes the same shapes. It
+holds the settings above and nothing else, so an editor marks a removed
+setting as one the file cannot hold. `settings_lint.schema()` generates it,
+with the descriptions in `catalogue_spec.TOP_DESCRIPTIONS`, and
+`tests/test_catalogue_spec.py` keeps the committed file equal to it.

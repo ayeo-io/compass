@@ -66,3 +66,164 @@ def test_contract_4_capture_refuses_to_overwrite(tmp_path):
     corpus.write_text(cc.CORPUS.read_text(encoding="utf-8"), encoding="utf-8")
     with pytest.raises(RuntimeError, match="already holds captured"):
         cc.capture(corpus)
+
+
+def test_contract_4_a_command_9_0_0_removed_must_name_its_removal():
+    """9.0.0 removes `compass issue receipt` (ADR-091). Its corpus entries are compared
+    with the parse error that names the removal, and nothing looser: the old success,
+    another exit or a bare unknown-command error each differ."""
+    entry = next(e for e in ENTRIES if e["id"] == "issue-receipt-quick-fix")
+    named = "compass: 'compass issue receipt' was removed in 9.0.0 (ADR-091): ..."
+    assert cc.differences(entry, cc.Outcome(2, "", named)) == []
+    assert cc.differences(entry, cc.Outcome(0, "not yet landed", ""))
+    assert cc.differences(entry, cc.Outcome(1, "", named))
+    assert cc.differences(entry, cc.Outcome(2, "", "invalid choice: 'receipt'"))
+    other = next(e for e in ENTRIES if e["id"] == "check-quick-fix-enforced")
+    assert other["id"] not in cc.REMOVED_IN_9_0_0
+
+
+def test_contract_4_a_freshness_phrase_9_0_0_removed_must_be_gone():
+    """9.0.0 removes artifact freshness (ADR-091). The two corpus entries that named a
+    freshness phrase keep their exit code, and the phrase must no longer be printed:
+    a stale-document line after 9.0.0 means the reader came back. The third,
+    artifact-records-digests, ran `compass issue artifact set`, which 9.0.0 removed too,
+    so it is compared with the line that names that removal."""
+    entry = next(e for e in ENTRIES if e["id"] == "next-stale-document")
+    assert cc.differences(entry, cc.Outcome(0, "Implement [gate: x]", "")) == []
+    assert cc.differences(entry, cc.Outcome(0, entry["stdout_contains"], ""))
+    assert cc.differences(entry, cc.Outcome(1, "Implement", ""))
+    assert set(cc.PHRASE_REMOVED_IN_9_0_0) == {"check-stale-document", "next-stale-document"}
+    assert "artifact-records-digests" in cc.REMOVED_IN_9_0_0
+
+
+def test_contract_4_next_reads_the_approach_from_the_manifest():
+    """9.0.0 writes no delivery-approach.md (ADR-091): the manifest holds the approach, so
+    `compass next` answers on an assessed issue with no such file. The entry's recorded
+    refusal (exit 2) is compared as exit 0; any other exit still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "next-regular-without-approach-record")
+    assert cc.differences(entry, cc.Outcome(0, "Define [gate: verify.correctness]", "")) == []
+    assert cc.differences(entry, cc.Outcome(2, "", "delivery-approach.md is missing"))
+    assert cc.differences(entry, cc.Outcome(1, "", ""))
+    assert cc.EXIT_CHANGED_IN_9_0_0["next-regular-without-approach-record"] == 0
+
+
+def test_contract_4_next_shows_the_path_stage():
+    """`compass next` shows the legacy implement stage as Build, the path stage it maps
+    to (ADR-092). The entry's recorded "Implement" is compared as "Build": the old word
+    alone, or another exit, still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "next-quick-fix")
+    assert entry["stdout_contains"] == "Implement"
+    line = "Build [gate: verify.correctness] | next: compass tdd-red --scenario A -- x"
+    assert cc.differences(entry, cc.Outcome(0, line, "")) == []
+    assert cc.differences(entry, cc.Outcome(0, "Implement [gate: verify.correctness]", ""))
+    assert cc.differences(entry, cc.Outcome(1, line, ""))
+    assert cc.PHRASE_CHANGED_IN_9_0_0["next-quick-fix"] == ("Implement", "Build")
+
+
+def test_contract_4_a_judged_check_from_compass_yml_is_not_read():
+    """`evidence-review-recorded` adds the judged check `design-review` through a
+    `checks:` block in `compass.yml`. 9.0.0 reads that block as a removed setting
+    (ADR-094), so no such check exists and the review is refused with exit 2. The
+    recorded success phrase is not compared; exit 0 still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "evidence-review-recorded")
+    assert entry["exit"] == 0 and entry["stdout_contains"]
+    assert cc.differences(entry, cc.Outcome(2, "", "no judged check design-review")) == []
+    assert cc.differences(entry, cc.Outcome(0, entry["stdout_contains"], ""))
+    assert cc.differences(entry, cc.Outcome(1, "", ""))
+
+
+def test_contract_4_the_intended_9_0_0_changes_are_the_listed_ones():
+    """Each entry 9.0.0 changes on purpose is named here, so a new one is a decision
+    made in this file and not a drift the tables absorb."""
+    # `issue-configure-refused-proposal-exits-1` was here until 9.0.0 removed `compass
+    # issue configure` with the issue layer (ADR-094); it is in `REMOVED_IN_9_0_0` now.
+    # `evidence-review-recorded` exits 2 since 9.0.0 reads compass.yml as settings only
+    # (ADR-094 open question 19); `policy-effective-shipped` names the check set, and
+    # `policy-lint-git-parent-no-sha` the git parent's removal. A project with copied
+    # governance and no compass.yml is refused (ADR-098, VD-043 decision 3), so its
+    # three entries that passed or failed the lint exit 2, and the four entries of
+    # the two copied states name the refusal. Typed input takes only the 9.0.0
+    # names (VD-043 decision 9), so the two entries that type the old size on a
+    # project 9.0.0 reads exit 2 and name the value refused.
+    assert cc.EXIT_CHANGED_IN_9_0_0 == {"next-regular-without-approach-record": 0,
+                                        "quick-fix-start-heavier": 2,
+                                        "quick-fix-start-auth-label": 0,
+                                        "evidence-review-recorded": 2,
+                                        "approach-evaluate-copied-governance": 2,
+                                        "approach-evaluate-controlled-autonomy": 2,
+                                        "policy-lint-copied": 2,
+                                        "policy-lint-broken": 2}
+    assert set(cc.OLD_WORD_REFUSED_IN_9_0_0) == {"approach-evaluate-controlled-autonomy",
+                                                 "quick-fix-start-heavier"}
+    assert cc.REFUSED_IN_9_0_0 == {
+        entry_id: "governance-copy-removed"
+        for entry_id in ("approach-evaluate-copied-governance",
+                         "approach-evaluate-broken-governance",
+                         "policy-lint-copied", "policy-lint-broken")}
+    assert set(cc.PHRASE_CHANGED_IN_9_0_0) == {
+        "next-quick-fix", "approach-evaluate-quick-fix", "approach-evaluate-no-compass-folder",
+        "approach-summary-regular", "quick-fix-start-valid", "quick-fix-start-advisory",
+        "quick-fix-start-auth-label", "policy-effective-shipped",
+        "policy-lint-git-parent-no-sha"}
+    for entry_id, (recorded, _) in cc.PHRASE_CHANGED_IN_9_0_0.items():
+        entry = next(e for e in ENTRIES if e["id"] == entry_id)
+        assert entry["stdout_contains"] == recorded, entry_id
+
+
+def test_contract_4_quick_fix_start_takes_heavier_work_on_the_path():
+    """On the four-stage path (ADR-092) `quick-fix start` starts work heavier than a
+    quick fix. The entry's recorded refusal (exit 1, "computes to full") is compared
+    as exit 0 with "recorded as delivery": the old refusal, or the old phrase alone,
+    still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "quick-fix-start-auth-label")
+    assert (entry["exit"], entry["stdout_contains"]) == (1, "computes to full")
+    now = "compass quick-fix start: 'login' recorded as delivery."
+    assert cc.differences(entry, cc.Outcome(0, now, "")) == []
+    assert cc.differences(entry, cc.Outcome(1, now, ""))
+    assert cc.differences(entry, cc.Outcome(0, "the change computes to full", ""))
+
+
+def test_contract_4_approach_evaluate_names_the_one_approach():
+    """An assessment given on the command line is evaluated on the path, so it names
+    `delivery` with the gate count 8.x gave. The old approach name still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "approach-evaluate-quick-fix")
+    assert cc.differences(entry, cc.Outcome(0, "delivery - 3 gate(s), 8 kinds", "")) == []
+    assert cc.differences(entry, cc.Outcome(0, "quick fix - 3 gate(s)", ""))
+    assert cc.differences(entry, cc.Outcome(0, "delivery - 6 gate(s)", ""))
+
+
+def test_contract_4_a_typed_old_size_is_refused_as_an_unknown_value():
+    """9.0.0 reads no old word typed on the command line (VD-043 decision 9). The two
+    entries that type `size=standard` on a project 9.0.0 reads exit 2 and name the
+    value refused. Their recorded success, or another refusal, still differs."""
+    refused = ("compass: invalid assessment:\n  - reading size='standard' is not in "
+               "the vocabulary ['atomic', 'small', 'medium', 'large', 'product']\n")
+    for entry_id in ("approach-evaluate-controlled-autonomy", "quick-fix-start-heavier"):
+        entry = next(e for e in ENTRIES if e["id"] == entry_id)
+        assert "size=standard" in entry["argv"] or "standard - several files" in entry["argv"]
+        assert cc.differences(entry, cc.Outcome(2, "", refused)) == [], entry_id
+        assert cc.differences(entry, cc.Outcome(entry["exit"], entry["stdout_contains"], ""))
+        assert cc.differences(entry, cc.Outcome(2, "", "compass: some other refusal\n"))
+
+
+def test_contract_4_a_governance_copy_is_refused_by_name():
+    """9.0.0 reads no copy of the governance files (ADR-098): the entry that routed
+    over a copy now exits 2 and names `governance-copy-removed`. Its old success, or
+    a refusal for another reason, still differs."""
+    entry = next(e for e in ENTRIES if e["id"] == "approach-evaluate-copied-governance")
+    refused = "compass: Blocked: ... [governance-copy-removed]\n"
+    assert cc.differences(entry, cc.Outcome(2, "", refused)) == []
+    assert cc.differences(entry, cc.Outcome(0, "delivery - 6 gate(s), 13 kinds", ""))
+    assert cc.differences(entry, cc.Outcome(2, "", "compass: some other refusal\n"))
+
+
+def test_contract_4_the_issue_configure_entries_are_removed_in_9_0_0():
+    """`compass issue configure` and `approach evaluate --reset-config` went with the
+    issue layer (ADR-094). Their six entries now exit 2 and name the removal."""
+    ids = {"issue-configure-proposes-a-change", "issue-configure-refused-proposal-exits-1",
+           "issue-configure-no-change-given", "issue-configure-discard-nothing",
+           "approach-evaluate-reset-config-needs-write", "approach-evaluate-write-reset-config"}
+    assert ids <= set(cc.REMOVED_IN_9_0_0)
+    assert not ids & set(cc.EXIT_CHANGED_IN_9_0_0) and not ids & set(cc.PHRASE_CHANGED_IN_9_0_0)
+    for entry_id in ids:
+        assert "(ADR-094)" in cc.REMOVED_IN_9_0_0[entry_id], entry_id

@@ -5,10 +5,11 @@ was the tested tree: code could change after the green and the record still
 cleared `suite-passed`. Every red, green and acceptance record now carries
 two ids. `tree_id` is the git tree id of the tracked files on disk plus the
 issue's own untracked changed files, leaving out `.compass/` and
-`docs/compass/`, which a record cannot affect. `changes_id` is a tree of the
-issue's changed files alone. `evidence-matches-tree` compares the newest
-record's `tree_id` with the tree now, and fails once the issue is ready to
-ship. For a landed issue it compares `changes_id` with the same files in the
+`docs/compass/`, which a record cannot affect. `file_sha256` holds the
+SHA-256 of each of the issue's own files (ADR-089). `evidence-matches-tree`
+compares the newest record's `tree_id` with the tree now, and fails once the
+issue is ready to ship. For a landed issue it compares `file_sha256` with the
+same files in the
 commit `ship-commit` recorded, which is what `compass ci` runs; HEAD moving on
 after the land does not matter.
 
@@ -112,7 +113,8 @@ def test_evb_1_a_green_names_the_tree_it_ran_on(repo):
     _git(repo, "add", "src/new.py")
     expected = _git(repo, "write-tree")
     assert _record(repo).get("tree_id") == expected
-    assert _record(repo).get("changes_id")
+    assert "src/new.py" in _record(repo).get("file_sha256")
+    assert "changes_id" not in _record(repo)
 
 
 def test_evb_1_a_red_and_an_acceptance_name_their_tree(repo):
@@ -282,3 +284,23 @@ def test_evb_6_a_land_commit_missing_from_the_clone_is_not_judged(repo):
     ok, why = _check(repo)
     assert ok is NOTHING_TO_CHECK, why
 
+
+
+def test_evb_8_of_two_records_from_one_second_the_later_one_is_judged(tmp_path):
+    """Timestamps are whole seconds. A fast run writes an old record and its
+    replacement in the same second, so the check must judge the record listed
+    later, not the first one it reads."""
+    from compass_pkg import binding
+
+    ev = tmp_path / "evidence"
+    ev.mkdir()
+    second = "2026-11-13T10:06:43+00:00"
+    for name, tree in (("acceptance.json", "a" * 40), ("acceptance-TRC-001.json", "b" * 40)):
+        (ev / name).write_text(json.dumps({"exit_code": 0, "passed": True,
+                                           "timestamp": second, "tree_id": tree}))
+    task = {"evidence": [
+        {"id": "EV-1", "type": "test-run", "path": "evidence/acceptance.json"},
+        {"id": "EV-2", "type": "test-run", "path": "evidence/acceptance-TRC-001.json"}]}
+    path, record = binding._newest_bound_record(task, str(tmp_path))
+    assert path == "evidence/acceptance-TRC-001.json"
+    assert record["tree_id"] == "b" * 40

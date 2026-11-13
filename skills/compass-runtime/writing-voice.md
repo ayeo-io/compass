@@ -11,7 +11,7 @@ terms - it is whether the sentence acts out a process or reports on one.
 
 **The calibration sample.** Before writing anything in this register, read the
 "Never stash across a worktree hop" section of
-`skills/worktree-multiagent/SKILL.md`. It tells a real incident - a stash popped
+`skills/compass-runtime/SKILL.md`. It tells a real incident - a stash popped
 inside a temporary worktree destroyed work when the worktree was removed - in
 plain sentences, with no stage name announced and no field left to do the
 talking. That is the voice every surface below is asking for.

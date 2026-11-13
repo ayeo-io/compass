@@ -145,10 +145,13 @@ is_enforced_path() {
       tests/*|*/tests/*|test/*|*/test/*|spec/*|*/spec/*|\
       __tests__/*|*/__tests__/*|testdata/*|*/testdata/*) return 1 ;;
     esac
-    # Exempt: eval fixture input. `evals/<group>/<name>/seed/` holds files the
-    # eval harness copies into a sandbox and never runs in place, so it is not
-    # production code. `rel` is resolved and relative to the project, so the
-    # pattern starts at the project root and a `..` step cannot borrow it.
+    # Exempt: eval fixture input, in any project. By convention
+    # `evals/<group>/<name>/seed/` holds files that an evaluation harness
+    # copies into a sandbox and never runs in place, so it is not production
+    # code. Compass ships no harness since ADR-093, but the rule stays for a
+    # project that keeps such a folder. `rel` is resolved and relative to the
+    # project, so the pattern starts at the project root and a `..` step
+    # cannot borrow it.
     # `examples/`, `cli/vendor/`, `.github/scripts/`, `evals/` outside `seed/`,
     # `src/examples/` and `db/seed/` stay guarded: enforcement.code_globs only
     # ratchets up (ADR-011). In `case`, `*` also matches `/`.

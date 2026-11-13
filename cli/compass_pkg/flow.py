@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass_pkg.flow - `compass flow` and the living system spec derivation
+# compass_pkg.flow - `compass flow`: the text board, `--json` and `--digest`
 # =============================================================================
 #
 # DEPENDENCY: PyYAML, bundled at cli/vendor/yaml/ and pinned in
@@ -16,7 +16,6 @@ import json
 import os
 import re
 import shlex
-import subprocess
 import sys
 import tempfile
 
@@ -33,23 +32,15 @@ import re as _re
 import fnmatch
 import re as _re
 import glob
-from compass_pkg import parse_cache, status_words
-# The completed-and-ships rule and the spec's heading pattern live in
-# shipped_issues, which `compass release notes` reads too without the parse
-# cache. The underscore names stay for the callers and tests that use them.
-from compass_pkg.shipped_issues import (LIVING_SPEC_FILES, ISSUE_HEADING as _ISSUE_HEADING,
-                                        completed_issues, issues_named as _issues_named,
-                                        one_line, ships as _ships)
-from compass_pkg.manifest_store import load_manifest_mapping
-from compass_pkg.core import (CompassError, find_compass_dir, find_governance,
+from compass_pkg import parse_cache, path_stages, status_words
+from compass_pkg.core import (CompassError, find_compass_dir,
                               load_yaml, manifest_path, normalize_spine)
-from compass_pkg.rework import cmd_rework_scan
-from compass_pkg.stable_ids import APPROACH_SPIKE, STAGE_IDS, STAGE_SHIP
+from compass_pkg.stable_ids import APPROACH_SPIKE, PATH_STAGE_IDS, STAGE_IDS, STAGE_SHIP
 
 
 
 # --- command: flow ----------------------------------------------------------
-# Cross-issue flow view. Reads broadly; writes only the page `--html` names.
+# Cross-issue flow view. Reads broadly and writes nothing.
 # Never changes any manifest (`Inv-4`: Flow advises, never gates).
 
 # A queued issue older than this many days is flagged when it carries a
@@ -64,9 +55,7 @@ def _routing_labels():
     """Every label a routing-policy rule names in `labels_any`."""
     from compass_pkg import effective
     try:
-        view = effective.view_or_legacy()
-        policy = (view.evaluator_policy() if view is not None else
-                  load_yaml(os.path.join(find_governance(), "routing-policy.yml")))
+        policy = effective.effective_for().evaluator_policy()
     except CompassError:
         return set()
     found, stack = set(), [policy]
@@ -148,7 +137,7 @@ def queue_ageing(work_root, today=None):
 
 # --- the delivery board ------------------------------------------------------
 # One read of every manifest, shaped into the sections the board shows. Plain
-# data, so the text board, `--json` and the HTML page cannot disagree.
+# data, so the text board and `--json` cannot disagree.
 
 LANDED_WINDOW_DAYS = 7
 
@@ -273,9 +262,8 @@ def board(work_root, today=None, sources=None, parsed=None):
     cache = parse_cache.for_work_root(work_root)
     out = {"backlog": [], "ready": [], "in_progress": [], "stale": [],
            "in_review": [], "done_this_week": [], "closed": [], "other": [],
-           "unreadable": [], "friction": None, "counts": {}, "total": 0,
+           "unreadable": [], "counts": {}, "total": 0,
            "done_by_reason": {reason: 0 for reason in status_words.CLOSE_REASONS}}
-    categories = {}
     if sources is None:
         sources = _checkout_sources(work_root)
     # A slug is one issue however many trees hold it: count slugs, and do not
@@ -315,7 +303,7 @@ def board(work_root, today=None, sources=None, parsed=None):
             _unreadable(out, src, why)
             continue
         try:
-            _board_place(out, categories, src, m, today, now, guarded, evidence_state, reader)
+            _board_place(out, src, m, today, now, guarded, evidence_state, reader)
         except effective.MajorRefusal as exc:
             # A generation built by another major refuses its own issue, not the board.
             _unreadable(out, src, str(exc))
@@ -323,9 +311,6 @@ def board(work_root, today=None, sources=None, parsed=None):
             # One malformed manifest must not hide every other issue.
             _unreadable(out, src, "malformed manifest.yml (%s)" % type(exc).__name__)
     out["backlog"].sort(key=lambda r: (-(r["age_days"] or 0), r["slug"]))
-    if categories:
-        top = sorted(categories.items(), key=lambda kv: (-kv[1], kv[0]))[0]
-        out["friction"] = {"category": top[0], "count": top[1]}
     if parsed is None:
         # With `parsed`, this checkout was read and pruned by `read_checkout`.
         # This run reads only other trees, so judging which entries went
@@ -359,7 +344,7 @@ def _why_fields(m):
         problems.append("schema_version %s is not one this Compass reads"
                         % m.get("schema_version"))
     named = m.get("current_phase")
-    if isinstance(named, str) and named.strip().lower() not in STAGE_IDS:
+    if isinstance(named, str) and named.strip().lower() not in STAGE_IDS + PATH_STAGE_IDS:
         problems.append("current_phase %r names no stage" % named)
     assessment, raw = None, m.get("assessment")
     if isinstance(raw, dict) and raw:
@@ -399,19 +384,21 @@ def _why_fields(m):
     return fields, (problems[0] if problems else None)
 
 
-def _lane_of(row, recorded, held, stage):
+def _lane_of(row, recorded, held, stage, m):
     """The lane the page puts an open issue in (decided here, never again by
-    the page). An unplaceable issue has none."""
+    the page). An unplaceable issue has none. The stage lanes are the issue's
+    own stages (`path_stages.stages_of`): a path issue sits in a path stage's
+    lane, and an issue assessed before the path keeps its legacy stage's lane."""
     if row["unplaceable"]:
         return None
     if not recorded or held:
         return "backlog"
-    if stage in STAGE_IDS:
+    if stage in path_stages.stages_of(m) or stage in STAGE_IDS:
         return stage
     return STAGE_SHIP if stage == "done" else None
 
 
-def _board_place(out, categories, src, m, today, now, guarded, evidence_state, read=None):
+def _board_place(out, src, m, today, now, guarded, evidence_state, read=None):
     """Put one issue's row in its section. Raises on a field of the wrong
     type, which the caller reports as a malformed manifest."""
     from compass_pkg import issue_detail
@@ -432,12 +419,11 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state, r
         out["counts"][status] = out["counts"].get(status, 0) + 1
         return
     # No stored status means in flight: the state comes from the records. The
-    # facts the issue page also shows come from one function, called through its
-    # module so a test can replace it (ADR-051).
+    # facts come from one function, called through its module so a test can
+    # replace it (ADR-051).
     facts = issue_detail.detail(m, task_dir, read=read)
     state = facts.state
-    row = {"slug": slug, "delivery_approach": approach, "state": state,
-           "readiness": facts.readiness}
+    row = {"slug": slug, "delivery_approach": approach, "state": state}
     # The stored flag's reason first, then what the issue waits for (ADR-062).
     blocked = lifecycle.blocked_text(facts.blocked, facts.waits)
     if blocked:
@@ -457,16 +443,16 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state, r
             src["tree_root"], slug, str(m.get("created") or "")))
         row["stage"], stage_problem = facts.stage, facts.stage_problem
         row["unplaceable"] = problem or stage_problem
-        row["lane"] = _lane_of(row, recorded, held, row["stage"])
+        row["lane"] = _lane_of(row, recorded, held, row["stage"], m)
         out["backlog"].append(row)
     elif state == "ready":
         row["stage"], stage_problem = facts.stage, facts.stage_problem
         row["unplaceable"] = problem or stage_problem
-        row["lane"] = _lane_of(row, recorded, held, row["stage"])
+        row["lane"] = _lane_of(row, recorded, held, row["stage"], m)
         out["ready"].append(row)
     elif state == "done":
         row["unplaceable"] = problem
-        _board_place_done(out, categories, row, m, now)
+        _board_place_done(out, row, m, now)
     else:
         if not isinstance(m.get("gates") or [], list):
             raise TypeError("gates is not a list")
@@ -474,7 +460,7 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state, r
         if facts.stage_problem:
             raise TypeError(facts.stage_problem)
         row.update(stage=facts.stage, evidence=evidence, unplaceable=problem)
-        row["lane"] = _lane_of(row, recorded, held, row["stage"])
+        row["lane"] = _lane_of(row, recorded, held, row["stage"], m)
         if evidence == "stale":
             out["stale"].append(row)
         else:
@@ -482,7 +468,7 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state, r
     out["counts"][state] = out["counts"].get(state, 0) + 1
 
 
-def _board_place_done(out, categories, row, m, now):
+def _board_place_done(out, row, m, now):
     """A closed issue: completed this week, or closed without delivery. A
     completed issue older than the window is counted and not listed."""
     reason = status_words.close_reason(m)
@@ -496,11 +482,6 @@ def _board_place_done(out, categories, row, m, now):
             row["close_reason"] = reason
             row["lane"] = None if row["unplaceable"] else "done"
             out["done_this_week"].append(row)
-            friction = m.get("friction")
-            for f in friction if isinstance(friction, list) else []:
-                if isinstance(f, dict) and f.get("category"):
-                    c = str(f["category"])
-                    categories[c] = categories.get(c, 0) + 1
     elif reason:
         row["close_reason"] = reason
         out["closed"].append(row)
@@ -554,13 +535,6 @@ def _board_row(key, r):
     return "%-40s approach=%s" % (r["slug"], r["delivery_approach"])
 
 
-def _friction_line(data):
-    f = data["friction"]
-    if not f:
-        return "Friction this week: none recorded."
-    return "Friction this week: %s (%d)." % (f["category"], f["count"])
-
-
 def _render_board(args, data):
     from compass_pkg.terminal import Report
     counts = data["counts"]
@@ -571,48 +545,17 @@ def _render_board(args, data):
         % (data["total"], len(counts), len(data["stale"]),
            len(data["done_this_week"])),
         ", ".join("%s %d" % (k, n) for k, n in sorted(counts.items()))
-        or "nothing to report",
-        _friction_line(data))
+        or "nothing to report")
     for key, heading, _ in _BOARD_SECTIONS:
         rows = data[key]
         rep.section(heading, rows, lambda r, k=key: _board_row(k, r))
-    rep.data(counts=counts, board={k: data[k] for k, _, _ in _BOARD_SECTIONS},
-             friction=data["friction"])
+    rep.data(counts=counts, board={k: data[k] for k, _, _ in _BOARD_SECTIONS})
     return rep.emit()
 
 
-def _check_html_target(target):
-    """Refuse a directory, and a path inside `.compass/` or `docs/compass/`,
-    which hold issue state. Checked before the board is read. One guard
-    serves every board file (`board_file.check_target`); only the command
-    name in its message differs."""
-    from compass_pkg import board_file
-    return board_file.check_target(target, "compass flow --html", _html_project_root())
-
-
-def _html_project_root():
-    try:
-        return os.path.dirname(find_compass_dir())
-    except CompassError:
-        return os.getcwd()
-
-
-def _write_board_html(work_root, target):
-    """Write the board page, the same page `compass board render` writes."""
-    from compass_pkg import board_cmd, board_file
-    path = _check_html_target(target)
-    page = board_cmd.build_page(_html_project_root(), work_root, False,
-                                datetime.datetime.now())
-    board_file.write_page_or_refuse("compass flow --html", path, page,
-                                    board_file.OUT_MODE)
-    print(f"compass flow: wrote the delivery board to {target}")
-    return 0
-
-
 def cmd_flow(args):
-    """Produce the flow board; with --digest also output a dated digest section
-    to stdout. The digest includes the rework-scan section and a retro
-    summary. Exit code is always 0 - this is advisory.
+    """Produce the flow board; with --digest output a dated digest of the
+    backlog to stdout instead. Exit code is always 0 - this is advisory.
     """
     work_root = getattr(args, "work_root", None)
     do_digest = getattr(args, "digest", False)
@@ -623,14 +566,6 @@ def cmd_flow(args):
         # `--work-root` still reads any folder of issues.
         work_root = os.path.join(find_compass_dir(), "work")
 
-    html_out = getattr(args, "html", None)
-    if html_out:
-        if do_digest:
-            raise CompassError("compass flow: --html writes the board, and "
-                               "--digest the digest; give one of them")
-        # The target is checked first, and the page is written even when
-        # there are no issues: it shows ten empty lanes and says so.
-        return _write_board_html(work_root, html_out)
     if not do_digest:
         if not os.path.isdir(work_root):
             print("compass flow: no issues found - work root does not exist.")
@@ -641,382 +576,11 @@ def cmd_flow(args):
             return 0
         return _render_board(args, data)
 
-    # --digest mode: produce a digest including rework-scan
-    import io as _io
-    import contextlib as _cl
-
+    # --digest mode: the dated backlog list.
     today = datetime.date.today().isoformat()
     print(f"# Flow digest - {today}\n")
     print("> Advisory only. This digest does not modify any issue state (Inv-4).\n")
     top, table = queue_ageing(work_root)
     print(top + "\n")
     print(table)
-
-    # --- Rework scan section (TRC-D5) ---
-    # Capture rework-scan output by invoking the scan logic directly
-    import types as _types
-    scan_args = _types.SimpleNamespace(
-        root=work_root,
-        window_days=None,
-        format="markdown",
-    )
-
-    buf = _io.StringIO()
-    with _cl.redirect_stdout(buf):
-        cmd_rework_scan(scan_args)
-    rework_section = buf.getvalue()
-
-    print(rework_section)
-
-    # --- Calibration summary ---
-    print("## Calibration signal\n")
-    # Enumerate issues for the retro summary
-    tasks = []
-    if os.path.isdir(work_root):
-        for d in sorted(os.listdir(work_root)):
-            tp = manifest_path(os.path.join(work_root, d))
-            if os.path.isfile(tp):
-                try:
-                    data = load_manifest_mapping(tp)
-                    tasks.append((d, data))
-                except CompassError:
-                    pass
-    # An `unchanged` entry keeps a reason; the approach did not move.
-    total_reframes = sum(1 for _, t in tasks for r in (t.get("reassessments") or [])
-                         if r.get("kind") != "unchanged")
-    if total_reframes == 0:
-        print(f"No re-assessments recorded across {len(tasks)} issue(s). "
-              f"Either the sizing is well-calibrated, or there is not enough history yet.\n")
-    else:
-        print(f"{total_reframes} re-assessment(s) recorded across {len(tasks)} issue(s). "
-              f"Run `compass retro` for the full breakdown.\n")
-
     return 0
-
-
-# --- living system spec derivation (ADR-008) ---------------------------------
-#
-# derive_system_spec(project_root) is the internal helper that produces
-# docs/system-spec.md by walking every .compass/work/*/manifest.yml whose
-# issue is completed (`status_words.is_completed`).
-#
-# Design constraints honoured here:
-#   Annotation over per-issue specs (invariant 5): never a parallel spec; the
-#            derived file carries the DERIVED FILE header.
-#   Reconstructibility (invariant 6): all derivation inputs live on disk; no
-#            in-memory accumulation beyond the walk.
-#   Backward compatibility (invariant 8): manifest.yml files with no `status`
-#            field (schema 1.0) are treated as active (not landed), so they
-#            are excluded from the derivation.
-#   ADR-008 §3 - idempotent; deterministic order (land_timestamp, then
-#             issue slug as tiebreaker); supersession (same intent id →
-#             latest-landed wins for current section, earlier → archive).
-#   ADR-008 §4 - never source-of-truth; DERIVED FILE header on line 1;
-#             silent overwrite on next ship.
-#   brand-new project with no landed issues produces a stub file.
-
-_DERIVED_HEADER = (
-    "<!-- DERIVED FILE - do not hand-edit; `compass _derive-system-spec` "
-    "rebuilds it from the scenarios in each completed issue's manifest.yml - "
-    "edit the scenario there and in the issue's acceptance-criteria.md -->"
-)
-
-def _completed_on_this_branch(project_root, landed):
-    """The completed issues that belong to the branch being derived (ADR-034).
-
-    Issue records are local and not committed, so they hold issues landed on
-    other branches too, and deriving all of them gave a branch scenarios it
-    does not have. An issue is left out only when it has a `land_commit`
-    that is not reachable from HEAD and the spec committed at HEAD does not
-    name it. Every landing re-derives that spec, so main's names what landed
-    on main, squash merges included; a branch's own landing is reachable.
-    Outside git, before a first commit, or with no `land_commit`, an issue
-    is kept, as before."""
-    def git(*args):
-        return subprocess.run(["git", "-C", project_root, *args],
-                              capture_output=True, text=True)
-    try:
-        if git("rev-parse", "--verify", "-q", "HEAD").returncode != 0:
-            return landed
-        named = set()
-        for rel in LIVING_SPEC_FILES:
-            shown = git("show", f"HEAD:{rel}")
-            if shown.returncode == 0:
-                named |= _issues_named(shown.stdout)
-        kept = []
-        for item in landed:
-            commit = item["issue"].get("land_commit")
-            # Only an issue the rule can judge is ever left out: one with a
-            # `land_commit` that is not on this branch and that the committed
-            # spec does not name. A record with no `land_commit` (written
-            # before ship-commit recorded one, or by hand) is kept, as before.
-            if (item["slug"] in named or not isinstance(commit, str) or not commit
-                    or git("merge-base", "--is-ancestor", commit,
-                           "HEAD").returncode == 0):
-                kept.append(item)
-        return kept
-    except OSError:
-        return landed
-
-
-def derive_system_spec(project_root: str) -> None:
-    """Derive docs/system-spec.md from all landed manifest.yml files.
-
-    This is the sole implementation of the living-system-spec derivation
-    (ADR-008).  It is invoked by ``compass _derive-system-spec --internal``
-    from ``scripts/integrate.sh`` after combined regression passes.
-
-    It is idempotent: running it twice on unchanged inputs produces a
-    byte-identical ``docs/system-spec.md``.
-
-    Args:
-        project_root: absolute path to the project root (the directory that
-            contains ``.compass/``).
-    """
-    project_root = os.path.abspath(project_root)
-    compass_work = os.path.join(project_root, ".compass", "work")
-
-    # ---- 1. Collect landed issues -------------------------------------------
-    # Walk .compass/work/*/manifest.yml; keep only completed issues.
-    # Issues without a `status` field (schema 1.0) are in flight.
-    # Process order: land_timestamp ascending, then issue slug ascending.
-    # A spike is completed too, and records what was learned. It ships
-    # nothing, so it adds no scenario to the spec.
-    completed = completed_issues(project_root)  # every completed issue, spikes included
-    landed = [item for item in completed if item["ships"]]
-
-    # Sort: land_timestamp ascending, issue slug as tiebreaker
-    landed.sort(key=lambda x: (x["land_timestamp"], x["slug"]))
-    landed = _completed_on_this_branch(project_root, landed)
-
-    # ---- 2. Build the current-behaviour and archived-behaviour tables ------
-    # Key: (slug, scenario id, intent id) -> entry
-    # (dict with slug, scn_id, scn_title, ts, date)
-    current: dict = {}
-    archived: list = []   # list of archived entries
-
-    for item in landed:
-        slug = item["slug"]
-        task = item["issue"]
-        task_dir = item["task_dir"]
-        land_ts = item["land_timestamp"]
-        # Parse a date string from land_timestamp for display
-        land_date = land_ts[:10] if len(land_ts) >= 10 else land_ts
-
-        # Read the scenarios block from manifest.yml
-        scenarios = task.get("scenarios") or []
-        for scn in scenarios:
-            if not isinstance(scn, dict):
-                continue
-            scn_id = scn.get("id", "")
-            scn_title = scn.get("title", "")
-            intent = scn.get("intent", "")
-            if not intent:
-                intent = scn_id  # fall back to id if no intent
-            # A scenario may serve more than one intent, and the manifest schema
-            # accepts either a string or a list of them. It answers for each
-            # id separately: keying on the whole list instead would invent a
-            # composite intent that supersedes neither of the real ones.
-            intents = intent if isinstance(intent, list) else [intent]
-            for one_intent in intents:
-                entry = {
-                    "slug": slug,
-                    "scn_id": scn_id,
-                    "scn_title": scn_title,
-                    "intent": one_intent,
-                    "land_timestamp": land_ts,
-                    "land_date": land_date,
-                }
-                # Intent ids are local to an issue (most issues use INT-1), so
-                # a shared intent id says nothing about supersession: not
-                # between issues, and not between sibling scenarios. The only
-                # supersession is the one the manifest records, in
-                # `superseded_by`, which names a scenario in the same issue.
-                if scn.get("superseded_by"):
-                    archived.append(entry)
-                else:
-                    # The current spec lists a scenario once, whatever
-                    # number of intents it serves.
-                    current[(slug, scn_id)] = entry
-
-    # ---- 3. Compose the derived spec text ----------------------------------
-    lines = [
-        _DERIVED_HEADER,
-        "",
-        "# System Specification (derived)",
-        "",
-        "> `compass _derive-system-spec` builds this file from the "
-        "`scenarios:` block of each landed issue's "
-        "`.compass/work/<slug>/manifest.yml`.",
-        "> **Do not hand-edit** - the next derivation overwrites it.",
-        "> Edit the source: the scenario in that manifest, and its prose in the "
-        "issue's `acceptance-criteria.md` under `docs/compass/<created>-<slug>/`.",
-        "",
-    ]
-
-    if current:
-        lines += [
-            "## Current Behavior",
-            "",
-        ]
-        # One heading per issue, in landing order, then one line per
-        # scenario. The spec has no size cap: it keeps every current
-        # scenario, and this layout keeps that readable.
-        by_issue: dict = {}
-        for entry in current.values():
-            by_issue.setdefault(entry["slug"], []).append(entry)
-        release_lines = {item["slug"]: item["issue"].get("release_note")
-                         for item in landed}
-        for slug, entries in by_issue.items():
-            lines += [f"### {slug} (completed {entries[0]['land_date']})", ""]
-            # The release line is the first text under the heading, as a
-            # paragraph so it does not read as a scenario line. An issue with
-            # none prints exactly what it did before the line existed.
-            release_line = one_line(release_lines.get(slug)).strip()
-            if release_line:
-                lines += [release_line, ""]
-            for entry in entries:
-                # A title is one line; spacing inside a line is kept as written.
-                title = one_line(entry["scn_title"])
-                lines.append(f"- `{entry['scn_id']}` {title}".rstrip())
-            lines.append("")
-    else:
-        lines += [
-            "## Current Behavior",
-            "",
-            "> No landed scenarios yet.",
-            "",
-        ]
-
-    # The archive is most of the history and almost none of what a reader
-    # opens the spec for, so it has its own file; the spec points to it.
-    archive_lines = list(lines[:1]) + [
-        "",
-        "# System Specification - Archive (derived)",
-        "",
-        "> Scenarios whose manifest names a replacement in `superseded_by`. "
-        "The current behavior is in `docs/system-spec.md`.",
-        "",
-    ]
-    if archived:
-        lines += [
-            "---",
-            "",
-            f"{len(archived)} superseded scenario(s) are in "
-            "`docs/system-spec-archive.md`.",
-            "",
-        ]
-        archive_lines += [
-            "## Archived Behavior",
-            "",
-            "> These scenarios name a replacement in `superseded_by`.",
-            "",
-        ]
-        # Sort archived entries: land_timestamp, then scn_id for determinism
-        archived_sorted = sorted(archived, key=lambda x: (x["land_timestamp"], x["scn_id"]))
-        for entry in archived_sorted:
-            archive_lines += [
-                f"### {entry['scn_title'] or entry['scn_id']} _(archived)_",
-                "",
-                f"- **Scenario id:** `{entry['scn_id']}`",
-                f"- **Intent:** `{entry['intent']}`",
-                f"- **Source issue:** `{entry['slug']}`",
-                f"- **Landed:** {entry['land_date']}",
-                "",
-            ]
-
-    content = "\n".join(lines)
-    archive_content = "\n".join(archive_lines)
-
-    # ---- 3b. Normalise house style on write ---------------------------------
-    # Scenario titles from landed issues are copied verbatim, and four historic
-    # ones contain em dashes. docs/system-spec.md is tracked, and this
-    # repository forbids em dashes in tracked files - so a faithful copy
-    # produces a file that fails the repository's own style test.
-    #
-    # The normalisation happens HERE, on the output, and never on the sources.
-    # Those acceptance-criteria.md files are a record of what was specified at the
-    # time; editing them to suit a generator would rewrite history, and would
-    # have to be repeated in every adopter's archive. A generator owns its
-    # output, so it owns its output's style.
-    # \u2014 is the em dash, written as an escape: this file is tracked, and
-    # the style test would otherwise flag the normaliser for containing the
-    # character it exists to remove.
-    # Normalise at the substitution site only. Do not add a global
-    # `.replace("  -  ", " - ")`: it rewrites titles that never held an em
-    # dash.
-    # [ \t] not \s: \s matches newlines, so an em dash at the end of a line
-    # would remove the line break and join a heading to the list after it.
-    content = re.sub(r"[ \t]*\u2014[ \t]*", " - ", content)
-    archive_content = re.sub(r"[ \t]*\u2014[ \t]*", " - ", archive_content)
-
-    # ---- 4. Write atomically -----------------------------------------------
-    out_path, archive_path = (os.path.join(project_root, *rel.split("/"))
-                              for rel in LIVING_SPEC_FILES)
-
-    # The archive of issues is local and untracked, so a worktree or a clone
-    # can lack an issue the committed spec already names. Rewriting the spec
-    # then would drop that issue's scenarios without a word (#289), so refuse
-    # and name each missing issue instead.
-    # Every landed record on disk counts here, kept by the branch rule or
-    # not: one the rule left out is not missing, and saying so would send a
-    # person to copy a record that is already there.
-    on_disk = {item["slug"] for item in completed}
-    named = set()
-    for path in (out_path, archive_path):
-        if os.path.isfile(path):
-            with open(path, encoding="utf-8") as fh:
-                named |= _issues_named(fh.read())
-    missing = sorted(named - on_disk)
-    if missing:
-        raise CompassError(
-            "the living spec names landed issue(s) missing from .compass/work/: "
-            + ", ".join(missing) + ". Re-deriving now would drop their scenarios. "
-            "Copy those issue folders into .compass/work/ from the checkout that "
-            "has them, then derive again.")
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    # The derived files are committed, but their titles come from local
-    # issue records, which may name a rival product. With a names key
-    # configured, each name becomes its code; a configured key that is
-    # missing stops the derivation rather than commit a name
-    # (governance/decisions/2026-10-04-rival-names-never-committed.md).
-    from compass_pkg import record, rival_names
-    key_path = record.names_key(project_root)
-    if key_path:
-        names = rival_names.load_key(key_path)
-        content = rival_names.redact_names(content, names)
-        archive_content = rival_names.redact_names(archive_content, names)
-    with open(out_path, "w", encoding="utf-8") as fh:
-        fh.write(content)
-    with open(archive_path, "w", encoding="utf-8") as fh:
-        fh.write(archive_content)
-
-
-def cmd_derive_system_spec(args):
-    """Private CLI entry point for ``compass _derive-system-spec --internal``.
-
-    This subcommand is intentionally excluded from ``compass --help`` (a
-    leading underscore marks a private verb).  It is only for in-framework
-    callers (now ``scripts/integrate.sh``).
-
-    The ``--internal`` flag is mandatory - without it the command errors out
-    (a second guard against running it by accident).
-    """
-    if not getattr(args, "internal", False):
-        raise CompassError(
-            "compass _derive-system-spec: the --internal flag is required. "
-            "This is a private entry point for scripts/integrate.sh - "
-            "it is not part of the public CLI surface."
-        )
-
-    # Resolve project root from the current working directory
-    # (walk up to find .compass/, fall back to cwd for brand-new projects).
-    try:
-        compass_dir = find_compass_dir()
-        project_root = os.path.dirname(compass_dir)
-    except CompassError:
-        # Brand-new project with no .compass/ yet - use cwd
-        project_root = os.getcwd()
-
-    derive_system_spec(project_root)
-    print("compass _derive-system-spec: docs/system-spec.md derived.")

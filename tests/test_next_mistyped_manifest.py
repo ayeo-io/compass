@@ -38,9 +38,10 @@ def _project(root: Path, line: str) -> None:
     task = root / ".compass" / "work" / "x"
     task.mkdir(parents=True)
     (root / ".compass" / "current-task").write_text("x\n")
+    # Since 9.0.0 `compass next` reads the approach from the manifest, not from
+    # delivery-approach.md (ADR-091).
     (task / "manifest.yml").write_text(
-        "schema_version: '2.0'\nissue: x\nstatus: active\n" + line)
-    (task / "delivery-approach.md").write_text("# Delivery approach - x\n")
+        "schema_version: '2.0'\nissue: x\nstatus: active\ndelivery_approach: regular\n" + line)
 
 
 @pytest.mark.parametrize("shape", list(SHAPES))

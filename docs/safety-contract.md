@@ -21,12 +21,17 @@ are recorded, `compass approach evaluate` applies the routing policy as a pure
 function.
 
 Its inputs are the recorded assessment, the project's resolved configuration
-(the shipped default, an optional git parent, `compass.yml` and the issue's
-own `config:`, which can name the approach with `compass issue configure
---route`) and the documents the issue has on disk, such as `intent.md` and
-`positioning.md`. The same inputs produce the same approach, every time.
+(the fixed check set with the tighten-only settings of `compass.yml`). From
+9.0.0 the issue's own `config:` is not an input (ADR-094), and the documents an issue
+has on disk are not an input (ADR-091). The same inputs produce the same approach, every time.
 Without `--write` it reads the configuration stored at the last evaluation;
 with `--write`, the current one.
+
+From 9.0.0 every delivery issue owes the same evidence (ADR-099). Risk, size,
+familiarity and urgency add no review and no record. A label of guarantee 5,
+a label in the project's `signoff_labels` and critical risk add a person's
+approval, and a project's `require_evidence` setting adds the evidence it
+names.
 
 ### 2. A declared guardrail cannot silently become advice
 
@@ -43,8 +48,26 @@ Compass will not clear a required mechanical gate with narrative assurance.
 Evidence is registered by id and type, and each gate declares which evidence
 types it accepts.
 
-Follow-ups are recorded explicitly and must be resolved before Compass
-completes the shipping workflow.
+From 9.0.0 Compass writes the evidence of a delivery issue itself (ADR-099).
+`compass quick-fix finish` reads the scenarios from the acceptance criteria
+and the changed files from git, runs the tests and writes the red and green
+records, and passes the three gates every issue has (`verify.correctness`,
+`verify.governance` and `verify.traceability`) from those records and the
+output of `compass check`. The session writes no evidence by hand.
+
+In a record that `finish` made, red before green means that the tests fail
+without the change. `finish` runs the test command on a copy of the commit
+the issue started from, with the test files of the change laid over it, and
+the command must fail there. It then runs the command on the working tree,
+where it must pass. The red record says `proved_on: base-copy` and names the
+base commit (`docs/base-copy.md`). The limits are under "What the record of
+a 9.0.0 issue does not claim" below.
+
+Follow-ups are recorded explicitly. On a path issue each one links to the
+GitHub issue that tracks the work, and an open Definition of Done item, where
+a project's settings make the issue owe the Definition of Done, is met
+only by such a follow-up. On an issue assessed before 9.0.0 each one must be
+resolved before Compass completes the shipping workflow.
 
 ### 4. A spike cannot silently become delivery
 
@@ -66,24 +89,52 @@ Human approvals are needed for an issue labeled:
 
 The evidence records the approver, role, decision, time, scope and conditions.
 
-From 7.0.0, critical risk on its own does not need an approval. Critical-risk
-code that carries none of the four labels can be reverted at merge, and CI,
-review and the other guardrails still gate it. Assess names the four labels
-when risk is critical and none is set. A project that wants an approval for
-every critical-risk change adds critical risk back to the trigger in its
-`compass.yml` (`docs/upgrade-7-0-0.md`); the lock allows a stricter trigger.
+From 7.0.0, critical risk on its own does not need this sign-off.
+Critical-risk code that carries none of the four labels can be reverted at
+merge, and CI, review and the other guardrails still gate it. A project adds
+labels to the trigger with the tighten-only setting `signoff_labels` in its
+`compass.yml`, and no setting can loosen the trigger (ADR-094).
 An issue assessed before 7.0.0 keeps the trigger stored with it.
+
+From 9.0.0 a person also approves the scenarios before any code edit
+(ADR-099). This holds for an issue with one of the four labels, with a label
+in `signoff_labels`, or with critical risk. The session writes the scenarios
+in the acceptance criteria, asks with `compass evidence request --checkpoint
+specify` and stops. Until a person has answered, the pre-tool hook refuses a
+code edit with the code `code-before-approval`, and `compass quick-fix
+finish` refuses to write the record.
+
+An approval covers the change the person saw (ADR-099). `compass quick-fix
+finish` writes a digest of the code and test files of the change in the
+manifest (`change_sha256`). The request for the sign-off or the ship approval
+holds that digest, and so does the approval record. When the code or the
+tests change afterwards, the next `finish` writes a new request, and `compass
+check` fails `human-approval-present` and `ship-approval-present` until a
+person approves the new state. The earlier record stays on record and no
+longer counts. The ship approval can also be read from the approving review
+of the merged pull request, which is given after the change stopped moving.
+An approval record with no digest, and an issue whose record was not written
+by `finish`, are not compared with the change.
 
 Only a `human-approval` record given for guardrail `G5` meets this approval. A
 record that names another subject - a `check`, `waiver`, `checkpoint`,
-`artifact` or `decisions` key, or a `guardrail` other than exactly `G5` - was
-given for that subject and is set aside. In Claude Code a person records
+`artifact`, `decisions` or `ship` key, or a `guardrail` other than exactly
+`G5` - was given for that subject and is set aside. A `G5` sign-off is given
+before code and is not the ship approval either (ADR-095): a ship approval is
+a `human-approval` record with `ship: <slug>` (`compass evidence request
+--ship`, then `/compass:approve`; or `compass evidence approve --ship` at a
+terminal; or an agent under a delegation typed `--for ship` and confirmed
+with its code), or a review of the merged pull request. In Claude Code a person records
 the sign-off by typing `/compass:approve`: the agent asks with `compass
 evidence request`, the Stop hook shows the request in Compass's words, and a
 `UserPromptExpansion` hook records the typed command (ADR-068). At a
 terminal a person runs `compass evidence approve --guardrail` and the value `G5`,
 giving `--approver`, `--role` and `--scope`; on a host whose adapter
-has no person-only approval event, such as Codex, that is the only path.
+has no person-only approval event, that is the only path. The agent's words in
+a request, its scope and a waiver's reason, are shown with every control,
+format and line-separator character removed, so an escape sequence cannot
+move the cursor over, and a direction override cannot reorder, the line that
+names the subject.
 
 A person can also delegate approvals with `/compass:delegate [--agent <name>]
 [--until <time>] [--on <issues>] [--for <forms>] [--max <n>]` (ADR-069,
@@ -140,9 +191,13 @@ limit on how long a delegation lasts or on how many are in force:
   `--agent`. Session ids appear in the issue's records. Neither limit is
   closed: a process that can do either can already act as the person.
 
-The record names the person, the agent and the delegation. The person sees a
-summary of delegated approvals, from any worktree, until they mark them
-reviewed. `/compass:approve` with nothing pending marks reviewed only the
+The record names the person, the agent and the delegation. The manifest
+keeps a copy of each delegation used (`delegations_used:`), written in the same
+save as the record, so the issue record shows the authority after the
+delegation file is gone. The copy holds no nonce and no session id.
+
+The person sees a summary of delegated approvals, from any worktree, until
+they mark them reviewed. `/compass:approve` with nothing pending marks reviewed only the
 approvals that the session's last summary showed. `/compass:reject <record id>`
 overrules one; for the sign-off it writes an `approval-withdrawal` record, which
 never reverses an action already taken and never fails a landed issue.
@@ -391,6 +446,32 @@ The guard refuses these calls:
   block message to the transcript (measured on 2.1.301), and the block
   message is where the person sees the code that confirms a g5 delegation.
   The hook reads a Grep's path with or without `jq`.
+- an approving review of a pull request (`pr-review-protected`). A review
+  approval by another person on the merged pull request is the ship approval,
+  and the agent runs `gh` with the person's login. The hook refuses:
+  - `gh pr review` with `--approve`, `--approve=...` or `-a`, also when `-a`
+    is joined to other short options (`-ab text`);
+  - `gh api` on a path that names `pulls/<n>/reviews` (with a review id or
+    `events` after it, or none) when the method is not `GET` or `HEAD`. The
+    method is the value of `-X`, `-XPOST`, `--method` or `--method=`, in any
+    argument order. With no method, a field (`-f`, `-F`, `--field`,
+    `--raw-field`) or `--input` makes it a `POST`, as `gh` sends it. A field
+    `event=APPROVE` is refused with any method;
+  - `gh api` with a GraphQL mutation `addPullRequestReview` or
+    `submitPullRequestReview`, whatever the event.
+
+  The hook reads each command of a chain (`&&`, `||`, `;`, `|`, a new line)
+  and, to eight levels, each quoted word that names a review, so `bash -c`,
+  `sh -c`, `eval` and a quoted command piped into `sh` are read too. A `gh`
+  given as a path (`/usr/local/bin/gh`) or after `command` or a `VAR=` word
+  counts. Allowed: `gh pr view`, `gh pr review --comment` and
+  `--request-changes`, a `gh api` read of the reviews (no method, or `GET`,
+  with `--jq` or `--paginate`), a write to another path, and the message of a
+  simple `git commit` or `gh pr create` that names a refused form. A quoted
+  word that holds a refused form in a command that is not simple, such as
+  `grep 'gh pr review -a' docs`, is refused as a known cost. The hook starts
+  the guard for a Bash command that names `gh` and then `review`, in any
+  letter case;
 
 The Bash checks match words, so they stop the agent's ordinary use and not a
 deliberate workaround. These limits remain. Most of them let a call reach the
@@ -453,6 +534,12 @@ folder link) states where the guard is exact:
   code (ayeo-io/compass#599) are the control that holds then;
 - brace expansion in a glob, in Bash or in a Grep glob, such as
   `{d,x}eleg*/*`, `deleg{ations,x}/*` and `**/{DL-*,x}.yml`;
+- an approving review of a pull request sent in a way that names no review:
+  a path or a field held in a variable or a file (`gh api "$P" -X POST`,
+  `--input body.json` on a GraphQL call, `-F query=@q.graphql`), a `gh` alias
+  or extension, and another HTTP client such as `curl` with the person's
+  token. GitHub records such a review under the person's account, and
+  Compass cannot tell it from the person's own review;
 - patterns that only zsh reads, such as `.compass/(deleg\|x)ations/*` and
   `.compass/deleg*/DL-<->.yml`;
 - a case-sensitive glob, such as `.compass/*/[A-Z]*` or the Grep glob
@@ -480,7 +567,7 @@ files, or `manifest.yml`.
 
 How each record was made shows, and is never judged. A record holds `via`:
 `terminal`, `prompt` or `delegation`. The detail of `human-approval-present`
-and the receipt say "via a terminal", "via a typed prompt", "via <agent>
+says "via a terminal", "via a typed prompt", "via <agent>
 under <delegation>", or "written without a Compass command" for a record
 with no `via`, which still counts.
 
@@ -505,7 +592,7 @@ resume by reading the files rather than reconstructing chat history.
 The hooks and the CLI judge work against the current issue:
 `.compass/current-task`, or `COMPASS_ISSUE` when a session's environment
 sets it. `COMPASS_ISSUE` comes first, so two sessions in one project can work
-on two issues; `compass run` sets it for each unattended session. A value
+on two issues. A value
 that names no issue is refused (`bad-session-issue-restart`), never passed over
 for the pointer. That order holds in the session's own project. In a worktree
 the order reverses for Edit and Write, and for a Bash call whose working
@@ -560,9 +647,13 @@ that do not are named in the last item below.
   passes to `save_manifest`; it does not follow a mapping through other
   functions. A save of a mapping built any other way, such as the new
   manifest `compass quick-fix start` writes, overwrites the file.
-- The hook's session record and the release-line write do not go through
-  `save_manifest`. Each holds the same lock, reads the file again inside it and
-  replaces the file atomically.
+- The release-line write does not go through `save_manifest`. It holds the
+  same lock, reads the file again inside it and replaces the file atomically.
+- Every manifest write, the release-line write and `compass migrate` included,
+  writes its YAML with `manifest_store.dump`. It writes no anchor or alias: a
+  value held under two keys, such as the assessment's `labels` list, is
+  written in full under each. A manifest written before can still hold
+  `&id001` and `*id001`, and every reader reads it as before.
 
 ## Deliberate limits
 
@@ -582,9 +673,14 @@ proves. It does not prove:
 - that the run exercised every declared scenario; or
 - that a trusted runner made the record.
 
-Each record does name the tree it ran on, with two git tree ids: `tree_id`,
-the tracked files on disk plus the issue's own new files, and `changes_id`,
-the issue's changed files and the test files its scenarios declare.
+Each record does name the tree it ran on. `tree_id` is the git tree id of
+the tracked files on disk plus the issue's own new files. `file_sha256`
+holds the SHA-256 of each of the issue's changed files and of each test file
+its scenarios declare, `file_modes` holds the mode git would record for
+each, and `test_files` names the test files among them. The commit side is
+read as a checkout writes it, so line-ending conversion does not count as a
+change. A record written before ADR-089 holds `changes_id`, a git tree id of
+the same files, instead of `file_sha256`; it is still read.
 `compass check` judges the issue's newest record:
 
 - in flight, once every gate has passed, it fails if the tree has changed
@@ -597,10 +693,19 @@ runner produced the record, and an older record is not judged. A record
 written outside a git repository, or before records carried a tree id, is
 not judged either.
 
+The CLI also writes `evidence/SHA256SUMS` in the issue folder, in the format
+`sha256sum` reads. It holds the SHA-256 of each record file the CLI wrote
+and of each file in the `file_sha256` of the record written last. Run
+`sha256sum -c .compass/work/<slug>/evidence/SHA256SUMS` from the project
+root to check them without Compass. It shows the files are the bytes the CLI
+recorded, not their modes; like the record, it does not prove a trusted
+runner wrote them, because anyone who can write the record can write this
+file.
+
 Tracing a file into the issue between two runs of the same command
-changes `changes_id`, because the traced file joins `changed_files`; it
+changes `file_sha256`, because the traced file joins `changed_files`; it
 changes `tree_id` too only when the file was untracked. Tracing an
-already-tracked file changes only `changes_id`. So a green recorded after
+already-tracked file changes only `file_sha256`. So a green recorded after
 that trace is a new assertion, not a rerun of the one before it: the same
 command on the same code is not flagged as a rerun, and the traced file
 shows in `changed_files`.
@@ -619,6 +724,25 @@ commit then differs from what the green tested, the commit stands but
 the issue is not marked done, and `ship-commit` names the files and
 exits non-zero.
 
+When the record is committed with the code (the committed record mode,
+`docs/delivery-record.md`), `ship-commit` writes the landing and
+`trail.md` before the commit and stages the issue record itself. So the
+commit holds a record that says the issue landed. When a check after the
+commit fails, the working copy is put back to not landed, and the output
+says the commit still holds the landed record; `git reset --soft HEAD^`
+removes an unpushed commit. Three limits follow:
+
+- `trail.md` is generated, but nothing stops a hand edit of its prose. The
+  sum lines are what `sha256sum -c` checks; a changed statement with
+  unchanged sum lines passes. `compass trail --check` reports the edit.
+- A formatter or git hook that rewrites a record file during the commit
+  makes a sum line fail at that commit. `ship-commit` names each such file
+  and does not change its exit code. A pre-commit step that rewrites a
+  record file before the commit is handled: `trail.md` is written again.
+- A shallow clone that does not hold the land commit cannot name it: the
+  land commit of a committed record is read from git history, and
+  `compass check` reports the landed comparison as not in this clone.
+
 When `git commit` leaves HEAD where it was, `ship-commit` stops with the
 lines git printed, in git's own words, then says HEAD did not advance and
 the land did not happen. It adds that a pre-commit hook may be the cause
@@ -630,7 +754,8 @@ unknown" and does not point at a hook.
 With nothing staged, `compass ship-commit --issue <slug>` lands at HEAD
 only when the issue's own commits at the tip stay inside its declared
 scope. It walks the first parent from HEAD. A commit that changes only
-the living spec is passed over. A commit judged in full keeps the living
+the living spec, which a branch made before 9.0.0 can still hold, is
+passed over. A commit judged in full keeps the living
 spec among its paths, so a hand edit of it is refused unless the issue
 owns it. A merge whose merged-in commits are all on the base branch, such
 as a merge of `origin/main`, counts only the paths it changed against
@@ -641,7 +766,7 @@ The walk stops at the issue's newest other commit, which is judged in
 full.
 
 The base branch is the remote's default branch (`origin/HEAD`), or
-`origin/main`, the base `compass spec sync` merges. When neither
+`origin/main`. When neither
 resolves, such as in a clone with no remote, every merge is judged in
 full, and the refusal says that the base was not found.
 
@@ -652,22 +777,45 @@ Teams must keep their normal CI controls.
 `compass quick-fix start` records which files were already changed or
 untracked, and which directories held no tracked file. It keeps that
 record inside the git directory, where nothing is committed. `compass
-quick-fix finish` refuses any of those files the agent did not trace, and
-lists the files it commits. It does not guard three cases:
+quick-fix finish` reads the change from git: each path the working tree
+holds that git has not committed, changed or untracked and not ignored. A
+committed path counts only when the manifest traces it already, from an
+earlier `finish` or from `compass changed-file add`, and it differs from the
+commit the issue started from. So a commit that `finish` made stays in the
+change, and a commit that a pull, a rebase or another person adds after
+`start` does not enter it. When the session committed the whole fix by hand,
+`finish` refuses and names `compass changed-file add`. When it committed only
+part of it, `finish` goes on and names each such file on an `untraced :`
+line with the same command. That line leaves out a commit that the remote's
+default branch holds, because a pull or a rebase brought it.
+
+`finish` leaves out a path that was already changed or untracked at `start`,
+and names it on a `left out :` line. The files a test run leaves, such as
+`.coverage`, are never part of the change. A tracked file under `.compass/`
+that is not issue state, such as the 8.x settings file `.compass/config.yml`
+(`compass.yml` since 8.0.0), is part of it. It
+does not guard three cases:
 
 - a file created after `start` is taken as the change's, whoever made it;
 - the start record is not checked for tampering: an edited record changes
   what `finish` refuses;
 - an issue with no start record, such as one begun before `start` wrote
-  one, commits a tracked file changed before the fix began.
+  one, commits a tracked file changed before the fix began. `finish` refuses
+  an untracked file of such an issue until it is traced.
 
-Two more cases follow from how `finish` decides. A test the scenario
-declares is committed even if it changed before `start`, because the
-scenario names it. And an issue started before the record moved into the
-git directory kept a digest record beside its manifest, which is
-committed with the issue's records.
+Three more cases follow from how `finish` decides. A path traced by hand with
+`compass changed-file add` is part of the change even if it changed before
+`start`. A test the scenario declares is committed even if it changed before
+`start`, because the scenario names it. And an issue started before the
+record moved into the git directory kept a digest record beside its manifest,
+which is committed with the issue's records.
 
-Read the file list `finish` prints before you push.
+9.0.0 derives no living spec and writes no project index (ADR-091), so
+`finish` traces a change to the living spec like any other file, and
+`ship-commit` refuses a staged project index, the `README.md` of the
+`docs/compass/` folder, as out of scope.
+
+Read the `committed:` and `left out :` lines `finish` prints before you push.
 
 ### Compass enforces nothing in a project that has not opted in
 
@@ -708,7 +856,7 @@ such as documentation, go through as usual.
 |---|---|---|
 | `scripts/install.sh` | Says none was found, or that it did not run, warns, and installs anyway. | Names the version, warns, and installs anyway. |
 | `hooks/session-start.sh` | Tells the person and the model, in place of the operating contract. Never blocks. | The same, naming the version. |
-| `hooks/pre-tool.sh` | Refuses each code edit, and each edit to a path that is neither built-in code nor exempt in a project that has a settings file (it cannot read `enforcement.code_globs`): `python-missing` when there is no `python3`, `reader-failed` when it does not run. | Its checks run, but the CLI cannot record the assessment and failing test they look for, so a code edit in an issue without them is refused as usual. |
+| `hooks/pre-tool.sh` | Refuses each code edit, and each edit to a path that is neither built-in code nor exempt in a project that has a settings file (it cannot read `enforcement.code_globs`): `python-missing` when there is no `python3`, `reader-failed` when it does not run. | Its checks run, but the CLI cannot record the assessment and scenarios they look for, so a code edit in an issue without them is refused as usual. |
 | `hooks/post-tool.sh` | No change: it does not use Python. | No change. |
 | `hooks/stop.sh` | Says the end-of-session check did not run, and exits 0. | Runs its check as usual. |
 | `compass` | Does not run. | Does not run. |
@@ -730,8 +878,10 @@ step, as a Python failure there does.
 
 ### The red marker is checked against its record, and a record can still be written by hand
 
-The pre-tool hook refuses a code edit unless a failing test is on record for
-the issue. The hook reads the red record beside the marker -
+On an issue assessed before 9.0.0, the pre-tool hook refuses a code edit
+unless a failing test is on record for the issue. A 9.0.0 delivery issue
+needs no failing test before a code edit, because `compass quick-fix finish`
+proves the red itself (ADR-099). The hook reads the red record beside the marker -
 `evidence/red*.json` - and checks its `content_digest`; an empty marker
 unlocks nothing.
 
@@ -757,6 +907,30 @@ timestamp can be written by hand too, so the cutoff raises the cost of a
 forged record from one line of JSON to a dated one, and no further. And
 `.compass/` is not a guarded path, so the line can be deleted like any other
 project setting.
+
+### A code edit needs a scenario on record, but the hook does not judge the scenario
+
+Guardrail `G2` (acceptance defined before it is built) is enforced before the
+code exists: the pre-tool hook refuses a code edit while the issue owes
+scenarios and its manifest has none.
+
+- On a path issue (one whose manifest records `evidence_required`, ADR-092)
+  every issue owes scenarios, so the hook refuses the edit with
+  `no-scenario`, which names `compass scenario add`. `compass quick-fix
+  start` writes the first scenario, so an issue it opened has one. Where the
+  scenarios owe a person's approval (guarantee 5), the hook refuses the edit
+  with `code-before-approval` until a person has given it.
+- On an issue assessed before 9.0.0 the rule is unchanged: only `define:
+  thorough` owes scenarios before code, and the refusal is
+  `no-acceptance-criteria`. A hotfix and a spike are exempt by their modes.
+- A spike is never a path issue, and its `.spike` marker suspends the check.
+
+The hook counts the manifest's `scenarios:` entries and reads nothing else. It
+does not check that a scenario has an intent or a test, or that it describes the
+change; `compass check` judges those (`G2` and `G3`). This check does not
+refuse an edit when the manifest cannot be read: a false refusal on unreadable
+state teaches people to bypass the hook. On an issue assessed before 9.0.0
+the red check that runs after it still applies.
 
 ### A dependency between issues is read from this checkout, and a fault never blocks
 
@@ -787,42 +961,6 @@ The hook's read has these limits:
 - An issue with no `depends_on`, or an empty one, starts no extra process and
   opens no other manifest. With dependencies, the hook starts one more
   python3 process and opens each dependency's manifest once.
-
-### The hook records each session on its issue, and a fault never blocks
-
-On every Edit, Write or Bash call it judges, the pre-tool hook adds the
-call's session id to the issue's `usage.sessions`, once, so `compass
-ship-commit` can read that session's transcript when the issue lands. ADR-063
-records the decision; this is the one place the hook writes an issue's
-manifest.
-
-- The issue comes from `COMPASS_ISSUE` or `.compass/current-task`, read in
-  shell. With neither, nothing is recorded; the most recently changed issue
-  is never guessed. A session whose fresh entry in the session table behind
-  the `pointer-moved` refusal names another issue is not recorded on the
-  pointer's issue.
-- For an Edit or Write in a worktree of the session's repository, and for a
-  Bash call whose working folder is in one, the worktree's pointer comes
-  first, `COMPASS_ISSUE` stands in only for an empty pointer, and the session
-  is recorded on that issue without reading the session table.
-- A session id that is not letters, digits, `-` and `_` is not recorded.
-- An id already in the manifest costs one `grep` and no python3 process. A new
-  id starts one python3 process, which opens only that issue's manifest.
-- The write never waits. It tries the issue's `.manifest.lock` once, without
-  blocking, and records nothing when another writer holds it; a later call
-  records the id. `compass` commands hold the same lock while they write a
-  manifest.
-- It inserts the id into the file's text and checks that the parsed result
-  changed only `usage.sessions`, so no other byte changes. It replaces the file
-  atomically, after comparing the bytes on disk with those it read; a writer
-  that changed the file in between is merged, not overwritten.
-- Any fault - a read-only manifest or folder, a failed write, a recorder that
-  cannot run - leaves the manifest as it was and no temporary file behind, and
-  the hook judges the call as before. Recording never refuses a call. A broken
-  install still refuses through the hook's other readers.
-- A session that makes no tool call the hook sees is not recorded. A command
-  that loaded the manifest before the hook wrote keeps the id when it saves:
-  the save merges the hook's change.
 
 ### The pre-tool hook refuses on a removed working directory, and three exits still let a call through
 
@@ -865,8 +1003,8 @@ other exits are stated here.
 
 ### An Edit that changes only comments of Python or YAML needs no failing test
 
-The pre-tool hook refuses an Edit of production code unless a failing test is
-on record. A comment cannot change what code does, so an Edit of a `.py`,
+On an issue assessed before 9.0.0, the pre-tool hook refuses an Edit of
+production code unless a failing test is on record. A comment cannot change what code does, so an Edit of a `.py`,
 `.yml` or `.yaml` file that changes only comments, docstrings or layout runs
 with no failing test and no assessed issue. The hook proves this from the file
 on disk and never from the text of the Edit: it reads the file once, applies
@@ -1033,9 +1171,10 @@ ends within 6 seconds.
 
 Three more rules apply with this one:
 
-- Path classes. `evals/*/seed/` holds input that the eval harness copies into a
-  sandbox and never runs in place, so it is not production code and needs no
-  failing test. The pattern starts at the project root, and a path with a `..`
+- Path classes. In any project, `evals/*/seed/` by convention holds input that
+  an evaluation harness copies into a sandbox and never runs in place, so it is
+  not production code and needs no failing test. Compass ships no harness
+  (ADR-093); the exemption stays for a project that keeps such a folder. The pattern starts at the project root, and a path with a `..`
   step cannot get the exemption. These stay guarded: `examples/`, `cli/vendor/` (every Compass
   process runs it), `.github/scripts/` (CI runs it), `evals/` outside `seed/`,
   `src/examples/` and `db/seed/`. The setting `enforcement.code_globs` only
@@ -1044,7 +1183,7 @@ Three more rules apply with this one:
 - Shell files. A file that `enforcement.code_globs` declares is guarded. A
   shell script, makefile or extensionless script is not a built-in
   production-code file type, so a project declares the ones it wants guarded.
-- Messages. The refusal for a missing failing test (`no-red-on-record`) names
+- Messages. On an issue assessed before 9.0.0, the refusal for a missing failing test (`no-red-on-record`) names
   `compass tdd-red` and `compass acceptance start`, for a change that has no
   natural test. A `.compass/current-task` that names an issue with no folder
   under `.compass/work/` is not a missing pointer: the hook says so, names the
@@ -1062,6 +1201,9 @@ The rules and the reasons are in
 ### Shell-write detection is best-effort
 
 The Claude Code pre-tool hook completely covers supported file-editing tools.
+Where this section says a write needs a failing test on record, that is the
+rule for an issue assessed before 9.0.0. A 9.0.0 delivery issue needs a
+scenario and, where owed, the scenario approval (ADR-099).
 For shell commands it recognizes these write shapes, and only these:
 
 - `>`, `>>` and `>|` redirects, including the `cat > file <<EOF` heredoc
@@ -1248,9 +1390,8 @@ the command grows: 10 KB took 4.4 seconds, 20 KB took 33.9 seconds and 50 KB
 did not end in 150 seconds. A command of 20 KB is a fifth of the length
 limit and already runs past the 15-second time limit. The hook before this
 change behaved the same way. On Claude Code 2.1.295 or later the 15-second
-timeout is the only control there. `scripts/install.sh` and the Codex hook
-file do not set these keys, so a source install and a Codex session keep the
-default timeout of 600 seconds.
+timeout is the only control there. `scripts/install.sh` does not set these
+keys, so a source install keeps the default timeout of 600 seconds.
 
 A shell script, makefile or extensionless script is not a built-in
 production-code file type for red-before-green enforcement. A file that
@@ -1320,23 +1461,18 @@ Compass cannot prevent a person, automation or agent from changing the
 repository outside its adapter and commands. Repository permissions, branch
 protection, review policy and CI remain essential.
 
-### The readiness floor reads a record a person can edit
-
-From 7.0.0 an issue on `autonomy: autonomous` is refused at `compass approach
-evaluate --write` while the repository is below the readiness floor or has no
-fresh readiness record. The floor guards against an unready repository, not
-against a person. The record, `.compass/readiness.yml`, is a plain file in the
-checkout, and anyone who can edit it can mark a readiness signal present, as
-anyone who can edit `compass.yml` can change the commands it runs.
-
-- An untrusted CI contribution is refused before the record is read, so a
-  record committed with the contribution cannot clear the floor.
-- The session-start hook adds one readiness line for an autonomous project
-  below the floor or not measured. It reads the record and runs nothing, and
-  its readiness code has its own guard: a record or settings file it cannot
-  read loses the line, never the contract, and the hook exits 0.
-- The floor is not a guardrail. It decides whether work runs without a
-  person, not whether work lands.
+**A ship approval read from GitHub is a copy, read once.** `compass issue link
+set --pr <n>` copies each counting review approval of the merged pull request
+into a `pr-approval` record: the reviewer, the review id and URL, and the
+commits (`docs/github-links.md`). It counts a review only when GitHub names a
+`User` account other than the pull request's author. An agent cannot add the
+record with `compass evidence add`, and the pre-tool hook refuses an agent's
+approving review. The same limits hold as for a delegation (ADR-069): a
+process that runs as the same operating system user can edit `manifest.yml`,
+or put another program named `gh` on `PATH` before Compass runs it. `compass
+check` does not read GitHub again, so a review dismissed after the read still
+counts. A reader checks a record against GitHub by its review id, with `gh api
+repos/<repo>/pulls/<n>/reviews/<review_id>`.
 
 ### A check's compatibility within a major version is shown on its corpus only
 
@@ -1347,20 +1483,47 @@ rather than reinterpret. Within a major, compatibility is shown on the corpus
 cases and nowhere else. A change of behavior that no case exercises is not
 detected, and the corpus is small (two cases for each check at first).
 
-**An approval of a waiver is a name and a date, and is not authenticated.** A waiver that loosens the shipped default carries `approved_by` and, for a
-project waiver, `approved_on`. Lint checks a project waiver's approver against the parent's
-`approvers.project-waiver` list, or the owner when the parent sets no such list (an empty list lets nobody approve), and that an issue waiver's
-approval is a record in the issue's evidence. It cannot check that the person
-named gave the approval. Anyone who can edit `compass.yml` can write any name
-and date. Repository permissions and review of the pull request that changes
-`compass.yml` are the control.
+**A waiver of one check on one issue is approved like any other subject.** From
+9.0.0 a waiver in an issue's manifest (`compass waiver add`) excuses its one
+check on that issue only once a `human-approval` record names it, given at
+the issue's current generation. The record
+comes from a typed `/compass:approve`, a terminal, or an agent under a
+delegation the person typed with `--for waivers` and confirmed with its code.
+No default delegation covers a waiver. The check `human-approval-present` and
+the checks of guardrail `G5` are never waived. The same limits hold as for any
+approval: an approval is a name and a date in a record, and it is
+not authenticated. Compass checks the approver's name against `approvers.waiver`,
+or the owner, and anyone who can write `manifest.yml` can write a record. See
+`docs/waivers.md`.
 
-**Conformance is a statement about the configuration, not about the work.** A project that unlocks a framework entry is reported non-conformant on every
-`compass check`, `compass issue receipt` and `compass approach show`. The
-line states that the configuration departs from the framework's locks. It does
-not say that any work was done badly, and a project that unlocks nothing is not
-shown to have done good work. A hard lock (guarantee 5) cannot be unlocked at
-all.
+**No project departs from the check set, so there is no conformance line.**
+In 8.x a project that unlocked a framework entry was reported non-conformant.
+9.0.0 has no locks and no unlocks (ADR-094): a setting can only add to the
+check set, so `compass check` and `compass approach show` print no conformance
+line. A waiver excuses one check on one issue and is shown on that check's
+row; the checks of guarantee 5 are never waived.
+
+### What the record of a 9.0.0 issue does not claim
+
+**The order of the work.** A red that `compass quick-fix finish` proved shows
+that the tests fail on the base commit and pass with the change. It does not
+show that a test was written before the code. A red recorded earlier with
+`compass tdd-red` still counts, and is the only proof of that order.
+
+**A review, by default.** A 9.0.0 delivery issue owes no review gate but the
+three every issue has. The regression, security, clarity and architecture
+reviews, the Definition of Done, the reproduction of a live defect before
+anything else, and the records of the four-layer acceptance strategy (`S17`)
+are owed only where a project adds their tokens with `require_evidence`
+(`docs/configuration.md`).
+
+**A trace by scenario.** `finish` traces every changed file to every scenario
+of the issue. A trace of one file to one scenario exists only where the
+session recorded it with `compass changed-file add`.
+
+**A true red, where the base copy has a limit.** A test that needs untracked
+build output fails on the base copy for that reason, and `finish` records
+the failure as the red (`docs/base-copy.md`).
 
 ### Compass is adaptable, not universal
 
@@ -1373,9 +1536,9 @@ project guardrails, provided they preserve this contract.
 |---|---|
 | 1 (deterministic routing) | `compass approach evaluate` over assessment and policy |
 | 2 (implemented guardrails) | `compass policy lint` and `compass check` |
-| 3 (typed evidence) | Gate type declarations plus the issue evidence registry |
+| 3 (typed evidence) | Gate type declarations plus the issue evidence registry; `compass quick-fix finish` writes the records |
 | 4 (spike containment) | Routing conflict checks and spike invariants |
-| 5 (human approval) | Structured `human-approval` evidence given for guardrail `G5`, checked before ship |
+| 5 (human approval) | Structured `human-approval` evidence given for guardrail `G5`, checked before ship; the `specify` approval before code; the digest of the change on each approval |
 | 6 (process-integrity CI) | `compass ci` |
 | 7 (resumable state) | the manifest (`templates/manifest.yml`), its artifacts and evidence under `.compass/` |
 

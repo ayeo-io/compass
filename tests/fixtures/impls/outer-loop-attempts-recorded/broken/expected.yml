@@ -1,0 +1,2 @@
+verdict: fail
+input: an in-scope issue whose outer-loop green has no `attempts` field

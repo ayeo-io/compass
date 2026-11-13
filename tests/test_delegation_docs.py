@@ -13,11 +13,14 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 FLAG_HINT = ("[--agent <name>] [--until <time>] [--on <issues>] [--for <forms>] "
              "[--max <n>]")
 
@@ -154,8 +157,7 @@ def test_TRC_105_no_current_document_states_a_delegation_limit_that_no_longer_ho
 
 
 def test_TRC_118_the_evidence_type_texts_name_the_issue_form():
-    guardrails = yaml.safe_load(_text("governance/guardrails.yml"))
-    preset = yaml.safe_load(_text("governance/presets/default/evidence-types.yml"))
+    preset = shipped("evidence-types.yml")
 
     def find(node):
         if isinstance(node, dict):
@@ -167,7 +169,6 @@ def test_TRC_118_the_evidence_type_texts_name_the_issue_form():
                     return found
         return ""
 
-    for label, doc in (("governance/guardrails.yml", guardrails),
-                       ("governance/presets/default/evidence-types.yml", preset)):
+    for label, doc in (("governance/check-set.yml", preset),):
         text = _flat(find(doc))
         assert "--issue <slug> --delegated --as <agent>" in text, (label, text)

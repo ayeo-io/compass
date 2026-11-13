@@ -117,17 +117,29 @@ class Problem:
 
 
 def _command_exists(command: str, repo_root: str) -> bool:
-    """Is `compass <verb>` a real subcommand of the CLI in this repository?"""
-    verb = command.split()[1] if len(command.split()) > 1 else ""
-    if not verb:
+    """Is `compass <verb> [<subverb>]` a real command of the CLI in this repository?
+
+    Asks the CLI. The launcher `cli/compass` no longer holds the verbs as
+    text: `quick-fix finish` registers itself from `compass_pkg` (ADR-099), so
+    searching the launcher for the verb finds nothing for a verb that exists.
+    Words after the verb count as a sub-verb only while they are plain words,
+    so a flag or a placeholder ends the command.
+    """
+    import subprocess
+    import sys
+    words = []
+    for word in command.split()[1:]:
+        if not re.fullmatch(r"[a-z][a-z0-9_-]*", word):
+            break
+        words.append(word)
+    if not words:
         return False
-    src = os.path.join(repo_root, "cli", "compass")
-    try:
-        with open(src, encoding="utf-8") as fh:
-            body = fh.read()
-    except OSError:
+    launcher = os.path.join(repo_root, "cli", "compass")
+    if not os.path.isfile(launcher):
         return False
-    return f'"{verb}"' in body or f"'{verb}'" in body
+    done = subprocess.run([sys.executable, launcher, *words, "--help"],
+                          capture_output=True, text=True, timeout=60)
+    return done.returncode == 0
 
 
 def check(text: str, repo_root: str) -> list[Problem]:

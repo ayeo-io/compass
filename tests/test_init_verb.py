@@ -134,9 +134,9 @@ def test_ioi_a1c_an_explicit_project_dir_is_where_it_initialises(tmp_path):
 def test_ioi_c2_init_creates_no_governance_directory(tmp_path):
     """Auto-initialisation creates project state only.
 
-    Five commands call this on the user's behalf. Being initialised for you is
+    Three commands call this on the user's behalf. Being initialised for you is
     small and reversible; having a governance/ directory copied into your
-    repository because you ran /compass:intent is not, and it would arrive
+    repository because you ran /compass:assess is not, and it would arrive
     without the conversation that is the point of adopting it.
     """
     root = (tmp_path / "fresh").resolve()
@@ -190,3 +190,30 @@ def test_ioi_d1_a_command_that_needs_an_issue_says_so(tmp_path):
         f"reader cannot tell an empty project from a broken one:\n{out}")
     assert "no .compass/ directory found" not in out, (
         "the project init just created is not being seen")
+
+
+def _settings_line(out):
+    lines = [ln.strip() for ln in out.splitlines() if ln.strip().startswith("settings")]
+    assert len(lines) == 1, out
+    return lines[0]
+
+
+def test_init_with_no_settings_file_says_the_defaults_are_in_force(tmp_path):
+    root = (tmp_path / "fresh").resolve()
+    root.mkdir()
+    run = _init(root)
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert _settings_line(run.stdout) == (
+        "settings : defaults in force. /compass:init writes a compass.yml.")
+
+
+def test_init_names_the_compass_yml_it_reads(tmp_path):
+    """A project that has its `compass.yml` is not told that defaults are in
+    force, or that `/compass:init` writes one."""
+    root = (tmp_path / "fresh").resolve()
+    root.mkdir()
+    (root / "compass.yml").write_text("schema: 1\nowner: sam-rivera\n")
+    run = _init(root)
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert _settings_line(run.stdout) == (
+        "settings : compass.yml, read over the shipped check set.")

@@ -1,14 +1,13 @@
 """The CLI speaks the v2 register.
 
 These tests assert the v2 verb map: approach evaluate, follow-up resolve
-(states outstanding -> resolved), retro, plan lint, issue
-lint/receipt/set-status, ship-commit, and the terminology verb. Retired
+(states outstanding -> resolved), retro, issue
+lint/set-status, ship-commit, and the terminology verb. Retired
 verbs and the tolerated --task and --reading flag spellings were removed at <!-- vocabulary-scan: allow - names the retired flag spellings this suite removed -->
 the major version (ADR-014); what remains of those contracts is asserted in
 tests/test_no_deprecation_stubs.py, which checks they no longer parse. The
 cli/ scan surface is enforced and widened to cli/compass_pkg/ string
-literals, and the receipt speaks v2 change-type names and shows recorded
-orchestration overrides.
+literals, and the evaluator speaks v2 change-type names.
 """
 from __future__ import annotations
 
@@ -70,12 +69,6 @@ def test_the_v2_verbs_exist_and_work(tmp_path):
     assert out.get("delivery_approach"), "approach evaluate wrote nothing"
 
     r = _run(root, "issue", "lint", "--issue", "t")
-    assert r.returncode == 0, r.stderr[-400:]
-    r = _run(root, "issue", "receipt", "--issue", "t")
-    assert r.returncode == 0, r.stderr[-400:]
-    r = _run(root, "plan", "lint", "--help")
-    assert r.returncode == 0
-    r = _run(root, "retro")
     assert r.returncode == 0, r.stderr[-400:]
     r = _run(root, "follow-up", "resolve", "--issue", "t", "BF-1")
     assert r.returncode == 0, r.stderr[-400:]
@@ -144,21 +137,11 @@ OVERRIDE_MD = """# Delivery approach - t
 """
 
 
-def test_output_speaks_v2_shape_names_and_receipt_shows_overrides(tmp_path):
-    """`TRC-5`: the receipt prints 'initiative' for the machine value
-    'expedition' and shows the recorded orchestration override; the
-    evaluator's output uses v2 shape names too."""
+def test_output_speaks_v2_shape_names(tmp_path):
+    """`TRC-5`: the evaluator's output uses v2 shape names. The receipt, which
+    also showed the recorded orchestration override, was removed in 9.0.0
+    (ADR-091)."""
     root = _project(tmp_path, approach_md=OVERRIDE_MD)
-    r = _run(root, "issue", "receipt", "--issue", "t")
-    assert r.returncode == 0, r.stderr[-400:]
-    assert "full" in r.stdout, (
-        "receipt does not translate 'expedition' to 'full':\n"
-        + r.stdout)
-    assert "expedition" not in r.stdout.lower(), (
-        "receipt still prints the machine value 'expedition':\n" + r.stdout)
-    assert re.search(r"overridden:?\s+solo", r.stdout), (
-        "receipt does not show the recorded topology override:\n" + r.stdout)
-
     r = _run(root, "approach", "evaluate", "--issue", "t")
     assert r.returncode == 0, r.stderr[-400:]
     assert "expedition" not in r.stdout.lower(), (

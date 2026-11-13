@@ -81,7 +81,8 @@ def _aggregate_argv(doc: dict, counts_dir: Path, step_name: str = FULL_STEP
 # The required jobs self-check needs besides the suite's own, so that its
 # result carries theirs on a title or body edit, where they skip (CRT-21).
 OTHER_REQUIRED = ["check-mutation", "bdd-adapter", "bdd-adapter-behave",
-                  "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python"]
+                  "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python",
+                  "atdd-adapter-typescript"]
 # The jobs a pull request runs, and the ones only a merge group or a push to
 # main runs (ayeo-io/compass-delivery#362).
 FAST_JOBS = ["checks", "count", "fast-tests"]
@@ -383,44 +384,6 @@ def _gated_steps(job: dict) -> None:
     assert seen
 
 
-HARNESS_PATHS = ["evals/", "tests/test_harness_root_real.py",
-                 "tests/test_eval_harness.py",
-                 ".github/requirements/self-check.txt",
-                 ".github/workflows/compass.yml"]
-
-
-def test_crt_9_harness_root_path_gate(change_repo, tmp_path):
-    """The real-root harness runs only when its inputs change."""
-    job = _load("compass.yml")["jobs"]["harness-root"]
-    argv = _changed_argv(job)
-    assert argv[argv.index("--output") + 2:] == HARNESS_PATHS, argv
-    assert job["steps"][0]["with"]["fetch-depth"] == 0
-    _gated_steps(job)
-    env = next(s for s in job["steps"] if s.get("id") == "changed")["env"]
-    # It runs in a merge group and on a push only, like the other suite jobs.
-    group = {"event": {"merge_group": {"base_sha": "b" * 40, "head_sha": "m" * 40},
-                       "before": None}, "sha": "m" * 40}
-    push = {"event": {"before": "p" * 40}, "sha": "a" * 40}
-    assert ci_expr.render(env["BASE_SHA"], github=group) == "b" * 40
-    assert ci_expr.render(env["HEAD_SHA"], github=group) == "m" * 40
-    assert ci_expr.render(env["BASE_SHA"], github=push) == "p" * 40
-    assert ci_expr.render(env["HEAD_SHA"], github=push) == "a" * 40
-
-    repo, base, change = change_repo
-    for i, path in enumerate(["evals/runner.py", *HARNESS_PATHS[1:]]):
-        out, said = _run_changed(job, repo, base, change(path), tmp_path)
-        assert out == ["run=true"], (path, out, said)
-        assert path in said, said
-    out, said = _run_changed(job, repo, base,
-                             change("cli/compass_pkg/next_cmd.py", "docs/README.md"),
-                             tmp_path)
-    assert out == ["run=false"], (out, said)
-    head = change("cli/compass_pkg/next_cmd.py")
-    for missing in ["", "0" * 40, "1234567890abcdef" * 2 + "12345678"]:
-        out, said = _run_changed(job, repo, missing, head, tmp_path)
-        assert out == ["run=true"], (missing, out, said)
-
-
 DOCS_PATHS = ["docs/", "mkdocs.yml", ".github/workflows/docs.yml"]
 
 
@@ -471,7 +434,9 @@ def test_crt_13_docs_build_always_reports(change_repo, tmp_path):
     head = change("cli/compass_pkg/next_cmd.py")
     out, said = _run_changed(build, repo, base, head, tmp_path)
     assert out == ["run=false"], (out, said)
-    for missing in ["", "0" * 40]:
+    # An empty base, the all-zero sha of a new branch and a sha the clone
+    # does not hold each run the job rather than skip it.
+    for missing in ["", "0" * 40, "1234567890abcdef" * 2 + "12345678"]:
         out, said = _run_changed(build, repo, missing, head, tmp_path)
         assert out == ["run=true"], (missing, out, said)
 
@@ -857,7 +822,8 @@ def _timeout_problems(paths) -> list[str]:
 def test_crt_14_every_job_has_a_timeout(tmp_path):
     """Every job in every workflow ends at its own timeout."""
     files = sorted(WORKFLOWS.glob("*.yml"))
-    assert len(files) >= 5, files
+    # 4 since 9.0.0 removed compass-run-demo.yml with `compass run` (ADR-090).
+    assert len(files) >= 4, files
     assert _timeout_problems(files) == []
     assert _load("compass.yml")["jobs"]["serial"]["timeout-minutes"] == 20
 
@@ -912,8 +878,9 @@ def test_crt_15_token_stays_read_only():
 # --- a base change (CRT-21) -------------------------------------------------
 
 SUITE_JOBS = ["checks", "count", "fast-tests", "shard", "serial", "check-mutation",
-              "harness-root", "bdd-adapter", "bdd-adapter-behave",
-              "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python"]
+              "bdd-adapter", "bdd-adapter-behave",
+              "bdd-adapter-cucumber-js", "bdd-adapter-godog", "atdd-adapter-python",
+              "atdd-adapter-typescript"]
 # The jobs a pull request runs. The others run only in a merge group or on a
 # push to main.
 PR_JOBS = ["checks", "count", "fast-tests"]

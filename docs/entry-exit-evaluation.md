@@ -6,8 +6,8 @@ check is judged, what `on_skipped` does, where the results show, and how the
 documents show the lists. The code is `cli/compass_pkg/stage_lists.py`, which
 judges a list, `cli/compass_pkg/item_records.py`, which reads the manifest
 records that meet an item, `cli/compass_pkg/follow_up_cmd.py`, which records a
-follow-up, and `cli/compass_pkg/template_lists.py`, which prints a template.
-`compass check`, `compass next` and `compass issue receipt` read the first.
+follow-up.
+`compass check` and `compass next` read the first.
 
 ## Switching it on
 
@@ -44,16 +44,39 @@ the next `compass approach evaluate --write`.
 | exit of a stage | the issue is past the stage |
 
 A closed issue has every list due, whatever its close reason. `compass check`
-counts only due checks. The
-receipt shows every list, and says which are not yet due.
+counts only due checks.
+
+## A path issue
+
+A path issue is one whose manifest records `evidence_required` (ADR-092). It
+runs assess, specify, build and ship, and has no stage modes, so none of its
+lists is skipped. `stage_lists.path_lists` gives it its lists:
+
+- A configuration that declares the four path stages, as the check set does
+  since 9.0.0 (ADR-092, ADR-094), is read at those stages as it stands. The
+  build exit list is the Definition of Done, and the ship entry list holds a
+  check such as the `agent-review` that `agent_review: on` turns on.
+- A configuration that still declares the legacy stages, as a stored 8.x
+  generation does, has each list moved to the path stage that shows its
+  stage: define, refine and plan to specify, breakdown and implement to
+  build, `verify` and ship to ship. The `verify` exit list, the Definition of
+  Done, moves to the build exit.
+- A path issue owes no Definition of Ready, so no `dor-*` check is listed for
+  it, wherever the configuration lists one.
+- It owes the Definition of Done (`verification-report`) only when its
+  `evidence_required` lists `definition-of-done`. Otherwise each Definition of
+  Done row is nothing to check.
+
+The rows are labelled with the path stage, such as `stage:build:exit`. An
+issue assessed before 9.0.0 keeps its legacy lists, labels and modes exactly.
 
 ## How a check is judged
 
 | Kind | Judged by |
 |---|---|
 | `human` | A record in the manifest (see [Item records](#item-records)): evidence that meets the check, a person's approval, or a follow-up that carries it to ship. A tick on a page counts for nothing, and the page is never read. With `approvers:` the check needs a current approval by a listed approver (see [Approvers on a human check](#approvers-on-a-human-check)). |
-| `deterministic` | Its registered implementation runs. The receipt does not run it and shows `pending`. |
-| `judged` | A review record: the newest registered `manual-review` record by a listed reviewer must say `pass` and match the check's inputs, definition, issue and generation. The cause of a failure is the first words of the detail. See [judged-checks.md](judged-checks.md). The receipt reads the record and shows the real verdict. |
+| `deterministic` | Its registered implementation runs. |
+| `judged` | A review record: the newest registered `manual-review` record by a listed reviewer must say `pass` and match the check's inputs, definition, issue and generation. The cause of a failure is the first words of the detail. See [judged-checks.md](judged-checks.md). |
 | `evidence` | Not evaluated by this version. A blocking check of this kind fails, so a list cannot pass by naming a check nothing reads. This holds whatever the capability, for a check a project adds, and `compass policy lint` warns (`M-LIST-KIND-UNEVALUATED`, exit code unchanged). The shipped default names none. |
 
 A row passes with the record's name in its detail: `met by EV-T`, `ticked by
@@ -63,23 +86,44 @@ reads the same records, so an item has one state whoever asks.
 
 ## Item records
 
-An item is a check id in the issue's `verify` exit list (the Definition of
-Done) or `plan` entry list (the Definition of Ready), whatever the capability
-says: the page shows both lists, and the capability only decides whether the
-stage lists run. One of four records meets an item, and a command writes each:
+An item is a check id in the issue's Definition of Done or `plan` entry list
+(the Definition of Ready), whatever the capability says: the page shows both
+lists, and the capability only decides whether the stage lists run. The
+Definition of Done is the build exit list, or the `verify` exit list of a
+configuration that declares a `verify` stage, as every stored generation and
+the shipped default do now. A path issue has only the Definition of Done: a
+command refuses to record a `dor-*` item or a `plan` or `breakdown` exit item
+for it. One of four records meets an item, and a command writes each:
 
 | Record | Written by | The item reads |
 |---|---|---|
 | `evidence[].meets: [item]` on an entry of an accepted type | `compass gate pass ... --meets ITEM`, `compass evidence add ... --meets ITEM` | `met by EV-id` |
 | a `human-approval` record with `check: item` | `compass evidence approve --check ITEM` | `ticked by <approver>` |
-| `follow_ups[].defers: item` | `compass follow-up add FU-id --defers ITEM --summary TEXT` | `carried to ship, FU-id`, then `met, FU-id resolved` once `compass follow-up resolve` resolves it |
+| `follow_ups[].defers: item` with `github: {repo, number}`, on a path issue | `compass follow-up add FU-id --defers ITEM --github owner/repo#N --summary TEXT` | `carried to a GitHub issue, FU-id`, whether or not it is resolved |
+| `follow_ups[].defers: item`, on an issue assessed before 9.0.0 | `compass follow-up add FU-id --defers ITEM --summary TEXT` | `carried to ship, FU-id`, then `met, FU-id resolved` once `compass follow-up resolve` resolves it |
 | a `page_ticks` entry | `compass issue migrate`, from a tick on an archived page | `ticked on the page before 7.0.0` |
 
 An item with none of them is open. `--meets` and `--defers` refuse, with exit 2
 and no change, an item the issue does not list, and `--meets` refuses evidence
-of a type the lists do not accept. `compass follow-up add` also takes
-`--target SLUG`, which blocks that issue's `dod-evidence-typed` while the
-follow-up is outstanding.
+of a type the lists do not accept.
+
+A path issue has one follow-up rule (ADR-093): an open Definition of Done item
+is met only by a follow-up that links to a GitHub issue. So on a path issue:
+
+- `compass follow-up add` refuses, with exit 2 and no change, a follow-up with
+  no `--github`, and a `--defers` item that is not in the build exit list;
+- `--github` takes `owner/repo#N` or the issue's URL, parsed as `compass issue
+  link set` parses a target; nothing is written to GitHub;
+- a follow-up with no `github` field meets nothing, and the open item's hint
+  names it;
+- the check that every follow-up is resolved has nothing to check, because
+  the linked issue tracks the work.
+
+An issue assessed before 9.0.0 keeps every older rule: an outstanding
+follow-up fails `compass check` until `compass follow-up resolve` resolves it,
+and a `target_task` entry that an older `--target` wrote blocks that issue's
+`dod-evidence-typed` while it is outstanding. `--target` was removed in 9.0.0
+and fails to parse with a line naming ADR-093.
 
 `compass evidence approve --check` accepts an item whose check lists no
 `approvers`. The approver must be a name in an `approvers:` list of the project
@@ -121,7 +165,11 @@ record in [Item records](#item-records) meets it.
 
 Who is listed. `owner` names the project's owner (the `owner:` of
 `compass.yml`, the same name waivers use), and names nobody when the project
-declares none. Any other entry is read as a person id, a role included, until
+declares none. Both are read from `compass.yml` as settings
+(`project_settings.project_file`): a catalog key in the same file is a removed
+setting and does not stop them being read (ADR-094). A file with a
+settings lint error, such as a key it cannot hold, names no owner: every
+resolution refuses that file, and `/compass:approve` names the error. Any other entry is read as a person id, a role included, until
 roles are resolved. The approver `agent` never matches.
 
 What is not protected. An approver's name is not authenticated, the same limit
@@ -146,7 +194,7 @@ compass evidence approve (--check ID | --guardrail G5 | --artifact KIND | --deci
 | `--guardrail` | `G5`: sign off guardrail `G5`, the only guardrail with a sign-off (below) |
 | `--artifact` | The kind of a document that reads `awaiting-approval` (below) |
 | `--decisions` | Confirm the decisions an agent took for the person |
-| `--checkpoint` | Answer the hand-off of a checkpoint stage: `assess`, `define`, `refine` or `plan` (below) |
+| `--checkpoint` | Answer the hand-off of a checkpoint stage: a path stage on a path issue, a legacy stage such as `define` on an older one (below) |
 | `--approver` | The person's id. It must be listed by the check |
 | `--role` | The role the person acts in |
 | `--scope` | What the approval covers. Required with `--check` and `--guardrail`; with `--checkpoint` it defaults to `the <stage> hand-off` |
@@ -177,36 +225,14 @@ for:
 - an approver the check does not list, because the record would not count;
 - a decision other than `approved` or `rejected`.
 
-#### Approving a document: `--artifact`
+#### Approving a document: `--artifact` (removed in 9.0.0)
 
-A stage command moves a document with a human check to `awaiting-approval`
-when the stage after it records its work (see ADR-050). `compass evidence
-approve --artifact <kind>` approves it. The command refuses, with exit 2 and
-no change, when:
-
-- the entry does not read `awaiting-approval`, naming the status it reads;
-- a human check on the document lists approvers and the approver is not one of
-  them. A human check with no `approvers:` takes any person other than
-  `agent`;
-- the decision is `rejected`. Send a document back with `compass issue
-  artifact set <kind> --status draft`.
-
-It writes one record of the type `artifact-approval` for each human check on
-the document, as `EV-APPROVAL-ARTIFACT-<kind>-<n>`, each holding `artifact`,
-`check`, `approver`, `role`, `decision`, `timestamp`, `issue` and `generation`
-(and `scope` when it is given). A document set to `awaiting-approval` by hand
-with no human check gets one record with no `check`. It then sets the
-entry's `approved_by` to the person and `approved_at` to the record's time.
-
-An `artifact-approval` record meets the human check it names, under every rule
-above except that it needs no `scope`. It is read nowhere else:
-`human-approval-present`, the check of guardrail `G5`, reads only
-`human-approval` records, and a waiver's approval needs one too. A document
-approval therefore never clears a sign-off.
-
-`compass issue artifact set <kind> --status approved` refuses a document with
-a human check and names this command. For a document with none it stays
-allowed and records `approved_by: compass issue artifact set`.
+9.0.0 keeps no document status (ADR-091), so the document form of
+`compass evidence approve` and `compass evidence request` is removed. A pending
+request for a document, written before 9.0.0, closes with nothing written. An
+`artifact-approval` record an older issue holds stays valid: it meets the human
+check it names, and `human-approval-present`, the check of guardrail `G5`,
+still reads only `human-approval` records.
 
 #### Confirming decisions: `--decisions`
 
@@ -216,7 +242,11 @@ approve --decisions` confirms them as one set.
 
 - **Which decisions.** At a checkpoint (`compass next` reports `Waiting at the
   <stage> checkpoint`), every unconfirmed decision taken at that stage or
-  earlier. Away from a checkpoint, every unconfirmed decision.
+  earlier. Away from a checkpoint, every unconfirmed decision. On a path issue
+  the stages are assess, specify, build and ship: a decision taken at a legacy
+  stage counts at the path stage that shows it, such as refine at specify, and
+  the decisions wait at a listed `specify` checkpoint once the scenarios are
+  written.
 - **Who may confirm.** A name in any `approvers:` list of the project file, with
   `owner` read as the project's owner. When the project file declares no
   `approvers:`, only its `owner` may confirm.
@@ -233,9 +263,12 @@ approve --decisions` confirms them as one set.
 
 #### Answering a checkpoint: `--checkpoint`
 
-A checkpoint is a stage hand-off that can wait for a person: `assess`,
-`define`, `refine` or `plan`. `compass evidence approve --checkpoint <stage>`
-records a person's answer to one. ADR-063 owns the decision.
+A checkpoint is a stage hand-off that can wait for a person. On a path issue
+it is `assess`, `specify`, `build` or `ship`. On an issue assessed before 9.0.0
+it is `assess`, `define`, `refine`, `plan`, `implement` or `verify`, and an
+outcome or request in a path stage name is refused, as before.
+`compass evidence approve --checkpoint <stage>` records a person's answer to
+one. ADR-063 owns the decision.
 
 - **What it writes.** One record of the type `checkpoint-approval`, as
   `EV-CHECKPOINT-<stage>-<n>`, holding `checkpoint` (the stage), `approver`,
@@ -246,6 +279,13 @@ records a person's answer to one. ADR-063 owns the decision.
   `evidence` the record's id. The entry replaces a `skipped` outcome an agent
   recorded with `compass issue checkpoint add`. A second answer for the same
   stage writes a new record and the outcome then cites it; both records stay.
+- **The spec it approved.** On a path issue the `specify` record also holds
+  `spec`, the spec's path relative to the project, and `spec_sha256`, the
+  `sha256sum` digest of its bytes. A request for `specify` holds the same two
+  keys, and the person is shown the digest. The prompt hook refuses to record
+  the answer, and closes the request as stale, when the spec changed after the
+  request was written. Until the answer is recorded, `compass tdd-red` refuses
+  on an issue that owes `scenario-approval` (`docs/checkpoints.md`, ADR-095).
 - **Who may answer.** A name in any `approvers:` list of the project file, with
   `owner` read as the project's owner; when the file declares no `approvers:`,
   only its `owner`. When the project declares neither, any name that is not an
@@ -255,7 +295,10 @@ records a person's answer to one. ADR-063 owns the decision.
   recorded, so it is not judged), a stage that is not a checkpoint stage, a
   stage the approach collapses or skips, a stage whose own record is not written
   yet (`compass next` does not count it done), the decision `rejected`, and a
-  name that may not answer.
+  name that may not answer. On a path issue the specify hand-off can be answered
+  once each scenario has an id, an intent and a declared test, and the ship
+  hand-off once build is done, because those two stages count as done only after
+  their answer or the landing.
 - **What it never clears.** No check reads `checkpoint-approval`:
   `human-approval-present`, the check of guardrail `G5`, reads only
   `human-approval`, a human check reads `human-approval` and
@@ -263,13 +306,16 @@ records a person's answer to one. ADR-063 owns the decision.
   a hand-off is therefore never the sign-off on an irreversible change.
   `compass evidence add --type checkpoint-approval` is refused, so the type is
   written only by this command.
+  `compass evidence add` refuses the types `isolation-proof` and `layering`
+  in the same way: only `compass isolation record` and `compass layering
+  record` write them (ADR-086).
 
 #### Signing off guardrail `G5`: `--guardrail`
 
 `human-approval-present`, the check of guardrail `G5`, counts only a
 `human-approval` record given for guardrail `G5` (ADR-066). A record names
-its subject: one that holds a `check`, `waiver`, `checkpoint`, `artifact` or
-`decisions` key, whatever the value, was given for that subject and is set
+its subject: one that holds a `check`, `waiver`, `checkpoint`, `artifact`,
+`decisions` or `ship` key, whatever the value, was given for that subject and is set
 aside. So is one whose `guardrail` is anything but the exact string `G5`. A
 record with none of these keys counts, which is the form every earlier
 sign-off uses. `approval_records.SUBJECT_KEYS` holds the keys and
@@ -323,6 +369,46 @@ and is shown as `...`. The key `answer` holds the decision.
 }
 ```
 
+#### Approving a waiver: `--waiver`
+
+`compass evidence approve --waiver W-<n>` approves one waiver of the issue
+(`cli/compass_pkg/waiver_records.py`, ADR-094). It writes one
+`human-approval` record with `waiver: W-<n>`, the `waived_check` and the
+`waiver_reason` the waiver names, `approver`, `role`, `scope`,
+`decision: approved`, `timestamp`, `issue` and `generation`. The record names
+a subject, so it never clears guardrail `G5`, and it counts only at the
+generation it holds. It refuses a withdrawn waiver,
+one already approved, one with no reason, one of a check the check set never
+waives, `--decision rejected` and a name that is not in `approvers.waiver`
+(else the project's owner). The waiver and what `compass check` shows are in
+`docs/waivers.md`.
+
+#### The typed ship approval: `--ship`
+
+`compass evidence approve --ship` approves the change of the issue at ship
+(#355). It is for an issue that owes the token `ship-approval` and whose
+merged pull request has no approving review by a person other than its
+author, such as a project not on GitHub or with one person. It writes one
+`human-approval` record with `ship: <slug>`, `head` (the `HEAD` commit when
+recorded, or none outside git), `approver`, `role`, `scope`,
+`decision: approved`, `timestamp`, `issue` and `generation`.
+`ship-approval-present` (`cli/compass_pkg/ship_approval.py`) counts it at the
+generation it holds while no `approval-withdrawal` names it.
+
+- `ship` is a subject key, so the record never clears guardrail `G5`. A `G5`
+  sign-off is given before code and is not a ship approval (ADR-095).
+- **Who may approve.** A name in any `approvers:` list of `compass.yml`, else
+  the project's owner; any person who is not an agent when the project
+  declares neither.
+- **When it refuses.** An issue whose `evidence_required` does not list
+  `ship-approval`, a second approval while one stands, `--decision
+  rejected`, the approver `agent` and no terminal.
+- **The other paths.** The agent asks with `compass evidence request --ship`
+  and the person types `/compass:approve <n>`. An agent records it under a
+  delegation only when the person typed `--for ship` and the code.
+  `/compass:reject <record id>` withdraws a delegated one with an
+  `approval-withdrawal` record.
+
 ### Approving in Claude Code, and delegated approvals
 
 In Claude Code a person answers a request by typing `/compass:approve [n]` or
@@ -331,7 +417,9 @@ In Claude Code a person answers a request by typing `/compass:approve [n]` or
 the answer through `approvals.record`, with `via: prompt`, the session id,
 the prompt id, the request number and its nonce. It records only one pending
 request of the session's issue that Compass has shown and that has not
-changed since, and blocks with the reason otherwise. A rejected check gets a
+changed since, and blocks with the reason otherwise. `/compass:approve waiver W-<n>`
+answers the pending request for that waiver, and only while the waiver names
+the check and reason the request showed. A rejected check gets a
 `rejected` record; a rejected document returns to draft and stays there while
 its file is unchanged; a rejected guardrail 5, checkpoint or decisions request
 writes no record.
@@ -357,8 +445,8 @@ or on how many are in force:
   checkout, which every worktree reads. `/compass:delegate` and `/compass:revoke`
   take the approver from the folder that holds it and need no current issue.
 
-`g5` is covered only with `--for g5`, after the person types back a code the
-hook shows them. The code is
+`g5` is covered only with `--for g5`, a waiver only with `--for waivers`, and
+the ship approval only with `--for ship`, after the person types back a code the hook shows them. The code is
 16 hex characters in four groups, such as `1a2b-3c4d-5e6f-7a8b`, typed with
 or without the hyphens. A `/compass:approve`, `/compass:reject` or
 `/compass:delegate` whose input has no prompt id is refused, and so is a
@@ -374,7 +462,16 @@ compass evidence approve (--check ID | --guardrail G5 | --artifact KIND | --deci
 
 It needs no terminal and no `--approver` or `--role`: the record names the
 person who delegated as `approver`, with `approved_by_agent`, `delegation` and
-`via: delegation`, and a line goes to the issue's devlog. The command must be
+`via: delegation`. In the same save, the manifest's `delegations_used:` gets
+a copy of the delegation under its id (`delegations.copy_of`, `keep_copy`;
+ADR-095 decision 12). The copy keeps who delegated, to whom, until when, for
+which issues and forms, and how it was typed, with the `sha256` of those
+fields. It leaves out the nonce, the use count, the index of other issues'
+records and the session ids: `covers_session` is kept as `true`. A second use
+of the same delegation adds nothing. A delegation whose kept fields changed,
+such as a `DL-1` typed again after the folder was cleared, is added again as
+`DL-1@2`. A revocation does not change the copy. The issue's devlog gets no
+line. The command must be
 a plain command that the pre-tool hook reads. The hook writes a call ticket into
 the common store (`cli/compass_pkg/delegation_tickets.py`): the session and the
 caller that Claude Code reported, and a digest of the words after `evidence
@@ -391,7 +488,8 @@ nothing, when it has no ticket, no `--issue`, or an issue that two worktrees
 hold; or when no delegation in force names the agent or covers its session, or
 the one that does has ended, was revoked, reached its `max`, was not written by
 a typed command, or does not cover the issue, its generation, the form or the
-labels of a 7.0.0 file. A delegation file in a linked worktree's own folder
+labels of a 7.0.0 file. The refusal tells the agent to ask with `compass
+evidence request` and stop, and says the person must type `/compass:approve`. A delegation file in a linked worktree's own folder
 gives no approval, and the refusal names it. The
 pre-tool hook also refuses the call when `--as` is not exactly the agent
 Claude Code reports.
@@ -440,6 +538,12 @@ compass evidence request (--check ID | --guardrail G5 | --artifact KIND | --deci
   pending request for the same subject closes as `replaced`. A request is not
   evidence, and no check reads it. The code is
   `cli/compass_pkg/approval_requests.py`.
+- **A stage review.** A request for the `refine`, `implement` or `verify`
+  checkpoint (`specify`, `build` or `ship` on a path issue) of an issue the
+  four-layer acceptance strategy (`S17`) applies to also holds `review`: the stage of the `atdd` skill it ends and that
+  stage's questions from `skills/atdd/references/stage-reviews.md`. The
+  command prints the questions, the person sees them with the request, and
+  the request's digest covers them (ADR-083).
 - **When it refuses.** It runs every refusal `compass evidence approve` gives
   for the subject, with the same words, except those that depend on who
   answers. It exits 2 and writes nothing.
@@ -472,25 +576,35 @@ A check is skipped in two cases:
 not apply to an approach. A list does not depend on the stage's mode.
 
 A third case is not a skip. When a `human` check's document is missing and the
-approach the issue was given does not list that document kind among its
-artifacts, the approach owes no such document, and the row is nothing to check,
-for example "quick-fix owes no verification-report". The artifact set is read
-from the configuration, so a project that adds `verification-report` to an
-approach makes the Definition of Done owed there. The shipped regular approach
-lists `requirements-review` from 7.0.0, so with this capability on, a regular
-issue assessed from 7.0.0 owes the seven Definition of Ready records at plan
-entry. An issue assessed earlier keeps its stored generation, which does not
-list the kind, so it has nothing to check for the Definition of Ready.
+approach does not owe that list, the row is nothing to check, for example
+"quick-fix owes no verification-report". Since 9.0.0 (ADR-091) the stage modes
+decide what is owed:
+
+- the Definition of Ready (`requirements-review`) where the issue's `refine`
+  mode is `lightweight` or `thorough`;
+- the Definition of Done (`verification-report`) where its `verify` mode is
+  `thorough`.
+
+So the 8.x regular and full approaches owe both, hotfix owes only the
+Definition of Done, and quick fix and spike owe neither. An issue assessed
+before 9.0.0 names an approach the shipped default no longer declares
+(ADR-092); it owes by its own stage modes in the same way. A stored generation
+whose approach still declares an `artifacts:` map is read by
+that map, as before 9.0.0. An issue assessed before 7.0.0 keeps a stored
+generation whose regular approach does not list `requirements-review`, so it
+has nothing to check for the Definition of Ready.
 
 ## A check that an approach does not owe
 
 A `when` on a check reads the assessment. Evaluation adds one derived key,
 `ships`, whether the approach the issue was given ships. Each Definition of
-Done check in the shipped default says `when: {ships: true}`, so a spike, which
-does not ship, owes none of them and a delivery owes all seven. A project can
-use `ships` in the `when` or `blocking_when` of its own checks and in the
-`when` of a guardrail gate. The key adds no field to the
-configuration, so the classifier compares it as it compares any `when`.
+Done check in the check set says `when: {ships: true}`, so a spike, which
+does not ship, owes none of them. A delivery owes all seven only where it
+owes `definition-of-done` (see A path issue). The key adds
+no field to the configuration. Since 9.0.0 a project adds a check only as a
+`project_checks` setting, whose `when` takes the keys of the assessment,
+`labels_any` and `any_of`, and not `ships` (`docs/configuration.md`). A
+stored generation whose own checks use `ships` is read as before.
 
 ## Where results show
 
@@ -504,39 +618,12 @@ is added to the output.
 `compass next` appends `entry not met: <check ids>` to its line when the
 current stage has failing entry checks.
 
-`compass issue receipt` adds a "Stage lists" section before the verdict. Each
-list is headed with its stage, its side and whether it is due. Each check shows
-its id, its state (`pass`, `fail`, `nothing-to-check` or `pending`) and its
-detail.
+## Where a list shows
 
-## Where a list shows in a document
-
-The requirements review shows the plan entry list and the verification report
-shows the `verify` exit list, each as a rendered block that `compass issue render`
-writes from the issue's configured list (`docs/rendered-blocks.md`):
-
-| List | Block | Under the heading |
-|---|---|---|
-| `plan` entry | `dor` | `Definition of Ready` |
-| `verify` exit | `dod` | `Definition of Done` |
-
-The first line of a block reads `Definition of Done: 5 of 7 met, 2 carried to
-ship (FU-3, FU-4)`, then one line gives each item's statement and its state.
-A tick written on the page counts for nothing. A list on another stage has no
-block yet; its checks are judged from the same records and are not written into
-a document.
-
-## Printing a template
-
-`compass issue template show <kind> [--depth D] [--issue SLUG] [--json]` prints
-the skeleton of that kind, which [the artifact catalogue](artifact-catalog.md)
-describes. The requirements review and the verification report hold an empty
-rendered block for each list, and the skeleton keeps each block marker as the
-template holds it: the blocks fill when the document is registered and
-`compass issue render` runs. `/compass:refine` and `/compass:verify` write
-their documents from this output. `--json` prints one object with the keys
-`kind`, `issue`, `depth`, `source` and `text`. `source` is `generation`, `live`
-or `none`.
+`compass check` lists each item of the `plan` entry list and the `verify` exit
+list with its state, under `stage:<stage>:<entry|exit>`. A tick written on a page
+counts for nothing. Before 9.0.0 a rendered block showed each list in the
+requirements review and the verification report (ADR-091 removed the render).
 
 ## Limits
 

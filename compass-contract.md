@@ -1,71 +1,40 @@
 # Compass operating contract
 
-**Assess before you change anything.** Run `/compass:assess` before editing
-code, specs or artifacts. You read risk, familiarity, size and goal; the CLI
-computes the delivery approach.
+**Start an issue before you change a file.** When someone describes work to
+build, change or fix, run `/compass:assess` first, even if they never typed
+it. Only conversation is exempt. **One request is one issue.** Add follow-on
+work or feedback in the same request to this issue; never start a second.
 
-**Never skip assessment.** Only conversation is exempt: answering,
-explaining, reading. Assess before a tool call changes a file.
+**The path is two commands**, each alone in its Bash call: `compass quick-fix
+start`, then `compass quick-fix finish -m "<message>" -- <test command>` once
+tests and code exist. `finish` writes the record and commits. When it asks for
+a person's approval, stop. After feedback, edit and run `finish` again. Each
+command prints `next:` or `done:`; do what it says; do not check its commit
+again. Never edit `.compass/`. Help: `compass <verb> --help`.
 
-**Trigger on intent, not on the command.** If someone describes work to build,
-change or fix, assess first even if they never typed the command.
-Explicitly typing any Compass command
-always works. If `.compass/current-task` already points at an assessed issue,
-carry on with it.
-
-**Guardrails are hard. Strategies are soft.** Five guardrails:
-
-1. Every change lands with a passing test that covers it.
+**Guardrails are hard. Strategies are soft.** **Five guardrails:**
+1. Every change lands with a test that fails without it.
 2. Acceptance criteria exist before the code.
 3. Code traces to a criterion and a reason.
-4. Evidence is a recorded command output, never a claim that something passed.
-5. A human approves anything irreversible.
+4. Evidence is a recorded command output.
+5. A person approves anything irreversible.
 
-Strategies, such as testing first, can be stepped off with a recorded reason;
-guardrails cannot.
+**Evidence, not assertion.** **If it is not on disk, it did not happen.**
+Scenarios: `docs/compass/<created>-<slug>/`. Manifest and evidence:
+`.compass/work/<slug>/`. **Settle edge cases before scenarios** (`atdd` skill).
 
-**Approvals.** Approve only under a delegation naming you, with `compass
-evidence approve --delegated --as <you> --issue <slug>`, as a plain Bash
-command, not a script. Otherwise run `compass
-evidence request`, ask the person to type `/compass:approve` or
-`/compass:reject`, and stop. Never create, extend or revoke a delegation.
+**Approvals.** For the labels `auth`, `payments`, `personal-data` and
+`migrations`, a label the project adds, and `critical` risk, a person approves
+the scenarios before any code edit. Never approve for the person: ask them to
+type `/compass:approve <n>` and stop. Approve yourself only under a
+delegation naming you, with `compass evidence approve --delegated --as <you>`.
+Never create, extend or revoke a delegation.
 
-**Evidence, not assertion.** Use the CLI: `compass tdd-red -- <cmd>` records a
-failing test, `compass tdd-green -- <cmd>` a passing one, and `compass check`
-runs the guardrails.
+**Commits.** `finish` stages the changed files and the record; do not `git
+add` anything under `.compass/` yourself. Push only when asked. For any other
+commit, check the staged list and commit authors. If something is staged by
+mistake, say so and stop; do not retry a refused unstage. A lint fix never
+weakens an assertion; re-run affected tests.
 
-**If it is not on disk, it did not happen.** Documents go to
-`docs/compass/<created>-<slug>/`, registered in the manifest. The manifest,
-evidence and markers live in `.compass/work/<slug>/`. Another session
-resumes from those files.
-
-**Stages, in order**, each with a `/compass:*` command:
-
-1. assess
-2. define acceptance criteria
-3. refine
-4. plan
-5. break down
-6. implement
-7. verify
-8. ship
-
-Honor the delivery approach's stage weights.
-
-**Record friction you observe.** If a step costs more than it returns and
-will recur, run `compass issue friction` with evidence and a fix.
-
-**Where to look.** `compass <verb> --help` explains a verb; the
-`compass-runtime` skill maps the stages.
-
-**Write for a person in the spirit of ASD-STE100.** Why before what, no
-reference a reader cannot follow, and stop once you have said it. Call each
-thing by its `compass terminology` term and say what it does the first time.
-If they are lost, re-pitch: the premise they missed, then the point.
-
-**Commit only what you mean to.** Stage each file by its path, never
-`.compass/`, and check the staged list and commit authors. If
-something is staged by mistake, say so and stop; do not retry a refused
-unstage. A lint fix never weakens an assertion; re-run affected tests.
-
-**Settle edge cases before scenarios** (`bdd-specification` skill).
+**Write for a person in the spirit of ASD-STE100.** Lead with the point. Use
+`compass terminology` terms. If they are lost, re-pitch.

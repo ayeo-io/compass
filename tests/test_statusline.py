@@ -5,6 +5,9 @@ shows its output to the person; it never enters the model's context, so it
 costs no tokens. The line must use the same stage resolver as `compass
 next`, so the two cannot disagree, and it must never break the session:
 outside a Compass project, or on any error, it prints nothing and exits 0.
+
+Each issue here is started on the four-stage path (ADR-092), so the line shows
+the path approach and the path stages.
 """
 from __future__ import annotations
 
@@ -14,6 +17,8 @@ import re
 import subprocess
 import sys
 import time
+
+import yaml
 from pathlib import Path
 
 import pytest
@@ -22,6 +27,9 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 SHIM = ROOT / "bin" / "compass-statusline"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
+
+#: The stage words a line can show: the four path stages and "done" (ADR-092).
+STAGE_WORDS = ("Assess", "Specify", "Build", "Ship", "done")
 
 
 def _statusline(cwd, *, columns=None):
@@ -72,7 +80,11 @@ def test_shows_the_issue_state_with_a_red_on_record(repo):
     assert r.returncode == 0 and r.stderr == "", r.stderr
     line = r.stdout.strip()
     assert "\n" not in line, line
-    for part in ("compass", "fix-login-redirect", "quick fix", "gates 0/3", "TRC-001 red"):
+    # ADR-092 decision: no approaches. The 8.x quick fix shows as the path's one
+    # delivery approach, with the light row's three gates, and the red puts it in
+    # Build.
+    for part in ("compass", "fix-login-redirect", "delivery", "Build", "gates 0/3",
+                 "TRC-001 red"):
         assert part in line, (part, line)
 
 
@@ -106,9 +118,12 @@ def test_garbage_on_stdin_prints_nothing(tmp_path):
 
 
 def _next_stage(root):
+    """The stage `compass next` names, or "done". A landed issue that owes the
+    ship approval adds `| next: <command>` to "all phases complete" (ADR-095)."""
     out = subprocess.run([sys.executable, str(CLI), "next"], cwd=root,
                          capture_output=True, text=True).stdout.strip()
-    return "done" if out == "all phases complete" else out.split()[0].split("[")[0]
+    done = out == "all phases complete" or out.startswith("all phases complete | next: ")
+    return "done" if done else out.split()[0].split("[")[0]
 
 
 @pytest.mark.parametrize("change", [
@@ -134,17 +149,23 @@ def test_the_stage_agrees_with_compass_next(repo, change):
 
 
 def test_no_approach_record_shows_no_stage(repo):
-    """`compass next` reports no stage when delivery-approach.md is missing,
-    so the line shows none either; the other fields stay."""
+    """`compass next` reports no stage when the manifest records no delivery approach,
+    so the line shows none either; the other fields stay. 9.0.0 writes no
+    delivery-approach.md (ADR-091), so the manifest is the record."""
     _start(repo)
-    for record in repo.rglob("delivery-approach.md"):
-        record.unlink()
+    for path in repo.rglob(".compass/work/*/manifest.yml"):
+        body = yaml.safe_load(path.read_text())
+        body.pop("delivery_approach", None)
+        path.write_text(yaml.safe_dump(body, sort_keys=False))
     nxt = subprocess.run([sys.executable, str(CLI), "next"], cwd=repo,
                          capture_output=True, text=True)
     assert nxt.returncode == 2, nxt.stdout
     fields = _statusline(repo).stdout.strip().split(" · ")
-    assert fields[:3] == ["compass", "fix-login-redirect", "quick fix"], fields
-    assert fields[3].startswith("gates "), fields
+    # The approach comes from the same manifest key, so it is not shown either.
+    assert fields[:2] == ["compass", "fix-login-redirect"], fields
+    assert fields[2].startswith("gates "), fields
+    assert not [f for f in fields if f in ("Define", "Implement", "Verify", *STAGE_WORDS)], \
+        fields
 
 
 def test_a_nested_repository_without_compass_is_not_its_parents_project(repo):

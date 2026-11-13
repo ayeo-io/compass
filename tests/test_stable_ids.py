@@ -50,11 +50,12 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 PACKAGE = ROOT / "cli" / "compass_pkg"
 STABLE_IDS = PACKAGE / "stable_ids.py"
-PRESET = ROOT / "governance" / "presets" / "default"
-
-
 def _preset_ids(name, key):
-    return list(yaml.safe_load((PRESET / name).read_text(encoding="utf-8"))[key])
+    """The ids of one catalogue of the shipped default: the check set since 9.0.0
+    (ADR-094), which replaced `governance/presets/default/`."""
+    sys.path.insert(0, str(ROOT / "tests"))
+    from check_set_files import shipped
+    return list(shipped(name)[key])
 
 
 def _load_stable_ids():
@@ -74,23 +75,42 @@ def test_si_1_the_constants_equal_the_default_preset():
 
     approaches = _preset_ids("approaches.yml", "approaches")
     assert list(ids.APPROACH_IDS) == approaches
+    # The preset declares the spike and `delivery`, the approach a four-stage path
+    # issue records (ADR-092). The five 8.x approaches keep their constants, which
+    # the frozen presets, stored generations and old manifests name.
+    assert ids.APPROACH_DELIVERY in approaches
+    frozen = list(yaml.safe_load((ROOT / "tests" / "fixtures" / "presets" / "default@7" / "approaches.yml")
+                                 .read_text(encoding="utf-8"))["approaches"])
+    assert list(ids.LEGACY_APPROACH_IDS) == frozen
     assert {v for k, v in vars(ids).items() if k.startswith("APPROACH_") and isinstance(v, str)} \
-        == set(approaches)
+        == set(approaches) | set(frozen)
 
     stages = _preset_ids("stages.yml", "stages")
-    assert list(ids.STAGE_IDS) == stages
+    # The preset declares the four path stages; the legacy ones keep their
+    # constants, which the frozen presets and old manifests name.
+    assert list(ids.PATH_STAGE_IDS) == stages
+    legacy = list(yaml.safe_load((ROOT / "tests" / "fixtures" / "presets" / "default@7" / "stages.yml")
+                                 .read_text(encoding="utf-8"))["stages"])
+    assert list(ids.STAGE_IDS) == legacy
+    assert ids.LEGACY_STAGE_IDS is ids.STAGE_IDS
     assert {v for k, v in vars(ids).items() if k.startswith("STAGE_") and isinstance(v, str)} \
-        == set(stages)
+        == set(legacy) | set(ids.PATH_STAGE_IDS)
+    assert set(ids.SPIKE_STAGE_IDS) < set(ids.PATH_STAGE_IDS)
+    assert set(ids.LEGACY_TO_PATH) == set(legacy)
+    assert set(ids.LEGACY_TO_PATH.values()) == set(ids.PATH_STAGE_IDS)
 
     gates = _preset_ids("gates.yml", "gates")
     assert list(ids.GATE_IDS) == gates
+    # A removed gate keeps its constant, because an older manifest still names it.
     assert {v for k, v in vars(ids).items() if k.startswith("GATE_") and isinstance(v, str)} \
-        == set(gates)
+        == set(gates) | set(ids.REMOVED_GATE_IDS)
+    assert not set(ids.REMOVED_GATE_IDS) & set(gates), "a removed gate is still declared"
 
     aliases = ids.LEGACY_APPROACH_ALIASES
     assert aliases, "no legacy approach names"
     assert not set(aliases) & set(approaches), "a legacy name is also a current id"
-    assert set(aliases.values()) <= set(approaches), "a legacy name maps to an id the preset lacks"
+    assert not set(aliases) & set(frozen), "a legacy name is also an 8.x id"
+    assert set(aliases.values()) <= set(frozen), "a legacy name maps to an id the 8.x presets lack"
 
 
 # --- the scanner -------------------------------------------------------------
@@ -171,10 +191,6 @@ def test_si_2_the_scanner_finds_ids_in_five_positions_and_skips_text():
 # (module, a code fragment that identifies the line, why it is not an id). The
 # fragment is never a line number. A stale entry fails SI-5.
 ALLOW = (
-    ("classify.py", '"scan": ("one of", ("full",',
-     '"full" is a scan mode (the whole grid was compared), not the approach id'),
-    ("locks.py", 'SCANS = ("footprint", "full")',
-     '"full" is a scan mode (every label in the layer), not the approach id'),
     ("word_map.py", '"full": "thorough"',
      '"full" is the retired stage weight in the in-module copy of the word table'),
     ("word_map.py", 'FALLBACK["size"] = {"standard": "medium"}',
@@ -196,8 +212,10 @@ def scan_package():
     """
     ids = _load_stable_ids()
     kinds = {}
-    for kind, values in (("stage", ids.STAGE_IDS), ("legacy", ids.LEGACY_APPROACH_ALIASES),
-                         ("gate", ids.GATE_IDS), ("approach", ids.APPROACH_IDS)):
+    for kind, values in (("stage", (*ids.STAGE_IDS, *ids.PATH_STAGE_IDS)),
+                         ("legacy", ids.LEGACY_APPROACH_ALIASES),
+                         ("gate", ids.GATE_IDS),
+                         ("approach", (*ids.APPROACH_IDS, *ids.LEGACY_APPROACH_IDS))):
         for value in values:
             kinds[value] = kind
     found = []
@@ -288,7 +306,19 @@ def test_si_5_the_allow_list_is_honest():
 # Everything else that names a stage as an id uses a constant. The count is exact,
 # so adding one or removing one fails until this table changes.
 STAGE_LEDGER = {
+    "approval_records.py": (1, 'the record subject key "ship" names the ship approval (#355), not the pipeline stage'),
+    "approval_requests.py": (6, 'the request form "ship" names the ship approval (#355), not the pipeline stage; and the checkpoint value "specify" names the specify approval a person gives before code (ADR-099)'),
+    "approvals.py": (3, 'the approval form "ship" names the ship approval (#355), not the pipeline stage'),
+    "delegations.py": (8, 'the delegated form and record key "ship" name the ship approval (#355), not the pipeline stage'),
+    "core.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),
+    "lean.py": (2, 'the subject "ship" names the ship approval, and the checkpoint value "specify" names the specify approval a person gives before code (ADR-099)'),
     "lessons.py": (2, 'a lesson source named "verify" is not a pipeline stage'),
+    "migrate.py": (2, 'the v1 "specify" and "build" keys in the fallback rename table are retired names'),
+    "migrate_settings.py": (2, 'the "ship" key of the 8.x stages: block that docs/judged-checks.md gave for the agent review, which compass migrate reads to write agent_review: on (#359)'),
+    "next_step.py": (2, 'the subject "ship" names the ship approval a person gives (ADR-099), not the pipeline stage'),
+    "pytest_report.py": (1, 'the "build" folder a test run skips is not a pipeline stage'),
+    "removed_parts.py": (1, 'the removed verb "compass plan lint" is a command word, not a stage'),
+    "word_map.py": (1, 'the retired run stage "build" in the fallback word table is a v1 name'),
 }
 
 
@@ -310,8 +340,11 @@ def test_si_7_the_rebuilt_values_equal_todays_values():
     from compass_pkg import core, policy
 
     assert core.ROUTE_NAMES is ids.APPROACH_IDS
-    assert core.ROUTE_NAMES == ("spike", "quick-fix", "regular", "hotfix", "full")
-    assert policy.CHECKPOINT_ROUTES == ("quick-fix", "regular", "full", "hotfix", "spike")
+    assert core.ROUTE_NAMES == ("spike", "delivery")
+    assert core.LEGACY_ROUTE_NAMES is ids.LEGACY_APPROACH_IDS
+    assert core.LEGACY_ROUTE_NAMES == ("spike", "quick-fix", "regular", "hotfix", "full")
+    assert policy.CHECKPOINT_ROUTES == ("quick-fix", "regular", "full", "hotfix", "spike",
+                                        "delivery")
     assert core.SHAPE_VALUE_MAP == {
         "express": "quick-fix", "standard": "regular", "expedition": "full",
         "feature": "regular", "initiative": "full"}
@@ -320,6 +353,10 @@ def test_si_7_the_rebuilt_values_equal_todays_values():
         "feature": "regular", "initiative": "full", "quick-fix": "quick fix"}
     assert core.STAGE_DISPLAY == {s: s for s in (
         "assess", "define", "refine", "plan", "breakdown", "implement", "verify", "ship")}
-    assert core.CHECKPOINT_STAGES == ("assess", "define", "refine", "plan")
+    # The path stages come first (ADR-092); an old issue keeps the legacy ones.
+    assert core.CHECKPOINT_STAGES == ("assess", "specify", "build", "ship", "define",
+                                      "refine", "plan", "implement", "verify")
+    assert core.LEGACY_CHECKPOINT_STAGES == ("assess", "define", "refine", "plan",
+                                             "implement", "verify")
     lines = (PACKAGE / "core.py").read_text(encoding="utf-8").splitlines()
     assert len(lines) <= 1200, f"core.py is {len(lines)} lines; the cap is 1,200"

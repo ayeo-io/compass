@@ -27,8 +27,8 @@ for every path.
 ## What a reviewer checks first
 
 - **A failing run for every new test.** Show each new test failing before your
-  change, as the `FAILED` lines in the pull request body. `compass tdd-red`
-  records it; a test that has never failed has not been shown to test anything.
+  change, as the `FAILED` lines in the pull request body. `compass quick-fix
+  finish` proves it on a copy of the base commit; a test that has never failed has not been shown to test anything.
 - **The house rules.** No em dash anywhere: write a plain hyphen. No line
   crediting an AI agent in a commit or pull request. US English.
   `tests/test_house_style.py` enforces the first two in tracked files; read

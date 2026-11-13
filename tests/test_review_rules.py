@@ -36,14 +36,12 @@ def _rules() -> list:
 
 @pytest.fixture
 def project(tmp_path):
-    """A Compass project with the repository's governance YAML, so
-    `policy lint` has a policy to read."""
+    """A Compass project with its own `governance/` folder for its review
+    rules."""
     root = tmp_path / "proj"
     (root / ".compass").mkdir(parents=True)
     gov = root / "governance"
     gov.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copy(ROOT / "governance" / name, gov / name)
     return root
 
 
@@ -89,7 +87,7 @@ def test_a_hook_change_gets_the_hook_rules_and_no_template_rule():
 def test_a_template_change_gets_the_reading_path_rule_and_no_hook_rule():
     """RV-A, the other way round: the matching is by file, not a fixed list."""
     r = _compass(ROOT, "review-rule", "list", "--changed-files",
-                 "templates/verification-report.md")
+                 "templates/acceptance-criteria.md")
     assert r.returncode == 0, r.stdout + r.stderr
     got = _ids(r.stdout)
     assert not (_rules_scoped_only_to(("hooks/",)) & got)
@@ -192,16 +190,23 @@ def test_the_repository_rules_pass_lint():
 
 def test_reviewer_reads_the_rules():
     """RV-D."""
-    text = (ROOT / "agents" / "reviewer.md").read_text(encoding="utf-8")
+    # The review dimensions file carries the review method the reviewer agent
+    # had until 9.0.0 (ADR-090, ADR-092); it moved there from `commands/ship.md`
+    # with ADR-099.
+    text = (ROOT / "skills" / "evidence-gates" / "review-dimensions.md").read_text(
+        encoding="utf-8")
     assert "compass review-rule list --changed-files" in text
     assert "RR-" in text
     assert re.search(r"`allowed`", text)
 
 
-def test_at_least_ten_rules_each_with_an_openable_incident():
-    """RV-E: an incident names a pull request, issue or commit."""
+def test_at_least_nine_rules_each_with_an_openable_incident():
+    """RV-E: an incident names a pull request, issue or commit.
+
+    The seed set held ten rules. 9.0.0 removed RR-007 with the living spec
+    whose titles it guarded (ADR-091), so nine remain."""
     rules = _rules()
-    assert len(rules) >= 10
+    assert len(rules) >= 9
     for r in rules:
         assert re.search(r"#\d+|\b[Cc]ommit [0-9a-f]{7,}\b", r["incident"]), r["id"]
 

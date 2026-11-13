@@ -11,7 +11,6 @@ import os
 import shutil
 import statistics
 import subprocess
-import sys
 import time
 from pathlib import Path
 
@@ -128,7 +127,7 @@ def test_trc_018(tmp_path, name):
     try:
         result = run_hook(root)
         assert not has_line(context(result))
-        assert "Assess before you change anything" in context(result)
+        assert "Start an issue before you change a file" in context(result)
     finally:
         if (root / "compass.yml").exists() and not (root / "compass.yml").is_symlink():
             (root / "compass.yml").chmod(0o644)
@@ -182,29 +181,6 @@ def test_trc_022_no_project_above(tmp_path):
     assert result.stdout == ""
 
 
-def _codex(project_root, cwd):
-    payload = {"hook_event_name": "SessionStart", "cwd": str(cwd), "source": "startup"}
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
-    return subprocess.run([sys.executable, str(ROOT / "adapters/codex/runtime.py"), "hook"],
-                          input=json.dumps(payload), capture_output=True, text=True,
-                          cwd=str(cwd), env=env, timeout=60)
-
-
-def test_trc_023(tmp_path):
-    root = project(tmp_path, "language: de\n")
-    sub = root / "src"
-    sub.mkdir()
-    result = _codex(root, sub)
-    assert result.returncode == 0, result.stderr
-    text = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-    lines = [p for p in text.splitlines() if p.startswith(PREFIX)]
-    assert lines == ["Write all prose in de. Code identifiers keep their names; "
-                     "Compass section headings stay in US English."]
-    unset = project(tmp_path, "", "unset")
-    plain = json.loads(_codex(unset, unset).stdout)["hookSpecificOutput"]["additionalContext"]
-    assert PREFIX not in plain
-
-
 def test_trc_024(tmp_path):
     framework = tmp_path / "framework"
     framework.mkdir()
@@ -220,7 +196,7 @@ def test_trc_024(tmp_path):
     plain = run_hook(project(tmp_path, "", "plain"), hook=hook)
     result = run_hook(project(tmp_path, "language: de\n"), hook=hook)
     text = context(result)
-    assert "Assess before you change anything" in text
+    assert "Start an issue before you change a file" in text
     assert not has_line(text)
     assert result.stdout == plain.stdout
 

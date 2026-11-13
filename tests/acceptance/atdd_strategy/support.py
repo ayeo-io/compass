@@ -32,15 +32,38 @@ ASSESSMENTS = {
     "spike": {"risk": "contained", "size": "small", "goal": "exploration"},
 }
 
+#: The candidate and client an outer-loop green names (ADR-085), for tests about
+#: something else.
+NAMED = ("--candidate", "build-417", "--client", "api")
+
 #: The ids of the strategy's checks. Rows with these names are the strategy's
 #: own findings; every other row is compared with compass 8.0.4.
 STRATEGY_CHECKS = ("acceptance-applicability-agrees", "outer-loop-recorded",
                    "outer-loop-attempts-recorded", "isolation-proven",
-                   "layering-test-passed")
+                   "layering-test-passed", "acceptance-support-present")
+
+
+#: The project's own rule that owes the full strategy (ADR-099 decision 9). A
+#: delivery issue owes no record of the strategy by default, so the projects
+#: these tests build opt in. `layering` routes the strategy as `on`.
+OPT_IN = [{"when": {}, "add": ["layering"]}]
+
+#: Rules that stand where the 8.x approaches stood: a token per size of change.
+OPT_IN_BY_SIZE = [
+    {"when": {"size": ["medium"]}, "add": ["layering"]},
+    {"when": {"size": ["atomic"]}, "add": ["outer-loop"]},
+    {"when": {"urgency": ["live-defect"]}, "add": ["isolation"]},
+]
+
+
+#: The PyYAML copy Compass ships. The example's layering test imports yaml,
+#: and the CI test job installs no PyYAML, so the example's pytest finds it here.
+VENDOR = ROOT / "cli" / "vendor"
 
 
 def env(root):
     return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(root),
+            "PYTHONPATH": str(VENDOR),
             "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "200",
             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "COMPASS_RENDER_AFTER": "0",
             "CLAUDE_PROJECT_DIR": str(root),
@@ -62,6 +85,8 @@ class Project:
     def __init__(self, root, cli=CLI, init=True):
         self.root = Path(root)
         self.cli = Path(cli)
+        self.extra_env = {}
+        self.require_evidence = list(OPT_IN)
         if init:
             self.root.mkdir(parents=True)
             (self.root / "README.md").write_text("base\n", encoding="utf-8")
@@ -70,17 +95,23 @@ class Project:
             git(self.root, "commit", "-q", "-m", "base")
             code, out, err = self.run("init")
             assert code == 0, out + err
+            self.setting(None)
 
     def run(self, *argv):
         r = subprocess.run([sys.executable, str(self.cli), *argv], cwd=self.root,
-                           env=env(self.root), capture_output=True, text=True,
-                           timeout=300, stdin=subprocess.DEVNULL)
+                           env=dict(env(self.root), **self.extra_env), capture_output=True,
+                           text=True, timeout=300, stdin=subprocess.DEVNULL)
         return r.returncode, r.stdout, r.stderr
 
     def setting(self, value, where="compass.yml", **more):
         """Write the strategy setting into `compass.yml` or `.compass/config.yml`.
         `value` None writes the file without the key."""
         doc = {"schema": 1, **more} if where == "compass.yml" else dict(more)
+        if self.require_evidence and "require_evidence" not in doc:
+            doc["require_evidence"] = self.require_evidence
+        if where != "compass.yml":
+            # The project's settings live in one file only (`settings-conflict`).
+            (self.root / "compass.yml").unlink(missing_ok=True)
         if value is not None:
             doc["acceptance_strategy"] = value
         path = self.root / where
@@ -116,7 +147,16 @@ class Issue:
             argv += ["--expected-acceptance", expected]
         if reason is not None:
             argv += ["--reason", reason]
-        return self.run(*argv)
+        result = self.run(*argv)
+        # Assess records who asked and the link to the request (#356), so the
+        # check `request-recorded` passes and the rows these tests compare are
+        # the ones they are about. Only this release's CLI has the flags.
+        if result[0] == 0 and self.project.cli == CLI:
+            code, out, err = self.run("issue", "link", "set", "--issue", self.slug,
+                                      "--request", f"https://example.com/requests/{self.slug}",
+                                      "--requester", "Test fixture")
+            assert code == 0, out + err
+        return result
 
     def must(self, *argv):
         code, out, err = self.run(*argv)
@@ -157,17 +197,10 @@ class Issue:
         self.write_manifest(body)
 
     def approach_record(self):
-        """The delivery-approach record written from the shipped template,
-        registered and rendered, as the assess stage writes it."""
-        rel = f"docs/compass/{CREATED}-{self.slug}/delivery-approach.md"
-        path = self.project.root / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        template = (ROOT / "templates" / "delivery-approach.md").read_text(encoding="utf-8")
-        path.write_text(template.replace("{{ISSUE_SLUG}}", self.slug), encoding="utf-8")
-        self.must("issue", "artifact", "set", "delivery-approach", "--status", "draft",
-                  "--path", rel, "--issue", self.slug)
-        self.must("issue", "render", "--issue", self.slug)
-        return path.read_text(encoding="utf-8")
+        """The acceptance-strategy line the issue's records give. Before 9.0.0 a render
+        wrote it into the delivery-approach record; 9.0.0 renders nothing (ADR-091), and
+        `compass approach evaluate --write` prints the same line."""
+        return strategy_line(self.manifest())
 
 
 def rows(document):
@@ -188,15 +221,38 @@ def without_strategy(document):
     return [r for r in rows(document) if r[0] not in STRATEGY_CHECKS]
 
 
+def _removed_in_9():
+    """The checks 9.0.0 removed on purpose (ADR-090). A comparison with 8.0.4
+    leaves them out on both sides, so it still sees every other difference."""
+    if str(ROOT / "cli") not in sys.path:
+        sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg.check_registry import REMOVED
+    return {name for name, removed in REMOVED.items() if removed.removed_in == "9.0.0"}
+
+
+def _without_removed(value, removed):
+    if isinstance(value, dict):
+        return {k: _without_removed(v, removed) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_without_removed(v, removed) for v in value
+                if not (isinstance(v, str) and v in removed)
+                and not (isinstance(v, list) and v and isinstance(v[0], str) and v[0] in removed)]
+    return value
+
+
 def recorded(name):
-    """The compass 8.0.4 output recorded for fixture `name`."""
-    return json.loads((FIXTURES / "compass-8.0.4" / f"{name}.json").read_text(encoding="utf-8"))
+    """The compass 8.0.4 output recorded for fixture `name`, less the checks
+    9.0.0 removed."""
+    data = json.loads((FIXTURES / "compass-8.0.4" / f"{name}.json").read_text(encoding="utf-8"))
+    return _without_removed(data, _removed_in_9())
 
 
 def summary(code, document):
     """What a comparison with compass 8.0.4 reads: the exit code and the rows
-    that are not the strategy's."""
-    return {"exit": code, "rows": [list(r) for r in without_strategy(document)]}
+    that are not the strategy's, less the checks 9.0.0 removed."""
+    removed = _removed_in_9()
+    return {"exit": code, "rows": [list(r) for r in without_strategy(document)
+                                   if r[0] not in removed]}
 
 
 # --- the projects the comparisons run on -------------------------------------------------
@@ -265,3 +321,84 @@ def without_loop(issue, name):
         if entry.get("path") == f"evidence/{name}.json":
             entry["record_id"], entry["content_digest"] = record_id, digest
     issue.write_manifest(body)
+
+
+# --- the stage 1 suites (scenario group C) -------------------------------------------------
+
+#: The acceptance test each stage 1 issue declares for its scenario.
+SPEC = "tests/acceptance/test_orders.py"
+SPEC_TEST = SPEC + "::test_place_order"
+#: The suite run, as a project runs it. `-p no:cacheprovider` keeps pytest's cache out of
+#: the tree the records name.
+PYTEST = (sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/acceptance")
+
+#: `conftest.py` bodies. The driver module `shop.driver` is not written yet.
+CONFTEST = {
+    "fixture import": ("import pytest\n\n\n@pytest.fixture\ndef driver():\n"
+                       "    from shop.driver import Driver\n    return Driver()\n"),
+    "module import": ("import pytest\nfrom shop.driver import Driver\n\n\n"
+                      "@pytest.fixture\ndef driver():\n    return Driver()\n"),
+    "third-party import": ("import pytest\n\n\n@pytest.fixture\ndef driver():\n"
+                           "    from orders_vendor_sdk import Client\n    return Client()\n"),
+    "syntax error": "import pytest\n\n\ndef shop(:\n    pass\n",
+    "silent exit 4": "import os\n\n\ndef pytest_configure(config):\n    os._exit(4)\n",
+    "no fixture": "",
+}
+SPEC_BODY = {
+    "uses the fixture": "def test_place_order(driver):\n    assert driver.place_order('book')\n",
+    "imports the driver": ("from shop.driver import Driver\n\n\n"
+                           "def test_place_order():\n    assert Driver().place_order('book')\n"),
+}
+
+
+def stage_one_suite(root, conftest="fixture import", spec="uses the fixture"):
+    """Write the package `shop`, with a production module and no driver, and an
+    acceptance suite whose `conftest.py` and specification are as named."""
+    root = Path(root)
+    (root / "shop").mkdir(exist_ok=True)
+    (root / "shop" / "__init__.py").write_text("", encoding="utf-8")
+    (root / "shop" / "orders.py").write_text("ORDERS = []\n", encoding="utf-8")
+    suite = root / "tests" / "acceptance"
+    suite.mkdir(parents=True, exist_ok=True)
+    (suite / "conftest.py").write_text(CONFTEST[conftest], encoding="utf-8")
+    (suite / "test_orders.py").write_text(SPEC_BODY[spec], encoding="utf-8")
+
+
+def run_pytest(root, *extra):
+    """Run the suite as `compass tdd-red` would, with a JUnit report, and return
+    `(exit code, report text or None, stderr)`."""
+    report = Path(root) / ".pytest-report.xml"
+    r = subprocess.run([*PYTEST, *extra, f"--junitxml={report}"], cwd=root,
+                       env=env(root), capture_output=True, text=True, timeout=120)
+    text = report.read_text(encoding="utf-8") if report.exists() else None
+    if report.exists():
+        report.unlink()
+    return r.returncode, text, r.stderr
+
+
+def stage_one_issue(project, slug="orders", approach="regular", conftest="fixture import",
+                    spec="uses the fixture", scenarios=("TRC-1",)):
+    """An issue at refine, with the suite written and each scenario declaring the
+    acceptance test."""
+    stage_one_suite(project.root, conftest, spec)
+    issue = project.issue(slug, approach=approach)
+    code, out, err = issue.assess()
+    assert code == 0, out + err
+    for scenario in scenarios:
+        issue.must("scenario", "add", scenario, "--issue", slug, "--intent", "INT-1",
+                   "--title", "Place an order", "--test", SPEC_TEST)
+    return issue
+
+
+def refusal(stderr):
+    """The message of a `compass tdd-red` refusal, without the command line and the
+    output tail, which name temporary paths."""
+    return stderr.split("\n  command:", 1)[0].strip()
+
+
+def strategy_line(manifest):
+    """`acceptance_strategy.line`, the one function every reader of the line calls."""
+    sys.path.insert(0, str(ROOT / "cli"))
+    import compass_pkg  # noqa: F401  (the bundled PyYAML first)
+    from compass_pkg import acceptance_strategy
+    return acceptance_strategy.line(manifest)

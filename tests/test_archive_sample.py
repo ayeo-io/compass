@@ -36,8 +36,8 @@ SAMPLE = archive.sample_root()
 # default, are listed in tests/archive.py as SHAPE_TESTS, because
 # tests/shape_skip_guard.py reads the same list. These two are about the real
 # archive, and are opt-in.
-REAL_ARCHIVE_TESTS = ("test_system_spec_currency.py",
-                      "test_archive_citations_resolve.py")
+# test_system_spec_currency.py left with the living spec (ADR-091).
+REAL_ARCHIVE_TESTS = ("test_archive_citations_resolve.py",)
 
 #: What must never reach a tracked file.
 PRIVATE = (

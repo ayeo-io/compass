@@ -105,7 +105,7 @@ review for the same reason an input does.
 A judged check follows the rules of every check in a list. It is `pending`
 until its list is due, it gives its `on_skipped` verdict when its stage is
 skipped or collapsed, and an advisory one reports a failure with the
-`advisory` status, which does not fail the run. `compass issue receipt` reads the records and shows the real verdict.
+`advisory` status, which does not fail the run.
 
 Reviewer identity is not authenticated. This is the same limit as
 `human-approval`: a name in a field is a claim, not a proof.
@@ -171,10 +171,38 @@ example above; `at` and `definition_digest` vary and are shown as `...`.
 
 `scope` and `generation` are absent when the record has none.
 
+## An agent review
+
+Before 9.0.0 a reviewer agent reviewed every change at verify. 9.0.0 runs each
+issue in one session (ADR-090), so no agent review is required. A project that
+wants one turns it on as advisory evidence with one tighten-only setting in its
+own `compass.yml` (ADR-094):
+
+```yaml
+agent_review: on
+```
+
+The setting adds the check set's optional entry: the judged check
+`agent-review`, whose statement is "An agent that did not write the change
+reviewed it against the acceptance criteria.", with `reviewers: [agent]`, `inputs:
+[acceptance-criteria]`, `severity: advisory` and `on_skipped: not-applicable`,
+listed at the `ship` entry. Since 9.0.0 a `checks:` or `stages:` block in
+`compass.yml` is a removed setting and is not read.
+
+The reviewing agent records its verdict with `compass evidence review
+agent-review --verdict pass|fail --reason TEXT --reviewer agent`, which writes a
+`manual-review` record. Then:
+
+- With no record, a `fail` or a changed input, the check shows as ADVISORY and
+  `compass check` does not fail on it.
+- A record by a person is set aside, because the check lists only `agent`.
+- The check sits at the `ship` entry and not in the Definition of Done, so
+  `dod-evidence-typed` does not read it.
+
 ## A project with no judged check
 
 Nothing changes. No record is read, the manifest is not touched and the output
-of `compass check`, `compass next` and the receipt is the same. The shipped
+of `compass check` and `compass next` is the same. The shipped
 default names no judged check in any list.
 
 ## Limits

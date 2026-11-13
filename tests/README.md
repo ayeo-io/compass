@@ -68,7 +68,6 @@ These files check the safety-contract guarantees:
 | `test_spike_safety.py`    | 4 - spike conclusion, no production changes, graduation linkage |
 | `test_ci.py`              | 6 - `compass ci` exit-code aggregation |
 | `test_modes.py`           | 7 - enforced vs advisory adoption mode |
-| `test_calibration.py`     | the assessment feedback loop - reassessment log and trend signal |
 | `test_house_style.py`     | this repository's own writing invariants (the cold-reader strategy, `S7`) - not a safety-contract guarantee |
 
 ## Fixtures
@@ -81,7 +80,9 @@ file - no test code change needed.
 ## Isolation
 
 Every test gets a fresh temp project from the `project` fixture - a copy of
-the shipped `governance/`, an empty `.compass/work/`, and `.compass/config.yml`
-set to `mode: enforced`. Tests that need a different mode write the config
-file themselves; tests that mutate governance use the `edit_governance`
-fixture, which only touches the temp copy.
+the shipped governance prose (`governance/*.md`), an empty `.compass/work/`,
+and `.compass/config.yml` set to `mode: enforced`. Tests that need a different
+mode write the config file themselves. The fixture copies no
+`routing-policy.yml` or `guardrails.yml`: 9.0.0 refuses a project with a copy
+of either and no `compass.yml` (ADR-098). A test that needs the 8.x reader of
+a copy uses `tests/legacy_copy.py`.

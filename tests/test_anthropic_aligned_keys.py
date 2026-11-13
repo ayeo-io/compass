@@ -101,7 +101,8 @@ def test_manifest_schema_declares_the_new_keys():
 
 def test_route_shapes_declare_a_ceiling_not_a_word():
     """`TRC-B6`: no shape carries a topology word or an orchestration word. <!-- vocabulary-scan: allow - names the retired key the shape must not carry -->"""
-    policy = _yaml(ROOT / "governance" / "routing-policy.yml")
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
     shapes = policy["route_shapes"]
     for name, shape in shapes.items():
         assert "topology" not in shape, f"{name} still declares a topology"
@@ -127,7 +128,16 @@ def test_breakdown_stage_weight_is_one_of_the_allowed_values():
     A guard that lists forbidden values passes on any value nobody listed,
     such as `banana`, so it cannot tell a correct rename from a wrong one.
     """
-    policy = _yaml(ROOT / "governance" / "routing-policy.yml")
+    # The shipped default declares no 8.x approach since 9.0.0 (ADR-092), so the
+    # shapes are read from the 8.0.4 governance copy, the last release that had them.
+    import sys as _sys
+    import yaml as _yaml_mod
+    import tarfile
+    _sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        _v8 = tar.extractfile("governance/routing-policy.yml").read().decode("utf-8")
+    policy = _yaml_mod.safe_load(_v8)
     for name, shape in policy["route_shapes"].items():
         weight = shape.get("stages", {}).get("breakdown")
         assert weight in BREAKDOWN_WEIGHTS, (
@@ -141,13 +151,14 @@ def test_breakdown_stage_weight_is_one_of_the_allowed_values():
 
 def test_the_architecture_gate_is_named_for_what_it_checks():
     """`TRC-B5`: `compass check` prints the gate id on every run."""
-    guardrails = _yaml(ROOT / "governance" / "guardrails.yml")
+    from check_set_files import view as shipped_view
+    guardrails = shipped_view("guardrails.yml")
     accepts = guardrails["gate_evidence_requirements"]
     assert "verify.architecture" in accepts
     assert "verify.fitness" not in accepts
 
-    policy_text = (ROOT / "governance" / "routing-policy.yml").read_text()
-    assert "add_gate: verify.fitness" not in policy_text
+    policy_text = (ROOT / "governance" / "check-set.yml").read_text()
+    assert "verify.fitness" not in policy_text
 
 
 def test_an_archived_gate_id_still_resolves():
@@ -159,13 +170,15 @@ def test_an_archived_gate_id_still_resolves():
 # --- `TRC-B7` - the config block adopters hand-edit -------------------------
 
 def test_the_config_names_multiagent_work_by_its_new_name():
-    """`TRC-B7`: shipped template and this repository's own config."""
+    """`TRC-B7`: shipped template and this repository's own config. 9.0.0 removed
+    the multiagent setting (ADR-090), so this repository's config holds neither
+    the old block nor the new one."""
     for rel in ("compass.yml", "templates/config.yml"):
         path = ROOT / rel
         if not path.exists():
             continue
         cfg = _yaml(path)
-        assert "multiagent" in cfg, f"{rel} has no multiagent block"
+        assert "multiagent" not in cfg, f"{rel} still has a multiagent block"
         assert "swarm" not in cfg, f"{rel} still has a swarm block"
 
 
@@ -184,11 +197,8 @@ def test_a_config_still_using_the_swarm_block_is_read(tmp_path):
         "swarm:\n  worktree_root: ../old-root\n  max_worktrees: 3\n")
     assert project_settings.scalar(str(tmp_path), "worktree_root") == "../old-root"
     assert project_settings.scalar(str(tmp_path), "max_worktrees") == "3"
-    for rel in ("scripts/multiagent.sh", "scripts/integrate.sh"):
-        body = (ROOT / rel).read_text(encoding="utf-8")
-        assert "compass_setting" in body, (
-            f"{rel} no longer reads its settings through compass_setting, so "
-            f"an adopter's swarm: block may no longer be read")
+    # The two scripts that read these through compass_setting were removed in
+    # 9.0.0 (ADR-090); the reader still reads the old block.
 
 
 # --- `TRC-F2` - a rename that drops data fails loudly -----------------------

@@ -6,15 +6,15 @@ The pilot ayeo-io/compass-delivery#306 ("Pilot the four-layer acceptance test mo
 |---|---|---|
 | Specification | `test_hook_refusals.py` | 16 scenarios, one DSL call per Given, When or Then line |
 | DSL | `dsl.py` | `install`, `project`, `machine`, `agent`, `hook`; no checks |
-| Driver | `tests/acceptance/hooks/drivers/base.py`, `tests/acceptance/hooks/drivers/claude_code.py`, `tests/acceptance/hooks/drivers/codex.py` | every set-up, every check, and how each client sends a call |
+| Driver | `tests/acceptance/hooks/drivers/base.py`, `tests/acceptance/hooks/drivers/claude_code.py` | every set-up, every check, and how each client sends a call |
 | System under test | a real install and a real project, in a folder of their own | |
 
-Each scenario runs once through Claude Code's hook interface and once through the Codex adapter. `COMPASS_HOOK_CLIENT=claude-code` or `codex` runs one client only. A scenario a client is known to fail is marked in `conftest.py` with its issue, and the mark is strict.
+Each scenario runs through Claude Code's hook interface. The pilot also ran each one through the Codex adapter, which 9.0.0 removed: it stays on 8.x (ayeo-io/compass-delivery#345, decision 5). `COMPASS_HOOK_CLIENT` names the client to run. A scenario a client is known to fail is marked in `conftest.py` with its issue, and the mark is strict.
 
 ## What the pilot found
 
 1. **The Codex adapter cannot refuse without `python3`.** Its hook command runs `python3`, so with no `python3` it exits 127 where the Claude Code hook refuses as `python-missing`. ayeo-io/compass-delivery#308 ("Refuse a Codex tool call when python3 is missing", in the private delivery record) tracks it.
-2. **Compass has no review form for the second and third stages of the `atdd` skill** (stage 2 writes the drivers, stage 3 tidies up and proves isolation). `compass evidence request --checkpoint` takes assess, define, refine and plan only.
+2. **Compass had no review form for the second and third stages of the `atdd` skill** (stage 2 writes the drivers, stage 3 tidies up and proves isolation). ayeo-io/compass-delivery#327 (the item that adds review checkpoints for stages 2 and 3, in the private delivery record) made them the `implement` and `verify` checkpoints, listed where the four-layer acceptance strategy applies.
 3. **Compass does not accept the red that ends the skill's first stage.** An import red (a driver that does not exist yet) is a setup error to `compass tdd-red`, not a failing test.
 
 ## What a change to the hook's layout touches

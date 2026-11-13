@@ -5,28 +5,23 @@ make sure the project exists before it writes into it.
 
 The split this verb keeps:
 
-  compass init      creates .compass/ and its state file. Nothing else. Safe
-                    to run twice, which is what lets the entry-point commands
-                    call it unconditionally rather than each testing for the
-                    directory.
-  /compass:init     the slash command - writes a minimal compass.yml, or runs
-                    `compass policy migrate` on a project with a
-                    .compass/config.yml or copied governance. It copies nothing.
-                    It then runs `compass init --readiness`, which is the only
-                    caller that measures the repository.
-  compass init --readiness
-                    as `compass init`, then runs `compass readiness` when a
-                    compass.yml exists and prints the absent signals. It exits 0
-                    whatever happens: a failure prints that readiness was not
-                    measured and why.
+  compass init      creates .compass/, its state file and the ignore lines
+                    of the record (#356): `.compass/work/.gitignore` in every
+                    project, and the per-machine lines of `.compass/.gitignore`
+                    when the record is committed (`record_mode`). Nothing
+                    else. Safe to run twice, which is what lets the
+                    entry-point commands call it unconditionally rather than
+                    each testing for the directory. A second run only adds an
+                    ignore line that is missing; it keeps the person's own.
+  /compass:init     the slash command - writes a minimal compass.yml. It
+                    copies nothing.
 
 Auto-initialisation must never write configuration. Being initialised for you
 is small and reversible; having a compass.yml written into your repository
-because you ran /compass:intent is not, and it would arrive without the
+because you ran /compass:assess is not, and it would arrive without the
 conversation that is the whole point of choosing a configuration.
 
-DEPENDENCY: none beyond the standard library and this package (the readiness modules
-are imported only when `--readiness` is passed). It runs before
+DEPENDENCY: none beyond the standard library and this package. It runs before
 a project exists, so it must not reach for anything that assumes one - in
 particular not core.find_compass_dir(), which raises when there is no
 .compass/ and is exactly the case this verb handles.
@@ -34,13 +29,14 @@ particular not core.find_compass_dir(), which raises when there is no
 import datetime
 import os
 
-from compass_pkg import project_settings
+from compass_pkg import project_settings, record_mode
+from compass_pkg.core import CompassError
 from compass_pkg.terminal import say
 
 # State the CLI writes, not settings a person edits (ADR-043). Written on
 # creation only - never over an existing file. Settings live in `compass.yml`
-# at the project root, which only `/compass:init` or `compass policy migrate`
-# creates. A project that has run neither uses the shipped defaults, which are
+# at the project root, which only `/compass:init` or a person creates. A
+# project without one uses the shipped defaults, which are
 # in force: that is a complete, valid state.
 STATE_TEMPLATE = """\
 # Compass - state the CLI wrote. Do not edit. Settings go in compass.yml; see
@@ -90,7 +86,36 @@ def resolve_project_root():
         search = parent
 
 
-def ensure_initialised(project_root, by="compass init"):
+def write_ignore_files(project_root):
+    """Write the record's ignore lines. Returns the files it changed.
+
+    `.compass/work/.gitignore` is written in every project: in kept-out mode
+    the project ignores the folder anyway, and a later switch to committed
+    mode needs no second step. The lines of `.compass/.gitignore` are added
+    only in committed mode, because a project that keeps its record out may
+    track that file and must not see it change. A project whose settings
+    cannot be read gets no committed-mode lines: `compass policy lint`
+    names the fault, and init must not fail on it."""
+    compass_dir = os.path.join(project_root, ".compass")
+    changed = []
+    work_ignore = os.path.join(compass_dir, "work", ".gitignore")
+    if record_mode.add_ignore_lines(work_ignore, record_mode.WORK_IGNORE_LINES,
+                                    record_mode.WORK_IGNORE_HEADER):
+        changed.append(work_ignore)
+    try:
+        committed = record_mode.mode(project_root).mode == record_mode.COMMITTED
+    except CompassError:
+        committed = False
+    if committed:
+        compass_ignore = os.path.join(compass_dir, ".gitignore")
+        if record_mode.add_ignore_lines(compass_ignore,
+                                        record_mode.COMPASS_IGNORE_LINES,
+                                        record_mode.COMPASS_IGNORE_HEADER):
+            changed.append(compass_ignore)
+    return changed
+
+
+def ensure_initialised(project_root, by="compass init", changed=None):
     """Create .compass/ if it is not there. Returns (created, compass_dir).
 
     Idempotent on purpose. Every entry-point command calls this without
@@ -100,6 +125,9 @@ def ensure_initialised(project_root, by="compass init"):
     `by` names what did the initialising - the verb itself, or the entry-point
     command that called it. It is written into the state file so the hook's
     first refusal can explain where Compass came from.
+
+    `changed`, when given, is a list that receives each ignore file this run
+    wrote to (`write_ignore_files`).
     """
     compass_dir = os.path.join(project_root, ".compass")
     work_dir = os.path.join(compass_dir, "work")
@@ -116,6 +144,9 @@ def ensure_initialised(project_root, by="compass init"):
     if not os.path.exists(state) and not os.path.exists(old_config):
         with open(state, "w", encoding="utf-8") as fh:
             fh.write(STATE_TEMPLATE.format(by=by, at=stamp))
+    written = write_ignore_files(project_root)
+    if changed is not None:
+        changed.extend(written)
 
     return created, compass_dir
 
@@ -127,47 +158,20 @@ def _state_path(root, compass_dir):
             or os.path.join(compass_dir, "state.yml"))
 
 
-def _measure_readiness(root):
-    """Measure the repository for `compass init --readiness`.
-
-    Returns `(lines, data)`: the lines to print after the files init wrote,
-    and the `--json` fields. It never raises: any failure becomes the one
-    "not measured" line, so init still completes. It measures only when the
-    project has a settings file, because that is what `/compass:init` has
-    just written."""
-    if not os.path.isfile(os.path.join(root, project_settings.COMPASS_YML)):
-        return [], {}
-    try:
-        from compass_pkg import readiness_cmd, readiness_record
-        notes = []
-        record = readiness_cmd.measure(root, notes)
-        absent = readiness_cmd.fix_order(record["signals"])
-        lines = ["Absent readiness signals (the floor first):"]
-        for signal in absent:
-            fix = signal.get("fix") or {}
-            lines.append("- [ ] %s: %s (%s)" % (signal["id"], fix.get("change", signal["reason"]),
-                                                fix.get("file", readiness_record.RECORD)))
-        if not absent:
-            lines.append("none - every readiness signal is present")
-        lines += ["  " + note for note in notes]
-        score_line, score, below = readiness_cmd._score_line(record)
-        lines += [score_line, "wrote %s" % readiness_record.RECORD]
-        return lines, {"readiness": {"measured": True, "score": score,
-                                     "signals": len(record["signals"]),
-                                     "floor_met": not below,
-                                     "absent": [s["id"] for s in absent]}}
-    except Exception as exc:                                # noqa: BLE001
-        reason = " ".join(str(exc).split()) or type(exc).__name__
-        return (["readiness was not measured: %s. Run `compass readiness` later." % reason],
-                {"readiness": {"measured": False, "reason": reason}})
+def _settings_line(root):
+    """What the commands read for settings. A new project has no `.compass/`,
+    so the only settings file it can hold is `compass.yml`."""
+    if project_settings.settings_source(root) is not None:
+        return f"settings : {project_settings.COMPASS_YML}, read over the shipped check set."
+    return "settings : defaults in force. /compass:init writes a compass.yml."
 
 
 def cmd_init(args):
     root = resolve_project_root()
+    changed = []
     created, compass_dir = ensure_initialised(
-        root, by=getattr(args, "by", None) or "compass init")
-    readiness_lines, readiness_data = (
-        _measure_readiness(root) if getattr(args, "readiness", False) else ([], {}))
+        root, by=getattr(args, "by", None) or "compass init", changed=changed)
+    ignores = ["ignore   : %s" % path for path in changed]
 
     if created:
         return say(
@@ -176,15 +180,24 @@ def cmd_init(args):
             detail=[
                 "state    : %s" % _state_path(root, compass_dir),
                 "work     : %s" % os.path.join(compass_dir, "work"),
-                "settings : defaults in force. /compass:init writes a compass.yml.",
-            ] + readiness_lines,
+                *ignores,
+                _settings_line(root),
+            ],
             decision=True,
-            created=True, path=compass_dir, project_root=root, **readiness_data,
+            created=True, path=compass_dir, project_root=root,
         )
 
+    if changed:
+        return say(
+            args,
+            "compass init: %s is already a Compass project - added the missing "
+            "ignore lines." % root,
+            detail=["state    : %s" % _state_path(root, compass_dir), *ignores],
+            created=False, path=compass_dir, project_root=root,
+        )
     return say(
         args,
         "compass init: %s is already a Compass project - nothing changed." % root,
-        detail=["state : %s" % _state_path(root, compass_dir)] + readiness_lines,
-        created=False, path=compass_dir, project_root=root, **readiness_data,
+        detail=["state : %s" % _state_path(root, compass_dir)],
+        created=False, path=compass_dir, project_root=root,
     )

@@ -137,24 +137,6 @@ def _stop(project):
 
 # --- the verb the hooks call -------------------------------------------------
 
-def test_the_cli_answers_where_a_document_is(tmp_path):
-    """`compass issue artifact-path <kind>` - the one answer both hooks use.
-
-    A second path-resolution implementation in bash is how the shell half and
-    the Python half stop agreeing about where a document is, which is the
-    defect this whole issue is about, reproduced inside the fix.
-    """
-    project = _project(tmp_path)
-    r = subprocess.run(
-        [sys.executable, str(COMPASS_CLI), "issue", "artifact-path",
-         "delivery-approach", "--issue", SLUG],
-        capture_output=True, text=True, timeout=120, cwd=str(project))
-    assert r.returncode == 0, r.stdout + r.stderr
-    printed = r.stdout.strip().splitlines()[-1].strip()
-    assert os.path.isfile(printed), (
-        f"the verb printed {printed!r}, which is not a file")
-    assert os.path.samefile(printed,
-                            project / DOCS_REL / "delivery-approach.md")
 
 
 def test_the_verb_exits_non_zero_when_the_document_is_absent(tmp_path):
@@ -189,65 +171,78 @@ def test_trc_d1_the_hook_accepts_a_relocated_delivery_approach_record(tmp_path):
 
 # --- `TRC-D2` ------------------------------------------------------------------
 
+def _no_approach(project):
+    """The manifest with no `delivery_approach`: the assessment did not finish."""
+    manifest = project / ".compass" / "work" / SLUG / "manifest.yml"
+    body = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+    body.pop("delivery_approach")
+    manifest.write_text(yaml.safe_dump(body), encoding="utf-8")
+    return project
+
+
 def test_trc_d2_the_hook_still_blocks_with_no_record_anywhere(tmp_path):
-    """The control. Reading the registry must not stop the hook firing."""
-    project = _project(tmp_path, documents=False, register=False)
+    """The control. 9.0.0 reads the approach from the manifest (ADR-091), so the
+    record is missing when the manifest names no approach."""
+    project = _no_approach(_project(tmp_path, documents=False, register=False))
     r = _pre_tool(project)
     assert r.returncode != 0, (
         "the pre-tool hook allowed a code edit on an issue with no "
         "delivery-approach record in either location:\n" + r.stderr)
-    assert "delivery-approach" in r.stderr and "assess" in r.stderr, (
+    assert "delivery approach" in r.stderr and "assess" in r.stderr, (
         "the hook blocked without naming the missing record and the command "
         f"that writes it:\n{r.stderr}")
 
 
-def test_trc_d2_a_moved_document_the_registry_does_not_know_about_blocks(tmp_path):
-    """The half-finished migration, from the hook's side.
-
-    Documents moved, registry not updated. The hook must treat that as "no
-    record" rather than finding it by luck - a registry the readers do not
-    trust is worse than no registry.
-    """
-    project = _project(tmp_path, documents=True, register=False)
-    r = _pre_tool(project)
-    assert r.returncode != 0, (
-        "the hook accepted a delivery-approach record that the manifest does "
-        "not register, so a half-finished migration reads as a finished "
-        f"one:\n{r.stderr}")
-
-
 # --- `TRC-D3` ------------------------------------------------------------------
 
-def test_trc_d3_the_stop_hook_reads_relocated_documents(tmp_path):
-    project = _project(tmp_path, gate_decision="FAIL")
+@pytest.mark.parametrize("register", [True, False])
+def test_trc_d3_the_stop_hook_finds_the_approach_and_ignores_the_report(tmp_path, register):
+    """The stop hook reads the delivery approach from the manifest, so it does not
+    warn that the record is missing, whether or not the documents are registered.
+    It no longer reads `verification-report.md`: 9.0.0 writes none, so a failing
+    gate decision in an old report draws no warning (#358)."""
+    project = _project(tmp_path, register=register, gate_decision="FAIL")
     out = _stop(project).stderr
-    assert "FAILING gate decision" in out, (
-        "the stop hook did not warn about a failing gate decision in a "
-        f"verification report registered under docs/compass/:\n{out}")
-    assert "no delivery-approach.md" not in out and "without triage" not in out, (
-        "the stop hook says the delivery-approach record is missing, though "
-        f"it is registered and on disk:\n{out}")
+    assert "delivery approach is MISSING" not in out, (
+        "the stop hook says the delivery approach is missing, though the "
+        f"manifest names it:\n{out}")
+    assert "verification-report.md" not in out, (
+        f"the stop hook still reads the verification report:\n{out}")
+    assert ".red marker still present" in out, (
+        f"the stop hook did not run its check on the issue:\n{out}")
 
 
 def test_trc_d3_the_stop_hook_still_reports_a_missing_record(tmp_path):
     """The control for the check above."""
-    project = _project(tmp_path, documents=False, register=False)
+    project = _no_approach(_project(tmp_path, documents=False, register=False))
     out = _stop(project).stderr
-    assert "delivery-approach" in out, (
+    assert "delivery approach" in out, (
         "an issue directory with no delivery-approach record anywhere drew no "
         f"warning:\n{out}")
 
 
-def test_trc_d3_the_stop_hook_reads_the_registry_not_the_directory(tmp_path):
-    """Proof that the pass above comes from the registry rather than from luck.
+# --- 9.0.0: the manifest is the delivery-approach record (ADR-091) ------------------
 
-    Same documents on disk, registry silent. The hook must not find the
-    verification report - otherwise it is scanning `docs/compass/` for
-    filenames, which finds another issue's report as readily as this one's and
-    makes a half-finished migration read as a finished one.
-    """
-    project = _project(tmp_path, register=False, gate_decision="FAIL")
-    out = _stop(project).stderr
-    assert "FAILING gate decision" not in out, (
-        "the stop hook found a verification report the manifest does not "
-        f"register, so it is not reading the registry:\n{out}")
+def test_the_hook_reads_the_approach_from_the_manifest(tmp_path):
+    """9.0.0 writes no delivery-approach.md, so an assessed issue with no document lets
+    a code edit through, and one whose manifest records no approach is blocked."""
+    project = _project(tmp_path, documents=False, register=False)
+    r = _pre_tool(project)
+    assert r.returncode == 0, r.stderr
+    manifest = project / ".compass" / "work" / SLUG / "manifest.yml"
+    body = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+    body.pop("delivery_approach")
+    manifest.write_text(yaml.safe_dump(body), encoding="utf-8")
+    r = _pre_tool(project)
+    assert r.returncode != 0 and "assess" in r.stderr, r.stderr
+
+
+def test_a_registered_approach_document_without_the_key_does_not_decide(tmp_path):
+    """The manifest's `delivery_approach` key alone decides (#359): a
+    registered delivery-approach.md no longer stands in for it, so an issue
+    that holds the document and not the key is blocked."""
+    project = _no_approach(_project(tmp_path, documents=True, register=True))
+    assert (tmp_path / DOCS_REL / "delivery-approach.md").is_file()
+    r = _pre_tool(project)
+    assert r.returncode != 0, r.stderr
+    assert "[no-delivery-approach]" in r.stderr, r.stderr

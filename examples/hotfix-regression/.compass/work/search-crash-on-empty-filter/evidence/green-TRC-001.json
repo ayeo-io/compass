@@ -1,7 +1,0 @@
-{
-  "command": "pytest tests/api/",
-  "exit_code": 0,
-  "passed": true,
-  "timestamp": "2026-05-11T10:24:07+00:00",
-  "log_excerpt": "tests/api/test_search.py ............                                    [ 27%]\ntests/api/test_rate_limit.py .....                                       [ 38%]\ntests/api/test_auth.py ..................                               [ 79%]\ntests/api/test_upload_errors.py ........                                 [ 97%]\ntests/api/test_health.py ..                                             [100%]\n\n========================== 45 passed in 3.18s =============================\n\n(test_empty_filter_object_does_not_crash now passes; the full api suite is\ngreen - regression clean, the fix broke nothing.)"
-}

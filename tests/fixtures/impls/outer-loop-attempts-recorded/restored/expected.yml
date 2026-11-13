@@ -1,0 +1,2 @@
+verdict: pass
+input: an in-scope issue whose outer-loop green has `attempts` 1

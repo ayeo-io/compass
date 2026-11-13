@@ -33,7 +33,7 @@ test-clean:  ## run the suite in a fresh clone of HEAD, as CI sees it (commit fi
 	  git clone -q --no-hardlinks . "$$d/compass" && \
 	  $(MAKE) -s -C "$$d/compass" $(CLEAN_TARGET)
 
-lint:  ## check governance YAML
+lint:  ## lint compass.yml as settings
 	python3 cli/compass policy lint
 
 validate:  ## self-check the framework repo structure

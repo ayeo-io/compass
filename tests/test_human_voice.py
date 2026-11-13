@@ -13,7 +13,7 @@ asserts what the prose surfaces carry (TRC-A1..A4, B1..B3, C1..C3, D1, F3);
 `tests/test_voice_tells.py` asserts how the standalone check behaves
 (TRC-D2, D3, F1, F2), by running it as a subprocess over fixtures.
 
-Criteria: docs/system-spec.md
+Criteria: the issue's acceptance criteria
 Design:   human-voice/technical-design.md (DD-4 names
           what each function asserts). `TRC-A2` and `TRC-C2` check quotes through
           `scripts/verify-archive-quotes.py` against the committed hash
@@ -203,7 +203,7 @@ def test_trc_a1_the_reference_lives_under_an_existing_skill_and_opens_with_the_p
         "the principle must appear as a single line, verbatim: " + PRINCIPLE
     )
 
-    assert "skills/worktree-multiagent/SKILL.md" in text
+    assert "skills/compass-runtime/SKILL.md" in text
     assert "Never stash across a worktree hop" in text, (
         "the reference must name that section as the calibration sample "
         "of the register it is asking for"
@@ -465,50 +465,20 @@ def test_trc_c2_the_rewritten_original_is_unmodified_and_cited():
     )
 
 
-def test_trc_c3_the_template_worked_example_records_a_decision_in_prose():
-    template = REPO_ROOT / "templates" / "requirements-review.md"
-    text = template.read_text(encoding="utf-8")
-    assert "## Worked example" in text, (
-        "templates/requirements-review.md must gain a worked-example section"
-    )
-    section = text.split("## Worked example", 1)[1]
-    # Stop at the next heading so the rest of the template cannot smuggle in
-    # a false pass for this section's own checks.
-    section = re.split(r"(?m)^## ", section, maxsplit=1)[0]
-
-    assert "Status:" not in section, (
-        "the worked example must show a decision in prose, not a "
-        "label-and-value row of the 'Status: RESOLVED' kind"
-    )
-    for tell in FINDABLE_TELLS:
-        assert tell.lower() not in section.lower(), (
-            f"the worked example must not carry a findable tell: {tell!r}"
-        )
-
-    # Every assertion above is negative, so an entirely empty section would
-    # still pass them. `TRC-C3`'s actual Then names four things the paragraph
-    # must carry.
-    assert "was unclear" in section, (
-        "the worked example must state what was unclear"
-    )
-    assert "jed72" in section, "the worked example must state whose call it was"
-    assert "fifty lines" in section, "the worked example must state the call itself"
-    assert "standard terminal" in section, (
-        "the worked example must state what the call rests on"
-    )
-
-
 # ---------------------------------------------------------------------------
 # Group D - the reviewer's clarity checks
 # ---------------------------------------------------------------------------
 
 def test_trc_d1_the_clarity_dimension_names_the_tells_as_judgement():
-    reviewer = (REPO_ROOT / "agents" / "reviewer.md").read_text(encoding="utf-8")
+    # `skills/evidence-gates/review-dimensions.md` carries the review method the
+    # reviewer agent did until 9.0.0 (ADR-090, ADR-092, ADR-099).
+    reviewer = (REPO_ROOT / "skills" / "evidence-gates"
+                / "review-dimensions.md").read_text(encoding="utf-8")
     gates = _evidence_gates_text()
     reference_path = "skills/compass-runtime/writing-voice.md"
 
     for name, text in (
-        ("agents/reviewer.md", reviewer),
+        ("skills/evidence-gates/review-dimensions.md", reviewer),
         ("skills/evidence-gates/SKILL.md", gates),
     ):
         assert reference_path in text, (
@@ -617,10 +587,12 @@ def test_trc_b1_claude_md_and_agents_md_carry_the_voice_paragraph():
 
 
 def test_trc_b2_assess_refine_and_verify_point_at_the_reference():
-    """The three commands whose output a person reads most name the writing
-    reference; no other command does. Every command file is a real command."""
+    """The commands whose output a person reads most name the writing
+    reference; no other command does. Every command file is a real command.
+    The `refine` and `verify` commands went with the four-stage path (ADR-092);
+    ship holds the review hand-off now."""
     command_dir = REPO_ROOT / "commands"
-    included = ["assess.md", "refine.md", "verify.md"]
+    included = ["assess.md", "ship.md"]
     stubs: set[str] = set()
     for name in included:
         text = (command_dir / name).read_text(encoding="utf-8")
@@ -641,7 +613,7 @@ def test_trc_b2_assess_refine_and_verify_point_at_the_reference():
         text = path.read_text(encoding="utf-8")
         assert REFERENCE_PATH not in text, (
             f"commands/{path.name} names the writing-voice reference; only "
-            f"assess, refine, and verify should"
+            f"assess and ship should"
         )
 
 
@@ -712,9 +684,8 @@ def test_trc_f3_no_new_guardrail_gate_check_or_cli_verb():
     # not touch the file" (defence in depth against a future edit to this
     # test that loosens the diff check above).
     import yaml
-    guardrails = yaml.safe_load(
-        (REPO_ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8")
-    )
+    from check_set_files import view as shipped_view
+    guardrails = shipped_view("guardrails.yml")
     assert len(guardrails["defaults"]) == 5
 
     terminology = yaml.safe_load(

@@ -181,7 +181,8 @@ def test_the_report_says_what_the_records_cannot_show(tmp_path):
     tail = r.stdout.split("\nThe records cannot show\n", 1)
     assert len(tail) == 2, r.stdout
     for fragment in ("interruptions.log keeps only its time and kind", "transcript", "gate",
-                     "review round is dated when it was recorded", "token use of a session the hook did not record"):
+                     "review round is dated when it was recorded",
+                     "how many tokens a session used: Compass does not record it"):
         assert fragment in tail[1], fragment
 
 
@@ -289,6 +290,53 @@ def test_hook_refusals_and_failed_checks_are_in_the_timeline(tmp_path):
     timeline = _section(_compass(root, "issue", "diagnose", "--issue", SLUG).stdout, "Timeline")
     assert timeline.count("hook refused an edit") == 1
     assert "a check failed" in timeline
+
+
+#: Two hand-offs a person answered and one an agent passed, as
+#: `compass evidence approve --checkpoint` and `compass issue checkpoint add` write them.
+OUTCOMES = [
+    {"stage": "define", "outcome": "waited", "by": "jed72", "at": "2026-10-01T09:40:00Z",
+     "evidence": "EV-CHECKPOINT-define-1"},
+    {"stage": "plan", "outcome": "skipped", "by": "planner", "at": "2026-10-01T09:50:00Z"},
+    {"stage": "assess", "outcome": "skipped", "by": "router", "at": "2026-10-01T09:20:00Z"},
+]
+
+#: A usage block of the shape `compass ship-commit` wrote before 9.0.0 (ADR-093).
+OLD_USAGE = {"sessions": ["sess-1"], "source": "claude-code", "skipped_lines": 0,
+             "total": {"requests": 8, "cost_usd": 4.25},
+             "stages": {"define": {"requests": 3, "cost_usd": 1.5}}}
+
+
+def test_the_checkpoints_section_lists_each_outcome_in_stage_order(tmp_path):
+    """Each checkpoint outcome is a line of its own section and a dated event of
+    the timeline. 9.0.0 shows no bands and no cost (ADR-093), even for a
+    manifest that holds a usage block from before it."""
+    root = _issue(tmp_path, good=True)
+    m = _load(root)
+    m["checkpoint_outcomes"] = OUTCOMES
+    m["usage"] = OLD_USAGE
+    _save(root, m)
+    before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    r = _compass(root, "issue", "diagnose", "--issue", SLUG)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert {p: p.read_bytes() for p in root.rglob("*") if p.is_file()} == before
+    assert _section(r.stdout, "Checkpoints").splitlines() == [
+        "  assess   skipped  by router  at 2026-10-01T09:20:00Z",
+        "  define   waited   by jed72  at 2026-10-01T09:40:00Z",
+        "  plan     skipped  by planner  at 2026-10-01T09:50:00Z"]
+    assert "Checkpoints and cost" not in r.stdout
+    assert "bands:" not in r.stdout and "cost:" not in r.stdout and "$" not in r.stdout
+    timeline = _section(r.stdout, "Timeline")
+    for entry in OUTCOMES:
+        assert (f"  {entry['at']}  checkpoint {entry['stage']} {entry['outcome']} "
+                f"by {entry['by']}") in timeline, (entry, timeline)
+
+
+def test_an_issue_with_no_outcome_says_so(tmp_path):
+    root = _issue(tmp_path, good=True)
+    r = _compass(root, "issue", "diagnose", "--issue", SLUG)
+    assert _section(r.stdout, "Checkpoints").splitlines() == [
+        "  no checkpoint outcomes recorded"]
 
 
 def test_a_recorded_cost_is_shown(tmp_path):

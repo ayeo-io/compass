@@ -3,19 +3,19 @@
 The voice audition is a standing strategy: a permanent review dimension for
 any change that writes prose, judged against a calibration sample (the
 worked-example rewrite and the "Never stash across a worktree hop" section of
-`skills/worktree-multiagent/SKILL.md`). This file checks that the strategy
+`skills/compass-runtime/SKILL.md`, where it moved when 9.0.0 removed the
+worktree-multiagent skill). This file checks that the strategy
 says so, and that the reviewer's clarity dimension points at it without
 repeating it.
 
 Kept separate from `test_human_voice.py` rather than added to it: that file's
 traceability ids (TRC-A1..A4, B1..B3, C1..C3, D1, F3) belong to the
 `human-voice` issue's own `acceptance-criteria.md`. This issue has its own
-criteria and its own TRC ids in
-`docs/system-spec.md`; reusing the
+criteria and its own TRC ids; reusing the
 same ids in the same file would make two different scenarios answer to one
 traceability id, which breaks the very chain this strategy is about.
 
-Criteria: docs/system-spec.md
+Criteria: the issue's acceptance criteria
 """
 from __future__ import annotations
 
@@ -44,11 +44,15 @@ def _range_is_readable(*revs) -> bool:
 
 
 STRATEGIES = REPO_ROOT / "governance" / "strategies.md"
-REVIEWER = REPO_ROOT / "agents" / "reviewer.md"
+# `skills/evidence-gates/review-dimensions.md` carries the review method the
+# reviewer agent did until 9.0.0 (ADR-090, ADR-092). ADR-099 took it out of
+# `commands/ship.md`: the dimensions beyond the three every issue passes are
+# owed only where a project's settings add them.
+REVIEWER = REPO_ROOT / "skills" / "evidence-gates" / "review-dimensions.md"
 EVIDENCE_GATES = REPO_ROOT / "skills" / "evidence-gates" / "SKILL.md"
 
 WORKED_EXAMPLE_PATH = "skills/compass-runtime/writing-voice-worked-example.md"
-STASH_SECTION_PATH = "skills/worktree-multiagent/SKILL.md"
+STASH_SECTION_PATH = "skills/compass-runtime/SKILL.md"
 STASH_SECTION_HEADING = "Never stash across a worktree hop"
 
 def _evidence_gates_text():
@@ -130,7 +134,7 @@ def test_trc_a1_strategy_states_permanence_and_names_the_calibration_sample():
         "calibration sample"
     )
     assert STASH_SECTION_PATH in flat, (
-        "the strategy must name skills/worktree-multiagent/SKILL.md as the other "
+        "the strategy must name skills/compass-runtime/SKILL.md as the other "
         "half of the calibration sample"
     )
     assert STASH_SECTION_HEADING in flat, (
@@ -191,7 +195,7 @@ def test_trc_b1_reviewer_and_evidence_gates_point_at_the_strategy_not_repeat_it(
     assert match, "TRC-A1 must land before this scenario can"
     s_number = match.group(1)
 
-    for name, text in (("agents/reviewer.md", reviewer),
+    for name, text in (("skills/evidence-gates/review-dimensions.md", reviewer),
                         ("skills/evidence-gates/SKILL.md", gates)):
         assert "governance/strategies.md" in text, (
             f"{name} must point the clarity dimension at governance/strategies.md"
@@ -238,14 +242,13 @@ def test_trc_f1_no_new_gate_guardrail_cli_verb_or_vocabulary():
         )
 
     import yaml
-    guardrails = yaml.safe_load(
-        (REPO_ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8")
-    )
+    from check_set_files import view as shipped_view
+    guardrails = shipped_view("guardrails.yml")
     assert len(guardrails["defaults"]) == 5
 
     reviewer = REVIEWER.read_text(encoding="utf-8")
     gates = _evidence_gates_text()
-    for name, text in (("agents/reviewer.md", reviewer),
+    for name, text in (("skills/evidence-gates/review-dimensions.md", reviewer),
                         ("skills/evidence-gates/SKILL.md", gates)):
         assert "never an automatic gate failure" in text.lower(), (
             f"{name} must keep the clarity dimension assessed, never a gate"

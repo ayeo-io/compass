@@ -16,8 +16,8 @@ They were a single sentence until 2026-08-27, when five pull requests in a row
 shipped with the footer on them. Half a rule in the middle of a paragraph is a
 rule that gets half-followed, so both now stand on their own.
 
-They are house rules, not guardrails: the `reviewer` agent assesses them at
-`verify`, and in
+They are house rules, not guardrails: the review at `verify` assesses them,
+and in
 this repository's vocabulary a guardrail is the hard, blocking kind that
 `guardrails.md` holds.
 

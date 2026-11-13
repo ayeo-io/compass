@@ -43,7 +43,7 @@ Stage commands now write the status of each registered document. A document that
 
 - **Stage commands write status.** A command that writes the record of a stage moves the `draft` documents of earlier stages that have a path. The commands are `compass issue artifact set` with a path, `compass issue subtask add`, `compass tdd-red`, `compass acceptance record`, `compass gate pass` on a `verify` gate and `compass ship-commit`. A document with no human check becomes `approved`. A document with a human check becomes `awaiting-approval`.
 - **`approved_by` names a person or a command.** A person's approval names the person. A stage's approval names the command, such as `compass tdd-red`. `approved_at` holds the time. The receipt and the dashboard show both.
-- **A person approves with `compass evidence approve --artifact <kind>`.** It needs a terminal, and it refuses the approver `agent`. It writes a record of the new evidence type `artifact-approval`. That record meets the document's human check. It is not a `human-approval` record, so it never clears the sign-off of guardrail `G5`.
+- **A person approves with `compass evidence approve --artifact <kind>`.** It needs a terminal, and it refuses the approver `agent`. It writes a record of the new evidence type `artifact-approval`. That record meets the document's human check. It is not a `human-approval` record, so it never clears the sign-off of guardrail `G5`. <!-- vocabulary-scan: allow - the 7.0.0 guide records the flag 9.0.0 removed (ADR-091) -->
 - **`compass issue artifact set --status approved` refuses a document with a human check.** It names the command above.
 - **A rewrite moves an approved document back to `draft`.** Registering an approved document again after its file changed moves it to `draft` and records why.
 - **Digests are always recorded.** `compass issue artifact set` records the digest of the document on every registration. The stale-document refusals stay behind the capability `artifact-freshness`.
@@ -53,7 +53,7 @@ Stage commands now write the status of each registered document. A document that
 - **A project artifact with no `stage` is owned by ship.** Add `stage: <stage>` to its catalog entry to have an earlier stage approve it. `compass ship-commit` approves the ship-owned ones.
 - **`compass issue migrate` settles the status of done issues.** On a done issue, each `draft` or `awaiting-approval` document becomes `approved` (close reason `completed`, `approved_by: compass issue migrate`) or `superseded` (`not-planned` or `duplicate`), with the reason "migrated from a 6.0.0 record". Documents in any other status and open issues are left as they are. The dry run reports the counts the apply makes. It counts each entry the apply registers before this step, for a relocated document or a verification note. It leaves out a stub distribution map that the apply renames and supersedes before this step. A second run changes nothing.
 - **A decision an agent took for the person is shown at the next checkpoint.** `compass issue decision add` (and `--from-ledger`) records it in `decisions_taken`. On `balanced` and `controlled` autonomy, `compass next` reports `Waiting at the <stage> checkpoint` until a person confirms the set with `compass evidence approve --decisions` or reopens a decision with `compass issue decision set`. On `autonomous` it lists the decisions and does not wait. The approver is a name in the project file's `approvers:` lists, or its `owner` when there are none. The confirmation is an `artifact-approval` record, never a `human-approval` record.
-- **`compass retro --decisions` reports how those decisions were settled.** It gives the share confirmed, changed and never confirmed on a done issue.
+- **The retro's `--decisions` flag reports how those decisions were settled.** It gives the share confirmed, changed and never confirmed on a done issue. 9.0.0 removed the retro (ADR-093).
 
 ### What to do
 
@@ -69,11 +69,11 @@ Stage commands now write the status of each registered document. A document that
 | `approved_by`, `approved_at` | an artifact entry in `manifest.yml` | Who approved the document, and when |
 | `artifact-approval` | the type of an evidence record | A person's approval of a document or of a set of decisions |
 | `artifacts-approved` | a check in the default preset | The ship refusal |
-| `compass evidence approve --artifact` | a flag | Approve a document that reads `awaiting-approval` |
+| `compass evidence approve --artifact` | a flag | Approve a document that reads `awaiting-approval` | <!-- vocabulary-scan: allow - the 7.0.0 guide records the flag 9.0.0 removed (ADR-091) -->
 | `decisions_taken` | `manifest.yml` | The decisions an agent took for the person, with their status |
 | `compass evidence approve --decisions` | a flag | Confirm the decisions taken for the person |
 | `compass issue decision add`, `compass issue decision set` | verbs | Record a decision taken for the person, or reopen one |
-| `compass retro --decisions` | a flag | Report how decisions taken for the person were settled |
+| The retro's `--decisions` | a flag | Report how decisions taken for the person were settled |
 
 ## Rendered blocks and the issue page
 
@@ -213,7 +213,7 @@ The dry run lists each move, rename, registration, re-point, pointer removal and
 
 ## Checkpoint outcomes and usage
 
-Compass now records what happened at each stage hand-off and what each issue cost. The decision is `architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md`, and `docs/autonomy-and-cost.md` owns the facts.
+Compass now records what happened at each stage hand-off and what each issue cost. The decision is `architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md`, and `docs/checkpoints.md` owns the facts that 9.0.0 kept. 9.0.0 removed the session record, the usage record, the retro and the cost section of `compass issue diagnose` (ADR-093); this section records 7.0.0.
 
 ### What changes
 
@@ -222,7 +222,7 @@ Compass now records what happened at each stage hand-off and what each issue cos
 - **`compass ship-commit` refuses an unanswered listed checkpoint.** It refuses a judged issue that lists a checkpoint with no outcome, before it writes anything, with the code `checkpoint-no-outcome`. A judged issue is one whose first assessment wrote `checkpoint_outcomes`. An issue assessed before this change is never refused, and no migrate adds the key.
 - **The pre-tool hook records each session.** The first time it judges a tool call for an issue, it appends the session id to `usage.sessions`. It never refuses an edit because of it. Every issue folder gains an empty `.manifest.lock` file.
 - **`compass ship-commit` records usage on every approach but the quick fix.** It reads the full transcripts of the recorded sessions and keeps numbers only. Above 1 GiB of transcript it reads none and records the reason `too-large`.
-- **`compass retro --impact` gains four rows**, the autonomy ratio, the band split, the cost per change and the decisions confirmed, each withheld below its floor. `compass retro --impact --json` and `compass retro --impact --format json` print one object. Before, `--json` printed the report's lines under an `output` key.
+- **The retro's `--impact` view gains four rows**, the autonomy ratio, the band split, the cost per change and the decisions confirmed, each withheld below its floor. With `--json` or `--format json` the view prints one object. Before, `--json` printed the report's lines under an `output` key.
 - **`compass issue diagnose` gains a Checkpoints and cost section**, and its last line of what the records cannot show now reads "token use of a session the hook did not record".
 
 ### What to do
@@ -233,19 +233,19 @@ Compass now records what happened at each stage hand-off and what each issue cos
 
 ## Repository readiness and autonomous work
 
-From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor before an issue can be assessed. An autonomous project below the floor, or with no fresh readiness record, is refused at `compass approach evaluate --write`, which every assess and reassess runs. The decision is `architecture/decisions/ADR-058-the-readiness-floor-caps-autonomous-work.md`. The facts are in `docs/readiness.md`.
+From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor before an issue can be assessed. An autonomous project below the floor, or with no fresh readiness record, is refused at `compass approach evaluate --write`, which every assess and reassess runs. The decision is `architecture/decisions/ADR-058-the-readiness-floor-caps-autonomous-work.md`. 9.0.0 removed the floor, the `readiness` verb and its page, `docs/readiness.md` (ADR-093); this section records 7.0.0.
 
 ### What breaks
 
 - **An autonomous project below the readiness floor is refused at assess.** `approach evaluate --write` exits 2 and writes nothing. The message names each absent readiness signal with the change that makes it present, and names `autonomy` as the setting to change.
-- **An autonomous project with no fresh readiness record is refused.** The message says whether the record is missing, stale or unreadable, and names `compass readiness`.
+- **An autonomous project with no fresh readiness record is refused.** The message says whether the record is missing, stale or unreadable, and names the `readiness` verb.
 - **An untrusted CI contribution cannot run an autonomous project.** Trust is read from the CI runner's environment before the record, so a record committed with the contribution does not count. No setting changes this. Measuring again does not help, so the message does not ask for it.
 
 ### What changes
 
 - **The four required signals** form the floor: `agent-instructions-present`, `build-declared-and-succeeds`, `tests-declared-and-under-two-minutes` and `lint-declared-and-clean`. The floor is met when each is present.
-- **`compass readiness`** measures the repository against eleven readiness signals and writes `.compass/readiness.yml`. `compass readiness --fix-list` lists the absent ones, those on the floor first, with the change for each.
-- **Six optional project keys** in `compass.yml`: `project.lint_command`, `project.format_check_command`, `project.build_command` and `project.typecheck_command`, which `compass readiness` runs, and `project.secret_scan` and `project.structured_logging`, which it only reads.
+- **The `readiness` verb** measures the repository against eleven readiness signals and writes `.compass/readiness.yml`. The readiness verb's `--fix-list` lists the absent ones, those on the floor first, with the change for each.
+- **Six optional project keys** in `compass.yml`: `project.lint_command`, `project.format_check_command`, `project.build_command` and `project.typecheck_command`, which the `readiness` verb runs, and `project.secret_scan` and `project.structured_logging`, which it only reads.
 - **The readiness line.** Every `approach evaluate --write` records the repository's readiness in the manifest's `readiness:` key, outside the generation, so a new measurement never forces a new generation. On an autonomous project below the floor, or with no fresh record, a session starts with one warning line. The session is never blocked.
 - **The floor is not a guardrail.** No gate, routing rule or `compass check` result names a readiness signal.
 
@@ -265,17 +265,17 @@ From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor bef
 
 ### The commands
 
-- `compass readiness` runs a project command only when `allow_project_commands: true` is set and the contribution is trusted.
+- The `readiness` verb runs a project command only when `allow_project_commands: true` is set and the contribution is trusted.
 - Every project command runs in a clean checkout of HEAD, in a temporary worktree, so a command that needs installed dependencies must set them up itself.
 - One run finishes within five minutes. The test command must pass within two minutes.
-- A CI job that assesses autonomous work runs `compass readiness` as a step before assess, because the CI checkout has no record.
+- A CI job that assesses autonomous work runs the `readiness` verb as a step before assess, because the CI checkout has no record.
 
 ### What to do
 
-On an autonomous project, run `compass readiness`. If it reports the floor as not met, take one of three ways to continue:
+On an autonomous project, run the `readiness` verb. If it reports the floor as not met, take one of three ways to continue:
 
 1. **Change `autonomy`** to `balanced` or `controlled` in `compass.yml`. The stage hand-offs that value lists then wait for a person.
-2. **Make the absent signals present.** `compass readiness --fix-list` names the change for each, such as declaring `project.build_command`. For a long suite, set the test signal's `command` parameter to `test_micro_command` in a project layer, and declare a micro suite that passes within two minutes.
+2. **Make the absent signals present.** The readiness verb's `--fix-list` names the change for each, such as declaring `project.build_command`. For a long suite, set the test signal's `command` parameter to `test_micro_command` in a project layer, and declare a micro suite that passes within two minutes.
 3. **Set `required_for_autonomous: false`** on a readiness signal in a project layer. That takes the signal off the floor, so it needs the owner's waiver in the same entry:
 
    ```yaml
@@ -288,14 +288,14 @@ On an autonomous project, run `compass readiness`. If it reports the floor as no
          approved_on: 2026-10-13
    ```
 
-Then run `compass readiness` again and assess.
+Then run the `readiness` verb again and assess.
 
 ### New verbs, flags and keys
 
 | Name | Where | Meaning |
 |---|---|---|
-| `compass readiness [--json] [--fix-list]` | verb | Measure the repository and write the readiness record, or list the absent signals from a fresh record |
-| `project.lint_command`, `project.format_check_command`, `project.build_command`, `project.typecheck_command` | `compass.yml` | The project commands `compass readiness` runs |
+| The `readiness` verb, with `--json` and `--fix-list` | verb | Measure the repository and write the readiness record, or list the absent signals from a fresh record |
+| `project.lint_command`, `project.format_check_command`, `project.build_command`, `project.typecheck_command` | `compass.yml` | The project commands the `readiness` verb runs |
 | `project.secret_scan`, `project.structured_logging` | `compass.yml` | Declarations; a non-empty string makes the signal present |
 | `readiness` | catalog in a preset or project layer | The readiness signals |
 | `required_for_autonomous` | field of a readiness signal | `true` puts the signal on the floor |
@@ -304,7 +304,7 @@ Then run `compass readiness` again and assess.
 
 ## The issue page on GitHub
 
-Compass can now post an issue's README to the linked GitHub issue, and the verb that wrote labels on demand has a new spelling. The decision is `architecture/decisions/ADR-057-derived-views-go-to-github-one-way-behind-a-refusal-check.md`. The facts are in `docs/github-labels.md`.
+Compass can now post an issue's README to the linked GitHub issue, and the verb that wrote labels on demand has a new spelling. The decision is `architecture/decisions/ADR-057-derived-views-go-to-github-one-way-behind-a-refusal-check.md`. 9.0.0 removed the label sync, the issue page, `compass issue github sync` and their page, `docs/github-labels.md` (ADR-093); this section records 7.0.0. `docs/github-links.md` owns `compass issue link set`, which stays.
 
 ### What is removed
 
@@ -374,7 +374,7 @@ A regular issue now opens with a short intent, and every issue that ships record
 
 ### What changes
 
-- **The regular approach owes `intent` at depth `lightweight`.** It has four headings: Problem, Desired outcome, Success signals and Non-goals. The router drafts it at assess from the issue description, and the spec author corrects it at define. `compass analyze` checks each scenario's intent id against it, and `compass ship-commit` refuses a regular issue while the intent is unwritten, through the check `artifacts-approved`.
+- **The regular approach owes `intent` at depth `lightweight`.** It has four headings: Problem, Desired outcome, Success signals and Non-goals. The router drafts it at assess from the issue description, and the spec author corrects it at define. compass analyze (removed in 9.0.0, ADR-091) checks each scenario's intent id against it, and `compass ship-commit` refuses a regular issue while the intent is unwritten, through the check `artifacts-approved`.
 - **A new approach field, `release_line`.** Quick fix, regular, hotfix and full set it `true` in the shipped default. The spike has no such field. Setting it `false` on an approach that has it is a loosening and needs a waiver.
 - **A new manifest key, `release_note`.** `compass acceptance record`, `compass ship-commit` and `compass quick-fix finish` write it with `--release-note "<text>"`. The latest write wins. A blank line, a line that starts with `#`, and a line the living spec's title rules refuse are refused before anything is written.
 - **Every landing refuses an issue that owes a line and has none**, with the code `release-line-missing`. An issue owes one only when its stored generation sets `release_line: true` on its approach and the issue is neither completed nor closed.
@@ -447,7 +447,7 @@ The catalog gives a document kind a word limit per depth, `compass check` refuse
 
 ## Role is not an assessment dimension
 
-The assessment no longer reads a role. The claims gate and the intent-fidelity block now follow the documents on the issue's disk, and the product-owner, product-marketer and designer stay as perspectives a session consults. The decision is `architecture/decisions/ADR-070-role-is-not-an-assessment-dimension-and-documents-on-disk-bring-the-claims-gate-and-the-intent-block.md`. `governance/routing-policy.md` owns the rules.
+The assessment no longer reads a role. The claims gate and the intent-fidelity block now follow the documents on the issue's disk, and the product-owner, product-marketer and designer stay as perspectives a session consults. The decision is `architecture/decisions/ADR-070-role-is-not-an-assessment-dimension-and-documents-on-disk-bring-the-claims-gate-and-the-intent-block.md`. `governance/routing-policy.md` owns the rules. 9.0.0 removed the role entry points and the role templates, `positioning.md` among them (ADR-093); this section records 7.0.0.
 
 ### What breaks
 
@@ -466,11 +466,11 @@ The assessment no longer reads a role. The claims gate and the intent-fidelity b
 - **A recorded role is not read.** A manifest that holds `assessment.role` evaluates and checks as before, without it.
 - **An issue with a stored 6.x generation keeps its role rules** until it is re-assessed. **A project on copied 6.x governance keeps them** until it runs `compass policy migrate`.
 - **An issue with no stored generation, in a project with a `compass.yml`, takes the new default at once.** A recorded role no longer changes its approach, and on the full approach it no longer owes `verify.claims`.
-- **`--justify role=` and `compass quick-fix start --role` are accepted and ignored until 9.0.0.** Each prints a notice on standard error and records nothing. Evaluating an issue whose manifest records a role prints the same notice.
+- **`--justify role=` and `compass quick-fix start --role` are accepted and ignored until 9.0.0.** Each prints a notice on standard error and records nothing. Evaluating an issue whose manifest records a role prints the same notice. <!-- vocabulary-scan: allow - the 7.0.0 guide records the flag 9.0.0 removed (ADR-098) -->
 - **A landing refuses an artifact rule the approach does not hold.** When a document is on disk whose artifact rule adds a gate or asks for a document and the last evaluation did not fire it, such as a `positioning.md` written after assess, `compass ship-commit` and `compass quick-fix finish` refuse with `artifact-rule-not-applied` and name the `compass approach evaluate --issue <slug> --write` that applies it.
 - **Assess drafts the intent before it writes the approach**, so RP-ART-002 fires on a regular or full issue (`approaches/assess-procedure.md`, step 3).
 - **`compass issue migrate` lists each recorded `assessment.role` as no longer read**, in the dry run and on `--apply`, and leaves the field in place.
-- **`compass preset test` reads a fixture that records a role without it**, and notes that it did.
+- **The preset test reads a fixture that records a role without it**, and notes that it did. 9.0.0 removed the preset test (ADR-094).
 - **The classifier crosses the documents a condition names, as it crosses labels.** The grid JSON of `compass policy diff --json` and `compass policy migrate --json` gains `artifacts`. The cap of eight named labels is unchanged, and a grid names at most four documents.
 - **The bias ids move.** The role bias RP-BIAS-002 is gone, so the bias that was RP-BIAS-003 is now RP-BIAS-002. Biases change no approach; a `compass.yml` that edited one of the two ids edits a different bias text now.
 
@@ -507,7 +507,7 @@ A person approves or rejects by typing `/compass:approve` or `/compass:reject` i
 ### What changes
 
 - **The agent asks; Compass shows; the person answers.** The agent runs `compass evidence request` with the subject. At the end of its turn Compass shows the request in its own words. The person types `/compass:approve` or `/compass:reject <reason>`, and the hook records the answer through the same writer as the terminal command, with `via: prompt`.
-- **`compass evidence approve` at a terminal still works.** Its records hold `via: terminal`. It is the only path on a host without a person-only approval event, such as Codex.
+- **`compass evidence approve` at a terminal still works.** Its records hold `via: terminal`. It is the only path on a host without a person-only approval event, such as Codex on 8.x. 9.0.0 supports Claude Code only (ADR-093).
 - **A rejected document stays in draft until its file changes.** This amends ADR-050 decision 2.
 - **Delegation.** `/compass:delegate <agent> until <time>` lets one named agent, such as `compass:architect`, approve with `compass evidence approve ... --delegated --as <agent>`. `g5` is covered only when typed, after the person types back a code shown to them. `/compass:revoke` ends it. Each delegated approval names the person, the agent and the delegation; the person sees a summary until they mark it reviewed, and `/compass:reject <record id>` overrules one.
 
@@ -558,7 +558,7 @@ Nothing. A command that is now refused needs a failing test on record, as an Edi
 
 ## Rewriting your configuration in the 6.0.0 words
 
-6.0.0 renamed Compass's vocabulary and kept reading the old words in a project's own `compass.yml`, a team preset and its policy-test fixtures, with a lint advisory. `compass policy migrate --words` rewrites those files in the new words. `docs/policy-migrate.md` owns the command.
+6.0.0 renamed Compass's vocabulary and kept reading the old words in a project's own `compass.yml`, a team preset and its policy-test fixtures, with a lint advisory. `compass policy migrate --words` rewrites those files in the new words. 9.0.0 removed the command and its page (ADR-094); this section records 7.0.0.
 
 ### What breaks
 
@@ -566,7 +566,7 @@ Nothing. The command is new, and it writes only when you pass `--apply`.
 
 ### What changes
 
-- **`compass policy migrate --words [DIR]` rewrites `compass.yml` and the fixtures under `compass-fixtures/`.** It uses the word mapping `compass policy lint` and `compass preset test` read the files through, so a word changes only in the field that holds it: `light` as a stage mode becomes `lightweight`, and `full` as an approach name stays. Comments, order and quoting stay.
+- **`compass policy migrate --words [DIR]` rewrites `compass.yml` and the fixtures under `compass-fixtures/`.** It uses the word mapping `compass policy lint` and the preset test read the files through, so a word changes only in the field that holds it: `light` as a stage mode becomes `lightweight`, and `full` as an approach name stays. Comments, order and quoting stay.
 - **A dry run comes first.** Without `--apply` it prints a diff and writes nothing.
 - **`--apply` refuses a write git cannot undo.** It refuses when a file it would write is uncommitted, or the project is in no git repository, unless you pass `--i-have-a-copy`. It writes every file or none, and never outside the project.
 - **A condition that reads `role` is listed, not rewritten.** The command names it with the `M-WHEN-RETIRED` message from `compass policy lint`, and exits 1 until you change it.
@@ -576,7 +576,7 @@ Nothing. The command is new, and it writes only when you pass `--apply`.
 1. Commit your configuration, then run `compass policy migrate --words` and read the diff.
 2. Run `compass policy migrate --words --apply`.
 3. If it lists a hand edit, key the rule on a document with `artifacts_any`, or on a label, as the section "Role is not an assessment dimension" says.
-4. For a team preset in another repository, run the same two commands there, then `compass preset test`.
+4. For a team preset in another repository, run the same two commands there, then the preset test.
 
 ### New keys and verbs
 
@@ -619,7 +619,7 @@ Guardrail 5 (`G5`, "a human signs off on the irreversible") asks for a person's 
 
 ## A copied `waived:` entry migrates to a `LEGACY` waiver
 
-`compass policy migrate` keeps the reason a 5.x project recorded under `routing_guardrails.waived:` in its copied routing policy. `docs/policy-migrate.md` describes the rule, under "Waiver stubs, lock refusals and the lint".
+`compass policy migrate` keeps the reason a 5.x project recorded under `routing_guardrails.waived:` in its copied routing policy. 9.0.0 removed the command and its page (ADR-094); this section records 7.0.0.
 
 ### What changes
 
@@ -633,7 +633,7 @@ Nothing. To clear the warning, the project's `owner` replaces `LEGACY` with an a
 
 ## A waived stage mode holds on a floor-raised approach
 
-A floor that raises an issue's approach keeps the issue's lower mode for a stage the floor does not name, when that stage's entry in the issue's `config:` carries an approved issue waiver. `docs/issue-configure.md` states the rule, and `governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md` records the decision.
+A floor that raises an issue's approach keeps the issue's lower mode for a stage the floor does not name, when that stage's entry in the issue's `config:` carries an approved issue waiver. `governance/decisions/2026-10-17-a-waived-stage-mode-holds-on-a-floor-raised-approach.md` records the decision.
 
 ### What changes
 
@@ -704,7 +704,7 @@ A project that names `compass:behaviour-mapping` or `dor-behaviour-is-gwt` keeps
 
 ## `compass policy migrate --undo` goes back to the old files
 
-`compass policy migrate --undo` puts a migrated project back as it was before `compass policy migrate --apply`. `docs/policy-migrate.md` owns the facts, under "Going back with `--undo`". The decision is `governance/decisions/2026-10-19-the-migration-marker-records-what-an-undo-needs.md`.
+`compass policy migrate --undo` puts a migrated project back as it was before `compass policy migrate --apply`. 9.0.0 removed the command and its page (ADR-094). The decision is `governance/decisions/2026-10-19-the-migration-marker-records-what-an-undo-needs.md`.
 
 ### What changes
 

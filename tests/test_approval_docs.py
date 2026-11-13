@@ -24,9 +24,22 @@ def test_e4_docs_name_prompt_path():
         safety.lower(), "the same-user limit"
     for needle in ("/compass:delegate", "approval-withdrawal", "nested claude -p"):
         assert needle in safety, needle
+    # ADR-099 cut the contract to one screen. It names the typed approval and the
+    # delegation rule; `finish` writes the request, the assess command names the
+    # request for the scenarios, and the reject command names `/compass:reject`.
     contract = _flat("compass-contract.md")
-    for needle in ("compass evidence approve --delegated --as", "compass evidence request",
-                   "/compass:reject", "Never create, extend or revoke a delegation"):
+    for needle in ("Approve yourself only under a delegation naming you",
+                   "ask them to type /compass:approve <n> and stop",
+                   "Never create, extend or revoke a delegation"):
         assert needle in contract, needle
+    assert "compass evidence request" in _flat("commands/assess.md")
+    assert "/compass:reject" in _flat("commands/reject.md")
     guardrails = _flat("governance/guardrails.md")
     assert "delegat" in guardrails and "approval-withdrawal" in guardrails
+
+
+def test_e4_contract_gives_the_delegated_approval_command():
+    """The contract gives the command an agent runs to approve under a
+    delegation naming it."""
+    contract = _flat("compass-contract.md")
+    assert "compass evidence approve --delegated --as" in contract

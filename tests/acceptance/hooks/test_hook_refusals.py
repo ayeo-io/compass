@@ -202,7 +202,7 @@ def test_hfm_4_a_missing_approach_record_is_reported_as_missing(dsl):
     dsl.project.isOptedIn()
     dsl.project.hasIssueWithNoApproachRecord()
     dsl.agent.edits("src/app.py")
-    dsl.hook.confirmRefused(code="no-delivery-approach", naming="has no delivery-approach.md")
+    dsl.hook.confirmRefused(code="no-delivery-approach", naming="has no delivery approach in its manifest")
     dsl.hook.confirmRefusalDoesNotSay("could not run")
 
 

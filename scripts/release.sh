@@ -167,7 +167,7 @@ fi
 
 # --- 4. examples present ----------------------------------------------------
 echo "[4] worked examples are actually present"
-required_examples="quick-fix-typo feature-api-change hotfix-regression initiative-new-subsystem spike-technical-unknown"
+required_examples="quick-fix-typo spike-technical-unknown"
 missing=""
 for e in $required_examples; do
   if [ ! -f "examples/$e/.compass/work"/*/manifest.yml ] 2>/dev/null; then
@@ -182,7 +182,7 @@ if [ -n "$missing" ]; then
   echo "    FAIL - missing example manifest.yml(s):$missing"
   exit 1
 fi
-echo "    PASS - all 5 example manifest.yml(s) present"
+echo "    PASS - all 2 example manifest.yml(s) present"
 
 # --- 4b. the plugin copy can ship -------------------------------------------
 # The marketplace and the plugin directory install the copy on the `plugin`
@@ -255,7 +255,7 @@ echo "    (clean - none)"
 # directly, so a mistake in release_file_list()'s excludes is caught here
 # rather than assumed away.
 echo "  examples integrity (every example must have its manifest.yml):"
-required_examples="quick-fix-typo feature-api-change hotfix-regression initiative-new-subsystem spike-technical-unknown"
+required_examples="quick-fix-typo spike-technical-unknown"
 missing=""
 for e in $required_examples; do
   # vocabulary-scan: allow - greps a real path inside the tarball listing

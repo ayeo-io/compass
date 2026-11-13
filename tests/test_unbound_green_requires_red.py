@@ -28,6 +28,7 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 from compass_pkg.checks import _check_suite_passed  # noqa: E402
 from compass_pkg.red_first import RED_REQUIRED_FROM  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 AFTER = str(RED_REQUIRED_FROM)
 BEFORE = "2026-01-01"
@@ -245,8 +246,7 @@ def test_ugr_7_a_green_after_a_red_still_says_so(tmp_path):
 
 def test_ugr_8_the_governance_text_states_the_rule():
     import yaml
-    doc = yaml.safe_load((ROOT / "governance" / "guardrails.yml")
-                         .read_text(encoding="utf-8"))
+    doc = shipped_view("guardrails.yml")
     text = " ".join(doc["checks"]["suite-passed"]["description"].split())
     assert "red record" in text
     assert "acceptance record" in text

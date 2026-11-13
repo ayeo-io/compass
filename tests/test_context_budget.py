@@ -25,24 +25,32 @@ CONTRACT = ROOT / "compass-contract.md"
 # One phrase from each rule. Several are pinned elsewhere word for word
 # (tests/invisible/test_invisible_triggering.py, tests/test_contract_facts.py).
 RULES = {
-    "assess first": "**Assess before you change anything.**",
-    "never skip": "**Never skip assessment.**",
-    "trigger on intent": "**Trigger on intent, not on the command.**",
-    "guardrails hard": "**Guardrails are hard. Strategies are soft.**",
-    "guardrail 1": "1. Every change lands with a passing test that covers it.",
+    "start an issue": "**Start an issue before you change a file.**",
+    "assess first": "run `/compass:assess` first",
+    "trigger on intent": "even if they never typed it.",
+    "one request": "**One request is one issue.**",
+    "guardrail 1": "1. Every change lands with a test that fails without it.",
     "guardrail 2": "2. Acceptance criteria exist before the code.",
     "guardrail 3": "3. Code traces to a criterion and a reason.",
     "guardrail 4": "4. Evidence is a recorded command output",
-    "guardrail 5": "5. A human approves anything irreversible.",
-    "evidence": "**Evidence, not assertion.**",
-    "use the CLI": "Use the CLI:",
-    "five guardrails": "Five guardrails:",
-    "on disk": "**If it is not on disk, it did not happen.**",
-    "stages": "**Stages, in order**",
-    "verify stage": "7. verify",
-    "where to look": "`compass <verb> --help`",
+    "guardrail 5": "5. A person approves anything irreversible.",
+    "five guardrails": "**Five guardrails:**",
+    "the path": "**The path is two commands**",
+    "start command": "`compass quick-fix start`",
+    "finish command": "`compass quick-fix finish -m \"<message>\" -- <test command>`",
+    "next line": "Each command prints `next:` or `done:`",
+    "never edit": "Never edit `.compass/`.",
     "write for a person": "**Write for a person in the spirit of ASD-STE100.**",
     "approvals": "**Approvals.**",
+}
+
+# Rules the contract held before ADR-099 cut it to 275 words. The cut dropped
+# them, and each is back in its shortest form (342 words).
+LOST_RULES = {
+    "guardrails hard": "**Guardrails are hard. Strategies are soft.**",
+    "evidence heading": "**Evidence, not assertion.**",
+    "on disk": "**If it is not on disk, it did not happen.**",
+    "where to look": "`compass <verb> --help`",
 }
 
 # The four rules for sign-off, staging, lint fixes and edge cases (issue
@@ -51,13 +59,11 @@ RULES = {
 # person. Compared with whitespace collapsed, because the contract wraps its
 # lines inside a phrase.
 NEW_RULES = {
-    "signoff request": ("ask the person to type `/compass:approve` or "
-                        "`/compass:reject`, and stop."),
-    "staging heading": "**Commit only what you mean to.**",
-    "staging by path": "Stage each file by its path",
-    "staging no compass": "never `.compass/`",
+    "signoff request": "ask them to type `/compass:approve <n>` and stop.",
+    "staging heading": "**Commits.**",
+    "staging by finish": "`finish` stages the changed files and the record",
+    "staging no compass": "do not `git add` anything under `.compass/` yourself",
     "lint fix": "A lint fix never weakens an assertion",
-    "edge cases heading": "**Settle edge cases before scenarios**",
 }
 
 # Raised from 2,250 by the one line that asks the agent to record friction it
@@ -83,7 +89,12 @@ NEW_RULES = {
 # Moved to 2,900 by the ASD-STE100 writing rule (issue `ste100-writing-rule`):
 # 2,873 characters measured, rounded up to the next 50. Every message a
 # session writes to a person depends on it, so it must be resident.
-CONTRACT_TARGET = 2900
+# Lowered to 2,200 by #358, which cut the contract to 2,191 characters.
+# Lowered to 1,750 by ADR-099, which cut the contract to 1,697 characters.
+# Moved to 2,250 when the rules that cut dropped went back, each in its
+# shortest form: 2,213 characters and 342 words measured, rounded up to the
+# next 50.
+CONTRACT_TARGET = 2250
 
 # Set from the rewrite of 2026-10-04 (2,581, 1,476, 1,436 and 1,216
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,
@@ -105,11 +116,19 @@ CONTRACT_TARGET = 2900
 # fails outer-loop-recorded until it records the acceptance suite with
 # --loop outer, so the flag must be learnable from --help. The option and its
 # shortest help need about 100 characters, and none was left.
+# tdd-green rose by about 280 characters and quick-fix finish by about 160 on
+# 2026-11-02 for --candidate and --client (ADR-085), and tdd-green also for
+# --every-scenario: an in-scope outer-loop green without them is refused, so
+# they must be learnable from --help.
+# quick-fix start rose by about 210 characters on 2026-11-07 for --request and
+# --requester (#356): assess records who asked and the link in the same call,
+# and `request-recorded` fails until it does, so the flags must be learnable
+# from --help. Their help is the shortest that still names the two forms.
 HELP_BUDGETS = {
-    ("quick-fix", "start"): 2900,
-    ("quick-fix", "finish"): 1760,
+    ("quick-fix", "start"): 3110,
+    ("quick-fix", "finish"): 1920,
     ("tdd-red",): 1570,
-    ("tdd-green",): 1360,
+    ("tdd-green",): 1640,
 }
 
 # The output options every verb takes.
@@ -117,14 +136,19 @@ COMMON = {"-h", "--help", "--quiet", "--summary", "--verbose", "--json",
           "--evidence-out"}
 
 # Every option each verb accepted before the trim; none may be lost.
+# quick-fix start lost --role in 9.0.0 on purpose (#359 step 9, commit
+# 41ee4476): role is not an assessment dimension since ADR-070, and argparse
+# now refuses the flag. The trim must still keep every other option.
 OPTIONS = {
     ("quick-fix", "start"): {"--risk", "--familiarity", "--size", "--goal",
-                             "--role", "--intent", "--scenario",
-                             "--scenario-id", "--test", "--labels"} | COMMON,
+                             "--intent", "--scenario",
+                             "--scenario-id", "--test", "--labels",
+                             "--request", "--requester"} | COMMON,
     ("quick-fix", "finish"): {"-m", "--message", "--no-commit", "--issue",
-                              "--release-note"} | COMMON,
+                              "--release-note", "--candidate", "--client"} | COMMON,
     ("tdd-red",): {"--scenario", "--issue", "--verified-by"} | COMMON,
-    ("tdd-green",): {"--scenario", "--issue", "--verified-by"} | COMMON,
+    ("tdd-green",): {"--scenario", "--issue", "--verified-by", "--every-scenario",
+                     "--candidate", "--client"} | COMMON,
 }
 
 
@@ -141,6 +165,12 @@ def test_tc_1_the_contract_keeps_every_rule_within_its_budget():
     text = CONTRACT.read_text(encoding="utf-8")
     assert missing_rules(text) == []
     warn_if_over("compass-contract.md", len(text), CONTRACT_TARGET, "characters")
+
+
+def test_tc_1_the_contract_keeps_the_rules_it_held_before_adr_099():
+    text = CONTRACT.read_text(encoding="utf-8")
+    flat = " ".join(text.split())
+    assert [name for name, phrase in LOST_RULES.items() if phrase not in flat] == []
 
 
 def test_tc_1_deleting_any_rule_is_caught():
@@ -200,10 +230,9 @@ def _contract_flat():
 def test_contract_states_signoff_handoff():
     text = _contract_flat()
     assert "**Approvals.**" in text
-    assert "Approve only under a delegation naming you" in text
-    assert "run `compass evidence request`" in text
-    assert ("ask the person to type `/compass:approve` or "
-            "`/compass:reject`, and stop.") in text
+    assert "Approve yourself only under a delegation naming you" in text
+    assert "Never approve for the person" in text
+    assert "ask them to type `/compass:approve <n>` and stop." in text
     # The superseded handoff, a command printed for the person's terminal,
     # must not come back beside the typed approval.
     assert "for their own terminal" not in text
@@ -212,30 +241,35 @@ def test_contract_states_signoff_handoff():
 
 def test_contract_states_staging_rule():
     text = _contract_flat()
-    assert "**Commit only what you mean to.**" in text
-    assert "Stage each file by its path" in text
-    assert "never `.compass/`" in text
-    assert "check the staged list and commit authors" in text
-    assert ("If something is staged by mistake, say so and stop; "
-            "do not retry a refused unstage.") in text
+    assert "**Commits.**" in text
+    assert "`finish` stages the changed files and the record" in text
+    assert "do not `git add` anything under `.compass/` yourself" in text
 
 
 def test_contract_states_lint_fix_rule():
     text = _contract_flat()
     assert "A lint fix never weakens an assertion" in text
-    assert "re-run affected tests" in text
+
+
+def test_contract_states_staging_checks_before_a_commit():
+    """ADR-099 moved staging into `finish`. The two older rules hold for any
+    other commit: check the staged list and commit authors, and stop when
+    something is staged by mistake."""
+    assert "For any other commit, check the staged list" in _contract_flat()
+    text = _contract_flat()
+    assert "check the staged list and commit authors" in text
+    assert ("If something is staged by mistake, say so and stop; "
+            "do not retry a refused unstage.") in text
 
 
 def test_contract_states_id_and_header_rule():
-    """The contract keeps the heading and names the skill that holds the
-    rule (a pointer, because the full text put the resident words over the
-    900-word ceiling). It names the skill, not a path: the contract is loaded
-    in every project, where the plugin's `skills/` folder is not on disk."""
+    """The contract keeps the heading and names the `atdd` skill that holds
+    the rule."""
     text = _contract_flat()
     assert "**Settle edge cases before scenarios**" in text
-    assert "(`bdd-specification` skill)" in text
-    assert "skills/bdd-specification/SKILL.md" not in text
-    skill = _flat((ROOT / "skills" / "bdd-specification" / "SKILL.md")
+    assert "(`atdd` skill)" in text
+    assert "skills/atdd/SKILL.md" not in text
+    skill = _flat((ROOT / "skills" / "atdd" / "SKILL.md")
                   .read_text(encoding="utf-8"))
     assert "id or header field" in skill
     assert "missing, empty and whitespace cases" in skill
@@ -279,8 +313,8 @@ def test_contract_target_warns_and_does_not_fail():
 def test_rule_four_pointer_keeps_heading():
     text = _contract_flat()
     assert "**Settle edge cases before scenarios**" in text
-    assert "(`bdd-specification` skill)" in text
-    body = (ROOT / "skills" / "bdd-specification" / "SKILL.md").read_text(
+    assert "(`atdd` skill)" in text
+    body = (ROOT / "skills" / "atdd" / "SKILL.md").read_text(
         encoding="utf-8")
     assert "Reproduce a reported bug on current code" in _flat(body)
     assert len(body.splitlines()) <= 200
@@ -290,7 +324,7 @@ def test_trc_026():
     """The `language` line is added by the session-start hook, so the shipped
     contract does not grow (issue `language-key-and-us-english`)."""
     text = CONTRACT.read_text(encoding="utf-8")
-    assert len(text) <= 2900
-    assert CONTRACT_TARGET == 2900
+    assert len(text) <= 2250
+    assert CONTRACT_TARGET == 2250
     assert "Write all prose in" not in text
     warn_if_over("compass-contract.md", len(text), CONTRACT_TARGET, "characters")

@@ -1,0 +1,293 @@
+# compass_pkg.evidence_required - the evidence a change owes before it ships
+"""Assess selects the evidence a change owes, not a delivery approach.
+
+`evaluate` is a pure function of the assessment and the configuration in force.
+It returns the ordered `evidence_required` list, the gate ids derived from it,
+the routing of the four-layer acceptance strategy (`S17`) and the ids of the
+rules that fired. The owning doc, `governance/routing-policy.md` ("The evidence
+rows"), explains each row and addition.
+
+The rows are fixed in code. A row is picked by the first match; the additions
+then apply on top. Every delivery issue owes the same row (ADR-099 decision 4):
+risk, size, familiarity and urgency add no review and no record. Two additions
+stay, and each is a person's approval: the scenario approval before code for a
+`G5` label or critical risk, and the `G5` sign-off for a `G5` label (ADR-099
+decision 5).
+
+The configuration adds only what a project can still set for a new issue: the
+gates of its floors (`add_gate`) and immovable gates, the skills its floors
+ask for (`require_skill`), its advisory strategies, and the two tighten-only
+settings the policy can carry (`signoff_labels`, read as more `G5` labels, and
+`require_evidence`, read as more tokens). The shipped check set
+(`governance/check-set.yml`) holds no floor that adds a gate. So a project
+with no settings owes the common row and the two approvals, and nothing else.
+This module never reads the configuration's approaches, shapes, stage modes or
+caps.
+
+The records of the four-layer acceptance strategy (`S17`) are owed only where
+a `require_evidence` rule adds their tokens (ADR-099 decision 9). The routing
+of the strategy is read from the tokens owed (`S17_ROUTING`); with none owed it
+is `guidance`: the `atdd` skill applies as advice and no check of the strategy
+runs.
+"""
+# DEPENDENCY: compass_pkg.core (CompassError, reading_matches), red_first
+# (ACCEPTANCE_KINDS), retired (DIMENSIONS), routing (RoutingConflict,
+# REMOVED_GATES) and stable_ids (the approach, gate and stage ids); no standard library module. No module imports this one yet.
+from __future__ import annotations
+
+from compass_pkg import retired
+from compass_pkg.core import CompassError, reading_matches
+from compass_pkg.red_first import ACCEPTANCE_KINDS
+from compass_pkg.routing import REMOVED_GATES, RoutingConflict
+
+from compass_pkg.stable_ids import (APPROACH_DELIVERY, APPROACH_SPIKE, GATE_G5,
+                                    PATH_STAGE_IDS, SPIKE_STAGE_IDS)
+
+#: The labels of guardrail `G5`, the irreversible surfaces that owe a person's sign-off.
+#: A policy's `signoff_labels` adds to them and never takes one away (`signoff_labels`).
+G5_LABELS = ("auth", "payments", "personal-data", "migrations")
+
+#: Every token, in the order the manifest stores them.
+TOKENS = ("request", "scenarios", "red-before-green", "suite-green",
+          "correctness", "governance", "traceability",
+          "regression", "security", "clarity", "architecture",
+          "outer-loop", "isolation", "layering",
+          "definition-of-done", "reproduce-first", "scenario-approval", "human-approval",
+          "ship-approval")
+
+#: The review gate each token is met by. The other tokens are met by records and
+#: checks, not by a gate (`governance/routing-policy.md`).
+GATE_OF_TOKEN = {"correctness": "verify.correctness", "governance": "verify.governance",
+                 "traceability": "verify.traceability", "regression": "verify.regression",
+                 "security": "verify.security", "clarity": "verify.clarity",
+                 "architecture": "verify.architecture"}
+TOKEN_OF_GATE = {gate: token for token, gate in GATE_OF_TOKEN.items()}
+SPIKE_GATE = "spike.conclude"
+
+#: What every delivery issue owes. `request` is the request link and the requester,
+#: read by the check `request-recorded` outside every gate (#356). `ship-approval`
+#: is a person's approval at ship, read by the check `ship-approval-present`
+#: outside every gate (#355). Neither meets a gate, so the gate sets of 8.0.4 do
+#: not move.
+EVERY_ISSUE = ("request", "scenarios", "red-before-green", "suite-green",
+               "correctness", "governance", "traceability", "ship-approval")
+
+#: The routing of `S17` an issue gets, read from the `S17` tokens it owes: the
+#: first entry whose token is owed. No token is owed by default; a
+#: `require_evidence` rule adds one. `layering` needs the full strategy,
+#: `isolation` the isolation proof, `outer-loop` the outer-loop records alone.
+S17_ROUTING = (("layering", "on"), ("isolation", "existing-dsl-isolation"),
+               ("outer-loop", "existing-dsl"))
+#: The routing of a delivery issue that owes no `S17` token: the strategy is
+#: advice, and no check of it runs (`acceptance_strategy.in_scope`).
+GUIDANCE = "guidance"
+STATES = ("on", "off")
+EXPECTED = ("none",) + tuple(ACCEPTANCE_KINDS)
+
+_G5 = {"labels_any": list(G5_LABELS)}
+
+#: The rows, first match wins: `(rule id, when, tokens, routing)`, the routing of
+#: `S17` before any token a setting adds. A row's `when` is read with the extra
+#: key `not` (none of these clauses holds) as well as the keys `reading_matches`
+#: reads.
+ROWS = (
+    ("RP-EVID-SPIKE", {"goal": "exploration"}, (), "suspended"),
+    ("RP-EVID-COMMON", {}, EVERY_ISSUE, GUIDANCE),
+)
+
+#: The additions to the delivery row, in order: `(rule id, when, token)`. Each is
+#: an approval a person gives.
+ADDITIONS = (
+    ("RP-EVID-SIGNOFF", {"any_of": [_G5, {"risk": "critical"}]}, "scenario-approval"),
+    (GATE_G5, _G5, "human-approval"),
+)
+
+_REQUIRED = ("risk", "familiarity", "size")
+_OPTIONAL = ("goal", "urgency")
+_VOCABULARY_KEYS = {"blast_radius": "risk", "terrain": "familiarity",
+                    "magnitude": "size", "intent": "goal"}
+
+
+def signoff_labels(policy):
+    """The labels that owe `G5` sign-off under `policy`: the four shipped ones,
+    then each label of the policy's `signoff_labels` that is not one of them.
+    The policy can only add a label, so a policy without the key owes what 8.x
+    owed."""
+    extra = (policy or {}).get("signoff_labels") or ()
+    if isinstance(extra, str) or not all(isinstance(label, str) for label in extra):
+        raise CompassError(f"signoff_labels {extra!r} is not a list of label names")
+    return G5_LABELS + tuple(dict.fromkeys(label for label in extra if label not in G5_LABELS))
+
+
+def _widened(node, labels):
+    """`node` with every `G5` clause (`labels_any` of the four shipped labels)
+    naming `labels` instead. Only a clause that names exactly the shipped
+    four changes, so another rule's own `labels_any` keeps its labels."""
+    if isinstance(node, dict):
+        return {k: (list(labels) if k == "labels_any" and v == list(G5_LABELS)
+                    else _widened(v, labels)) for k, v in node.items()}
+    if isinstance(node, (list, tuple)):
+        return type(node)(_widened(item, labels) for item in node)
+    return node
+
+
+def _required_evidence(policy):
+    """The policy's `require_evidence` entries, each `{id, when, add}`, with
+    every token checked against `TOKENS`. A token outside the closed set is a
+    fault in the settings and raises `CompassError`."""
+    entries = (policy or {}).get("require_evidence") or []
+    for entry in entries:
+        unknown = [t for t in entry.get("add") or () if t not in TOKENS]
+        if unknown:
+            raise CompassError(f"require_evidence {entry.get('id', '?')}: "
+                               f"{', '.join(map(str, unknown))} not one of {', '.join(TOKENS)}")
+    return entries
+
+
+def _matches(when, readings, orders):
+    when = dict(when)
+    unless = when.pop("not", ())
+    return reading_matches(when, readings, orders) and not any(
+        reading_matches(clause, readings, orders) for clause in unless)
+
+
+def _checked(assessment, policy):
+    """The assessment with the retired dimensions taken out, or `CompassError`
+    naming each reading that is missing or outside the configuration's vocabulary."""
+    vocab = {_VOCABULARY_KEYS.get(k, k): v for k, v in (
+        policy.get("assessment_vocabulary") or policy.get("reading_vocabulary") or {}).items()}
+    readings = {k: v for k, v in (assessment or {}).items() if k not in retired.DIMENSIONS}
+    errors = [f"missing required reading: {dim}" for dim in _REQUIRED if dim not in readings]
+    for dim in _REQUIRED + _OPTIONAL:
+        if dim in readings and dim in vocab and readings[dim] not in vocab[dim]:
+            errors.append(f"reading {dim}={readings[dim]!r} is not in the vocabulary "
+                          f"{vocab[dim]}")
+    if errors:
+        raise CompassError("invalid assessment:\n  - " + "\n  - ".join(errors))
+    return readings
+
+
+def _refuse_exploration(readings, orders, labels=G5_LABELS):
+    """A spike ships nothing, so it must not touch a surface that owes a person's
+    sign-off. 8.x refused the same assessments, where its floors would have raised
+    the spike to a delivery approach; turning one into the other is a choice a
+    person makes by re-assessing (`approaches/spike.md`)."""
+    if _matches({"any_of": [{"labels_any": list(labels)}, {"risk": "critical"}]},
+                readings, orders):
+        raise RoutingConflict(
+            "routing conflict - exploration cannot silently become delivery.\n"
+            "  Intent is 'exploration' (a spike), but the assessment names critical "
+            "risk or a `G5` label, where a change owes a person's sign-off.\n"
+            "  A spike ships nothing and must not touch production-critical surface.\n"
+            "  Re-assess: either scope a narrower discovery issue that does not touch "
+            "the risky surface, or set intent=delivery and accept the evidence that "
+            "change owes.")
+
+
+def evaluate(assessment, policy, acceptance_state="on", expected_acceptance="none"):
+    """The evidence an assessment owes under `policy`, the configuration in force
+    in the shape `routing.evaluate_route` takes.
+
+    `acceptance_state` is the project's `acceptance_strategy` setting and
+    `expected_acceptance` what assess was told (`--expected-acceptance`). The
+    strategy applies only where a `require_evidence` rule adds one of its
+    tokens, the setting is `on` and the change has client-observable behavior.
+
+    Two keys of `policy` carry the tighten-only settings of `compass.yml`:
+    `signoff_labels` (more labels that owe what a `G5` label owes) and
+    `require_evidence` (`[{id, when, add}]`, tokens a matching delivery
+    assessment also owes). Each only adds; without them the result is the
+    shipped one.
+
+    Returns a mapping with `delivery_approach`, `stages`, `evidence_required`,
+    `gates`, `acceptance_routing`, `acceptance_applies`, `rules_fired`,
+    `required_skills` and `applicable_strategies`. Raises `RoutingConflict` for
+    exploration on a surface that owes a sign-off, and `CompassError` for an
+    assessment or setting it cannot read."""
+    if acceptance_state not in STATES:
+        raise CompassError(f"acceptance_state {acceptance_state!r} is not one of {STATES}")
+    if expected_acceptance not in EXPECTED:
+        raise CompassError(f"expected_acceptance {expected_acceptance!r} is not one of "
+                           f"{EXPECTED}")
+    readings = _checked(assessment, policy)
+    orders = policy.get("dimension_orders")
+    guard = policy.get("routing_guardrails") or {}
+    labels = signoff_labels(policy)
+    required = _required_evidence(policy)
+    # A label the settings add owes what a shipped `G5` label owes, so each `G5`
+    # clause of the rows and additions names it too.
+    rows, additions = ((ROWS, ADDITIONS) if labels == G5_LABELS
+                       else (_widened(ROWS, labels), _widened(ADDITIONS, labels)))
+
+    rule, _, row_tokens, routing = next(
+        r for r in rows if _matches(r[1], readings, orders))
+    spike = rule == "RP-EVID-SPIKE"
+    if spike:
+        _refuse_exploration(readings, orders, labels)
+    fired = [rule]
+    owed = set(row_tokens)
+    extra_gates = []
+
+    if not spike:
+        for rule_id, when, token in additions:
+            if _matches(when, readings, orders):
+                owed.add(token)
+                fired.append(rule_id)
+        for entry in required:
+            if reading_matches(entry.get("when"), readings, orders):
+                owed.update(entry.get("add") or ())
+                if entry.get("id") and entry["id"] not in fired:
+                    fired.append(entry["id"])
+        # A gate the configuration names that a token stands for joins as that
+        # token, so `gates` stays derived from `evidence_required`. Any other gate
+        # is kept as it is. A removed gate is owed by nothing (`routing.REMOVED_GATES`).
+        # The immovable gates are recorded as no rule that fired, as in 8.x;
+        # a floor that adds a gate is.
+        named = [(None, ig.get("gate")) for ig in guard.get("immovable_gates") or []]
+        named += [(fl.get("id"), fl.get("add_gate")) for fl in guard.get("floors") or []
+                  if fl.get("add_gate")
+                  and reading_matches(fl.get("when"), readings, orders)]
+        for rule_id, gate in named:
+            if not gate or gate in REMOVED_GATES:
+                continue
+            if gate in TOKEN_OF_GATE:
+                owed.add(TOKEN_OF_GATE[gate])
+            elif gate not in extra_gates:
+                extra_gates.append(gate)
+            if rule_id and rule_id not in fired:
+                fired.append(rule_id)
+
+    # The `S17` records are owed only through a token a setting added, and the
+    # routing says how much of the strategy those tokens need.
+    if not spike:
+        routing = next((r for token, r in S17_ROUTING if token in owed), routing)
+    applies = (not spike and routing != GUIDANCE and acceptance_state == "on"
+               and expected_acceptance not in ACCEPTANCE_KINDS)
+
+    skills = []
+    for fl in guard.get("floors") or []:
+        if fl.get("require_skill") and reading_matches(fl.get("when"), readings, orders):
+            if fl["require_skill"] not in skills:
+                skills.append(fl["require_skill"])
+            if fl.get("id") and fl["id"] not in fired:
+                fired.append(fl["id"])
+    strategies = [{"id": adv.get("id", "?"), "strategy": adv.get("strategy", ""),
+                   "rationale": adv.get("rationale", "")}
+                  for adv in (policy.get("routing_strategies") or {}).get(
+                      "advisory_strategies") or []
+                  if reading_matches(adv.get("when"), readings, orders)]
+
+    evidence = [t for t in TOKENS if t in owed]
+    gates = ([SPIKE_GATE] if spike
+             else [GATE_OF_TOKEN[t] for t in evidence if t in GATE_OF_TOKEN] + extra_gates)
+    return {
+        "delivery_approach": APPROACH_SPIKE if spike else APPROACH_DELIVERY,
+        "stages": SPIKE_STAGE_IDS if spike else PATH_STAGE_IDS,
+        "evidence_required": evidence,
+        "gates": gates,
+        "acceptance_routing": routing,
+        "acceptance_applies": applies,
+        "rules_fired": fired,
+        "required_skills": sorted(skills),
+        "applicable_strategies": strategies,
+    }

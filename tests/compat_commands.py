@@ -197,11 +197,11 @@ def _regular_issue(root: Path, env: dict) -> None:
 
 
 def _with_copied_governance(root: Path, env: dict) -> None:
+    # 5.6.0 copied the framework's two governance files. 9.0.0 deleted them from
+    # the framework (ADR-098), so the copy is the last 8.x release's, packed.
+    from compat_baseline import GOVERNANCE_8_0_4, add_governance_copy
     _initialised(root, env)
-    governance = root / "governance"
-    governance.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copyfile(ROOT / "governance" / name, governance / name)
+    add_governance_copy(root, source=GOVERNANCE_8_0_4)
 
 
 def _outside_git(root: Path, env: dict) -> None:
@@ -213,9 +213,15 @@ def _outside_git(root: Path, env: dict) -> None:
     _must(root, env, "init")
 
 
+#: A `compass.yml` Compass refuses. 9.0.0 reads a catalogue key such as `stages:`
+#: as a removed setting and does not check its value (ADR-094), so the fault is
+#: in a setting it reads.
+BROKEN_COMPASS_YML = "schema: 1\nautonomy: sometimes\n"
+
+
 def _regular_issue_broken_compass_yml(root: Path, env: dict) -> None:
     _regular_issue(root, env)
-    (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
+    (root / "compass.yml").write_text(BROKEN_COMPASS_YML, encoding="utf-8")
 
 
 JUDGED_COMPASS_YML = """schema: 1
@@ -270,9 +276,11 @@ def _with_stale_document(root: Path, env: dict) -> None:
     (work / "acceptance-criteria.md").write_text("# Criteria\n", encoding="utf-8")
     (work / "technical-design.md").write_text("# Design\n", encoding="utf-8")
     (work / "delivery-approach.md").write_text("# Delivery approach\n", encoding="utf-8")
+    # 9.0.0 removed `compass issue artifact set` (ADR-091), so the entries are written
+    # as that verb wrote them.
+    import document_registry
     for kind in ("acceptance-criteria", "technical-design"):
-        _must(root, env, "issue", "artifact", "set", kind, "--status", "draft",
-              "--issue", REGULAR_SLUG)
+        document_registry.register(work, kind, f".compass/work/{REGULAR_SLUG}/{kind}.md")
     manifest = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8"))
     manifest["current_phase"] = "implement"
     (work / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
@@ -316,7 +324,7 @@ def _with_looser_compass_yml(root: Path, env: dict) -> None:
 
 def _with_broken_compass_yml(root: Path, env: dict) -> None:
     _initialised(root, env)
-    (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
+    (root / "compass.yml").write_text(BROKEN_COMPASS_YML, encoding="utf-8")
 
 
 def _with_git_parent_no_sha(root: Path, env: dict) -> None:
@@ -332,16 +340,38 @@ def _with_git_parent_uncached(root: Path, env: dict) -> None:
         encoding="utf-8")
 
 
+#: A team preset as `compass preset init` scaffolded it before 9.0.0 removed the
+#: verb (ADR-094): a `compass.yml` and one fixture. The entries run in these
+#: states name a removed verb, so the files are written here, not by the CLI.
+_PRESET_YML = "schema: 1\nowner: \"acme-team\"\n"
+_PRESET_FIXTURE = """\
+name: Small contained work
+assessment:
+  risk: contained
+  familiarity: brownfield-mapped
+  size: small
+  goal: delivery
+  labels: []
+expect:
+  approach: delivery
+"""
+
+
 def _with_preset(root: Path, env: dict) -> None:
     _initialised(root, env)
-    _must(root, env, "preset", "init", "team-preset", "--owner", "acme-team")
+    fixtures = root / "team-preset" / "compass-fixtures"
+    fixtures.mkdir(parents=True)
+    (root / "team-preset" / "compass.yml").write_text(_PRESET_YML, encoding="utf-8")
+    (fixtures / "example.yml").write_text(_PRESET_FIXTURE, encoding="utf-8")
 
 
 def _with_failing_preset(root: Path, env: dict) -> None:
     _with_preset(root, env)
     fixture = root / "team-preset" / "compass-fixtures" / "example.yml"
+    # The scaffold's fixture expects `delivery`, the approach of every delivery
+    # assessment since 9.0.0 (ADR-092); a fixture that expects another fails.
     fixture.write_text(fixture.read_text(encoding="utf-8").replace(
-        "approach: quick-fix", "approach: full"), encoding="utf-8")
+        "approach: delivery", "approach: full"), encoding="utf-8")
 
 
 def _with_grouped_preset(root: Path, env: dict) -> None:
@@ -378,10 +408,12 @@ STATES = {
 }
 
 
-# Configurations B (an empty overlay in compass.yml) and C (a 5.6.0 governance
-# copy) are added to a built state. A state that already holds a settings file
-# or governance of its own is not given another: it is that configuration, or
-# configuration D, already.
+# Configuration B (an empty overlay in compass.yml) is added to a built state. A
+# state that already holds a settings file or governance of its own is not given
+# another: it is that configuration, or configuration D, already. Configuration C
+# (a 5.6.0 governance copy) is not run here: 9.0.0 refuses a project with copied
+# governance (`governance-copy-removed`), so C holds for contracts 1 and 2 only
+# (VD-043 decision 2).
 _HAS_COMPASS_YML = {"regular-issue-broken-compass-yml", "with-compass-yml",
                     "with-looser-compass-yml", "with-broken-compass-yml"}
 _HAS_GOVERNANCE = {"with-copied-governance", "with-broken-governance"}
@@ -392,40 +424,16 @@ def configuration_applies(state: str, kind: str) -> bool:
     if kind == "B":
         return state not in _HAS_COMPASS_YML | _HAS_GOVERNANCE | _HAS_OLD_CONFIG
     if kind == "C":
-        return state not in _HAS_COMPASS_YML | _HAS_GOVERNANCE
+        return False
     return True
-
-
-#: The two entries whose answer differs under configuration B on purpose.
-#: Configuration B is an empty overlay: a `compass.yml` holding `schema: 1` and
-#: `extends: compass:default@6`. `policy test` then finds a project preset with
-#: no fixtures (exit 1, where a project with no `compass.yml` gives exit 2),
-#: and `policy update` finds a project that already extends the shipped default
-#: (exit 0, where a project with no `compass.yml` gives exit 2). Both answers
-#: are about the configuration found, so the no-configuration baseline does not
-#: apply. Configuration C and every other entry are still compared.
-_DIFFER_UNDER_B = frozenset({"policy-test-no-preset",
-                             "policy-update-no-project-file"})
 
 
 def entry_applies(entry: dict, kind: str) -> bool:
     """Whether `entry` is a fair question under configuration `kind`. The
-    state must not already hold a settings file or governance of its own, and
-    the command must not be about the configuration itself:
-    `policy migrate` migrates the very files B and C add, and `terminology`
-    reads `governance/terminology.yml`, which a two-file governance copy lacks
-    (the 5.6.0 CLI refuses it the same way in such a project). Two entries are
-    also left out under B alone: see `_DIFFER_UNDER_B`."""
-    if not configuration_applies(entry["project"], kind):
-        return False
-    argv = entry["argv"]
-    if argv[:2] == ["policy", "migrate"]:
-        return False
-    if kind == "B" and entry["id"] in _DIFFER_UNDER_B:
-        return False
-    if kind == "C" and argv[:1] == ["terminology"]:
-        return False
-    return True
+    state must not already hold a settings file or governance of its own. An
+    entry whose command 9.0.0 removed is a fair question under every
+    configuration: it fails to parse the same way whatever the project holds."""
+    return configuration_applies(entry["project"], kind)
 
 
 def build_configuration(kind: str, root: Path, fault: str | None = None) -> None:
@@ -480,12 +488,174 @@ def load(path: Path = CORPUS) -> list[dict]:
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))["entries"]
 
 
-def differences(entry: dict, outcome: Outcome) -> list[str]:
-    """What the run did that the recorded entry says it should not."""
+#: The entries whose command 9.0.0 removed, each with the line its parse error must
+#: give. The corpus is frozen, so the entries stay as 5.6.0 recorded them. A removed
+#: command now exits 2 and names its removal; that is what such an entry is compared
+#: with. Any other exit or message still differs, and every other entry is compared
+#: as recorded.
+REMOVED_IN_9_0_0 = {
+    **{entry_id: "'compass issue receipt' was removed in 9.0.0 (ADR-091)"
+       for entry_id in ("issue-receipt-quick-fix", "issue-receipt-unknown",
+                        "receipt-stale-document")},
+    **{entry_id: "'compass spec sync' was removed in 9.0.0 (ADR-091)"
+       for entry_id in ("issue-refresh-spec-outside-git", "issue-refresh-spec-no-base")},
+    "artifact-records-digests": "'compass issue artifact set' was removed in 9.0.0 (ADR-091)",
+    **{entry_id: "'compass issue template show' was removed in 9.0.0 (ADR-091)"
+       for entry_id in ("issue-template-requirements-review",
+                        "issue-template-verification-report-json",
+                        "issue-template-unknown-kind")},
+    **{entry_id: "'compass retro' was removed in 9.0.0 (ADR-093)"
+       for entry_id in ("retro-plain", "retro-no-compass-folder", "retro-friction",
+                        "retro-lessons", "retro-lineage", "retro-compliance")},
+    **{entry_id: "'compass issue configure' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("issue-configure-proposes-a-change",
+                        "issue-configure-refused-proposal-exits-1",
+                        "issue-configure-no-change-given", "issue-configure-discard-nothing")},
+    **{entry_id: "'compass approach evaluate --reset-config' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("approach-evaluate-reset-config-needs-write",
+                        "approach-evaluate-write-reset-config")},
+    **{entry_id: "'compass policy diff' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-diff-identical", "policy-diff-identical-exit-code",
+                        "policy-diff-bad-reference", "policy-diff-differs-exit-code")},
+    **{entry_id: "'compass policy update' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-update-nothing-to-do", "policy-update-json-nothing-to-do",
+                        "policy-update-major-not-kept", "policy-update-no-extends",
+                        "policy-update-no-project-file")},
+    **{entry_id: "'compass preset test' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-test-passes", "policy-test-fails", "policy-test-no-preset",
+                        "policy-test-groups")},
+    **{entry_id: "'compass preset init' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-init-preset-writes", "policy-init-preset-refused")},
+    **{entry_id: "'compass policy migrate' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-migrate-copied", "policy-migrate-nothing",
+                        "policy-migrate-refused")},
+    **{entry_id: "'compass policy lint --offline' was removed in 9.0.0 (ADR-094)"
+       for entry_id in ("policy-lint-offline", "policy-lint-git-parent-uncached-offline")},
+}
+
+
+#: Entries whose phrase came from artifact freshness, which 9.0.0 removed (ADR-091).
+#: The exit code is still compared; the phrase must now be absent.
+PHRASE_REMOVED_IN_9_0_0 = {
+    "check-stale-document": "artifact freshness",
+    "next-stale-document": "artifact freshness",
+}
+
+
+#: Entries whose exit 9.0.0 changed on purpose, with the exit it gives now. `compass next`
+#: reads the approach from the manifest, since 9.0.0 writes no delivery-approach.md
+#: (ADR-091), so an assessed issue with no such file is answered, not refused. A new
+#: assessment is on the four-stage path (ADR-092), which has no approaches, so
+#: `quick-fix start` no longer refuses work heavier than a quick fix: it starts the
+#: change and records the evidence it owes.
+#:
+#: `evidence-review-recorded` exits 2, not 0. Its state adds the judged check
+#: `design-review` through a `checks:` block in `compass.yml`, which 9.0.0 reads as a
+#: removed setting (ADR-094), so no judged check of that name exists to record a
+#: review against. The owner looks at this entry (ADR-094 open question 19).
+#:
+#: A project with copied governance and no `compass.yml` is refused with exit 2
+#: (`governance-copy-removed`), because 9.0.0 does not read the copy (ADR-098). Its
+#: entries are also in `REFUSED_IN_9_0_0`.
+#:
+#: Typed input takes only the 9.0.0 names (VD-043 decision 9): the two entries that
+#: type the old size `standard` on a project that 9.0.0 reads exit 2, as any value
+#: outside the vocabulary does. Their recorded phrases are the old outcome's, so
+#: `OLD_WORD_REFUSED_IN_9_0_0` names what stderr says instead. The two entries that
+#: type it on a copied-governance project are refused for the copy first.
+EXIT_CHANGED_IN_9_0_0 = {"next-regular-without-approach-record": 0,
+                         "quick-fix-start-heavier": 2,
+                         "quick-fix-start-auth-label": 0,
+                         "evidence-review-recorded": 2,
+                         "approach-evaluate-copied-governance": 2,
+                         "approach-evaluate-controlled-autonomy": 2,
+                         "policy-lint-copied": 2,
+                         "policy-lint-broken": 2}
+
+
+#: Entries that type an old word 9.0.0 no longer reads, each with the text stderr
+#: must hold: the refusal of a value outside the vocabulary.
+OLD_WORD_REFUSED_IN_9_0_0 = {
+    entry_id: "reading size='standard' is not in the vocabulary"
+    for entry_id in ("approach-evaluate-controlled-autonomy", "quick-fix-start-heavier")}
+
+
+#: Entries 9.0.0 refuses, each with the refusal code stderr must name. The exit is
+#: compared as `EXIT_CHANGED_IN_9_0_0` gives it, or as recorded. A broken copy was
+#: already refused (exit 2) and is now refused for the copy itself.
+REFUSED_IN_9_0_0 = {entry_id: "governance-copy-removed"
+                    for entry_id in ("approach-evaluate-copied-governance",
+                                     "approach-evaluate-broken-governance",
+                                     "policy-lint-copied", "policy-lint-broken")}
+
+
+#: Entries whose phrase 9.0.0 changed on purpose, each with `(recorded, now)`. The exit
+#: is still compared, and stdout must hold the new phrase. `compass next` shows the stage
+#: of an issue assessed on the legacy stages as the path stage it maps to, so implement
+#: shows as Build (ADR-092). A new assessment, and an assessment given on the command
+#: line, is on the four-stage path: it names the one approach `delivery` where 8.x named
+#: quick fix, regular or full, keeps the gate count, and lists no stage of the legacy
+#: path to wait at (ADR-092 open question 7).
+PHRASE_CHANGED_IN_9_0_0 = {
+    "next-quick-fix": ("Implement", "Build"),
+    "approach-evaluate-quick-fix": ("quick fix - 3 gate(s)", "delivery - 3 gate(s)"),
+    "approach-evaluate-no-compass-folder": ("quick fix - 3 gate(s)", "delivery - 3 gate(s)"),
+    "approach-summary-regular": ("waits for you at: define, plan",
+                                 "does not stop to wait for you"),
+    "quick-fix-start-valid": ("recorded as quick fix", "recorded as delivery"),
+    "quick-fix-start-advisory": ("recorded as quick fix", "recorded as delivery"),
+    "quick-fix-start-auth-label": ("computes to full", "recorded as delivery"),
+    # One check set ships, named by its id and version, not a preset (ADR-094). A
+    # 9.0.0 major may move this entry (decision 2026-10-30).
+    "policy-effective-shipped": ("default@8.0.0", "compass-checks@9.0.0"),
+    # A git parent is refused as a removed setting, so its lint code is the removal's.
+    "policy-lint-git-parent-no-sha": ("L-PARENT-NO-SHA", "L-PARENT-REMOVED"),
+}
+
+
+def differences(entry: dict, outcome: Outcome, configuration: str = "A") -> list[str]:
+    """What the run did that the recorded entry says it should not, under
+    `configuration` (A, B or C)."""
     found = []
-    if outcome.exit != entry["exit"]:
+    if entry["id"] in PHRASE_REMOVED_IN_9_0_0:
+        if outcome.exit != entry["exit"]:
+            found.append(f"exit {outcome.exit}, recorded {entry['exit']}")
+        phrase = entry.get("stdout_contains")
+        if phrase and phrase in outcome.stdout:
+            found.append(f"stdout still holds {phrase!r}, which 9.0.0 removed with "
+                         f"{PHRASE_REMOVED_IN_9_0_0[entry['id']]}")
+        return found
+    if entry["id"] in REMOVED_IN_9_0_0:
+        if outcome.exit != 2:
+            found.append(f"exit {outcome.exit}, a removed command exits 2")
+        if REMOVED_IN_9_0_0[entry["id"]] not in outcome.stderr:
+            found.append(f"stderr lacks {REMOVED_IN_9_0_0[entry['id']]!r}")
+        return found
+    if entry["id"] in REFUSED_IN_9_0_0 and f"[{REFUSED_IN_9_0_0[entry['id']]}]" \
+            not in outcome.stderr:
+        found.append(f"stderr lacks the refusal code {REFUSED_IN_9_0_0[entry['id']]}")
+    if entry["id"] in OLD_WORD_REFUSED_IN_9_0_0 \
+            and OLD_WORD_REFUSED_IN_9_0_0[entry["id"]] not in outcome.stderr:
+        found.append(f"stderr lacks {OLD_WORD_REFUSED_IN_9_0_0[entry['id']]!r}")
+    return found + _as_recorded(entry, outcome,
+                                EXIT_CHANGED_IN_9_0_0.get(entry["id"], entry["exit"]),
+                                PHRASE_CHANGED_IN_9_0_0.get(entry["id"], (None, None)))
+
+
+def _as_recorded(entry, outcome, expected=None, changed=(None, None)):
+    found = []
+    expected = entry["exit"] if expected is None else expected
+    if outcome.exit != expected:
         found.append(f"exit {outcome.exit}, recorded {entry['exit']}")
     phrase = entry.get("stdout_contains")
+    if expected not in (0, entry["exit"]):
+        # An entry that now fails on purpose with another exit (`EXIT_CHANGED_IN_9_0_0`):
+        # its recorded phrase is the old outcome's output, which the failure does not
+        # print. `REFUSED_IN_9_0_0` names what a new refusal prints instead.
+        phrase = None
+    recorded, now = changed
+    if phrase and phrase == recorded:
+        phrase = now
     if phrase and phrase not in outcome.stdout:
         found.append(f"stdout lacks {phrase!r}")
     phrase = entry.get("stderr_contains")

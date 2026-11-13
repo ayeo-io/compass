@@ -32,16 +32,19 @@ NAMED_DOCS = ("CLAUDE.md", "AGENTS.md", "README.md", "compass-contract.md")
 # keeps the words it was decided in (ADR-022), so an ADR describing a removal
 # necessarily names what was removed.
 #
-# `docs/system-spec.md` is derived from landed scenarios and marks archived
-# entries as such. `docs/glossary.md` is derived from the vocabulary, whose
-# ban entries must name the word they retire.
-SKIP_NAMES = {"system-spec.md", "system-spec-archive.md", "glossary.md"}
+# `docs/glossary.md` is derived from the vocabulary, whose ban entries must
+# name the word they retire.
+SKIP_NAMES = {"glossary.md"}
 
 # A removed command may be named where the naming IS the service: the upgrade
 # table telling a broken caller what to type instead.
 ALLOWED = {
     "docs/releasing.md": "the upgrade table names each removed command beside "
                          "its replacement",
+    # tests/test_upgrade_9_0_0_guide.py checks the rest of this page: outside
+    # its generated table, every slash command it names must exist.
+    "docs/upgrade-9-0-0.md": "the 9.0.0 upgrade table names each removed slash "
+                             "command beside its replacement",
 }
 
 

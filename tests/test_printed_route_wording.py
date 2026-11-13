@@ -66,9 +66,3 @@ def test_rw_1_gate_pass_and_check_ask_about_the_delivery_approach(tmp_path):
     from compass_pkg.checks import _check_gate_evidence
     _ok, detail = _check_gate_evidence({"gates": []}, str(tmp_path))
     assert "delivery approach" in detail and _retired(detail) == [], detail
-
-
-def test_rw_1_retro_prints_no_retired_word(tmp_path):
-    root = _project(tmp_path)
-    out = _cli(root, "retro")
-    assert _retired(out) == [], out

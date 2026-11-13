@@ -7,9 +7,8 @@ Why these are regex assertions over markdown rather than unit tests: the
 "production" change for most of this issue is the text of shipped templates,
 skills, agents and commands. That is the same situation
 tests/test_plugin_doc_drift.py is in, and these follow its approach. The
-executable half of the issue (the `compass plan lint` subcommand) is tested
-separately in tests/test_no_placeholders_check.py, where real unit tests are
-possible.
+executable half of the issue, the `compass plan lint` subcommand, was removed
+in 9.0.0 (ADR-091) with its tests.
 
 These are still real tests: they run under `pytest tests/`, they fail when the
 shipped text drifts, and `compass tdd-red` / `compass tdd-green` write typed
@@ -32,10 +31,12 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
 sys.path.insert(0, str(ROOT / "tests"))
 from archive import archive_root, checkable_root  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 SPEC_TEMPLATE = "templates/acceptance-criteria.md"
-CLARIFICATIONS_TEMPLATE = "templates/requirements-review.md"
-BDD_SKILL = "skills/bdd-specification/SKILL.md"
+# `bdd-specification` merged into `atdd` in 9.0.0 (#360); the scenario
+# sections kept their headings.
+BDD_SKILL = "skills/atdd/SKILL.md"
 SPEC_AUTHOR = "agents/spec-author.md"
 
 
@@ -72,8 +73,7 @@ def _section(text, heading, level="## "):
 
 def test_trc_a1_summary_precedes_role_guide():
     """The Summary is the first thing a cold reader meets: it comes before the
-    intent-links table. The role-guide block lives in docs/roles-guide.md only, so
-    the template holds no copy of it."""
+    intent-links table. The template holds no role-guide block."""
     tpl = _read(SPEC_TEMPLATE)
 
     i_summary = tpl.find("## Summary")
@@ -82,7 +82,7 @@ def test_trc_a1_summary_precedes_role_guide():
     assert i_summary >= 0, "No '## Summary' heading in the spec template"
     assert i_intent >= 0, "The intent-links table disappeared from the spec template"
     assert "## How each role reads this file" not in tpl, (
-        "The role-guide block is in docs/roles-guide.md only, not in the spec template"
+        "The spec template must not hold the role-guide block"
     )
     assert i_summary < i_intent, (
         "The Summary must come before the intent links - a cold reader wants "
@@ -145,13 +145,14 @@ def test_trc_a4_template_scenario_machinery_intact():
     )
     assert re.search(r"traceability id:\s*TRC-", tpl), "Traceability id comments lost"
     assert "## Failure-mode scenarios" in tpl, "Failure-mode section lost"
-    assert "## Coverage ledger" in tpl, "Coverage ledger lost"
+    # The coverage block went with rendered blocks in 9.0.0 (ADR-091).
+    assert "## Coverage ledger" not in tpl, "the Coverage ledger has no writer since 9.0.0"
 
 
 def test_trc_a5_spec_author_and_skill_name_summary():
-    """Both the agent that runs define and the skill it loads tell the author
-    to write the Summary, and both name all three fields."""
-    for rel in (SPEC_AUTHOR, BDD_SKILL):
+    """The skill define loads tells the author to write the Summary, and names
+    all three fields. The agent that ran define was removed in 9.0.0 (ADR-090)."""
+    for rel in (BDD_SKILL,):
         text = _read(rel)
         low = text.lower()
 
@@ -163,15 +164,11 @@ def test_trc_a5_spec_author_and_skill_name_summary():
 def test_trc_a6_dor_requires_filled_summary():
     """A filled Summary is a condition of leaving the requirements review -
     enforced by the Definition of Ready, not by the CLI. The Ready items live in the
-    shipped preset (the template holds an empty `dor` block that `compass issue render`
-    fills from them)."""
-    body = _section(_read(CLARIFICATIONS_TEMPLATE), "Gate")
-
-    assert "definition of ready" in body.lower(), "Definition of Ready section not found"
-    assert "<!-- compass:render dor -->" in body
-
-    from test_ready_and_done_data import READY_IDS, statements
-    summary_items = [i for i in statements(READY_IDS) if "summary" in i.lower()]
+    frozen `default@7` preset, which a stored 8.x generation reads; the four-stage
+    path owes no Definition of Ready (ADR-092), and 9.0.0 writes no requirements
+    review to hold them (ADR-091)."""
+    from test_ready_and_done_data import FROZEN, READY_IDS, statements
+    summary_items = [i for i in statements(READY_IDS, FROZEN) if "summary" in i.lower()]
     assert summary_items, "No Definition of Ready item requiring the spec's Summary"
 
     item = _flat(summary_items[0])
@@ -244,23 +241,28 @@ def test_trc_b4_self_review_complements_clarify():
 
     assert "review still runs" in low, (
         "The self-review does not state that the requirements review still "
-        "runs on the regular approach and above"
+        "runs on a change with more than one scenario"
     )
-    assert "regular" in low, (
-        "The self-review does not name the approaches the requirements "
+    # The path has no regular approach (ADR-092): the review runs by the
+    # number of scenarios.
+    assert "more than one scenario" in low, (
+        "The self-review does not name the changes the requirements "
         "review still runs on")
 
 
 def test_trc_b5_express_self_check_recorded_in_devlog():
     """Where the requirements review collapses, the self-check is the QA -
     so it goes on disk, not into the conversation (`S4`, persistence over
-    conversation)."""
+    conversation). The path writes no devlog.md (ADR-092), so the record on
+    disk is the spec the self-check edited."""
     low = _self_review().lower()
 
-    assert "quick-fix" in low or "quick fix" in low, ("The self-review says nothing about the quick fix")
-    assert "devlog.md" in low, (
-        "The self-review does not require recording the Express self-check in devlog.md"
-    )
+    assert "one-scenario change" in low, (
+        "The self-review says nothing about the one-scenario change")
+    assert "acceptance-criteria.md`, which is the record" in low, (
+        "The self-review does not name where the one-scenario self-check is "
+        "recorded on disk")
+    assert "persistence over conversation" in low
 
 
 # ---------------------------------------------------------------------------
@@ -270,43 +272,12 @@ def test_trc_b5_express_self_check_recorded_in_devlog():
 GOVERNANCE_SKILL = "skills/governance-check/SKILL.md"
 
 
-def test_trc_c2b_skill_names_command_and_note():
-    """The planner has to know what to run, and what a hit means."""
-    flat = _flat(_read(GOVERNANCE_SKILL))
-
-    assert "compass plan lint" in flat, (
-        "The governance-check skill does not name the command the planner runs"
-    )
-    assert re.search(r"note,? (rather than|not) a (stop|block)", flat), (
-        "The skill does not state that a reported hit is a note rather than a stop"
-    )
-
-
-def test_trc_c3_check_sits_in_strategies_walk():
-    """The check is judgement, so it belongs in the strategies walk. Putting it
-    under the guardrails walk would make it look like it is cleared with
-    evidence, which is exactly the conflation the two-walk split prevents."""
-    text = _read(GOVERNANCE_SKILL)
-
-    i_strategies = text.find("## Walk 2 - the strategies")
-    i_routing = text.find("## Walk 3 - the routing policy")
-    i_check = text.lower().find("compass plan lint")
-
-    assert i_strategies >= 0 and i_routing >= 0, "The governance walks were renamed"
-    assert i_check >= 0, "The no-placeholders check is not in the skill at all"
-    assert i_strategies < i_check < i_routing, (
-        "The no-placeholders check must be described under Walk 2 (strategies, "
-        "assessed as judgement), not under Walk 1 (guardrails, cleared with "
-        "evidence)"
-    )
-
-
 def test_trc_c4_guardrail_count_stays_five():
     """ADR-002: the framework grows by adding artifacts, not rules. A
     sixth guardrail would dilute the concept."""
     import yaml
 
-    gy = yaml.safe_load((ROOT / "governance/guardrails.yml").read_text())
+    gy = shipped_view("guardrails.yml")
 
     def _walk_ids(node, found):
         if isinstance(node, dict):
@@ -334,7 +305,7 @@ def test_trc_c6_no_gate_or_floor_added():
     promotes it, and no delivery-approach shape lists it as a gate."""
     import yaml
 
-    rp = yaml.safe_load((ROOT / "governance/routing-policy.yml").read_text())
+    rp = shipped_view("routing-policy.yml")
 
     floors = rp["routing_guardrails"].get("floors", [])
     for floor in floors:
@@ -356,18 +327,20 @@ def test_trc_c6_no_gate_or_floor_added():
 
 HANDOFF_HEADING = "## Hand-off"
 
+# The define, refine and plan commands went with the four-stage path
+# (ADR-092). The specify hand-off is in the go command; the other boundary
+# where a person reviews is the end of ship.
 HANDOFF_PHASES = {
-    "commands/define.md": "acceptance-criteria.md",
-    "commands/refine.md": "requirements-review.md",
-    "commands/plan.md": "technical-design.md",
+    "commands/ship.md": "failure_modes_descoped",
 }
 
 
 def test_trc_d1_specify_handoff_prompt():
-    """Define closes by inviting a cold-reader review: what was written, what
-    to look for, and what happens on approval."""
-    text = _read("commands/define.md")
-    assert HANDOFF_HEADING in text, "commands/define.md has no Hand-off section"
+    """Specify closes by inviting a cold-reader review: what was written, what
+    to look for, and what happens on approval. The go command holds it (the
+    define command until ADR-092)."""
+    text = _read("commands/go.md")
+    assert HANDOFF_HEADING in text, "commands/go.md has no Hand-off section"
 
     flat = _flat(_section(text, "Hand-off"))
 
@@ -378,14 +351,14 @@ def test_trc_d1_specify_handoff_prompt():
             f"The Specify hand-off does not ask the reviewer to check '{look_for}'"
         )
 
-    assert "refine" in flat, (
+    assert "build" in flat, (
         "The Specify hand-off does not say what happens next once the reviewer approves"
     )
 
 
 def test_trc_d2_clarify_and_plan_handoffs_symmetric():
-    """The other two hand-offs do the same three jobs, so a reviewer meets the
-    same shape at every phase boundary."""
+    """The ship hand-off does the same three jobs, so a reviewer meets the
+    same shape at every boundary where a person reviews."""
     for rel, artifact in HANDOFF_PHASES.items():
         text = _read(rel)
         assert HANDOFF_HEADING in text, f"{rel} has no Hand-off section"
@@ -411,11 +384,7 @@ def test_trc_d3_handoff_prompt_defined_once():
             f"{path.name} defines a Hand-off section - the prompt belongs in "
             "commands/, and the agent should refer to it instead"
         )
-
-    # The two agents that own these phases point at the prompt without restating it.
-    for rel in (SPEC_AUTHOR, "agents/planner.md"):
-        flat = _flat(_read(rel))
-        assert "hand-off" in flat, f"{rel} never refers to the phase hand-off prompt"
+    # The two agents that pointed at the prompt were removed in 9.0.0 (ADR-090).
 
 
 # ---------------------------------------------------------------------------
@@ -610,8 +579,13 @@ def test_trc_f2_placeholder_scan_covers_summary_fields():
 
 def test_trc_f3_rationale_for_no_subagent_loop():
     """The reason there is no subagent critic is recorded, so it is a decision
-    on the record rather than an omission someone later 'fixes'."""
-    body = _self_review()
+    on the record rather than an omission someone later 'fixes'. The
+    rationale moved to a reference of the `atdd` skill in 9.0.0 (#360), which
+    the self-review section names."""
+    reference = "skills/atdd/references/requirements-review.md"
+    assert reference in _self_review(), (
+        "The self-review does not name the file that holds the rationale")
+    body = _self_review() + "\n" + _read(reference)
     low = body.lower()
 
     assert re.search(r"25\s*(minutes|min)", low), (

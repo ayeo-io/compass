@@ -151,8 +151,8 @@ def test_mapping_lives_in_the_exempt_data_file():
 def test_apply_migrates_the_shape_value(tmp_path):
     """A migrated manifest must speak the v2 change-type value, not the v1
     shape name - all five cases, with hotfix and spike keeping their
-    spelling. The normaliser and the receipt's display layer agree with the
-    migrated output."""
+    spelling. The normaliser and the display layer agree with the migrated
+    output."""
     cases = {"express": "quick-fix", "standard": "regular",
              "expedition": "full", "hotfix": "hotfix",
              "spike": "spike"}
@@ -172,7 +172,7 @@ def test_apply_migrates_the_shape_value(tmp_path):
     sys.path.insert(0, str(REPO_ROOT / "cli"))
     from compass_pkg.core import display_shape, normalize_spine
     assert display_shape("quick-fix") == "quick fix", (
-        "the receipt would print the machine hyphen for a migrated value")
+        "a screen would print the machine hyphen for a migrated value")
     norm = normalize_spine({"route": "expedition"})
     assert norm["delivery_approach"] == "full", (
         "the normalizer does not agree with the migrated value")

@@ -15,15 +15,6 @@ except BaseException:  # noqa: BLE001 - the contract must still reach the sessio
 if lessons:
     contract = contract.rstrip("\n") + "\n\n" + lessons + "\n"
 
-try:
-    from compass_pkg import project_settings, readiness_record
-    autonomy = str(project_settings.settings(sys.argv[3]).get("autonomy") or "balanced")
-    readiness = readiness_record.hook_line(sys.argv[3], autonomy.strip().lower())
-except BaseException:  # noqa: BLE001 - the contract must still reach the session
-    readiness = ""
-if readiness:
-    contract = contract.rstrip("\n") + "\n\n" + readiness + "\n"
-
 # One line when the project sets `language`. It is built from the canonical
 # tag only (cli/compass_pkg/language.py), so a value in compass.yml cannot
 # carry text into the session. Unset, malformed or unreadable adds nothing.

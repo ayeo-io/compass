@@ -6,7 +6,9 @@ Nothing mechanical reads a conversation, so these tests check that the
 instruction is where every session reads it: the contract for every project,
 and the Plain English section of CLAUDE.md and AGENTS.md for this repository.
 
-Scenario ids: `STE-1`, `STE-2`, `STE-3` and `STE-6` (issue `ste100-writing-rule`).
+Scenario ids: `STE-1`, `STE-2` and `STE-3` (issue `ste100-writing-rule`).
+`STE-6`, the resident words as a target that warns, is now the hard limit in
+`tests/test_resident_text.py` (#358).
 """
 from __future__ import annotations
 
@@ -60,19 +62,12 @@ def _target(path, name):
 
 
 def test_ste_2_the_targets_fit_the_rule():
-    """The contract with the writing rule is 2,873 characters and 442
-    words. Targets it always exceeded would warn on every run and stop
-    meaning anything, so they move to fit it."""
-    assert _target(BUDGET_TEST, "CONTRACT_TARGET") == 2900
-    assert _target(BOOTSTRAP_TEST, "CONTRACT_WORD_TARGET") == 450
-
-
-def test_ste_6_resident_words_over_target_warns(monkeypatch):
-    """The words every session keeps loaded - skill, command and agent
-    descriptions plus the contract - are a target like the contract's own
-    size: over it, the test passes and pytest warns."""
-    import test_instruction_volume as volume
-    from size_targets import OverTarget
-    monkeypatch.setattr(volume, "RESIDENT_TARGET", 1)
-    with pytest.warns(OverTarget, match=r"The resident text \(.*\) is \d+ words, over its target of 1 words"):
-        volume.test_iv_a1_resident_cost_is_bounded()
+    """The contract with the writing rule was 2,873 characters and 442
+    words. #358 cut it to 2,191 characters and 342 words, with the rule
+    kept, and the targets moved down with it. A target far above the text
+    would never warn and stop meaning anything. ADR-099 cut the contract to
+    1,697 characters and 275 words, and the character target moved to 1,750.
+    The rules that cut dropped went back in their shortest form: 2,213
+    characters and 342 words, and the character target moved to 2,250."""
+    assert _target(BUDGET_TEST, "CONTRACT_TARGET") == 2250
+    assert _target(BOOTSTRAP_TEST, "CONTRACT_WORD_TARGET") == 350

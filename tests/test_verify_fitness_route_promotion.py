@@ -33,15 +33,27 @@ def _run_cli(*args: str, cwd: Path,
     )
 
 
+#: The project's own rules that owe the architecture review. On a 9.0.0
+#: delivery issue the check set holds no floor that adds a gate (ADR-099 decision 4);
+#: a project adds the `architecture` token itself
+#: with `require_evidence`, and the token's gate is `verify.architecture`.
+#: The rules fire as `RP-SETTING-1` and `RP-SETTING-2`, in file order.
+ARCHITECTURE_RULES = [
+    {"when": {"risk": ["cross-cutting", "critical"]},
+     "add": ["architecture"]},
+    {"when": {"labels_any": ["auth", "payments", "personal-data", "migrations"]},
+     "add": ["architecture"]},
+]
+
+
 def _setup_gov(tmp_path: Path) -> Path:
-    """Copy shipped governance into tmp_path."""
-    import shutil
-    gov_src = FRAMEWORK_ROOT / "governance"
-    gov_dst = tmp_path / "governance"
-    gov_dst.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(gov_src / "routing-policy.yml", gov_dst / "routing-policy.yml")
-    shutil.copyfile(gov_src / "guardrails.yml", gov_dst / "guardrails.yml")
+    """A project on the shipped check set that opts in to the architecture
+    review. 9.0.0 reads no copy of the governance files (ADR-098), so none is
+    made."""
     (tmp_path / ".compass").mkdir(exist_ok=True)
+    (tmp_path / "compass.yml").write_text(
+        yaml.safe_dump({"schema": 1, "require_evidence": ARCHITECTURE_RULES}),
+        encoding="utf-8")
     return tmp_path
 
 
@@ -61,7 +73,7 @@ class TestVerifyFitnessPromotionBlastRadius:
             "approach", "evaluate", "--json",
             "--assessment", "risk=cross-cutting",
             "--assessment", "familiarity=brownfield-mapped",
-            "--assessment", "size=standard",
+            "--assessment", "size=medium",
             "--assessment", "intent=delivery",
             cwd=project_root,
         )
@@ -90,21 +102,22 @@ class TestVerifyFitnessPromotionBlastRadius:
         assert "verify.architecture" in data["gates"]
 
     def test_fired_guardrails_names_floor_rg_floor_006(self, tmp_path):
-        """When cross-cutting fires RP-REQUIRE-003, it appears in fired_guardrails."""
+        """When cross-cutting fires the project's architecture rule, it appears in
+        the rules fired."""
         project_root = _setup_gov(tmp_path)
         result = _run_cli(
             "approach", "evaluate", "--json",
             "--assessment", "risk=cross-cutting",
             "--assessment", "familiarity=brownfield-mapped",
-            "--assessment", "size=standard",
+            "--assessment", "size=medium",
             "--assessment", "intent=delivery",
             cwd=project_root,
         )
         assert result.returncode == 0
         data = json.loads(result.stdout)
         floor_ids = [f["id"] for f in data.get("policy_rules_fired", [])]
-        assert "RP-REQUIRE-003" in floor_ids, (
-            f"Expected RP-REQUIRE-003 in fired_guardrails, got: {floor_ids}"
+        assert "RP-SETTING-1" in floor_ids, (
+            f"Expected RP-SETTING-1 in fired_guardrails, got: {floor_ids}"
         )
 
     def test_contained_blast_radius_does_not_add_verify_fitness(self, tmp_path):
@@ -157,7 +170,8 @@ class TestVerifyFitnessPromotionTouches:
         )
 
     def test_fired_guardrails_names_floor_rg_floor_007(self, tmp_path):
-        """When touches fires RP-REQUIRE-004, it appears in fired_guardrails."""
+        """When touches fires the project's architecture rule, it appears in the
+        rules fired."""
         project_root = _setup_gov(tmp_path)
         result = _run_cli(
             "approach", "evaluate", "--json",
@@ -171,8 +185,8 @@ class TestVerifyFitnessPromotionTouches:
         assert result.returncode == 0
         data = json.loads(result.stdout)
         floor_ids = [f["id"] for f in data.get("policy_rules_fired", [])]
-        assert "RP-REQUIRE-004" in floor_ids, (
-            f"Expected RP-REQUIRE-004 in fired_guardrails, got: {floor_ids}"
+        assert "RP-SETTING-2" in floor_ids, (
+            f"Expected RP-SETTING-2 in fired_guardrails, got: {floor_ids}"
         )
 
     def test_safe_domain_does_not_add_verify_fitness(self, tmp_path):

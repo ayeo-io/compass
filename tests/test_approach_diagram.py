@@ -1,7 +1,7 @@
 """The delivery approaches can be seen without reading YAML.
 
 What each approach does lives in `route_shapes` and `autonomy_checkpoints`
-in `governance/routing-policy.yml`. `compass approach render` renders them
+of the resolved check set. `compass approach render` renders them
 as one HTML table, one row per approach and one column per stage, with the
 stops for a person under the chosen autonomy setting. The shipped policy's
 render is committed as `docs/approach-diagram.html`, and a test fails when
@@ -12,6 +12,7 @@ Scenario ids: RD-1, RD-2, RD-3, RD-5 and RD-6 (issue `approach-diagram`) and EF-
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -19,28 +20,46 @@ import sys
 from pathlib import Path
 
 import yaml
+from check_set_files import view as shipped_view  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 COMMITTED = ROOT / "docs" / "approach-diagram.html"
 
 
-def _diagram(cwd, *args):
+def _diagram(cwd, *args, env=None):
     return subprocess.run([sys.executable, str(CLI), "approach", "render", *args],
-                          cwd=cwd, capture_output=True, text=True, timeout=60)
+                          cwd=cwd, capture_output=True, text=True, timeout=60,
+                          env=None if env is None else {**os.environ, **env})
 
 
-def _project(tmp_path, autonomy="balanced", policy=None):
+def _project(tmp_path, autonomy="balanced"):
     root = tmp_path / "proj"
     (root / ".compass").mkdir(parents=True, exist_ok=True)
     (root / ".compass" / "config.yml").write_text(f"autonomy: {autonomy}\n")
-    if policy is not None:
-        (root / "governance").mkdir()
-        (root / "governance" / "routing-policy.yml").write_text(
-            yaml.safe_dump(policy, sort_keys=False))
-        for name in ("guardrails.yml",):
-            shutil.copy(ROOT / "governance" / name, root / "governance" / name)
     return root
+
+
+def _render(policy, autonomy):
+    """The page for `policy`, rendered in this process. 9.0.0 reads no project
+    copy of the routing policy (ADR-098), so a policy other than the check set
+    is given to the renderer directly."""
+    import types
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg.approach_diagram import render
+    return types.SimpleNamespace(stdout=render(policy, autonomy), stderr="", returncode=0)
+
+
+def _v8_policy():
+    """The routing policy of the 8.0.4 governance copy. It declares the five 8.x
+    approaches over the eight legacy stages, which the shipped default no
+    longer does (ADR-092), so the renderer's handling of stops, skipped stages
+    and an unlimited ceiling is tested on it."""
+    import tarfile
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        return yaml.safe_load(tar.extractfile("governance/routing-policy.yml").read())
 
 
 def _row(html, approach):
@@ -58,8 +77,19 @@ def _cell(row, stage):
 
 # --- RD-1: where a person approves ------------------------------------------
 
+def test_rd_1_controlled_marks_assess_and_specify_of_the_shipped_path(tmp_path):
+    result = _diagram(_project(tmp_path), "--autonomy", "controlled")
+    assert result.returncode == 0, result.stderr
+    delivery = _row(result.stdout, "delivery")
+    for stage in ("assess", "specify"):
+        assert "stops for you" in _cell(delivery, stage), stage
+    for stage in ("build", "ship"):
+        assert "stops for you" not in _cell(delivery, stage), stage
+    assert '<td data-stage="define"' not in result.stdout
+
+
 def test_rd_1_balanced_marks_regular_define_and_plan_and_no_quick_fix_stop(tmp_path):
-    result = _diagram(_project(tmp_path), "--autonomy", "balanced")
+    result = _render(_v8_policy(), "balanced")
     assert result.returncode == 0, result.stderr
     regular = _row(result.stdout, "regular")
     for stage in ("define", "plan"):
@@ -71,7 +101,7 @@ def test_rd_1_balanced_marks_regular_define_and_plan_and_no_quick_fix_stop(tmp_p
 
 def test_rd_1_every_cell_names_its_weight_as_a_word(tmp_path):
     html = _diagram(_project(tmp_path), "--autonomy", "balanced").stdout
-    policy = yaml.safe_load((ROOT / "governance" / "routing-policy.yml").read_text())
+    policy = shipped_view("routing-policy.yml")
     for approach, shape in policy["route_shapes"].items():
         row = _row(html, approach)
         for stage, weight in shape["stages"].items():
@@ -95,16 +125,16 @@ def test_rd_2_an_unknown_autonomy_is_refused(tmp_path):
 # --- RD-3: the project's own policy, through the current names -----------------
 
 def test_rd_3_a_projects_policy_is_shown(tmp_path):
-    policy = yaml.safe_load((ROOT / "governance" / "routing-policy.yml").read_text())
+    policy = _v8_policy()
     policy["route_shapes"]["quick-fix"]["stages"]["define"] = "full"
-    html = _diagram(_project(tmp_path, policy=policy), "--autonomy", "balanced").stdout
+    html = _render(policy, "balanced").stdout
     assert "full" in _cell(_row(html, "quick-fix"), "define")
 
 
 def test_rd_3_an_old_keyed_policy_shows_the_current_names(tmp_path):
     old = yaml.safe_load(
         (ROOT / "tests" / "fixtures" / "routing-policy-old-route-names.yml").read_text())
-    result = _diagram(_project(tmp_path, policy=old), "--autonomy", "balanced")
+    result = _render(old, "balanced")
     assert result.returncode == 0, result.stderr
     for approach in ("quick-fix", "regular", "full"):
         _row(result.stdout, approach)
@@ -125,8 +155,11 @@ def test_rd_6_the_committed_diagram_matches_a_fresh_render():
     # above the test's working directory can change what it compares.
     sys.path.insert(0, str(ROOT / "cli"))
     from compass_pkg.approach_diagram import render
-    policy = yaml.safe_load((ROOT / "governance" / "routing-policy.yml").read_text())
-    fresh = render(policy, "balanced")
+    policy = shipped_view("routing-policy.yml")
+    from compass_pkg import check_set, effective
+    view = effective.EffectiveView("live", None, None, check_set.resolved(), {})
+    from compass_pkg.approach_diagram import LAYERED_SOURCE
+    fresh = render(policy, "balanced", view.stage_order() or None, LAYERED_SOURCE)
     assert COMMITTED.is_file(), "docs/approach-diagram.html is missing"
     assert COMMITTED.read_text(encoding="utf-8") == fresh, (
         "docs/approach-diagram.html is stale: run `compass approach render "
@@ -137,11 +170,11 @@ def test_rd_6_the_committed_diagram_matches_a_fresh_render():
 def test_rd_6_two_renders_are_identical_and_a_changed_weight_differs(tmp_path):
     first = _diagram(_project(tmp_path), "--autonomy", "balanced").stdout
     assert first == _diagram(_project(tmp_path), "--autonomy", "balanced").stdout
-    policy = yaml.safe_load((ROOT / "governance" / "routing-policy.yml").read_text())
-    policy["route_shapes"]["regular"]["stages"]["refine"] = "full"
+    policy = shipped_view("routing-policy.yml")
+    policy["route_shapes"]["delivery"]["stages"]["specify"] = "lightweight"
     other = tmp_path / "other"
     other.mkdir()
-    changed = _diagram(_project(other, policy=policy), "--autonomy", "balanced").stdout
+    changed = _render(policy, "balanced").stdout
     assert changed != first
 
 
@@ -155,16 +188,16 @@ def test_rd_1_the_page_says_these_are_defaults_and_names_what_raises_them(tmp_pa
 
 
 def test_rd_1_no_subtask_ceiling_reads_as_no_limit(tmp_path):
-    html = _diagram(_project(tmp_path), "--autonomy", "balanced").stdout
+    html = _render(_v8_policy(), "balanced").stdout
     assert "None" not in _row(html, "full")
     assert "no limit" in _row(html, "full")
 
 
 def test_rd_1_a_skipped_stage_never_stops(tmp_path):
-    policy = yaml.safe_load((ROOT / "governance" / "routing-policy.yml").read_text())
+    policy = _v8_policy()
     policy["route_shapes"]["quick-fix"]["stages"]["refine"] = "skipped"
     policy["autonomy_checkpoints"]["balanced"]["quick-fix"] = ["refine"]
-    html = _diagram(_project(tmp_path, policy=policy), "--autonomy", "balanced").stdout
+    html = _render(policy, "balanced").stdout
     assert "stops for you" not in _cell(_row(html, "quick-fix"), "refine")
 
 
@@ -181,39 +214,42 @@ def _layered(tmp_path, compass_yml):
 LAYERED = """\
 schema: 1
 approaches:
-  quick-fix:
+  delivery:
     set:
-      stages: {define: full, implement: full}
+      stages: {specify: full, build: full}
       gates: [verify.correctness]
       checkpoints:
-        balanced: [implement]
+        balanced: [build]
 """
 
 
-def test_ef_12_a_compass_yml_changes_the_approaches_shown(tmp_path):
+def test_ef_12_a_compass_yml_that_sets_approaches_shows_the_shipped_default(tmp_path):
     html = _diagram(_layered(tmp_path, LAYERED), "--autonomy", "balanced").stdout
-    row = _row(html, "quick-fix")
-    assert "thorough" in _cell(row, "define")      # the layer says `full`, read as `thorough`
-    assert "stops for you" in _cell(row, "implement")
-    assert "verify.correctness" in row and "verify.security" not in row
-    # An approach the file leaves alone keeps the shipped default.
-    assert "stops for you" in _cell(_row(html, "regular"), "plan")
+    shipped = _diagram(_layered(tmp_path / "plain", "schema: 1\n"), "--autonomy",
+                       "balanced").stdout
+    assert _row(html, "delivery") == _row(shipped, "delivery")
+    assert html.split("<table>")[1] == shipped.split("<table>")[1]
 
 
 def test_ef_12_the_page_names_the_configuration_it_was_rendered_from(tmp_path):
-    layered = _diagram(_layered(tmp_path, LAYERED)).stdout
-    assert "compass.yml" in layered
-    assert "governance/routing-policy.yml" not in layered.split("<h2>")[0].split(
-        "Generated by")[1]
+    layered = _diagram(_layered(tmp_path, "schema: 1\nowner: jed72\n")).stdout
+    generated = layered.split("<h2>")[0].split("Generated by")[1]
+    assert "governance/check-set.yml" in generated and "compass.yml" in generated
+    assert "governance/routing-policy.yml" not in generated
+    # A project with its own copy of the governance files and no `compass.yml`
+    # is refused, not drawn from the copy (ADR-098).
     other = tmp_path / "other"
     other.mkdir()
-    legacy = _diagram(_project(other)).stdout
-    assert "Generated by <code>compass approach render</code> from " \
-           "<code>governance/routing-policy.yml</code>" in legacy
+    import compat_baseline as cb
+    root = _project(other)
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
+    refused = _diagram(root)
+    assert refused.returncode == 2 and "[governance-copy-removed]" in refused.stderr
 
 
 def test_ef_12_a_compass_yml_that_cannot_resolve_is_refused(tmp_path):
-    bad = "schema: 1\napproaches:\n  nosuch: {set: {ships: true}}\n"
+    # A setting the lint refuses: nothing is resolved from the file (ADR-094).
+    bad = "schema: 1\nsignoff_labels: oops\n"
     result = _diagram(_layered(tmp_path, bad))
     assert result.returncode != 0
     assert result.stdout == ""

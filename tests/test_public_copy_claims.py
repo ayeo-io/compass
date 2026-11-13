@@ -16,7 +16,7 @@ Scope note: this scans the files a reader can actually clone. `.compass/work/`
 and `docs/proposals/` are gitignored, so what they say is working material
 rather than public copy, and they are deliberately not scanned.
 
-Scenario ids: see docs/system-spec.md (TRC-1, `TRC-2`).
+Scenario ids: see the issue's acceptance criteria (TRC-1, `TRC-2`).
 """
 from __future__ import annotations
 

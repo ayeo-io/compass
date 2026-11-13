@@ -34,11 +34,6 @@ def _make_project(tmp_path: Path, scenarios: Optional[List[str]] = None) -> Path
     """A minimal Compass project using the real shipped governance files."""
     proj = tmp_path / "project"
     proj.mkdir(parents=True, exist_ok=True)
-    gov = proj / "governance"
-    gov.mkdir(exist_ok=True)
-    src = FRAMEWORK_ROOT / "governance"
-    for f in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copyfile(src / f, gov / f)
 
     compass_dir = proj / ".compass"
     task_dir = compass_dir / "work" / "t"

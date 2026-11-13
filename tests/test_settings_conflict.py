@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg import core, governance, project_settings, record  # noqa: E402
+from compass_pkg import core, project_settings, record  # noqa: E402
 from compass_pkg import tdd  # noqa: E402
 
 # Looked up by name so a reader without these yet fails a test by assertion,
@@ -343,25 +343,25 @@ def test_bs7_compass_check_fails_with_the_conflict(box):
     assert "settings-conflict" in result.stdout + result.stderr
 
 
-def test_bs7_a_missing_preset_is_an_error_naming_the_file_not_a_traceback(box):
+def test_bs7_a_missing_check_set_is_an_error_naming_the_file_not_a_traceback(box):
     framework, base = box
     project = make_project(base, compass_yml=SCHEMA)
     shutil.copytree(ROOT / "governance", Path(project) / "governance")
-    # The framework copy ships no preset, and this issue needs the effective view.
-    assert not (framework / "governance" / "presets").exists()
+    # The framework copy ships no check set (ADR-094), and this issue needs the
+    # effective view.
+    assert not (framework / "governance" / "check-set.yml").exists()
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", COMPASS_ISSUE=ch.SLUG)
     result = subprocess.run([sys.executable, str(framework / "cli" / "compass"),
                              "check"], cwd=project, env=env,
                             capture_output=True, text=True, timeout=120)
     assert result.returncode == 2, result.stdout + result.stderr
     assert "Traceback" not in result.stderr
-    assert "preset.yml" in result.stderr, result.stderr
+    assert "check-set.yml" in result.stderr, result.stderr
 
 
 @pytest.mark.parametrize("reader", [
     lambda root: core.load_mode(),
     lambda root: tdd._read_config(root),
-    lambda root: governance._drift_is_strict(),
     lambda root: record.settings(root),
     lambda root: core.load_autonomy(),
 ])
@@ -378,38 +378,6 @@ def test_bs7_lenient_still_answers_for_a_file_it_cannot_read(tmp_path):
     root = _project(tmp_path, "adoption: [unclosed\n")
     lenient = getattr(project_settings, "lenient", project_settings.settings)
     assert lenient(root) == {}
-
-
-def _usage_in(tmp_path, old):
-    """What `_record_usage` writes into a manifest when the project's old
-    settings file is `old`."""
-    from compass_pkg import quick_fix_cmd
-    root = tmp_path / "qf"
-    task = root / ".compass" / "work" / "x"
-    task.mkdir(parents=True)
-    (task / "manifest.yml").write_text("issue: x\n")
-    (root / ".compass" / "config.yml").write_text(old)
-    quick_fix_cmd._record_usage(str(task), "2026-10-07T00:00:00+00:00")
-    return core.load_yaml(str(task / "manifest.yml")).get("usage")
-
-
-def test_bs7_an_unparseable_settings_file_still_records_usage_as_unreadable(
-        tmp_path):
-    usage = _usage_in(tmp_path, "prices: [unclosed\n")
-    assert usage["recorded"] is False and usage["reason"] == "unreadable"
-
-
-def test_bs7_the_usage_record_does_not_hide_a_conflict(tmp_path):
-    root = tmp_path / "qf2"
-    task = root / ".compass" / "work" / "x"
-    task.mkdir(parents=True)
-    (task / "manifest.yml").write_text("issue: x\n")
-    (root / ".compass" / "config.yml").write_text("prices: {}\n")
-    (root / "compass.yml").write_text(SCHEMA)
-    from compass_pkg import quick_fix_cmd
-    with pytest.raises(CompassError) as caught:
-        quick_fix_cmd._record_usage(str(task), "2026-10-07T00:00:00+00:00")
-    assert "settings-conflict" in str(caught.value)
 
 
 def test_bs1_a_script_key_under_two_headings_is_named_once(tmp_path):

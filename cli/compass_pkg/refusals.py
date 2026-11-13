@@ -34,7 +34,6 @@
 # =============================================================================
 from __future__ import annotations
 
-from compass_pkg import old_names
 from compass_pkg.core import CompassError
 from compass_pkg.project_settings import CONFLICT_FIX, CONFLICT_WHY
 
@@ -79,8 +78,10 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "'.compass/current-task' names '{slug}', which is not one "
                "path segment - a slug names a directory directly under "
                ".compass/work/.",
-        "fix": "fix .compass/current-task to name a real issue slug, then "
-               "retry.",
+        # Never a hand edit of the pointer: the hook records each session's
+        # issue, and `compass issue use` is the one way to move it.
+        "fix": "run compass issue use <slug> with a real issue slug, then "
+               "retry. To list the issues, run compass flow.",
     },
     "bad-session-issue": {
         "what": "this edit",
@@ -130,7 +131,7 @@ REFUSALS: dict[str, dict[str, str]] = {
     },
     "no-delivery-approach": {
         "what": "this edit",
-        "why": "issue '{slug}' has no delivery-approach.md - its "
+        "why": "issue '{slug}' has no delivery approach in its manifest - its "
                "assessment did not finish.",
         "fix": "run /compass:assess.",
     },
@@ -138,10 +139,20 @@ REFUSALS: dict[str, dict[str, str]] = {
         "what": "edit to {target} (tool: {tool})",
         "why": "the acceptance-before-code guardrail blocks this: define: "
                "thorough is set but manifest.yml has no scenarios.",
-        "fix": "add the scenarios to acceptance-criteria.md and manifest.yml "
-               "(compass scenario add), or run /compass:assess --reassess "
-               "if this is "
-               "exploratory.",
+        "fix": "add the first scenario to acceptance-criteria.md with compass "
+               "scenario add TRC-001 --issue {slug} --intent \"<one sentence>\", "
+               "or run /compass:assess --reassess if this is exploratory.",
+    },
+    # The same guardrail on a path issue (ADR-092), which has no stage modes, so
+    # the reason cannot name `define: thorough`.
+    "no-scenario": {
+        "what": "edit to {target} (tool: {tool})",
+        "why": "the acceptance-before-code guardrail blocks this: the issue is on the "
+               "four-stage path, which owes scenarios before code, and manifest.yml has "
+               "none.",
+        "fix": "add the first scenario with compass scenario add TRC-001 --issue "
+               "{slug} --intent \"<one sentence>\", or run /compass:assess "
+               "--reassess if this is exploratory.",
     },
     "red-unsigned": {
         "what": "this edit",
@@ -177,15 +188,18 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "no failing test is recorded for issue '{slug}' in "
                "{project}.",
         "fix": "run compass tdd-red --scenario <id> -- <failing test "
-               "command>, or compass acceptance start if none fits, "
-               "then retry.",
+               "command>, or compass acceptance start --kind <kind> if none "
+               "fits.",
     },
     # The approval guards (approval_guard.py, ADR-068 decision 10, ADR-069).
     "approval-request-protected": {
         "what": "{target} (tool: {tool})",
         "why": "an approval binds to the request a person was shown.",
+        # One subject flag as the example: a longer list would push a long
+        # target over the 60-word cap (tests/test_approval_guard_refusal_text.py).
         "fix": "do not read, change or run these files. Ask with compass "
-               "evidence request; the person answers with /compass:approve.",
+               "evidence request --checkpoint <stage>; the person answers with "
+               "/compass:approve.",
     },
     "delegation-protected": {
         "what": "{target} (tool: {tool})",
@@ -199,8 +213,18 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "Claude Code reports this call as {caller}, and a delegated "
                "approval must name exactly the agent that makes it. A word "
                "the shell could build is refused too.",
-        "fix": "run it from the agent the delegation names, with --as set to "
-               "that agent's full name, or ask with compass evidence request.",
+        "fix": "run it as the named agent, with --as set to its full name, or "
+               "ask with compass evidence request --checkpoint <stage> --issue "
+               "<slug>.",
+    },
+    # An agent's approving review of a pull request (approval_guard._review_approval,
+    # #355): a review approval by another person is the ship approval.
+    "pr-review-protected": {
+        "what": "{target} (tool: {tool})",
+        "why": "an approving review of a pull request is a person's approval of the "
+               "change, and the agent runs gh with that person's login.",
+        "fix": "ask a person to review and approve the pull request; a comment review "
+               "and a read of the reviews are allowed.",
     },
     "transcript-protected": {
         "what": "{target} (tool: {tool})",
@@ -215,49 +239,90 @@ REFUSALS: dict[str, dict[str, str]] = {
         "what": "landing of issue '{slug}'",
         "why": "{stages} {is} listed in checkpoints with no outcome recorded, so "
                "nothing shows a person answered {it}.",
-        "fix": "the person who answers runs compass evidence approve "
-               "--checkpoint {stage} --approver <you> --role <role>, for each "
-               "stage named, then ship again.",
+        # An agent approves only under a delegation, so the fix asks and stops,
+        # as `scenarios-not-approved` does.
+        "fix": "for each stage named, run compass evidence request --checkpoint "
+               "{stage} --issue {slug} and stop; the person answers with "
+               "/compass:approve. Then ship again.",
+    },
+    # `compass tdd-red` on a path issue that owes `scenario-approval`, before the
+    # `specify` checkpoint has a person's answer (scenario_freeze.refusal, ADR-095).
+    # It refuses before the test runs, because the `.red` marker unlocks code edits.
+    "scenarios-not-approved": {
+        "what": "red for issue '{slug}'",
+        "why": "the scenarios of {slug} need a person's approval before code, and "
+               "the specify checkpoint has no answer from a person.",
+        "fix": "run compass evidence request --checkpoint specify --issue {slug} and "
+               "stop; the person answers with /compass:approve. Then run the red again.",
+    },
+    # The pre-tool hook (ADR-099 decision 5): a code edit on an issue whose
+    # scenarios owe a person's approval, before the `specify` checkpoint has a
+    # person's answer.
+    "code-before-approval": {
+        "what": "edit to {target} (tool: {tool})",
+        "why": "the scenarios of {slug} need a person's approval before code, and "
+               "the specify checkpoint has no answer from a person.",
+        "fix": "write the scenarios in the issue's acceptance-criteria.md, run compass "
+               "evidence request --checkpoint specify and stop; the person answers "
+               "with /compass:approve.",
+    },
+    # The landing check of `compass ship-commit` (manifest._refuse_open_definition_of_done,
+    # ADR-091): `dod-evidence-typed` failed, so the Definition of Done has an open item.
+    "definition-of-done-open": {
+        "what": "landing of issue '{slug}'",
+        "why": "the check dod-evidence-typed failed: {detail}",
+        # The detail names the person's command for an item only a person can
+        # meet. An agent never runs `evidence approve` here without a delegation.
+        "fix": "for each open item, run compass follow-up add FU-<n> --issue {slug} "
+               "--defers <item> --github <owner/repo#N> --summary \"<why>\", or "
+               "compass evidence add EV-<n> --issue {slug} --type <type> --path "
+               "<file> --meets <item>. Then ship again.",
     },
     # The release-line refusals (release_line.py, ADR-065): a landing of an issue
-    # that owes a line and has none, and a line the living spec would read as an
-    # issue heading. `compass acceptance record` gives the first for a blank line.
+    # that owes a line and has none, and a line the release notes would print as a
+    # heading. `compass acceptance record` gives the first for a blank line.
     "release-line-missing": {
         "what": "landing of issue '{slug}'",
         "why": "issue '{slug}' has no release line, and its approach owes one: a "
                "sentence for users that the release notes list.",
-        "fix": "give it with --release-note \"<text written for a user>\", then "
-               "run the command again.",
-    },
-    # A landing of an issue whose documents earned an artifact rule its recorded
-    # approach does not hold (documents_present.py, ADR-070): a positioning.md
-    # written after the issue was assessed, so verify.claims is missing.
-    "artifact-rule-not-applied": {
-        "what": "landing of issue '{slug}'",
-        "why": "{documents} is on disk, so {rules} applies, but the recorded approach "
-               "was evaluated before the document was there.",
-        "fix": "run compass approach evaluate --issue {slug} --write, pass any gate it "
-               "adds, then ship again.",
-    },
-    # A landing of an issue whose design holds a decision scoped `project` that no
-    # record in architecture/decisions/ names (decision_scope.py, ADR-072).
-    "project-decision-unrecorded": {
-        "what": "landing of issue '{slug}'",
-        "why": "technical-design.md scopes {decisions} to the whole project, and no "
-               "record in architecture/decisions/ names {it}.",
-        "fix": "write {path} with compass adr new, cite its id under the decision, then "
-               "ship again.",
+        # A landing refusal does not know its verb (manifest.LANDING_REFUSALS),
+        # so there `verb` names both verbs that land (release_line.LANDING_VERBS).
+        "fix": "run {verb} again with --release-note \"<a sentence for users>\".",
     },
     "release-line-heading": {
         "what": "the release line of issue '{slug}'",
-        "why": "it starts with #, and the living spec reads a line such as "
-               "### <slug> (completed <date>) as one of its issue headings.",
-        "fix": "write the release line as plain text that does not start with #, "
-               "then run the command again.",
+        "why": "it starts with #, so the release notes would print it as a heading.",
+        "fix": "run {verb} again with --release-note \"<plain text>\".",
+    },
+    # The project refusals of `compass migrate` (migrate_9._refuse_project, #359).
+    # 9.0.0 reads neither a copied governance folder nor a git parent, so the
+    # project moves on 8.x first, or by an edit of compass.yml. Every command
+    # that resolves the policy gives the first too (`effective.refuse_governance_copy`).
+    "governance-copy-removed": {
+        "what": "{verb} in this project",
+        "why": "governance/ holds a copy of routing-policy.yml or guardrails.yml and "
+               "there is no compass.yml. Compass 9.0.0 does not read copied governance.",
+        "fix": "on Compass 8.x, run compass policy migrate to write compass.yml, then run "
+               "compass migrate again. docs/upgrade-9-0-0.md lists the steps.",
+    },
+    "git-parent-removed": {
+        "what": "{verb} in this project",
+        "why": "compass.yml extends the git parent {parent}, and Compass 9.0.0 removed "
+               "git parents.",
+        "fix": "move the checks the parent adds into compass.yml (signoff_labels, "
+               "require_evidence, agent_review, project_checks), delete extends:, then "
+               "run compass migrate again.",
     },
     # A Bash command too long for the pre-tool hook to scan before Claude Code
     # stops it (hooks/pre-tool.sh holds the limit). The refusal never quotes the
     # command: it can hold a secret.
+    # `compass check` before it runs any row (`check_cmd.deleted_check_refusal`). Each
+    # offending item is named with the command or edit that clears it, in one line.
+    "names-deleted-check": {
+        "what": "compass check of issue {slug}",
+        "why": "{named} - each names a check Compass no longer has.",
+        "fix": "{fix}; then rerun compass check --issue {slug}.",
+    },
     "bash-command-too-long": {
         "what": "Bash command of {size} bytes",
         "why": "the write guard refuses a command over {limit} bytes because it "
@@ -290,12 +355,19 @@ def codes() -> list[str]:
 
 MAX_PARAM_WORDS = 20
 
+#: A lower cap for a code whose fix line is long, so the refusal stays under
+#: 60 words. The detail of `definition-of-done-open` starts with the open
+#: item's name, which is what the reader needs from it. `names-deleted-check`
+#: lists its items in order: a cut list still names the first ones, and the
+#: rest are named once those are cleared.
+PARAM_WORDS = {"definition-of-done-open": 12, "names-deleted-check": 16}
 
-def _cap(value) -> str:
+
+def _cap(value, limit=MAX_PARAM_WORDS) -> str:
     words = str(value).split()
-    if len(words) <= MAX_PARAM_WORDS:
+    if len(words) <= limit:
         return str(value)
-    return " ".join(words[:MAX_PARAM_WORDS]) + " ..."
+    return " ".join(words[:limit]) + " ..."
 
 
 def render(code: str, **params) -> str:
@@ -305,8 +377,6 @@ def render(code: str, **params) -> str:
     template field `params` does not give - both mean a call site and the
     registry have drifted apart, and failing loudly is how that gets found.
     """
-    # An old code is read until 9.0.0 and renders as its current code.
-    code = old_names.read("refusal_code", code)
     try:
         entry = REFUSALS[code]
     except KeyError:
@@ -314,7 +384,8 @@ def render(code: str, **params) -> str:
     # A parameter is text from the environment - an exception message, a
     # path. Cutting each to a fixed word count keeps a refusal short
     # enough to read, however long the text it quotes.
-    params = {k: _cap(v) for k, v in params.items()}
+    limit = PARAM_WORDS.get(code, MAX_PARAM_WORDS)
+    params = {k: _cap(v, limit) for k, v in params.items()}
     what = entry["what"].format(**params)
     why = entry["why"].format(**params)
     fix = entry["fix"].format(**params)
@@ -332,11 +403,6 @@ def cmd_refusal(args):
             print(f"**Blocked:** {entry['what']}")
             print(f"**Why:** {entry['why']}")
             print(f"**Fix:** {entry['fix']}\n")
-            for row in old_names.rows("refusal_code"):
-                if row["new"] == code:
-                    print(f"**Old code:** `{row['old']}` is read until "
-                          f"{row['removed_in']}. "
-                          "<!-- us-english-scan: allow - old code, read until 9.0.0 -->\n")
         return 0
     code = getattr(args, "code", None)
     if not code:

@@ -6,8 +6,8 @@ Stop-hook stays silent when a reassessment has already been filed (`TRC-C3`).
 Stop-hook regex does not produce false positives on quoted context
 (`TRC-X3`).
 
-The hook reads patterns from governance/signals.yml at runtime (
-never hardcoded), emits a prompt to stderr, and exits 0 (non-blocking).
+The six phrases are a constant in hooks/py/stop_scan.py (ADR-094). The
+hook emits a prompt to stderr and exits 0 (non-blocking).
 
 Each test invokes hooks/stop.sh as a subprocess with a crafted temp project.
 """
@@ -21,6 +21,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 
@@ -29,13 +30,13 @@ STOP_HOOK = FRAMEWORK_ROOT / "hooks" / "stop.sh"
 
 
 def _make_project(tmp_path: Path, *, signals_extra: dict | None = None) -> Path:
-    """Create a minimal Compass project in tmp_path with signals.yml copied."""
+    """Create a minimal Compass project in tmp_path with governance/ copied."""
     compass = tmp_path / ".compass"
     work = compass / "work"
     work.mkdir(parents=True, exist_ok=True)
     (compass / "config.yml").write_text("version: 1.0.0\nmode: enforced\n")
 
-    # Copy governance/ including signals.yml
+    # Copy governance/, as a project with copied governance has it
     gov_src = FRAMEWORK_ROOT / "governance"
     gov_dst = tmp_path / "governance"
     gov_dst.mkdir(parents=True, exist_ok=True)
@@ -197,7 +198,7 @@ def test_no_false_positive_in_quoted_context(tmp_path):
             # These lines quote or cite the phrase, not report it as an actual
             # scope-bloat event. The hook must not fire on them.
             '    > "more files than Plan estimated" - quoted from spec discussion',
-            "    The pattern `more files than Plan estimated` is documented in signals.yml",
+            "    The pattern `more files than Plan estimated` is a scope-bloat phrase",
             "We avoided narrowing scope by keeping everything in one stream",
         ],
         reframes=[],
@@ -210,41 +211,114 @@ def test_no_false_positive_in_quoted_context(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Guard: changing signals.yml changes the hook's behaviour
+# The six phrases warn as they did when signals.yml held them
 # ---------------------------------------------------------------------------
 
-def test_hook_reads_signals_at_runtime(tmp_path):
-    """The hook loads patterns from signals.yml, not hardcoded.
+# The six phrases signals.yml shipped until 9.0.0 (ADR-094). Each
+# must give the same reminder line it gave when the hook read them from the
+# file.
+SIX_PHRASES = [
+    "more files than Plan estimated",
+    "narrow scope and spawn sibling",
+    "file deeper layer as a sibling issue at ship",
+    "soften the gate",
+    "(carried to ship)",
+    "USER TO APPLY",
+]
 
-    Change signals.yml to use a custom phrase; check the hook fires on that
-    phrase and not on one of the default phrases that was removed.
+
+@pytest.mark.parametrize("phrase", SIX_PHRASES)
+@pytest.mark.parametrize("prefix", ["", "2026-05-20: ", "2026-05-20 "])
+def test_each_phrase_gives_the_same_reminder(tmp_path, phrase, prefix):
+    """Each phrase, bare or after a date, gives the reminder line naming
+    the devlog line."""
+    project = _make_project(tmp_path)
+    line = prefix + phrase + " - touched the core module"
+    _make_task(project, "phrase-task", devlog_lines=["2026-05-19: Started build", line])
+    result = _run_hook(project)
+    assert result.returncode == 0, result.stderr
+    assert "COMPASS - RE-ASSESSMENT REMINDER" in result.stderr, result.stderr
+    assert '! [phrase-task] Scope-bloat signal detected in devlog: "%s"' % line \
+        in result.stderr, result.stderr
+
+
+@pytest.mark.parametrize("phrase", SIX_PHRASES)
+def test_each_phrase_is_silent_after_a_reassessment(tmp_path, phrase):
+    """A reassessment dated on or after the line suppresses each phrase."""
+    project = _make_project(tmp_path)
+    _make_task(project, "phrase-task",
+               devlog_lines=["2026-05-19: " + phrase],
+               reframes=[{"reason": "scope grew", "date": "2026-05-19"}])
+    result = _run_hook(project)
+    assert result.returncode == 0, result.stderr
+    assert "re-assess" not in result.stderr.lower(), result.stderr
+
+
+@pytest.mark.parametrize("phrase", SIX_PHRASES)
+def test_each_phrase_warns_when_dated_after_the_reassessment(tmp_path, phrase):
+    """A line dated after the latest reassessment still warns."""
+    project = _make_project(tmp_path)
+    line = "2026-05-21: " + phrase
+    _make_task(project, "phrase-task", devlog_lines=[line],
+               reframes=[{"reason": "scope grew", "date": "2026-05-20"}])
+    result = _run_hook(project)
+    assert result.returncode == 0, result.stderr
+    assert '! [phrase-task] Scope-bloat signal detected in devlog: "%s"' % line \
+        in result.stderr, result.stderr
+
+
+@pytest.mark.parametrize("phrase", SIX_PHRASES)
+def test_each_phrase_is_silent_mid_line_or_indented(tmp_path, phrase):
+    """A phrase that does not start the line, or an indented line, does not
+    warn (TRC-X3)."""
+    project = _make_project(tmp_path)
+    _make_task(project, "phrase-task",
+               devlog_lines=["We noted " + phrase, "    " + phrase])
+    result = _run_hook(project)
+    assert result.returncode == 0, result.stderr
+    assert "re-assess" not in result.stderr.lower(), result.stderr
+
+
+# ---------------------------------------------------------------------------
+# A project's own signals.yml is no longer read (ADR-094)
+# ---------------------------------------------------------------------------
+
+def test_a_project_signals_file_is_not_read(tmp_path):
+    """A project that kept its own signals.yml, as copied
+    governance does, still gets the six phrases, and its own phrases and
+    its design_smell list have no effect. The file does not break the hook.
     """
     project = _make_project(tmp_path)
-
-    # Replace signals.yml with a custom set of phrases
     custom_signals = {
         "version": "1.0.0",
         "scope_bloat_phrases": ["CUSTOM_BLOAT_MARKER_XYZ"],
-        "rework_scan": {
-            "window_days": 14,
-            "public_surface_patterns": ["/api/v[0-9]+/"],
-            "migration_paths": ["migrations/*.sql"],
-        },
+        "design_smell": ["tests dominated by mocking or setup"],
     }
-    sig_path = project / "governance" / "signals.yml"
-    with sig_path.open("w") as fh:
+    with (project / "governance" / "signals.yml").open("w") as fh:
         yaml.safe_dump(custom_signals, fh)
 
-    # devlog has the custom phrase only, not a default phrase
-    _make_task(
-        project,
-        "custom-sig-task",
-        devlog_lines=["CUSTOM_BLOAT_MARKER_XYZ occurred during build"],
-        reframes=[],
-    )
+    _make_task(project, "custom-task",
+               devlog_lines=["CUSTOM_BLOAT_MARKER_XYZ occurred during build"])
     result = _run_hook(project)
     assert result.returncode == 0, result.stderr
-    # The hook should fire because the custom phrase is present
-    assert "re-assess" in result.stderr.lower(), (
-        "Hook should have fired on the custom phrase:\n" + result.stderr
-    )
+    assert "re-assess" not in result.stderr.lower(), (
+        "The project's own phrase must not warn:\n" + result.stderr)
+
+    _make_task(project, "custom-task",
+               devlog_lines=["soften the gate to land it"])
+    result = _run_hook(project)
+    assert result.returncode == 0, result.stderr
+    assert 'Scope-bloat signal detected in devlog: "soften the gate to land it"' \
+        in result.stderr, result.stderr
+
+
+def test_an_unreadable_project_signals_file_does_not_break_the_hook(tmp_path):
+    """A project signals.yml that is not YAML changes nothing."""
+    project = _make_project(tmp_path)
+    (project / "governance" / "signals.yml").write_text("scope_bloat_phrases: [\n")
+    _make_task(project, "bad-signals",
+               devlog_lines=["USER TO APPLY the migration"])
+    result = _run_hook(project)
+    assert result.returncode == 0, result.stderr
+    assert 'Scope-bloat signal detected in devlog: "USER TO APPLY the migration"' \
+        in result.stderr, result.stderr

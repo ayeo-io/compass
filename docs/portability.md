@@ -1,23 +1,24 @@
 # Portability
 
-Compass runs on Claude Code today, but most of Compass is deliberately runtime
-neutral. A port should replace the adapter, not fork the methodology or
-reimplement the policy engine.
+Compass 9.0.0 supports Claude Code only; the Codex adapter stays on 8.x. Most
+of Compass is still deliberately runtime neutral. A port should replace the
+adapter, not fork the methodology or reimplement the policy engine.
 
 ## The three-layer boundary
 
 | Layer | Responsibility | Representative files | Porting rule |
 |---|---|---|---|
 | Methodology | Defines the flow, roles, artifacts, guardrails and strategies. | `docs/`, `approaches/`, templates, governance Markdown | Reuse. |
-| Kit | Computes delivery approaches, checks state and writes mechanical evidence. | `cli/`, governance YAML, schemas, `manifest.yml` | Invoke. |
+| Kit | Computes the evidence each change owes, checks state and writes mechanical evidence. | `cli/`, governance YAML, schemas, `manifest.yml` | Invoke. |
 | Adapter | Maps Compass into a particular agent runtime. | commands, agents, skills, hooks, runtime instructions and install wiring | Rebuild. |
 
 The boundary follows the determinism model:
 
 - the adapter produces an assessment because assessment needs judgement;
-- the kit computes the delivery approach because that must be deterministic; and
-- the adapter orchestrates the resulting flow while calling the kit for
-  checks and state mutations.
+- the kit computes the evidence the change owes because that must be
+  deterministic; and
+- the adapter runs the path while calling the kit for checks and state
+  mutations.
 
 A port that independently implements routing or guardrails may resemble
 Compass, but it will drift from Compass policy.
@@ -26,29 +27,26 @@ Compass, but it will drift from Compass policy.
 
 ### The Claude Code adapter layer
 
-The shipped adapter is Claude Code: `commands/` are the stage interface,
-`agents/` the distinct contexts, `skills/` the loadable procedures, `hooks/`
+The shipped adapter is Claude Code: `commands/` are the path interface,
+`skills/` the loadable procedures, `hooks/`
 the pre-action enforcement, and `.claude-plugin/` the install wiring. A port
 rebuilds that layer and reuses everything under it.
 
 ```
-commands/        the stage interface (the /compass: namespace)
-agents/          router, spec-author, planner, orchestrator, builder,
-                 verifier, reviewer, product-owner, product-marketer,
-                 architect
-skills/          adaptive-routing, atdd, bdd-specification, behavior-mapping,
-                 compass-runtime, evidence-gates, flow-management,
-                 governance-check, intent-interview, plan-authoring,
+commands/        the path interface (the /compass: namespace)
+skills/          adaptive-routing, atdd, compass-runtime, evidence-gates,
+                 flow-management, governance-check, intent-interview,
                  receiving-code-review, systematic-debugging,
-                 tdd-discipline, worktree-multiagent
+                 tdd-discipline
 hooks/           pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
                  prompt-approval.sh, approval-summary.sh
 bin/compass      the shim that puts the kit on PATH
 .claude-plugin/  the plugin manifest and marketplace entry
 ```
 
-Take care with `architect`: it advises across the pipeline and is not a
-sixth role, so a one-to-one role mapping drops it or turns it into a role.
+Take care with `architect`: it is a perspective the session takes across
+the path, not a separate agent or command, so a port must not turn it into
+one.
 
 A conforming adapter must satisfy the following requirements.
 
@@ -60,24 +58,28 @@ user does not type an explicit Compass command.
 Before the first delivery change it must:
 
 1. assess risk, familiarity and size, and any goal or urgency switch;
-2. record the assessment in the manifest;
-3. call `compass approach evaluate --write`; and
-4. present the human-readable approach for approval.
+2. record the assessment with `compass quick-fix start`, or in the manifest
+   and then with `compass approach evaluate --write`; and
+3. show the person the three lines of `compass approach show`: the
+   approach, the evidence the change owes and where the files go.
 
 Conversation and read-only exploration do not need an issue. A delivery
 change does.
 
 ### 2. Expose the delivery flow
 
-The adapter must expose the eight methodological stages, whether as eight
-commands or an equivalent interface:
+The adapter must expose the four stages of the path, whether as one command
+that runs them all, as the shipped `/compass:go` does, or an equivalent
+interface:
 
 ```text
-assess → define → refine → plan → breakdown → implement → verify → ship
+assess → specify → build → ship
 ```
 
-It must honour the stage weights and omissions computed by the delivery
-approach, and write the selected artifacts using Compass templates.
+It must collect the evidence the change owes, as `compass approach show`
+lists it, and follow the `next:` line each kit call prints. From 9.0.0 the
+stages have no modes, and the one document Compass needs is
+`acceptance-criteria.md` (ADR-091, ADR-092).
 
 ### 3. Call the kit
 
@@ -86,20 +88,20 @@ operations. At minimum:
 
 | Need | Kit command |
 |---|---|
-| Compute or update a delivery approach | `compass approach evaluate` |
+| Compute or update the evidence a change owes | `compass quick-fix start`, `compass approach evaluate` |
+| Name the next step | `compass next` |
 | Check an issue | `compass check` |
 | Record red and green tests | `compass tdd-red`, `compass tdd-green` |
 | Check governance and issue schemas | `compass policy lint`, `compass issue lint` |
-| Check cross-artifact consistency | `compass analyze` |
 | Run the CI lane | `compass ci` |
-| Surface retrospective signals | `compass retro`, `compass rework-scan`, `compass flow` |
+| Show every issue's state | `compass flow` |
 
 Schema-owning state changes must also use kit commands where one exists,
 rather than editing `manifest.yml` ad hoc.
 
 ### 4. Preserve the safety contract
 
-The adapter must call `compass check` at the verify stage and before ship,
+The adapter must call `compass check` at the ship stage and before the commit,
 honour its exit code and preserve required human approvals.
 
 **Getting the contract into a session.** Compass's rules of behaviour live in
@@ -111,10 +113,12 @@ prompt, an always-loaded instruction file, or the equivalent of `CLAUDE.md`.
 What must not change is that the contract exists once. Keep one copy: two
 copies drift apart.
 
-BDD and TDD are default strategies. When the runtime supports pre-action hooks,
-the adapter enforces red-before-green mechanically, with the hook made
-approach-aware so it does not block spikes. Without hooks, the adapter must
-make the check an explicit implementation step.
+BDD and TDD are default strategies. `compass quick-fix finish` proves the red on
+a copy of the base commit, so a hook does not need to. When the runtime supports
+pre-action hooks, the adapter refuses a code edit before the scenarios exist and,
+where the issue owes it, before a person approves them, with the hook made
+aware of the spike so it does not block one. Without hooks, the adapter must
+make those checks an explicit step of build.
 
 **A person-only approval event.** In Claude Code a person approves by
 typing `/compass:approve`; `hooks/prompt-approval.sh` records it on the
@@ -123,27 +127,27 @@ only after a dated measurement on its host shows that the event fires for a
 command a person typed and that the model cannot raise it, through a tool, a
 scheduled job, a subagent or another session. Until then the adapter sets
 `COMPASS_APPROVAL_CHANNEL=terminal`, and `compass evidence request` prints the
-exact `compass evidence approve` command for the person's own terminal. Codex
-has no such event today, so its users approve at their terminal.
+exact `compass evidence approve` command for the person's own terminal.
 
 **A time limit on the pre-tool hook.** On Claude Code, `hooks/hooks.json` sets
 `"timeout": 15` and `"onFailure": "block"` on the pre-tool hook, so a hook that
 runs out of time can block the call from Claude Code 2.1.295. A source install
-(`scripts/install.sh`) and the Codex hook file do not set these keys and keep
-the default timeout of 600 seconds. An adapter on another runtime needs its own
-bound; the safety contract states the length limit that holds on every version.
+(`scripts/install.sh`) does not set these keys and keeps the default timeout
+of 600 seconds. An adapter on another runtime needs its own bound; the safety
+contract states the length limit that holds on every version.
 
 An adapter limitation can reduce convenience or parallelism. It must not
 silently weaken a guardrail.
 
-### 5. Support the five entry-point roles
+### 5. Keep one specification for every role
 
-The runtime needs distinct entry paths for product, design, engineering,
-marketing and QA. All five contribute to the same acceptance specification and
-produce their normal Compass artifacts.
+From 9.0.0 there are no role entry points (ADR-093). Product, design,
+engineering, marketing and QA read the same acceptance criteria, and a brief
+opens them through the `intent-interview` skill.
 
-The adapter must preserve the gates the documents bring, such as intent fidelity and
-claim traceability. Otherwise the role has no effect on delivery.
+The adapter must preserve claim traceability: the manifest's `claims:` and
+the `claim-traces-to-scenario` check. Otherwise a public claim can ship with
+no scenario behind it.
 
 ### 6. Persist state on disk
 
@@ -151,26 +155,22 @@ Nothing essential may live only in conversation. The adapter must maintain:
 
 ```text
 .compass/current-task
-.compass/work/<issue>/README.md
 .compass/work/<issue>/manifest.yml
-.compass/work/<issue>/delivery-approach.md
 .compass/work/<issue>/evidence/
+docs/compass/<created>-<issue>/acceptance-criteria.md
 ```
 
-It adds the approach-selected product, requirements, design, delivery, quality and
-launch artifacts alongside them.
+From 9.0.0 Compass writes no `devlog.md` for a new issue; an archived issue
+keeps its own.
 
 A different session or runtime can resume by reading this state.
 
 ### 7. Give safe delivery orchestration
 
-The adapter must support solo delivery. Pair and multiagent approaches need
-isolated workspaces plus a single integration owner.
-
-The reference adapter uses Git worktrees. A runtime can use another mechanism,
-but each subtask must be able to run a failing test cycle without affecting
-the others. If equivalent isolation is unavailable, cap the orchestration and state
-the limitation.
+The adapter must support solo delivery. From 9.0.0 that is all it needs:
+each issue runs in one session, and the session builds its scenarios one
+after another (ADR-090). No adapter needs isolated
+workspaces or an integration owner.
 
 ## Conformance mapping
 
@@ -182,12 +182,9 @@ complete and lose the view across open issues:
 
 | Kit call | What a port loses without it |
 |---|---|
-| `compass analyze` | nothing reports where an issue's own artifacts disagree |
 | `compass flow` | no view of blockers or owed follow-ups across issues |
 | `compass next` | the session guesses which stage comes next |
-| `compass retro` | no signal that assessment is systematically mis-sizing work |
-| `compass rework-scan` | nothing reports a file that one issue adds and another issue deletes |
-| `compass follow-up` | an owed follow-up can never be settled, so shipping stays blocked |
+| `compass follow-up` | an open Definition of Done item cannot be linked to the GitHub issue that tracks it, so shipping stays blocked |
 | `compass adr` | decision records are hand-numbered, and numbers get reused |
 
 A port must document the capability mapping below it too.
@@ -202,7 +199,6 @@ A port must document the capability mapping below it too.
 | Pre-action enforcement |  |  |
 | Post-action issue logging |  |  |
 | Session-end status check |  |  |
-| Role entry points |  |  |
 | Distinct agent contexts |  |  |
 | Isolated parallel workspaces |  |  |
 | CI integration |  |  |
@@ -210,8 +206,6 @@ A port must document the capability mapping below it too.
 | Install surface (`bin/compass`, `.claude-plugin/`) |  |  |
 
 An empty cell is a design question, not evidence of equivalence.
-
-Tokens per stage for an interactive quick fix come from a Claude Code adapter, `cli/compass_pkg/session_usage.py`, which reads that runtime's own session transcript. Outside Claude Code a quick fix records `usage.reason: not-claude-code` until a port gives an adapter of its own, and a count a runtime does not give is recorded as null, never 0.
 
 `schemas/adapter-contract.yml` holds this table as data, with the Claude Code
 adapter's column filled in. `tests/test_adapter_contract.py` fails when a
@@ -228,7 +222,7 @@ A port normally keeps these unchanged:
 
 - methodology and conceptual documentation;
 - governance prose and machine-readable policy;
-- approach definitions and rubric;
+- the path, the spike and the rubric;
 - artifact templates;
 - CLI, schemas and vendored dependencies;
 - issue directory layout; and
@@ -258,9 +252,9 @@ portable contract itself.
 
 A port is conforming when the same assessed issue and policy produce:
 
-- the same computed approach;
+- the same computed approach and evidence;
 - a schema-compatible `manifest.yml`;
-- the same required artifact and gate set;
+- the same gate set;
 - equivalent typed evidence and approval records;
 - the same `compass check` verdict; and
 - an issue that another Compass runtime can resume without translation.
@@ -279,13 +273,11 @@ the guide defines their required fields and keeps unmeasured results visible.
 
 1. Complete the conformance mapping.
 2. Wire the target runtime to the unchanged kit CLI.
-3. Implement assessment and the eight stage commands.
-4. Add role entry points.
-5. Add persistence and resumption.
-6. Add the strongest enforcement the runtime supports.
-7. Add safe parallelism, or declare an orchestration cap.
-8. Run cross-runtime conformance tests.
-9. Document install, security and known limitations.
+3. Implement assessment and the four stages of the path.
+4. Add persistence and resumption.
+5. Add the strongest enforcement the runtime supports.
+6. Run cross-runtime conformance tests.
+7. Document install, security and known limitations.
 
 The methodology is the long-lived asset, the kit is its deterministic
 mechanism, and the adapter is how a particular runtime reaches both.

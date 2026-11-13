@@ -3,9 +3,8 @@
 `grep -q` exits at its first match. The command writing into the pipe can
 then die of a broken pipe, and under `pipefail` the pipeline reports that
 failure, so a line that was found reads as missing. It depends on timing:
-`validate.sh` reported `templates/positioning.md` and
-`templates/launch-readiness.md` missing in CI on 2026-10-03, though both
-exist (#261). A here-string or a test of captured output has no pipe.
+`validate.sh` reported two shipped templates missing in CI on 2026-10-03,
+though both existed (#261). A here-string or a test of captured output has no pipe.
 
 Scenario id: GQ-1 (issue `grep-q-under-pipefail`).
 """

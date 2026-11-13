@@ -43,7 +43,8 @@ def test_trc_001_finish_runs_the_command_once_for_two_scenarios(repo, tmp_path):
     count = tmp_path / "runs.txt"
     command = f"echo run >> {count} && python3 -m pytest -q {TEST}"
     done = _run(repo, "quick-fix", "finish", "--issue", "two-scenarios", "-m",
-                "Say hello properly", "--no-commit", "--", "sh", "-c", command)
+                "Say hello properly", "--no-commit", "--candidate", "local", "--client", "cli",
+                "--", "sh", "-c", command)
     assert done.returncode == 0, done.stdout + done.stderr
 
     assert count.read_text().splitlines() == ["run"], "the command ran more than once"

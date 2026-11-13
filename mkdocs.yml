@@ -1,8 +1,7 @@
 # The documentation site, published at https://docs.ayeo.io/compass/ by
 # .github/workflows/docs.yml. Pages are the same files as in docs/, so they
 # stay under the repository's tests and pull-request rule; only the pages
-# in `nav` are published (`exclude_docs`), never issue records or the
-# living spec.
+# in `nav` are published (`exclude_docs`), never issue records.
 site_name: Compass
 site_description: Adaptive spec-driven development for Claude Code
 site_url: https://docs.ayeo.io/compass/
@@ -41,10 +40,8 @@ exclude_docs: |
   !/safety-contract.md
   !/refusal-codes.md
   !/methodology.md
-  !/roles-guide.md
   !/security.md
   !/portability.md
-  !/codex.md
   !/adapter-conformance.md
   !/install-smoke-test.md
   !/cli.md
@@ -52,9 +49,8 @@ exclude_docs: |
   !/upgrade-6-0-0.md
   !/upgrade-7-0-0.md
   !/upgrade-8-0-0.md
-  !/github-labels.md
-  !/github-labels-walkthrough.md
-  !/waivers-and-locks.md
+  !/github-links.md
+  !/waivers.md
   !/artifact-catalog.md
 
 nav:
@@ -65,9 +61,8 @@ nav:
       - Install check: install-smoke-test.md
       - CLI reference: cli.md
       - Configuration: configuration.md
-      - Waivers and locks: waivers-and-locks.md
-      - GitHub labels: github-labels.md
-      - GitHub labels walkthrough: github-labels-walkthrough.md
+      - Waivers: waivers.md
+      - GitHub links: github-links.md
       - Upgrading to 6.0.0: upgrade-6-0-0.md
       - Upgrading to 7.0.0: upgrade-7-0-0.md
       - Upgrading to 8.0.0: upgrade-8-0-0.md
@@ -77,8 +72,6 @@ nav:
       - Security: security.md
   - How it works:
       - Methodology: methodology.md
-      - Roles: roles-guide.md
       - Artifact catalog: artifact-catalog.md
       - Portability: portability.md
-      - Codex: codex.md
       - Adapter behaviour checks: adapter-conformance.md

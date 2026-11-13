@@ -4,11 +4,17 @@
 configurations, and each must equal the 5.6.0 baseline:
 
 - A. No configuration: the shipped default alone. The existing contract files
-  run this one (`test_compat_contracts.py`, `_4`, `_5`).
+  run this one (`test_compat_contracts.py`, `_4`, `_5`). Contracts 1 and 2 read
+  the 8.0.4 governance copy in place of the live default, because 9.0.0
+  replaces the delivery approaches the live default routes (ADR-092).
 - B. An empty overlay: a `compass.yml` holding `schema: 1` and
-  `extends: compass:default@6` and nothing else.
+  `extends: compass:default@6` and nothing else. Resolution reads the live
+  preset whatever major `extends:` names, so contracts 1 and 2 read B as the
+  empty overlay over the 8.0.4 governance copy, as they read A (ADR-092).
 - C. A project that carries a copy of the 5.6.0 governance files, read through
-  the legacy adapter.
+  the 8.x copy reader the tests keep (`tests/legacy_copy.py`). 9.0.0 refuses
+  such a project (`governance-copy-removed`, ADR-098), so C holds for contracts
+  1 and 2 only. Contracts 3 to 6 run under B (VD-043 decision 2).
 
 Configuration D (contracts 4 and 5 only) is the settings moved into
 `compass.yml`; `test_compat_contract_5.py` runs it, and contract 4 runs it in
@@ -34,15 +40,24 @@ import yaml
 import compat_baseline as cb
 import compat_commands as cc
 import compat_hook
-from test_compat_contract_5 import _NOT_MOVABLE, move_settings
+from test_compat_contract_5 import _NOT_MOVABLE
 
 BC = ("B", "C")
-ALL = BC  # A has its own files and reads the policy file directly
+ALL = BC  # A has its own files, and contracts 1 and 2 there read the 8.0.4 copy
+#: The configurations a 9.0.0 CLI runs in: C is refused (VD-043 decision 2).
+RUNS = ("B",)
+
+
+# The governance copy each configuration's routing is read over in contracts 1
+# and 2: B's empty overlay sits over the 8.0.4 copy (see the module docstring),
+# and C is a copy of its own.
+ROUTED_OVER = {"B": cb.GOVERNANCE_8_0_4, "C": None}
 
 
 @pytest.fixture(scope="module")
 def policies(tmp_path_factory):
-    return {k: cb.policy_under(k, tmp_path_factory.mktemp(f"policy-{k}"))
+    return {k: cb.policy_under(k, tmp_path_factory.mktemp(f"policy-{k}"),
+                               governance=ROUTED_OVER[k])
             for k in ALL}
 
 
@@ -68,10 +83,35 @@ def test_contract_1_routes_as_the_baseline_under(kind, policies):
     assert differences == [], "\n".join(differences[:10])
 
 
-@pytest.mark.parametrize("kind", BC)
+# Configuration B cannot fail contracts 1 and 2, so it has no can-fail partner
+# for them. Since 9.0.0 (ADR-094) B's `compass.yml` holds settings only: a
+# catalogue key or `extends:` is a removed setting, read as if absent, and no
+# tighten-only setting changes what `evaluate_route` reads over the 8.0.4 copy
+# (`require_evidence` and `signoff_labels` are read by the evidence evaluator,
+# the others do not reach the routing policy, and contract 1 runs every autonomy
+# itself). A fault planted in B therefore has nothing to change, and a can-fail
+# case for B would fail for that reason, not because the contract is blind. So
+# B is checked to give configuration A's results, with the planted tightening
+# applied (`compat_baseline.PLANTED_OVERLAY`). C keeps its can-fail partner: its
+# fault is planted in the governance copy it routes over. Decision: VD-021 of
+# #357.
+
+def _routes(policy, rows):
+    return [cb.compact(row["assessment"], policy) for row in rows
+            if row["kind"] in ("grid", "archive")]
+
+
+def test_contract_1_under_b_routes_as_a_even_with_a_tightening(tmp_path):
+    _, rows = cb.load_routing()
+    planted = cb.policy_under("B", tmp_path, fault="routing", governance=ROUTED_OVER["B"])
+    assert planted.get("require_evidence"), "the planted tightening was not applied"
+    assert _routes(planted, rows) == _routes(cb.policy_8_0_4(), rows)
+
+
+@pytest.mark.parametrize("kind", ["C"])
 def test_contract_1_under_the_configuration_can_fail(kind, tmp_path):
     header, rows = cb.load_routing()
-    planted = cb.policy_under(kind, tmp_path, fault="routing")
+    planted = cb.policy_under(kind, tmp_path, fault="routing", governance=ROUTED_OVER[kind])
     assert cb.routing_differences(planted, header, rows, first_only=True, layered=True), (
         f"a planted routing fault under {kind} went unseen")
 
@@ -87,11 +127,24 @@ def test_contract_2_owes_what_it_owed_under(kind, policies):
     assert cb.owed_by_approach(now) == recorded["owed"]
 
 
-@pytest.mark.parametrize("kind", BC)
+def test_contract_2_under_b_owes_as_a_even_with_a_tightening(tmp_path):
+    """Contract 2 under B gives A's result; see the note above contract 1."""
+    _, rows = cb.load_routing()
+    planted = cb.policy_under("B", tmp_path, fault="routing", governance=ROUTED_OVER["B"])
+    a = cb.policy_8_0_4()
+    grid = [r for r in rows if r["kind"] == "grid"]
+    under_b = [dict(r, result=cb.legacy_spelling(cb.compact(r["assessment"], planted)))
+               for r in grid]
+    under_a = [dict(r, result=cb.legacy_spelling(cb.compact(r["assessment"], a)))
+               for r in grid]
+    assert cb.owed_by_approach(under_b) == cb.owed_by_approach(under_a)
+
+
+@pytest.mark.parametrize("kind", ["C"])
 def test_contract_2_under_the_configuration_can_fail(kind, tmp_path):
     _, rows = cb.load_routing()
     recorded = yaml.safe_load(cb.OWED.read_text(encoding="utf-8"))
-    planted = cb.policy_under(kind, tmp_path, fault="routing")
+    planted = cb.policy_under(kind, tmp_path, fault="routing", governance=ROUTED_OVER[kind])
     now = [dict(r, result=cb.legacy_spelling(cb.compact(r["assessment"], planted)))
            for r in rows if r["kind"] == "grid"]
     assert cb.owed_by_approach(now) != recorded["owed"]
@@ -135,16 +188,9 @@ def archive_runs():
         runs.remove_projects()
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", RUNS)
 def test_contract_3_gives_the_recorded_verdicts_under(kind, archive_runs):
     recorded = _recorded()["issues"]
-    if kind == "C":
-        # A copied 5.6.0 governance folder cannot declare the 7.0.0 check
-        # `artifacts-approved` (ADR-050), so it records no row for it. Every
-        # other recorded verdict must still match.
-        recorded = {slug: dict(r, verdicts={k: v for k, v in r["verdicts"].items()
-                                            if k != "artifacts-approved"})
-                    for slug, r in recorded.items()}
     # The sample is read after `issue migrate` and `issue render --all`, and exactly the
     # three row moves of 7.0.0 are allowed (ADR-051, `allow_7_0_0_moves`).
     old, new = cb.allow_7_0_0_moves(recorded, archive_runs[kind])
@@ -152,14 +198,14 @@ def test_contract_3_gives_the_recorded_verdicts_under(kind, archive_runs):
     assert differences == [], "\n".join(differences)
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", RUNS)
 def test_contract_6_every_sampled_issue_stays_readable_under(kind, archive_runs):
     unreadable = {slug: r for slug, r in archive_runs[kind].items()
-                  if r["lint_exit"] or r["receipt_exit"]}
+                  if r["lint_exit"] or r["show_exit"]}
     assert unreadable == {}
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", RUNS)
 def test_contract_3_under_the_configuration_can_fail(kind):
     recorded = _recorded()["issues"]
     slug = next(s for s, r in recorded.items()
@@ -176,7 +222,7 @@ def test_contract_3_under_the_configuration_can_fail(kind):
 # --- contract 4: CLI exit codes on the command corpus -------------------------
 
 ENTRIES = cc.load()
-CASES = [(e, k) for e in ENTRIES for k in BC if cc.entry_applies(e, k)]
+CASES = [(e, k) for e in ENTRIES for k in RUNS if cc.entry_applies(e, k)]
 
 
 @pytest.fixture(scope="module")
@@ -187,7 +233,7 @@ def projects(tmp_path_factory):
 def test_contract_4_configurations_cover_most_of_the_corpus():
     """The states that already hold a settings file or governance of their own
     are not given another, so the count of what is skipped is stated."""
-    for kind in BC:
+    for kind in RUNS:
         applied = [e for e in ENTRIES if cc.entry_applies(e, kind)]
         assert len(applied) >= len(ENTRIES) * 0.7, (kind, len(applied), len(ENTRIES))
 
@@ -196,12 +242,12 @@ def test_contract_4_configurations_cover_most_of_the_corpus():
                          ids=[f"{k}-{e['id']}" for e, k in CASES])
 def test_contract_4_exit_code_matches_the_baseline_under(projects, entry, kind):
     outcome = projects.run(entry, configuration=kind)
-    assert cc.differences(entry, outcome) == [], (
-        f"{entry['id']} under {kind}: {cc.differences(entry, outcome)}\n"
+    assert cc.differences(entry, outcome, kind) == [], (
+        f"{entry['id']} under {kind}: {cc.differences(entry, outcome, kind)}\n"
         f"stdout:\n{outcome.stdout}\nstderr:\n{outcome.stderr}")
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", RUNS)
 def test_contract_4_under_the_configuration_can_fail(projects, kind):
     """Build the state cleanly, then break the configuration the builder added,
     and run a command that passed at 5.6.0 and reads the configuration."""
@@ -219,38 +265,36 @@ def test_contract_4_under_the_configuration_can_fail(projects, kind):
 import test_compat_contract_5 as c5  # noqa: E402
 
 MOVABLE = [e for e in c5.ENTRIES if e["state"] not in _NOT_MOVABLE]
+#: Contract 5 runs B only: C is retired for it (VD-043 decision 2).
+C5_KINDS = ("B",)
 
 
 def with_configuration(kind, fault=None):
     """A mutation for a hook corpus project. B holds the settings in a
-    `compass.yml` that extends the default; C keeps `.compass/config.yml` and
-    adds the 5.6.0 governance copy beside it."""
+    `compass.yml` that extends the default. C, the 5.6.0 governance copy, is
+    retired for contract 5, because 9.0.0 refuses that project (VD-043
+    decision 2)."""
+    assert kind == "B", kind
+
     def mutate(project):
         if not (project / ".compass").exists():
             return          # a project that never opted in
-        if kind == "B":
-            move_settings(project)
-            moved = project / "compass.yml"
-            try:
-                data = yaml.safe_load(moved.read_text()) if moved.exists() else None
-            except yaml.YAMLError:
-                data = None     # a file that does not parse stays as moved
-            if isinstance(data, dict):
-                moved.write_text(yaml.safe_dump(
-                    {"schema": 1, "extends": "compass:default@6",
-                     **{k: v for k, v in data.items() if k != "schema"}},
-                    sort_keys=False))
-                if fault == "drop-settings":
-                    moved.write_text("schema: 1\nextends: compass:default@6\n")
-        else:
-            cb.add_governance_copy(project)
+        built = project / "compass.yml"
+        try:
+            data = yaml.safe_load(built.read_text()) if built.exists() else None
+        except yaml.YAMLError:
+            data = None     # a file that does not parse stays as built
+        if isinstance(data, dict):
+            built.write_text(yaml.safe_dump(
+                {"schema": 1, "extends": "compass:default@6",
+                 **{k: v for k, v in data.items() if k != "schema"}},
+                sort_keys=False))
             if fault == "drop-settings":
-                (project / ".compass" / "config.yml").write_text(
-                    "version: 1.0.0\nmode: enforced\n")
+                built.write_text("schema: 1\nextends: compass:default@6\n")
     return mutate
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", C5_KINDS)
 @pytest.mark.parametrize("entry", MOVABLE, ids=[e["id"] for e in MOVABLE])
 def test_contract_5_decides_as_recorded_under(c5_install, entry, kind):
     if entry["state"] in compat_hook.NEEDS_NON_ROOT and os.geteuid() == 0:
@@ -265,7 +309,7 @@ def test_contract_5_decides_as_recorded_under(c5_install, entry, kind):
         assert entry["stderr_excludes"] not in err
 
 
-@pytest.mark.parametrize("kind", BC)
+@pytest.mark.parametrize("kind", C5_KINDS)
 def test_contract_5_under_the_configuration_can_fail(c5_install, kind):
     hook_root, base = c5_install
     entry = next(e for e in c5.ENTRIES if e["id"] == "edit-glob-dir-match-no-red")

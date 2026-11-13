@@ -1,11 +1,11 @@
 """A session's issue can come from `COMPASS_ISSUE`, ahead of the pointer.
 
-`.compass/current-task` names the issue a person is working on. `compass run`
-starts unattended sessions in the same project, and those sessions read the
-same pointer, so the pre-tool hook judged an unattended session's edits by
-the person's issue. `COMPASS_ISSUE` in a session's environment now names its
-issue for the hooks and the CLI, and `compass run` sets it for every session
-it starts.
+`.compass/current-task` names the issue a person is working on. A second
+session in the same project read the same pointer, so the pre-tool hook
+judged its edits by the person's issue. `COMPASS_ISSUE` in a session's
+environment now names its issue for the hooks and the CLI. `compass run`,
+which set it for the sessions it started, was removed in 9.0.0 (ADR-090), so
+SI-D is no longer tested.
 
 Scenario ids: SI-A to SI-E, in the acceptance criteria of the issue
 `run-session-issue`.
@@ -104,10 +104,6 @@ def test_si_a_the_variable_blocks_when_its_issue_has_no_red(project):
 # --- SI-B: the CLI ------------------------------------------------------------------
 
 def test_si_b_a_command_without_an_issue_uses_the_variable(project):
-    # A missing issue page is an advisory line that lengthens the first line of `check`
-    # until the slug is cut off, so the pages are written first.
-    for slug in ("ready", "bare"):
-        _cli(project, "issue", "render", "--issue", slug)
     result = _cli(project, "check", issue="ready")
     assert "'ready'" in result.stdout, result.stdout + result.stderr
     explicit = _cli(project, "check", "--issue", "bare", issue="ready")
@@ -125,33 +121,6 @@ def test_si_c_a_bad_variable_is_refused_without_falling_back(project, bad):
     cli = _cli(project, "check", issue=bad)
     assert cli.returncode != 0
     assert "COMPASS_ISSUE" in cli.stderr
-
-
-# --- SI-D: compass run sets it -----------------------------------------------------------
-
-_STUB = r'''#!/usr/bin/env python3
-import json, os, sys
-from pathlib import Path
-Path(os.environ["STUB_SEEN"]).write_text(os.environ.get("COMPASS_ISSUE", "<unset>"))
-print(json.dumps({"type": "result", "subtype": "success", "is_error": False,
-                  "session_id": "s1", "total_cost_usd": 0.0}))
-'''
-
-
-def test_si_d_compass_run_names_its_issue_in_every_session(project, tmp_path):
-    stub = tmp_path / "claude"
-    stub.write_text(_STUB)
-    stub.chmod(0o755)
-    env = _env(project)
-    env["STUB_SEEN"] = str(tmp_path / "seen")
-    result = subprocess.run(
-        [sys.executable, str(CLI), "run", "ready", "--stage", "verify",
-         "--stop-file", str(tmp_path / "STOP"), "--claude", str(stub),
-         "--max-cycles", "1"],
-        cwd=project, capture_output=True, text=True, env=env, timeout=60)
-    assert result.returncode in (0, 4), result.stderr
-    assert (tmp_path / "seen").read_text() == "ready"
-    assert (project / ".compass" / "current-task").read_text() == "bare\n"
 
 
 # --- SI-E: every reader agrees ------------------------------------------------------------
@@ -174,9 +143,10 @@ def test_si_e_the_stop_hook_checks_the_variable_not_the_pointer(project):
     assert "points at 'gone'" not in result.stdout + result.stderr
 
 
-def test_si_e_the_receipt_and_status_line_read_the_variable(project):
-    receipt = _cli(project, "issue", "receipt", issue="ready")
-    assert "ready" in receipt.stdout, receipt.stdout + receipt.stderr
+def test_si_e_approach_show_and_the_status_line_read_the_variable(project):
+    # The receipt read it too, until 9.0.0 removed it (ADR-091).
+    shown = _cli(project, "approach", "show", issue="ready")
+    assert ".compass/work/ready/" in shown.stdout, shown.stdout + shown.stderr
     sys.path.insert(0, str(ROOT / "cli"))
     from compass_pkg import statusline
     old = os.environ.get("COMPASS_ISSUE")
@@ -191,11 +161,10 @@ def test_si_e_the_receipt_and_status_line_read_the_variable(project):
     assert "ready" in line and "bare" not in line
 
 
-# --- found in review: the suite inside an unattended session ----------------------
+# --- found in review: the suite inside a session that sets the variable -------------
 
 def test_si_d_the_suite_passes_inside_a_session_that_sets_the_variable():
-    """`compass run` sets the variable for its sessions, and those sessions
-    run this suite. The tests build their own projects, so the session's
+    """A session that sets the variable can run this suite. The tests build their own projects, so the session's
     issue must not reach them."""
     env = {**os.environ, "COMPASS_ISSUE": "an-issue-this-suite-never-builds"}
     result = subprocess.run(

@@ -12,7 +12,7 @@ frozen vocabulary through the whole of v2.
 This asserts both halves: the document speaks v2, and it is in the scanned
 set so a retired term in it fails the build.
 
-Scenario ids: see docs/system-spec.md (TRC-1, `TRC-2`).
+Scenario ids: see the issue's acceptance criteria (TRC-1, `TRC-2`).
 """
 
 # These tests assert the current file names; files written under older
@@ -100,7 +100,7 @@ def test_trc_s6_smoke_steps_pass_on_a_healthy_install(tmp_path):
     import sys
     text = SMOKE_TEST.read_text(encoding="utf-8")
     assert not smoke_step_findings(text)
-    assert "docs/compass/<date>-<issue-slug>/delivery-approach.md" in text
+    assert "docs/compass/<date>-<issue-slug>/acceptance-criteria.md" in text
     assert ".compass/work/<issue-slug>/manifest.yml" in text
     assert "--global --uninstall" in text
 
@@ -120,17 +120,15 @@ def test_trc_s6_smoke_steps_pass_on_a_healthy_install(tmp_path):
     assert start.returncode == 0, start.stdout + start.stderr
     assert (tmp_path / ".compass" / "current-task").is_file()
     assert (tmp_path / ".compass" / "work" / "scratch-issue" / "manifest.yml").is_file()
-    created = next((tmp_path / "docs" / "compass").glob("*-scratch-issue"))
-    assert (created / "delivery-approach.md").is_file()
-    where = run("issue", "artifact-path", "delivery-approach")
-    assert where.returncode == 0 and where.stdout.strip().endswith("delivery-approach.md")
-
-    render = run("issue", "render", "--issue", "scratch-issue")
-    assert render.returncode == 0, render.stdout + render.stderr
-    page = (created / "README.md").read_text()
-    assert "next action" not in page.lower()
-    for kind in ("header", "ask", "decision-required", "acceptance", "traceability"):
-        assert "<!-- compass:render %s -->" % kind in page, kind
+    # 9.0.0 writes no delivery-approach.md (ADR-091): the manifest holds the approach.
+    # On the four-stage path (ADR-092) `quick-fix start` writes the one issue
+    # document, the acceptance criteria, where the page says it goes.
+    import yaml
+    created = yaml.safe_load((tmp_path / ".compass" / "work" / "scratch-issue"
+                              / "manifest.yml").read_text(encoding="utf-8"))["created"]
+    docs = tmp_path / "docs" / "compass" / f"{created}-scratch-issue"
+    assert sorted(p.name for p in docs.iterdir()) == ["acceptance-criteria.md"]
+    assert [p.name for p in (tmp_path / "docs" / "compass").iterdir()] == [docs.name]
 
     check = run("check", "--issue", "scratch-issue")
     assert check.returncode != 0 and "Traceback" not in check.stdout + check.stderr

@@ -1,4 +1,8 @@
-"""An omitted guardrail is reported, not silent (governance-drift-detection).
+"""A guardrail that does not apply reads as skipped (governance-drift-detection).
+
+9.0.0 reads no copy of `guardrails.yml` (ADR-098), so no project can omit a
+shipped guardrail, and the ABSENT report of `TRC-D1` went with the copy. The
+history below is why `TRC-D2` exists.
 
 `compass check` gives two guarantees: a guardrail that is ABSENT from the
 project's own governance file is reported in the default view, and a
@@ -54,7 +58,7 @@ friction: []
 """
 
 
-def _project(tmp_path, *, touches="", drop_g5=False):
+def _project(tmp_path, *, touches=""):
     proj = tmp_path / "proj"
     (proj / ".compass" / "work" / "t").mkdir(parents=True)
     shutil.copytree(GOVERNANCE, proj / "governance")
@@ -62,11 +66,6 @@ def _project(tmp_path, *, touches="", drop_g5=False):
     (proj / ".compass" / "work" / "t" / "manifest.yml").write_text(
         TASK.format(touches=touches))
     (proj / ".compass" / "current-task").write_text("t\n")
-    if drop_g5:
-        gp = proj / "governance" / "guardrails.yml"
-        g = yaml.safe_load(gp.read_text())
-        g["defaults"] = [x for x in g["defaults"] if x["id"] != "G5"]
-        gp.write_text(yaml.safe_dump(g, sort_keys=False))
     return proj
 
 
@@ -82,25 +81,6 @@ def _check(proj, *flags):
         [sys.executable, str(CLI), "check", "--issue", "t", *flags],
         cwd=str(proj), capture_output=True, text=True, timeout=120,
     ).stdout
-
-
-# ---------------------------------------------------------------------------
-# `TRC-D1` - a guardrail the project omits is reported
-# ---------------------------------------------------------------------------
-
-def test_trc_d1_a_guardrail_the_project_omits_should_be_reported():
-    import tempfile
-    tmp = pathlib.Path(tempfile.mkdtemp(prefix="compass-absent-"))
-    try:
-        out = _check(_project(tmp, touches="auth", drop_g5=True))
-        assert "G5" in out, (
-            "G5 is absent from the project's governance and the task touches "
-            f"auth - the surface G5 guards - yet check never mentions it:\n{out}")
-        lowered = out.lower()
-        assert "absent" in lowered or "not declared" in lowered, (
-            f"the wording does not distinguish absent from not-applicable:\n{out}")
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------

@@ -15,14 +15,20 @@ State lives in the directory named by GH_FAKE_DIR:
 - `state.json`: `repo_labels` (the labels the repository has), `issues`
   (the labels on each issue, keyed `owner/repo#number`), and for the issue
   page `comments` (each issue's comments, `[{"id", "body"}]`), `bodies` and
-  `titles` (keyed the same way) and `next_id`, and for `pr view` `prs` (the
-  JSON `gh pr view --json` prints for each pull request, keyed the same way).
+  `titles` (keyed the same way) and `next_id`, for `pr view` `prs` (the
+  JSON `gh pr view` holds for each pull request, keyed the same way; it prints
+  only the fields `--json` names, so a test sees which fields Compass asked
+  for), for `api repos/<r>/pulls/<n>/reviews` `reviews` (each pull request's
+  reviews, keyed the same way, printed one JSON object per line as `--jq`
+  prints them), and for `api user` `login` (the login `gh` reads as, by
+  default `reader`).
 
 GH_FAKE_MODE makes every call fail: `unauth` as `gh` does when it is not
 logged in, `down` as it does when GitHub cannot be reached.
 
 GH_FAKE_FAIL makes one kind of call fail as `down` does: `api` fails every
-`gh api` call (the issue page), `labels` fails every other call (the labels).
+`gh api` call (the issue page), `labels` fails every other call (the labels),
+`reviews` fails the reviews call and `user` fails `gh api user`.
 """
 from __future__ import annotations
 
@@ -35,6 +41,7 @@ from pathlib import Path
 _COMMENTS = re.compile(r"repos/([^/]+/[^/]+)/issues/([0-9]+)/comments")
 _COMMENT = re.compile(r"repos/([^/]+/[^/]+)/issues/comments/([0-9]+)")
 _ISSUE = re.compile(r"repos/([^/]+/[^/]+)/issues/([0-9]+)")
+_REVIEWS = re.compile(r"repos/([^/]+/[^/]+)/pulls/([0-9]+)/reviews")
 
 
 def _flag_values(argv, flag):
@@ -52,8 +59,18 @@ def _save(path, state):
 
 def _api(argv, base, state, state_path):
     """The REST calls the issue page makes: list, create and edit comments, and
-    read and edit an issue."""
-    path = argv[1] if len(argv) > 1 else ""
+    read and edit an issue. Also the reads of a pull request's reviews and of
+    the user `gh` reads as."""
+    words = [w for w in argv[1:] if w != "--paginate"]
+    path = words[0] if words else ""
+    if path == "user":
+        print(state.get("login", "reader"))
+        return 0
+    found = _REVIEWS.fullmatch(path)
+    if found and "--method" not in argv:
+        for review in state.get("reviews", {}).get(f"{found.group(1)}#{found.group(2)}", []):
+            print(json.dumps(review))
+        return 0
     method = (_flag_values(argv, "--method") or ["GET"])[0]
     sent = None
     if "--input" in argv:
@@ -121,6 +138,10 @@ def main(argv):
     is_api = argv[:1] == ["api"]
     if (fail == "api" and is_api) or (fail == "labels" and not is_api):
         return _down()
+    if is_api and fail == "reviews" and any(_REVIEWS.fullmatch(w) for w in argv):
+        return _down()
+    if is_api and fail == "user" and "user" in argv:
+        return _down()
     state_path = base / "state.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     if is_api:
@@ -144,7 +165,8 @@ def main(argv):
             sys.stderr.write("GraphQL: Could not resolve to a PullRequest with the number "
                              f"of {argv[2]}. (repository.pullRequest)\n")
             return 1
-        print(json.dumps(found))
+        asked = (_flag_values(argv, "--json") or [""])[0].split(",")
+        print(json.dumps({k: v for k, v in found.items() if k in asked}))
         return 0
     if argv[:2] in (["issue", "view"], ["issue", "edit"]):
         key = f"{repo}#{argv[2]}"

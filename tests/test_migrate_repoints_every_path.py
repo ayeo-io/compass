@@ -5,12 +5,14 @@ The migration moves an issue's human documents from `.compass/work/<slug>/` to
 `docs/compass/<created>-<slug>/`. A stopped subtask's `stopped_reason.evidence`
 names a review file beside the manifest, and the migration used to leave it
 naming the old place, so `multiagent-run-recorded` failed on an issue that had
-passed. These tests cover that field and every other manifest field that can
+passed. 9.0.0 removed that check (ADR-090); the migrate still repoints the
+field, so an archived record keeps naming a file that exists. These tests cover that field and every other manifest field that can
 hold a path to an issue document.
 
 The scenarios are:
 
-  * a stopped subtask keeps its stop evidence (`MRS-1`);
+  * a stopped subtask keeps its stop evidence (`MRS-1`, tested through the
+    check until 9.0.0 removed it, and now through `MRS-2`);
   * one test per field kind that names a moved file (`MRS-2`);
   * `compass check` gives the same verdict before and after (`MRS-3`);
   * an archive that an earlier release already migrated is repaired from the
@@ -33,7 +35,6 @@ ROOT = Path(__file__).resolve().parent.parent
 COMPASS_CLI = ROOT / "cli" / "compass"
 
 sys.path.insert(0, str(ROOT / "cli"))
-from compass_pkg.multiagent_check import _check_multiagent_run_recorded  # noqa: E402
 
 SLUG = "a-stopped-run"
 CREATED = "2026-10-01"
@@ -97,26 +98,6 @@ def _read(work):
 
 def _resolve(base, value):
     return (base / value).resolve()
-
-
-def _stop_run_record(task_dir_path, manifest):
-    return _check_multiagent_run_recorded(manifest, str(task_dir_path))
-
-
-# --- MRS-1 -------------------------------------------------------------------
-
-def test_mrs_1_a_stopped_subtask_still_passes_after_migration(tmp_path):
-    work = _issue(tmp_path)
-    passed, detail = _stop_run_record(work, _read(work))
-    assert passed is True, f"the fixture must pass before migrating: {detail}"
-
-    r = _migrate(tmp_path)
-    assert r.returncode == 0, r.stdout + r.stderr
-    assert not (work / MOVED).exists(), "the review file should have moved"
-
-    passed, detail = _stop_run_record(work, _read(work))
-    assert passed is True, (
-        f"multiagent-run-recorded fails after migration: {detail}")
 
 
 # --- MRS-2: one case per field kind -------------------------------------------
@@ -275,9 +256,9 @@ def test_mrs_3_compass_check_gives_the_same_verdict_after_migration(tmp_path):
         yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
 
     before = _verdicts(tmp_path)
-    recorded = [v for (_g, n), v in before.items()
-                if n == "multiagent-run-recorded"]
-    assert recorded and recorded != ["fail"], before
+    # The check that read the subtask fields, multiagent-run-recorded, was
+    # removed in 9.0.0 (ADR-090); every other verdict must still hold.
+    assert before, before
 
     r = _migrate(tmp_path)
     assert r.returncode == 0, r.stdout + r.stderr
@@ -357,16 +338,6 @@ def test_mrs_4_a_stale_field_in_a_relocated_issue_is_repaired(
     assert _resolve(base, got) == (tmp_path / NEW_REL).resolve(), (
         f"{spelling!r} was left as {got!r} in an issue whose file had "
         f"already moved")
-
-
-def test_mrs_4_a_relocated_issue_passes_multiagent_run_recorded(tmp_path):
-    work = _relocated_issue(tmp_path)
-    passed, _detail = _stop_run_record(work, _read(work))
-    assert passed is False, "the fixture must start stale"
-
-    _migrate(tmp_path)
-    passed, detail = _stop_run_record(work, _read(work))
-    assert passed is True, detail
 
 
 def test_mrs_4_the_dry_run_reports_the_repair_and_changes_nothing(tmp_path):
@@ -454,6 +425,8 @@ EXCLUDED = {
     "landed_by[].issue": "an issue slug",
     "depends_on[].issue": "an issue slug",
     "land_commit": "a commit id",
+    "base_commit": "the commit `compass quick-fix start` found at HEAD, a commit id; only a 9.0.0 path issue has the field, never a 1.x tree the migration reads",
+    "change_sha256": "a digest of the change's code and test files, not a path; only a 9.0.0 path issue has the field (ADR-099)",
     "repairs": "an issue slug",
     "scenarios[].verifiable": "a scenario taxonomy label",
     "subtasks[].last_error_digest": "a digest of an error message",
@@ -461,6 +434,18 @@ EXCLUDED = {
                             "file outside the project; no migration moves it",
     "intent_source.scheme": "the scheme of the source, such as https or file",
     "intent_source.sha256": "a digest of the source, not a path",
+    "policy.check_set": "the check set's id and version, such as compass-checks@9.0.0, "
+                        "not a path",
+    "policy.check_set_sha256": "a digest of the check set file, not a path",
+    "scenario_freeze.red": "the first red record under the issue's `evidence/`, "
+                           "which the migration never moves (migrate.py keeps "
+                           "machine state in place); and only a 9.0.0 path issue "
+                           "has the field, never a 1.x tree the migration reads",
+    "scenario_freeze.spec": "the spec a 9.0.0 path issue's code was written against, "
+                            "already under docs/compass when frozen; no 1.x tree "
+                            "has the field, and the frozen value is a record "
+                            "nothing rewrites",
+    "scenario_freeze.spec_sha256": "a digest of the spec file, not a path",
     "intent_source.snapshot": "a bare file name in the issue's own folder under "
                               "`.compass/work`, resolved against that folder when "
                               "read; it has no folder part to repoint",

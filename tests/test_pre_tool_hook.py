@@ -1,15 +1,15 @@
 """`TRC-F1` - assessment remains mandatory, unchanged.
 
-pre-tool.sh blocks an Edit on a production file when the current issue has no
-delivery-approach.md (i.e. assessment did not complete).
+pre-tool.sh blocks an Edit on a production file when the current issue's
+manifest has no `delivery_approach` key (i.e. assessment did not complete).
 
 The hook reads the hook context from stdin as JSON (Claude Code PreToolUse
 format) and inspects the .compass/current-task pointer to find the issue
-directory. If the issue directory lacks delivery-approach.md, it exits 2 and
-writes a message to stderr naming the missing delivery-approach.md.
+directory. If the manifest names no delivery approach, it exits 2 and writes a
+message to stderr naming the missing delivery approach.
 
 This test creates a synthetic Compass project in a tmp directory, sets up
-.compass/current-task pointing at an issue without delivery-approach.md, then
+.compass/current-task pointing at an issue with no delivery approach, then
 invokes hooks/pre-tool.sh with the synthetic tool call JSON.
 
 IMPORTANT NOTE on path design:
@@ -43,7 +43,7 @@ HOOK_PATH = FRAMEWORK_ROOT / "hooks" / "pre-tool.sh"
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_compass_project(root: Path, slug: str, *, with_route_md: bool) -> Path:
+def _make_compass_project(root: Path, slug: str, *, with_approach: bool) -> Path:
     """Scaffold a minimal Compass project under root.
 
     Returns the issue directory path.
@@ -56,10 +56,11 @@ def _make_compass_project(root: Path, slug: str, *, with_route_md: bool) -> Path
     # .compass/current-task points at our slug
     (compass_dir / "current-task").write_text(slug, encoding="utf-8")
 
-    # Optionally create delivery-approach.md
-    if with_route_md:
-        (task_dir / "delivery-approach.md").write_text(
-            "# Route\n\nroute: express\n", encoding="utf-8"
+    # Optionally record the delivery approach: the manifest's key alone
+    # decides (#359).
+    if with_approach:
+        (task_dir / "manifest.yml").write_text(
+            "delivery_approach: express\n", encoding="utf-8"
         )
 
     return task_dir
@@ -96,24 +97,25 @@ def _fresh_project_dir() -> Path:
 
 
 # ---------------------------------------------------------------------------
-# `TRC-F1`: hook blocks when delivery-approach.md is absent
+# `TRC-F1`: hook blocks when the manifest names no delivery approach
 # ---------------------------------------------------------------------------
 
 def test_blocks_without_frame():
-    """Assessment is still required - hook exits 2 and names missing
-    delivery-approach.md.
+    """Assessment is still required - hook exits 2 and names the missing
+    delivery approach.
 
-    Given a fresh issue with no delivery-approach.md
+    Given a fresh issue with no delivery approach in its manifest and no
+    delivery-approach.md (9.0.0 reads the manifest's key alone, ADR-091)
     When any tool tries to Edit a file under the project source (a .py file)
     Then hooks/pre-tool.sh blocks the edit (exit code 2)
-    And the block message names the missing delivery-approach.md
+    And the block message names the missing delivery approach
     """
     assert HOOK_PATH.is_file(), f"pre-tool.sh not found at {HOOK_PATH}"
 
     project = _fresh_project_dir()
     try:
         slug = "no-frame-slug"
-        _make_compass_project(project, slug, with_route_md=False)
+        _make_compass_project(project, slug, with_approach=False)
 
         # Target a recognised production file (.py extension).
         # "src/app.py" - no "test" component anywhere in the path.
@@ -136,17 +138,17 @@ def test_blocks_without_frame():
             f"Expected exit 2 (block), got {result.returncode}.\n"
             f"stdout: {result.stdout}\nstderr: {result.stderr}"
         )
-        # Block message must name delivery-approach.md
-        assert "delivery-approach.md" in result.stderr, (
-            f"Expected 'delivery-approach.md' in stderr.\nstderr: {result.stderr}"
+        # Block message must name the delivery approach
+        assert "delivery approach" in result.stderr, (
+            f"Expected 'delivery approach' in stderr.\nstderr: {result.stderr}"
         )
     finally:
         shutil.rmtree(str(project), ignore_errors=True)
 
 
-def test_allows_when_route_md_present_and_red_marker():
-    """Hook allows the edit when delivery-approach.md exists and the .red
-    marker is set.
+def test_allows_when_the_approach_is_recorded_and_red_marker():
+    """Hook allows the edit when the manifest records the delivery approach
+    and the .red marker is set.
 
     This is the complementary positive case - confirms the hook's basic
     allow-path still works after the F1 regression check.
@@ -156,7 +158,7 @@ def test_allows_when_route_md_present_and_red_marker():
     project = _fresh_project_dir()
     try:
         slug = "framed-slug"
-        task_dir = _make_compass_project(project, slug, with_route_md=True)
+        task_dir = _make_compass_project(project, slug, with_approach=True)
 
         # Drop the .red marker so the hook's green path is satisfied
         write_red_record(task_dir)
@@ -187,7 +189,7 @@ def test_hook_exits_zero_for_non_code_file():
     project = _fresh_project_dir()
     try:
         slug = "no-frame-slug"
-        _make_compass_project(project, slug, with_route_md=False)
+        _make_compass_project(project, slug, with_approach=False)
 
         # Markdown files are always exempt regardless of issue state
         target = str(project / "README.md")
@@ -222,7 +224,7 @@ def test_no_red_blocks_wiring_change_baseline():
     honestly."""
     project = _fresh_project_dir()
     try:
-        _make_compass_project(project, "wire-slug", with_route_md=True)
+        _make_compass_project(project, "wire-slug", with_approach=True)
         target = str(project / "src" / "app.py")
         result = subprocess.run(
             ["bash", str(HOOK_PATH)],
@@ -239,7 +241,7 @@ def test_verified_by_red_allows_edit():
     drops) allows the production edit."""
     project = _fresh_project_dir()
     try:
-        task_dir = _make_compass_project(project, "wire-ok", with_route_md=True)
+        task_dir = _make_compass_project(project, "wire-ok", with_approach=True)
         write_red_record(task_dir)   # a verified-by red drops this marker
         target = str(project / "src" / "app.py")
         result = subprocess.run(
@@ -268,7 +270,7 @@ def _guard_run(project, tool, **fields):
 
 def _guarded_project():
     project = _fresh_project_dir()
-    task_dir = _make_compass_project(project, "feature", with_route_md=True)
+    task_dir = _make_compass_project(project, "feature", with_approach=True)
     write_red_record(task_dir)        # a red on record: only the new guards can refuse
     return project, task_dir
 

@@ -19,7 +19,7 @@ The support code the first specification needs:
 | `tests/acceptance/system.py` | the data folder, and the API server, started on first use and stopped when the run ends |
 | `tests/acceptance/test_layering.py` | the layering test |
 
-The system under test uses the Python standard library only. The test tools are in `requirements.txt`, each pinned to one version.
+The system under test uses the Python standard library only. The test tools are in `requirements.txt`, each pinned to one version. The layering test reads `governance/terminology.yml` with PyYAML.
 
 ## Run it
 
@@ -61,6 +61,7 @@ tests/acceptance/test_todos.py:18: one DSL call per Given, When or Then line: th
 | the DSL makes no check | an `assert`, a `raise` or a call to the runner's `fail` inside a DSL method, async or not, or inside a module-level function of `dsl.py` |
 | every identifier goes through an alias | a string in a specification that matches a pattern in `IDENTIFIER_PATTERNS` (an email address) and is not an argument of a DSL parameter that the method passes to `self._alias(...)` |
 | one DSL call per Given, When or Then line | a statement that is not one DSL call, a step line with no call, or a line that makes two. A Given line is matched to a `has` method, a Then line to a `confirm` method, a When line to any other. Within each of these phases, lines and calls are matched by count. It reads module-level `test_*` functions and the `test_*` methods of `Test*` classes |
+| a DSL method name uses no banned term | a DSL method whose name holds a term of the `banned` list in the project's `governance/terminology.yml`, the first one found in the example's root or a folder above it. `routeTodo` holds the term `route`. Without that file the rule skips and says why |
 
 Two items of the model's checklist are not rules here: DSL and driver method names match, and nothing cleans up after a scenario. The example follows both. The layering test does not check them.
 
@@ -70,6 +71,16 @@ Two items of the model's checklist are not rules here: DSL and driver method nam
 2. Replace `todo/` with your system, and `tests/acceptance/system.py` with how your run reaches it.
 3. Write your specifications and DSL first. Add your driver names to `DRIVERS`: until the modules exist, each scenario is an error at setup.
 4. Write each driver against the interface in `tests/acceptance/drivers/__init__.py`. Put every check in the driver.
-5. Set `DSL_FILE`, `SPEC_FILES` and `IDENTIFIER_PATTERNS` in `test_layering.py` for your suite, and run it in CI with the specifications.
+5. Set `DSL_FILE`, `SPEC_FILES`, `IDENTIFIER_PATTERNS` and, when your banned list is not in `governance/terminology.yml` at or above the suite's root, `TERMINOLOGY_FILE` in `test_layering.py` for your suite. Run it in CI with the specifications.
+6. Name each piece of support code in your `compass.yml`, so `compass readiness` can report the pieces that are missing:
+
+   ```yaml
+   project:
+     acceptance_support:
+       alias_helper: tests/acceptance/alias.py
+       driver_factory: conftest.py
+       dsl_root: tests/acceptance/dsl.py
+       layering_test: tests/acceptance/test_layering.py
+   ```
 
 Compass does not read this example's code. Its own tests, in `tests/acceptance/atdd_strategy/test_reference_example.py` of the Compass repository, run it and plant each breach. The CI job `atdd-adapter-python` runs it on every pull request.

@@ -7,8 +7,8 @@ and `skills/compass-runtime/SKILL.md` shared 46 sentences verbatim - 39% of
 `compass-runtime` naming nine agents and omitting `architect`.
 
 `AGENTS.md` is deliberately not part of this. It shares no sentence with
-either, because it is the runtime-neutral expression for Codex, Amp and
-Cursor. Other runtimes are out of scope for this contract.
+either, because it is the runtime-neutral expression of Compass for a port to
+another runtime. Other runtimes are out of scope for this contract.
 
 Scenario ids: SB-A1..A3, SB-B1..B4, SB-C1, SB-C2, SB-D1, SB-D2 in
 session-bootstrap/acceptance-criteria.md
@@ -28,7 +28,7 @@ from size_targets import warn_if_over
 
 ROOT = Path(__file__).resolve().parent.parent
 # Named so it cannot collide: a bare `contract.md` is a substring of
-# `docs/safety-contract.md` and `templates/ui-contract.md`, and a test that
+# `docs/safety-contract.md`, and a test that
 # greps for it passes on either.
 CONTRACT = ROOT / "compass-contract.md"
 HOOKS_JSON = ROOT / "hooks" / "hooks.json"
@@ -45,7 +45,8 @@ AGENTS_MD = ROOT / "AGENTS.md"
 # and pytest warns.
 # Moved to 450 by the ASD-STE100 writing rule (issue `ste100-writing-rule`):
 # 442 words measured.
-CONTRACT_WORD_TARGET = 450
+# Lowered to 350 by #358, which cut the contract to 342 words.
+CONTRACT_WORD_TARGET = 350
 
 
 # ---------------------------------------------------------------------------
@@ -193,8 +194,8 @@ def test_sb_b3_the_runtime_neutral_document_is_untouched():
     """AGENTS.md is not a third copy and is not this cycle's work.
 
     It shares no sentence with either Claude Code document, because it is the
-    portable expression for Codex, Amp and Cursor. Other runtimes are out of
-    scope for this contract.
+    portable expression for a port to another runtime. Other runtimes are out
+    of scope for this contract.
     """
     text = AGENTS_MD.read_text(encoding="utf-8")
     assert "Runtime-Neutral" in text, (
@@ -203,26 +204,6 @@ def test_sb_b3_the_runtime_neutral_document_is_untouched():
     assert CONTRACT.name not in text, (
         f"AGENTS.md now points at {CONTRACT.name}, a Claude Code artefact. "
         "The portable document must not depend on the adapter's files.")
-
-
-def test_sb_b4_the_contract_does_not_carry_a_stale_agent_roster():
-    """The contract names every shipped agent or none: a roster kept by
-    hand goes out of date.
-
-    A roster maintained in prose drifts again. Either the contract names every
-    shipped agent, or it names none and points at where they are listed.
-    """
-    shipped = {p.stem for p in (ROOT / "agents").glob("*.md")}
-    assert shipped, "no agents ship, so this check would pass over nothing"
-
-    text = CONTRACT.read_text(encoding="utf-8")
-    named = {name for name in shipped if re.search(rf"\b{re.escape(name)}\b", text)}
-
-    if named:
-        missing = sorted(shipped - named)
-        assert not missing, (
-            "the contract names some agents but not all, which is the drift "
-            f"this issue exists to remove: {', '.join(missing)}")
 
 
 # ---------------------------------------------------------------------------
@@ -262,11 +243,10 @@ def test_sb_c2_a_pin_to_the_plugin_root_says_where_a_project_changes_it():
     rules in its `compass.yml`, and `compass policy show` prints what is in
     force. So an instruction can read the shipped prose from
     `${CLAUDE_PLUGIN_ROOT}/governance/`. The trap is a file that pins the
-    prose and says nothing else, which ignores both the project's
-    `compass.yml` and a 5.x project's own copy of `governance/` (which
-    `find_governance()` still resolves project-local first, and `compass
-    policy show` does not read that copy). Within eight lines of each pin the
-    text must say that an unmigrated 5.x project runs on its own copy.
+    prose and says nothing else, which leaves a reader of a 5.x project with
+    its own copy of `governance/` believing the pin applies to it. 9.0.0
+    refuses such a project (`governance-copy-removed`, ADR-098). Within eight
+    lines of each pin the text must name the unmigrated 5.x project.
     """
     unexplained = []
     for path in _pin_scan_files():
@@ -291,8 +271,8 @@ def _pin_scan_files():
 
 def test_sb_c2_the_pin_scan_reads_skills_and_templates():
     names = {str(p.relative_to(ROOT)) for p in _pin_scan_files()}
-    assert {"commands/plan.md", "agents/router.md", "skills/adaptive-routing/SKILL.md",
-            "skills/adaptive-routing/composition.md", "templates/delivery-approach.md"} <= names
+    assert {"commands/ship.md", "skills/adaptive-routing/SKILL.md",
+            "skills/adaptive-routing/composition.md", "templates/acceptance-criteria.md"} <= names
 
 
 def _unexplained_pins(text):

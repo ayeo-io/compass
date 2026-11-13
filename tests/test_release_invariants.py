@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 import yaml
+from check_set_files import view as shipped_view  # noqa: E402
 
 REPO_ROOT = Path(__file__).parent.parent
 
@@ -28,7 +29,7 @@ REPO_ROOT = Path(__file__).parent.parent
 
 def test_guardrail_count_is_exactly_five():
     """`G1`-`G5` are the framework's five guardrails. ADR-002: no growth."""
-    data = yaml.safe_load((REPO_ROOT / "governance/guardrails.yml").read_text())
+    data = shipped_view("guardrails.yml")
     default_ids = [g["id"] for g in data["defaults"]]
     assert default_ids == ["G1", "G2", "G3", "G4", "G5"], (
         f"The five framework guardrails must be G1-G5 in order; got {default_ids}. "
@@ -38,7 +39,7 @@ def test_guardrail_count_is_exactly_five():
 
 def test_no_trusted_rerun_is_a_check_under_g4_not_a_new_guardrail():
     """The no-trusted-rerun check must be a CHECK_FN under `G4`, not a new guardrail."""
-    data = yaml.safe_load((REPO_ROOT / "governance/guardrails.yml").read_text())
+    data = shipped_view("guardrails.yml")
     g4 = next(g for g in data["defaults"] if g["id"] == "G4")
     assert "no-trusted-rerun" in g4["checks"], (
         "A1's no-trusted-rerun must be registered as a CHECK_FN under G4 - "
@@ -48,7 +49,7 @@ def test_no_trusted_rerun_is_a_check_under_g4_not_a_new_guardrail():
 
 def test_command_passes_is_a_check_under_g4_not_a_new_guardrail():
     """The command-passes check must be a CHECK_FN under `G4`, not a new guardrail."""
-    data = yaml.safe_load((REPO_ROOT / "governance/guardrails.yml").read_text())
+    data = shipped_view("guardrails.yml")
     g4 = next(g for g in data["defaults"] if g["id"] == "G4")
     assert "command-passes" in g4["checks"], (
         "A2's command-passes must be registered as a CHECK_FN under G4 (DD-5; ADR-002)."
@@ -63,7 +64,7 @@ def test_command_passes_is_a_check_under_g4_not_a_new_guardrail():
 def test_routing_dimensions_are_unchanged():
     """The four assessment dimensions (risk, familiarity, size, goal) are
     unchanged."""
-    policy = yaml.safe_load((REPO_ROOT / "governance/routing-policy.yml").read_text())
+    policy = shipped_view("routing-policy.yml")
     vocab = policy["assessment_vocabulary"]
     assert "risk" in vocab
     assert "familiarity" in vocab
@@ -78,7 +79,7 @@ def test_routing_dimensions_are_unchanged():
 
 def test_no_fifth_routing_dimension_added():
     """No new top-level assessment dimension was introduced by the 1.1.0 release."""
-    policy = yaml.safe_load((REPO_ROOT / "governance/routing-policy.yml").read_text())
+    policy = shipped_view("routing-policy.yml")
     vocab_keys = set(policy["assessment_vocabulary"].keys())
     # The legitimate set; if anything beyond this exists, the framework grew a dimension
     legitimate = {"risk", "familiarity", "size", "goal", "urgency", "labels_common"}
@@ -96,9 +97,9 @@ def test_no_fifth_routing_dimension_added():
 
 def test_verify_fitness_only_introduced_via_routing_floors():
     """verify.architecture is not in any route_shape's gates list - it is only
-    added by the RP-REQUIRE-003 and RP-REQUIRE-004 floors.
+    added by a floor (the check set holds none now; a project's own floor can).
     """
-    policy = yaml.safe_load((REPO_ROOT / "governance/routing-policy.yml").read_text())
+    policy = shipped_view("routing-policy.yml")
     for shape_name, shape in policy["route_shapes"].items():
         assert "verify.architecture" not in shape.get("gates", []), (
             f"verify.architecture must not be baked into route_shape '{shape_name}'.gates - "
@@ -106,15 +107,14 @@ def test_verify_fitness_only_introduced_via_routing_floors():
         )
 
 
-def test_verify_fitness_promotion_floors_exist():
-    """RP-REQUIRE-003 and RP-REQUIRE-004 are present and use add_gate: verify.architecture."""
-    policy = yaml.safe_load((REPO_ROOT / "governance/routing-policy.yml").read_text())
+def test_the_shipped_check_set_has_no_floor_that_adds_the_architecture_gate():
+    """The check set holds no floor with add_gate: verify.architecture (ADR-099). The
+    gate is owed only through a project's `architecture` token or its own floor."""
+    policy = shipped_view("routing-policy.yml")
     floors = policy["routing_guardrails"]["floors"]
-    by_id = {f["id"]: f for f in floors}
-    assert "RP-REQUIRE-003" in by_id, "RP-REQUIRE-003 (verify.architecture on cross-cutting/critical) must exist"
-    assert "RP-REQUIRE-004" in by_id, "RP-REQUIRE-004 (verify.architecture on irreversible touches) must exist"
-    assert by_id["RP-REQUIRE-003"]["add_gate"] == "verify.architecture"
-    assert by_id["RP-REQUIRE-004"]["add_gate"] == "verify.architecture"
+    assert [f["id"] for f in floors if f.get("add_gate") == "verify.architecture"] == []
+    assert "RP-REQUIRE-003" not in {f["id"] for f in floors}
+    assert "RP-REQUIRE-004" not in {f["id"] for f in floors}
 
 
 # -----------------------------------------------------------------------------
@@ -151,7 +151,7 @@ def test_quarantine_yml_ships_empty():
 
 def test_no_project_guardrails_declared_in_framework_repo():
     """The framework's own guardrails.yml ships with project: [] (empty)."""
-    data = yaml.safe_load((REPO_ROOT / "governance/guardrails.yml").read_text())
+    data = shipped_view("guardrails.yml")
     assert data.get("project", []) == [], (
         "The framework guardrails.yml must ship with project: [] (bare-repo no-op for adopters)."
     )
@@ -214,7 +214,7 @@ def test_default_method_strategy_set_is_the_known_set():
 
 def test_net_new_gates_is_one():
     """gate_evidence_requirements gained exactly verify.architecture (no other new gate)."""
-    data = yaml.safe_load((REPO_ROOT / "governance/guardrails.yml").read_text())
+    data = shipped_view("guardrails.yml")
     gates = set(data["gate_evidence_requirements"].keys())
     legitimate = {"verify.correctness", "verify.regression", "verify.security",
                   "verify.governance", "verify.traceability", "verify.claims",
@@ -222,12 +222,6 @@ def test_net_new_gates_is_one():
                   "verify.architecture"}
     extra = gates - legitimate
     assert not extra, f"gate_evidence_requirements gained unexpected gates: {extra}"
-
-
-def test_net_new_signals_category_is_design_smell():
-    """signals.yml gained exactly the design_smell category from this work."""
-    data = yaml.safe_load((REPO_ROOT / "governance/signals.yml").read_text())
-    assert "design_smell" in data, "signals.yml must have a design_smell category (TRC-C4)"
 
 
 # -----------------------------------------------------------------------------
@@ -307,7 +301,7 @@ def test_no_user_stories_as_spec_format():
 def test_no_deployment_pipeline_concepts():
     """Safety-contract guarantee 6: Compass is not a deployment pipeline."""
     # No CI/CD pipeline files in templates/. No "release" or "production" stage gates.
-    data = yaml.safe_load((REPO_ROOT / "governance/guardrails.yml").read_text())
+    data = shipped_view("guardrails.yml")
     gates = set(data["gate_evidence_requirements"].keys())
     for forbidden in ("release", "production", "deploy", "rollout"):
         for gate in gates:

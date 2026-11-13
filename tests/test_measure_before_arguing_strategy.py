@@ -8,7 +8,7 @@ incidents that established it.
 The practice is written down because it has to reach a session that has never
 read this file's history.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 
@@ -19,7 +19,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 STRATEGIES = ROOT / "governance" / "strategies.md"
 
 # Where a session needs the pointer. CLAUDE.md is loaded every session, and
-# commands/verify.md is where the reviewer assesses the practice - the same
+# the review dimensions file is where the reviewer assesses the practice (the
+# review method moved there from commands/ship.md with ADR-099) - the same
 # two-surface pattern `S10` (mutation proof) uses.
 #
 # skills/receiving-code-review/SKILL.md would be the natural third home, since
@@ -29,7 +30,8 @@ STRATEGIES = ROOT / "governance" / "strategies.md"
 # the pointer is worth.
 POINTER_SURFACES = (
     ("CLAUDE.md", ROOT / "CLAUDE.md"),
-    ("commands/verify.md", ROOT / "commands" / "verify.md"),
+    ("skills/evidence-gates/review-dimensions.md",
+     ROOT / "skills" / "evidence-gates" / "review-dimensions.md"),
 )
 
 

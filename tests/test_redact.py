@@ -17,8 +17,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "cli"))
 from compass_pkg.redact import MARK, redact  # noqa: E402
 
+# The shipped default declares no readiness signal since 9.0.0 (ADR-093). The
+# 8.x preset did, and a stored generation copies it into the record; the test
+# fixture holds that preset (VD-055).
 READINESS_CATALOGUE = Path(__file__).resolve().parent.parent / (
-    "governance/presets/default/readiness.yml")
+    "tests/fixtures/presets/default@7/readiness.yml")
 
 
 @pytest.mark.parametrize("text", [

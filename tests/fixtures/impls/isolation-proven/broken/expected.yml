@@ -1,0 +1,2 @@
+verdict: fail
+input: an in-scope issue whose isolation proof shows the `parallel` run failed with `exit_code` 1

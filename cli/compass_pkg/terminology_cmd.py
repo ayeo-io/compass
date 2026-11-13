@@ -9,11 +9,13 @@ import sys
 
 import yaml
 
-from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_yaml
+from compass_pkg.core import FRAMEWORK_ROOT, CompassError, find_compass_dir, load_yaml
 
 
 def _load_terms():
-    path = os.path.join(find_governance(), "terminology.yml")
+    # The framework's vocabulary, read by path: a project's governance/ never
+    # held one, and 9.0.0 reads no copied governance (ADR-098).
+    path = os.path.join(FRAMEWORK_ROOT, "governance", "terminology.yml")
     doc = load_yaml(path)
     if not isinstance(doc, dict) or not isinstance(doc.get("terms"), dict):
         raise CompassError(
@@ -105,7 +107,7 @@ def cmd_terminology(args):
 # reader opens and the file the build enforces cannot disagree. A hand-written
 # copy of a machine-readable source goes out of date when the source changes.
 #
-# Private, like _derive-system-spec: called at ship, not a public verb.
+# Private: called at ship, not a public verb.
 
 def _fmt(value):
     """One field, flattened. YAML block scalars arrive with newlines in them."""
@@ -114,15 +116,7 @@ def _fmt(value):
     return " ".join(str(value).split())
 
 
-def kind_rows(artifacts: dict) -> list:
-    """One row per document kind of the artifacts catalogue. The glossary and
-    `docs/artifact-catalog.md` both read it, so they cannot disagree."""
-    from compass_pkg import artifact_kinds
-
-    return artifact_kinds.rows(artifacts)
-
-
-def render_glossary(vocab: dict, artifacts: dict = None) -> str:
+def render_glossary(vocab: dict) -> str:
     terms = vocab.get("terms") or {}
     codes = vocab.get("codes") or {}
     out = [
@@ -165,56 +159,15 @@ def render_glossary(vocab: dict, artifacts: dict = None) -> str:
             if e.get(key):
                 line = f"**{label}:** {_fmt(e[key])}"
                 from compass_pkg import old_names
-                if key == "also" and old_names.is_old("term", str(e[key]).strip()):
-                    line += " <!-- us-english-scan: allow - old term, read until 9.0.0 -->"
+                also = str(e[key]).strip()
+                ends = [r["removed_in"] for r in old_names.rows("term") if r["old"] == also]
+                if key == "also" and ends:
+                    # The release comes from the table, so the page cannot
+                    # name an end the reader no longer has.
+                    line += f" <!-- us-english-scan: allow - old term, read until {ends[0]} -->"
                 out.append(line)
                 out.append("")
-    rows = kind_rows(artifacts)
-    if rows:
-        out += ["## Document kinds", "",
-                "The kinds of document a process writes, from the artifacts catalog of the",
-                "shipped default. Each entry gives who reads the document, the name the",
-                "industry uses for it, and where it lives.", ""]
-        for row in sorted(rows, key=lambda r: r["kind"]):
-            out += [f"### `{row['kind']}`", "", row["audience"], "",
-                    f"**Traditional name:** {row['stands_for']}", "",
-                    f"**Stage:** `{row['stage']}` · **Owner:** {row['owner']}", "",
-                    f"**Home:** `docs/compass/<created>-<issue-slug>/{row['file']}`", ""]
     return "\n".join(out).rstrip("\n") + "\n"
-
-
-#: The lines in `docs/artifact-catalog.md` between which `_derive-glossary`
-#: writes the table of kinds. The text around them is written by hand.
-REGION_START = "<!-- compass:catalogue-table -->"  # us-english-scan: allow - region marker already in generated documents
-REGION_END = "<!-- /compass:catalogue-table -->"  # us-english-scan: allow - region marker already in generated documents
-
-
-def render_catalogue_region(artifacts: dict) -> str:
-    """The table of kinds and the headings of each, as markdown."""
-    rows = kind_rows(artifacts)
-    out = ["| Kind | File | Stage | Owner | Traditional name | Who reads it |",
-           "|---|---|---|---|---|---|"]
-    for r in rows:
-        out.append("| `%s` | `%s` | `%s` | %s | %s | %s |" % (
-            r["kind"], r["file"], r["stage"], r["owner"], r["stands_for"], r["audience"]))
-    out += ["", "Headings of each kind, in order:", ""]
-    for r in rows:
-        for depth in sorted(r["sections"], reverse=True):
-            listed = r["sections"][depth]
-            out.append("- `%s`, %s: %s" % (
-                r["kind"], depth, "; ".join(listed) if listed else "no heading (one rendered block)"))
-    return "\n".join(out) + "\n"
-
-
-def replace_catalogue_region(doc: str, artifacts: dict) -> str:
-    """`doc` with the text between the region markers replaced by a fresh table."""
-    start = doc.find(REGION_START)
-    end = doc.find(REGION_END)
-    if start < 0 or end < start:
-        raise CompassError(
-            f"docs/artifact-catalog.md has no {REGION_START} ... {REGION_END} region to write.")
-    return (doc[:start + len(REGION_START)] + "\n\n" + render_catalogue_region(artifacts)
-            + "\n" + doc[end:])
 
 
 def cmd_derive_glossary(args):
@@ -224,30 +177,11 @@ def cmd_derive_glossary(args):
         raise CompassError(f"no vocabulary file at {src}")
     with open(src, "r", encoding="utf-8") as fh:
         vocab = yaml.safe_load(fh) or {}
-    catalogue_src = os.path.join(root, "governance", "presets", "default", "artifacts.yml")
-    artifacts = {}
-    if os.path.isfile(catalogue_src):
-        with open(catalogue_src, "r", encoding="utf-8") as fh:
-            artifacts = (yaml.safe_load(fh) or {}).get("artifacts") or {}
-    text = render_glossary(vocab, artifacts)
+    text = render_glossary(vocab)
     out = getattr(args, "out", None) or os.path.join(root, "docs", "glossary.md")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as fh:
         fh.write(text)
     print(f"compass _derive-glossary: {out} derived "
-          f"({len(vocab.get('codes') or {})} codes, {len(vocab.get('terms') or {})} terms, "
-          f"{len(artifacts)} document kinds).")
-    # The owning doc is rewritten beside the glossary: at its place when no
-    # output is named, and at --catalogue-out when one is. A caller that names
-    # only --out gets the glossary and leaves the doc alone.
-    doc_in = os.path.join(root, "docs", "artifact-catalog.md")
-    doc_out = getattr(args, "catalogue_out", None) or (
-        None if getattr(args, "out", None) else doc_in)
-    if doc_out and os.path.isfile(doc_in):
-        with open(doc_in, "r", encoding="utf-8") as fh:
-            doc = replace_catalogue_region(fh.read(), artifacts)
-        os.makedirs(os.path.dirname(doc_out), exist_ok=True)
-        with open(doc_out, "w", encoding="utf-8") as fh:
-            fh.write(doc)
-        print(f"compass _derive-glossary: {doc_out} derived.")
+          f"({len(vocab.get('codes') or {})} codes, {len(vocab.get('terms') or {})} terms).")
     return 0

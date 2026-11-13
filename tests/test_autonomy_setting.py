@@ -28,7 +28,7 @@ GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
 QUICK_FIX = {"risk": "trivial", "familiarity": "brownfield-mapped",
              "size": "atomic", "intent": "delivery"}
 FEATURE = {"risk": "contained", "familiarity": "brownfield-mapped",
-           "size": "standard", "intent": "delivery"}
+           "size": "medium", "intent": "delivery"}
 INITIATIVE = {"risk": "contained", "familiarity": "brownfield-mapped",
               "size": "large", "intent": "delivery"}
 
@@ -44,6 +44,19 @@ def project(tmp_path):
     (root / ".compass").mkdir()
     (root / ".compass" / "config.yml").write_text("mode: enforced\n")
     return root
+
+
+#: A project that asks for the outer loop of the four-layer strategy (`S17`). The
+#: strategy applies, and `controlled` autonomy waits at build and ship, only where
+#: a setting adds its records (ADR-099 decision 9).
+OUTER_LOOP = "require_evidence:\n  - when: {}\n    add: [outer-loop]\n"
+
+
+def _controlled_with_outer_loop(root):
+    """`controlled` autonomy and the outer loop, both in `compass.yml`. Its
+    settings replace `.compass/config.yml`, which is removed."""
+    (root / ".compass" / "config.yml").unlink()
+    (root / "compass.yml").write_text("schema: 1\nautonomy: controlled\n" + OUTER_LOOP)
 
 
 def _set_autonomy(root, value):
@@ -75,14 +88,26 @@ def _start(root, slug, risk, size):
 
 
 def test_au_1_balanced_is_the_default(project):
-    assert _evaluate(project, QUICK_FIX)["checkpoints"] == []
-    assert _evaluate(project, FEATURE)["checkpoints"] == ["define", "plan"]
-    assert _evaluate(project, INITIATIVE)["checkpoints"] == [
-        "assess", "define", "refine", "plan"]
-    _start(project, "bigger", "contained", "standard")
+    # An assessment given on the command line is evaluated on the four-stage path
+    # too: balanced lists no checkpoint for a change that owes no
+    # `scenario-approval`, at any size (ADR-092 open question 7).
+    for readings in (QUICK_FIX, FEATURE, INITIATIVE):
+        assert _evaluate(project, readings)["checkpoints"] == [], readings
+    _set_autonomy(project, "controlled")
+    # No record of `S17` is owed, so `controlled` waits at assess and specify.
+    assert _evaluate(project, FEATURE)["checkpoints"] == ["assess", "specify"]
+    _controlled_with_outer_loop(project)
+    assert _evaluate(project, FEATURE)["checkpoints"] == ["assess", "specify", "build", "ship"]
+    (project / "compass.yml").unlink()
+    _set_autonomy(project, "balanced")
+    _start(project, "bigger", "contained", "medium")
     manifest = yaml.safe_load(
         (project / ".compass" / "work" / "bigger" / "manifest.yml").read_text())
-    assert manifest["checkpoints"] == ["define", "plan"], manifest
+    # On the four-stage path balanced autonomy lists no checkpoint for a change
+    # that owes no `scenario-approval` (ADR-092 open question 7).
+    assert "definition-of-done" not in manifest["evidence_required"], manifest
+    assert "stages" not in manifest, manifest
+    assert manifest["checkpoints"] == [], manifest
 
 
 @pytest.mark.parametrize("readings", [QUICK_FIX, FEATURE, INITIATIVE])
@@ -91,13 +116,12 @@ def test_au_2_the_setting_changes_only_the_checkpoints(project, readings):
     for value in ("controlled", "balanced", "autonomous"):
         _set_autonomy(project, value)
         results[value] = _evaluate(project, readings)
-    # The readiness floor reads `autonomy` too, but only to say whether
-    # --write would be refused; it changes no approach, gate or stage.
-    rest = [{k: v for k, v in r.items() if k not in ("checkpoints", "readiness")}
+    # 9.0.0 removed the readiness floor (ADR-093), so `checkpoints` is the
+    # only key the setting changes, and no result carries `readiness`.
+    rest = [{k: v for k, v in r.items() if k != "checkpoints"}
             for r in results.values()]
     assert rest[0] == rest[1] == rest[2]
-    assert results["controlled"]["readiness"]["would_refuse"] is None
-    assert results["balanced"]["readiness"]["would_refuse"] is None
+    assert not [v for v, r in results.items() if "readiness" in r], results
     assert results["autonomous"]["checkpoints"] == []
     assert "assess" in results["controlled"]["checkpoints"]
 
@@ -116,35 +140,31 @@ def test_au_3_an_unknown_value_is_refused(project):
 
 def test_au_4_the_summary_stays_three_lines_and_names_the_checkpoints(project):
     assert _start(project, "greeting", "trivial", "atomic").returncode == 0
-    _start(project, "bigger", "contained", "standard")
+    # On the path balanced autonomy waits nowhere on this change, so the bigger
+    # issue is assessed under controlled autonomy, which lists every stage where
+    # `S17` applies (ADR-092 open question 7).
+    _controlled_with_outer_loop(project)
+    assert _start(project, "bigger", "contained", "medium").returncode == 0
     small = _run(project, "approach", "show", "--issue", "greeting")
     big = _run(project, "approach", "show", "--issue", "bigger")
     for view in (small, big):
         assert view.returncode == 0, view.stderr
         assert len(view.stdout.strip().splitlines()) == 3, view.stdout
     assert "does not stop to wait for you" in small.stdout.splitlines()[0]
-    assert "waits for you at: define, plan" in big.stdout.splitlines()[0]
+    assert "waits for you at: assess, specify, build, ship" in big.stdout.splitlines()[0]
+    assert big.stdout.splitlines()[1].startswith("Evidence: "), big.stdout
 
 
-@pytest.mark.parametrize("command", ["assess", "define", "refine", "plan"])
+@pytest.mark.parametrize("command", ["assess", "go"])
 def test_au_5_each_hand_off_waits_only_when_listed(command):
+    # ADR-092 D7: the define, refine and plan commands are gone. Assess keeps
+    # its procedure, and the specify hand-off is in `/compass:go`. A path
+    # issue writes no `devlog.md` (D12), so the record of a skipped wait is
+    # the checkpoint outcome, not a devlog line.
     text = (ROOT / "commands" / f"{command}.md").read_text(encoding="utf-8")
     if command == "assess":   # its full procedure is a reference file
         text += (ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
-    assert "`checkpoints:`" in text, command
-    assert "devlog.md" in text, command
+        assert "`checkpoints:`" in text, command
+    else:
+        assert "`specify` checkpoint is\nlisted, wait for approval" in text, command
     assert "autonomy" in text, command
-
-
-def test_au_6_a_table_naming_another_stage_is_refused(project):
-    shutil.copytree(ROOT / "governance", project / "governance")
-    path = project / "governance" / "routing-policy.yml"
-    policy = yaml.safe_load(path.read_text())
-    policy["autonomy_checkpoints"]["balanced"]["regular"].append("verify")
-    path.write_text(yaml.safe_dump(policy, sort_keys=False))
-    lint = _run(project, "policy", "lint")
-    assert lint.returncode != 0, lint.stdout + lint.stderr
-    assert "verify" in lint.stdout + lint.stderr
-    r = _run(project, "approach", "evaluate", "--json",
-             *sum((["--assessment", f"{k}={v}"] for k, v in FEATURE.items()), []))
-    assert r.returncode != 0, r.stdout + r.stderr

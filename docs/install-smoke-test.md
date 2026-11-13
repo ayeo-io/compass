@@ -4,20 +4,20 @@ Use this checklist after installing Compass or changing its installation.
 Run it in a scratch Git repository so the test issue does not enter a real
 project.
 
-Run the checklist separately for each runtime. Keep the host version, framework
-revision, OS, installation method, hook trust state, raw output and expected
-versus observed result. Use `passed`, `failed`, `unsupported` or `unmeasured`
-for each case. The [adapter behavior guide](adapter-conformance.md) explains
+Compass supports Claude Code only; the Codex adapter stays on 8.x. Keep the
+host version, framework revision, OS, installation method, hook trust state,
+raw output and expected versus observed result. Use `passed`, `failed`,
+`unsupported` or `unmeasured` for each case. The [adapter behavior guide](adapter-conformance.md) explains
 why local subprocess results cannot count as native or independent acceptance.
 
-| Step | Claude Code | Codex |
-|---|---|---|
-| Install | Marketplace or source commands below. | Follow [Codex installation](codex.md); review hook trust in the host. |
-| Start an issue | Run `/compass:assess` below. | Load `compass:compass` and ask it to assess the scratch change. |
-| Inspect records | Check the manifest, documents and CLI verdict below. | Check the same shared records and verdict. |
-| Check hooks | Try the edit in the actual host. | Try the edit in the actual host; discovered but untrusted hooks do not prove enforcement. |
-| Uninstall/reinstall | Use the source commands below. | Use the Codex installer's uninstall and reinstall commands in its guide. |
-| Resume | Reopen the host and continue from recorded state. | Reopen the host and continue; record cold start and compaction separately. |
+| Step | Claude Code |
+|---|---|
+| Install | Marketplace or source commands below. |
+| Start an issue | Run `/compass:assess` below. |
+| Inspect records | Check the manifest, documents and CLI verdict below. |
+| Check hooks | Try the edit in the actual host. |
+| Uninstall/reinstall | Use the source commands below. |
+| Resume | Reopen the host and continue from recorded state; record cold start and compaction separately. |
 
 For independent acceptance, another person must install Compass and complete a
 scratch issue. Record the tester's identity. An author's temporary configuration
@@ -87,7 +87,7 @@ python3 cli/compass policy lint
 Expect:
 
 ```text
-compass 8.0.4 (issue schema 3.0)
+compass 9.0.0 (issue schema 3.0)
 PyYAML 6.0.2 at .../cli/vendor/yaml/__init__.py
 ```
 
@@ -120,25 +120,16 @@ Confirm that Compass created:
 ```text
 .compass/current-task
 .compass/work/<issue-slug>/manifest.yml
-docs/compass/<date>-<issue-slug>/delivery-approach.md
 ```
 
 The exact slug can vary. The manifest, evidence and markers are in
-`.compass/work/<issue-slug>/`. The issue's documents are in
-`docs/compass/<date>-<issue-slug>/`, where `<date>` is the manifest's
-`created:` date. `delivery-approach.md` is there too, and
-`compass issue artifact-path delivery-approach` prints its path.
+`.compass/work/<issue-slug>/`. The manifest holds the delivery approach. The
+one issue document, the acceptance criteria, goes in
+`docs/compass/<date>-<issue-slug>/acceptance-criteria.md`, where `<date>` is
+the manifest's `created:` date.
 
-Render the issue page:
-
-```bash
-compass issue render --issue <issue-slug>
-```
-
-Open the generated `README.md` in `docs/compass/<created>-<issue-slug>/`. It must show
-the status and approach, the ask, whether a decision is required, the
-acceptance scenarios, and each scenario's traceability. `compass next`
-names the next action.
+Run `compass approach show --issue <issue-slug>`. It must show the approach,
+the gates and where the issue's files go. `compass next` names the next action.
 
 If `/compass:assess` is unknown, the adapter is not loaded. Restart Claude
 Code, then check the plugin installation or the source installation.
@@ -163,12 +154,11 @@ problem rather than an uncleared gate.
 
 ## 6. Check the hooks
 
-Start a small delivery issue, define one scenario, then try to edit production
-code before recording a failing test. The pre-tool hook must block the edit
-and explain how to record the red test.
+Assess a small delivery issue with `/compass:assess`, then try to edit
+production code before adding a scenario. The pre-tool hook must block the
+edit and name `compass scenario add`.
 
-Do not run this check on a spike: spikes deliberately suspend the
-red-before-green strategy.
+Do not run this check on a spike: the hook never refuses a spike's edits.
 
 For a source install, confirm the Claude Code settings contain Compass entries
 for:
@@ -202,7 +192,7 @@ runs must succeed without duplicate hook entries.
 |---|---|
 | Command is unknown | Restart Claude Code; check the plugin or source adapter path. |
 | `policy lint` cannot find governance | Run from the project or use the CLI from a complete Compass checkout. |
-| Edit is blocked | Record a failing test first, or confirm the issue is correctly assessed as a spike. |
+| Edit is blocked | Read the refusal. Add a scenario, get the scenario approval it names, or confirm the issue is correctly assessed as a spike. |
 | Hooks were not registered | Install `jq` and rerun the source installer, or follow its manual instructions. |
 | Existing Compass directory is not overwritten | Move the unrelated directory aside; the installer stops with an error and does not overwrite it. |
 

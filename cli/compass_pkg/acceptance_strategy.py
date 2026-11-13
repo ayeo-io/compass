@@ -18,13 +18,13 @@ branches itself. It must tell a changed project setting, an off or suspended
 issue and a line that disagrees with the records apart, each with its own
 message, and `in_scope` gives only one answer for all of them. The module also holds the setting reader, the line the
 delivery-approach record shows, the advisory check
-`acceptance-applicability-agrees` and `compass retro --acceptance`.
+`acceptance-applicability-agrees` and the waiver notices `compass check` prints.
 
 Compass reads records here, never project code.
 """
-# DEPENDENCY: standard library (json, os); compass_pkg.check_results, core,
-# project_settings and red_first, and inside functions compass_pkg.layers, parents,
-# effective and status_words. It imports no command
+# DEPENDENCY: standard library (json, os); compass_pkg.check_results,
+# core, project_settings and red_first, and inside functions
+# next_cmd and next_step. It imports no command
 # module and no check module at load time, so a check module can import it.
 from __future__ import annotations
 
@@ -33,19 +33,19 @@ import os
 
 from compass_pkg import project_settings
 from compass_pkg.check_results import NOTHING_TO_CHECK
-from compass_pkg.core import CompassError, load_yaml, manifest_path
-from compass_pkg.red_first import ACCEPTANCE_KINDS, load_record
+from compass_pkg.core import CompassError
+from compass_pkg.red_first import ACCEPTANCE_KINDS, is_record_name, load_record
 
 #: The settings key and the manifest key.
 KEY = "acceptance_strategy"
 STATES = ("on", "off")
 
 #: The advisory check this module implements, and every check of the strategy.
-#: The other four are added by later items; a configuration that does not
+#: Later items add the checks this CLI does not ship yet; a configuration that does not
 #: declare one does not run it.
 CHECK = "acceptance-applicability-agrees"
 CHECKS = (CHECK, "outer-loop-recorded", "outer-loop-attempts-recorded",
-          "isolation-proven", "layering-test-passed")
+          "isolation-proven", "layering-test-passed", "acceptance-support-present")
 
 #: The routing of each approach, as the preset's `approaches.<id>.acceptance_strategy`
 #: names it, and the words the delivery-approach record shows for it.
@@ -54,7 +54,13 @@ ROUTINGS = {
     "existing-dsl": "existing DSL only",
     "existing-dsl-isolation": "existing DSL only, isolation proof required",
     "suspended": "suspended, as strategy `S2`",
+    "guidance": "guidance, no record owed",
 }
+#: The routing of a delivery issue that owes no `S17` token (ADR-099 decision 9):
+#: the `atdd` skill is advice, and no check of the strategy runs. A project
+#: adds the tokens with `require_evidence` in `compass.yml`.
+GUIDANCE = "guidance"
+GUIDANCE_WHY = "no record of the strategy is owed unless `require_evidence` adds one"
 
 #: What `compass approach evaluate --expected-acceptance` takes: `none` for a
 #: change with client-observable behavior.
@@ -84,8 +90,8 @@ def setting(project_root):
     on, without a word."""
     held = project_settings.lenient(project_root)
     # Only a missing key means on: a key with no value is refused, as the lint
-    # refuses it. A project pinned before the strategy never reads the setting.
-    if KEY not in held or pinned_below(project_root):
+    # refuses it.
+    if KEY not in held:
         return "on", None
     value = held[KEY]
     state = _state(value.get("state")) if isinstance(value, dict) else None
@@ -141,52 +147,11 @@ def approach_routing(resolved, approach):
     return "on" if body.get("ships", True) is not False else "suspended"
 
 
-#: The first major of the shipped default that carries the strategy.
+#: The first major of the shipped default that carries the strategy. 9.0.0 reads
+#: `extends:` as a removed setting at any major, so a pin at @6 or @7 no longer
+#: keeps a project out of the strategy; `compass migrate` writes
+#: `acceptance_strategy: off` in its place (ADR-098 open question 6).
 FIRST_MAJOR = 8
-
-
-def pinned_below(project_root):
-    """The `extends:` value when the project's `compass.yml` pins the shipped
-    default at a major before `FIRST_MAJOR`, else None. Resolution always reads
-    the live preset, whatever major `extends:` names, so the pin is what keeps
-    a project on @6 or @7 out of the strategy (decided by jed72, 2026-10-30). A
-    project with no `compass.yml`, no `extends:` or a git parent names no
-    shipped major and runs on the live default, so it is not pinned below."""
-    from compass_pkg import layers, parents
-    if not project_settings.compass_yml_counts(project_root):
-        return None
-    try:
-        doc = load_yaml(os.path.join(project_root, layers.PROJECT_FILE))
-        value = parents.extends_value((doc or {}).get("extends"))
-        name, major = layers.parse_extends(value)
-    except (CompassError, AttributeError, TypeError, ValueError):
-        return None
-    return value if name == "default" and major < FIRST_MAJOR else None
-
-
-def suspended_findings(resolved):
-    """`[(path, message)]` for each approach that ships and sets the routing
-    `suspended`. `compass policy lint` refuses them: that would turn the strategy
-    off with no recorded reason, and the settings key is the one way to turn it
-    off (decided by jed72, 2026-10-30). The spike, which ships nothing, keeps
-    `suspended`."""
-    out = []
-    for approach, body in sorted(((resolved or {}).get("approaches") or {}).items()):
-        if (isinstance(body, dict) and body.get(KEY) == "suspended"
-                and body.get("ships", True) is not False):
-            out.append((f"approaches.{approach}.{KEY}",
-                        f"the {approach} approach ships, so it cannot suspend the "
-                        f"four-layer acceptance strategy; turn the strategy off for the "
-                        f"project with the settings key `{KEY}: {{state: off, reason: <why>}}`"))
-    return out
-
-
-def notice(task_dir):
-    """The notice `compass check` gives an issue with no stored block."""
-    pinned = pinned_below(_project_root(task_dir))
-    if pinned:
-        return f"{NAME}: does not apply - the project extends {pinned}, before the strategy"
-    return NOTICE
 
 
 def declared(resolved):
@@ -227,14 +192,10 @@ def stored(task):
     return value if isinstance(value, dict) else None
 
 
-def line(task, task_dir=None):
-    """The applicability line of the delivery-approach record. With the issue
-    folder it gives the pin reason for a pinned project, as `notice` does."""
+def line(task):
+    """The applicability line of the delivery-approach record."""
     held = stored(task)
     if held is None:
-        pinned = pinned_below(_project_root(task_dir)) if task_dir else None
-        if pinned:
-            return f"The {NAME} does not apply: the project extends {pinned}, before the strategy."
         return f"The {NAME} does not apply: {OLDER}."
     if held.get("state") == "off":
         status = "off for this project"
@@ -265,12 +226,38 @@ def loop_of(record):
     return "outer" if (record or {}).get("loop") == "outer" else "inner"
 
 
+def stage_one(task, loop):
+    """True when a red ends stage 1 and is written before implement (ADR-081): the
+    outer loop, on an approach whose `stages` run refine, before plan is handed off
+    and with no technical design, distribution map or subtask registered. 9.0.0
+    registers no document (ADR-091), so plan's hand-off is what ends stage 1; an
+    issue made before then keeps the registered documents. Quick fix and hotfix
+    collapse refine, so their outer-loop red is the first record of implement.
+
+    On a path issue (ADR-092) stage 1 ends at specify: an outer-loop red is stage
+    1's while specify is not done (`next_step.specify_done`), and build's after."""
+    from compass_pkg import next_cmd, next_step
+    from compass_pkg.path_stages import is_path_issue
+    from compass_pkg.stable_ids import STAGE_PLAN, STAGE_REFINE
+    if is_path_issue(task):
+        return loop == "outer" and not next_step.specify_done(task)
+    stages = (task or {}).get("stages")
+    weight = stages.get(STAGE_REFINE) if isinstance(stages, dict) else None
+    if loop != "outer" or not isinstance(weight, str) \
+            or weight.strip().lower() in next_cmd._SKIPPED_WEIGHTS:
+        return False
+    return not (next_cmd._handed_off(task, STAGE_PLAN)
+                or next_cmd._registered(task, "technical-design")
+                or next_cmd._registered(task, "distribution-map")
+                or next_cmd._entries(task, "subtasks"))
+
+
 def red_records(task_dir):
     """`[(name, record)]` of each red record holding a failed run, signed or not,
     bound or unbound, in name order."""
     out = []
     for name in _evidence_names(task_dir):
-        if name == "red.json" or (name.startswith("red-") and name.endswith(".json")):
+        if is_record_name("red", name):
             record = load_record(os.path.join(task_dir, "evidence", name))
             code = record.get("exit_code")
             if record.get("passed") is False and isinstance(code, int) \
@@ -324,11 +311,13 @@ def in_scope(task, task_dir):
         return False, f"the project turned the strategy off - {held.get('reason')}"
     if held.get("routing") == "suspended":
         return False, f"suspended on this approach - {held.get('why')}"
+    if held.get("routing") == GUIDANCE:
+        return False, GUIDANCE_WHY
     return records_say(task, task_dir)
 
 
 def _project_root(task_dir):
-    from compass_pkg.layers import find_project_root
+    from compass_pkg.project_settings import find_project_root
     return find_project_root(os.path.dirname(os.path.dirname(os.path.normpath(task_dir))))
 
 
@@ -355,6 +344,8 @@ def _check_applicability_agrees(task, task_dir):
     # as `in_scope` reads it, so there is no line to compare with them.
     if held.get("routing") == "suspended":
         return NOTHING_TO_CHECK, f"not required: the strategy is suspended - {held.get('why')}"
+    if held.get("routing") == GUIDANCE:
+        return NOTHING_TO_CHECK, f"not required: {GUIDANCE_WHY}"
     applies, why = records_say(task, task_dir)
     if bool(held.get("applies")) != applies:
         said = "applies" if held.get("applies") else "does not apply"
@@ -368,92 +359,25 @@ def _check_applicability_agrees(task, task_dir):
                   f"{'applies' if applies else 'does not apply'} ({why})")
 
 
-# --- the retrospective -----------------------------------------------------------------------
-
-def _closed(task):
-    """Landed, or closed as completed. An issue closed as not planned or as a
-    duplicate delivered nothing, so the measures leave it out."""
-    from compass_pkg import status_words
-    return bool(task.get("land_timestamp")) or status_words.is_completed(task)
-
-
-def step_off(task, task_dir):
-    """The reason of an approved issue waiver of one of the strategy's checks in
-    the issue's stored generation, or None. A waiver the generation holds passed
-    the lint that commits it, so its approval was checked then (ADR-039)."""
-    from compass_pkg import effective
-    try:
-        view = effective.effective_for(task_dir, task)
-    except CompassError:
-        return None
-    records = ((view.provenance or {}).get("waivers") or {}) if view is not None else {}
-    for record in records.values():
-        if not isinstance(record, dict) or record.get("scope") != "issue":
+def waiver_lines(task, view):
+    """A notice for each issue waiver of one of the strategy's checks in the issue's
+    `config:`: the check, the reason and whether it is approved. An approved waiver
+    is one the issue's generation (`view`) holds, which passed the lint that
+    committed it (ADR-039); any other leaves the check as it was."""
+    held = (((task or {}).get("config") or {}).get("checks") or {})
+    committed = ((getattr(view, "provenance", None) or {}).get("waivers") or {}) \
+        if view is not None else {}
+    approved = {str(r.get("entry")) for r in committed.values()
+                if isinstance(r, dict) and r.get("scope") == "issue"}
+    lines = []
+    for check in CHECKS:
+        waiver = (held.get(check) or {}).get("waiver") if isinstance(held.get(check), dict) \
+            else None
+        if not isinstance(waiver, dict):
             continue
-        entry = str(record.get("entry") or "")
-        if entry.startswith("checks.") and entry[len("checks."):] in CHECKS:
-            body = (((task.get("config") or {}).get("checks") or {})
-                    .get(entry[len("checks."):]) or {}).get("waiver") or {}
-            return record.get("reason") or body.get("reason") or "no reason recorded"
-    return None
-
-
-def report(work):
-    """The retrospective over every closed issue under `work` that was assessed
-    with the strategy."""
-    out = {"measured": [], "out_of_scope": [], "off": [], "stepped_off": []}
-    names = sorted(os.listdir(work)) if os.path.isdir(work) else []
-    for slug in names:
-        task_dir = os.path.join(work, slug)
-        path = manifest_path(task_dir)
-        if not os.path.isfile(path):
-            continue
-        try:
-            task = load_yaml(path)
-        except CompassError:
-            continue
-        if not isinstance(task, dict) or stored(task) is None or not _closed(task):
-            continue
-        if stored(task).get("state") == "off":
-            out["off"].append(slug)
-            continue
-        applies, _ = in_scope(task, task_dir)
-        if not applies:
-            out["out_of_scope"].append(slug)
-            continue
-        reason = step_off(task, task_dir)
-        if reason:
-            out["stepped_off"].append({"issue": slug, "reason": reason})
-            continue
-        out["measured"].append(slug)
-    return out
-
-
-def cmd_retro_acceptance(args):
-    """`compass retro --acceptance`: the strategy's measures, with an opted-out
-    project and each issue that stepped off reported apart. Exit 0."""
-    from compass_pkg.core import find_compass_dir
-    compass_dir = find_compass_dir()
-    root = os.path.dirname(compass_dir)
-    state, reason = setting(root)
-    out = report(os.path.join(compass_dir, "work"))
-    out = {"opted_out": {"reason": reason} if state == "off" else None, **out}
-    if getattr(args, "format", "markdown") == "json":
-        print(json.dumps(out, indent=2))
-        return 0
-    lines = [f"compass retro --acceptance: the {NAME}"]
-    if state == "off":
-        lines.append(f"  This project has opted out of the four-layer acceptance strategy: "
-                     f"{reason}")
-    lines.append(f"  closed in-scope issues counted in the measures: {len(out['measured'])}"
-                 + (f" ({', '.join(out['measured'])})" if out["measured"] else ""))
-    if out["off"]:
-        lines.append(f"  not counted, assessed while the strategy was off: "
-                     f"{', '.join(out['off'])}")
-    if out["out_of_scope"]:
-        lines.append(f"  not counted, out of scope: {', '.join(out['out_of_scope'])}")
-    for item in out["stepped_off"]:
-        lines.append(f"  not counted, stepped off through an approved waiver: "
-                     f"{item['issue']} - {item['reason']}")
-    print("\n".join(lines))
-    return 0
+        state = ("approved" if f"checks.{check}" in approved else
+                 f"not approved, so {check} keeps its severity; ask for a waiver "
+                 f"with `compass waiver add`")
+        lines.append(f"waiver of {check}: {waiver.get('reason') or 'no reason recorded'}"
+                     f" - {state}")
+    return lines

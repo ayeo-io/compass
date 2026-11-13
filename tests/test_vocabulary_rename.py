@@ -214,7 +214,7 @@ def _cli_stage_keys():
     dict makes `command == key` structurally incapable of failing, so the
     assertion read as the rule and checked nothing.
 
-    NOT read from governance/routing-policy.yml: that file still declares the
+    NOT read from the 8.x `routing-policy.yml` (deleted in 9.0.0): that file declared the
     v1 keys (`frame`, `specify`, ...) and is migrated in its own slice. The
     manifest loader maps them forward, so what a manifest HOLDS is what matters
     here.
@@ -223,10 +223,13 @@ def _cli_stage_keys():
     return set(STAGE_DISPLAY)
 
 # Retired command names that must answer with a pointer rather than vanish.
-# `design` is NOT here: it is a retired name for the engineering stage AND the
-# live name for the designer's, so a stub pointing at `/compass:plan` would
-# take the designer's command away again.
+# `design` is NOT here: it was a retired name for the engineering stage AND the
+# name of the designer's command, which 9.0.0 removed (ADR-093).
 RETIRED_COMMANDS = {"triage": "assess", "wireframe": "design"}
+
+#: The role entry points 9.0.0 removed with no replacement (ADR-093). A
+#: retired name whose replacement is one of them has no live command to name.
+ROLE_COMMANDS_REMOVED = ("intent", "design", "position", "consult")
 
 
 def _command_names():
@@ -261,21 +264,25 @@ def test_trc_a1():
 
     keys = _cli_stage_keys()
     assert keys, "the CLI declares no stage keys, so this checks nothing"
-    missing = sorted(k for k in keys if k not in names)
-    assert not missing, (
-        "the manifest holds these stage keys and no command of the same name "
-        "exists: %s. The word a person types and the word the manifest holds "
-        "must be the same. Commands present: %s"
-        % (missing, sorted(names)))
+    # On the four-stage path (ADR-092) the six stage commands are gone: the
+    # `next:` line names each specify and build step, so those two stages have
+    # no command. The stages a person still types a command for are assess
+    # and ship, and a command named for a stage must name a path stage, never
+    # a removed one an old manifest still holds.
+    from compass_pkg.stable_ids import PATH_STAGE_IDS
+    for typed in ("assess", "ship"):
+        assert typed in names and typed in PATH_STAGE_IDS, (
+            "no `/compass:%s` command, or it is not a path stage" % typed)
+    stale = sorted(k for k in keys & names if k not in PATH_STAGE_IDS)
+    assert not stale, (
+        "these commands are named for a stage the path removed: %s. The word a "
+        "person types and the word the manifest holds must be the same. "
+        "Commands present: %s" % (stale, sorted(names)))
 
     # The two defects this rule exists for, asserted directly rather than left
-    # to the general shape above.
-    intent = (COMMANDS / "intent.md").read_text(encoding="utf-8")
-    assert "prd.md" not in intent, (
-        "`/compass:intent` still writes prd.md - a command and its own output "
-        "naming different things is the defect this issue opened on")
-    assert "intent.md" in intent, (
-        "`/compass:intent` does not name intent.md as what it writes")
+    # to the general shape above. `/compass:intent`, which once wrote the old
+    # intake filename, went with the role entry points (ADR-093).
+    assert _is_removed("intent"), "`/compass:intent` still ships (ADR-093)"
     assert _is_removed("triage"), (
         "`/compass:triage` still ships. It produces an `assessment:` block, "
         "and the command for that is `/compass:assess`; the retired name was "
@@ -283,27 +290,25 @@ def test_trc_a1():
 
 
 def test_trc_a2():
-    """The designer's command is `design` again, and does not claim
-    the engineering stage's job (`TRC-A2`)."""
-    names = _command_names()
-    for want in ("design", "plan"):
-        assert want in names, "no `/compass:%s` command: %s" % (want, sorted(names))
+    """No command claims the engineering stage's job (`TRC-A2`). The
+    designer's command, `design`, went with the role entry points (ADR-093)."""
+    assert _is_removed("design"), "`/compass:design` still ships (ADR-093)"
+    # The plan stage and its command went with the path (ADR-092).
+    assert _is_removed("plan"), "`/compass:plan` still ships"
     assert _is_removed("wireframe"), (
         "`/compass:wireframe` still ships - the designer's entry point is "
         "`/compass:design`, and the retired name was removed at 4.0.0")
 
-    design = (COMMANDS / "design.md").read_text(encoding="utf-8")
-    plan = (COMMANDS / "plan.md").read_text(encoding="utf-8")
+    # The engineering design rules moved from the plan stage to the
+    # governance-check skill, "Writing the design down", in the file beside it.
+    plan = (REPO_ROOT / "skills" / "governance-check" / "writing-the-design.md").read_text(
+        encoding="utf-8")
 
-    assert "ui-contract.md" in design, (
-        "`/compass:design` does not produce the UI contract, so it is not the "
-        "designer's entry point")
-    assert "technical-design.md" in plan, (
-        "`/compass:plan` does not produce technical-design.md")
+    # 9.0.0 writes no technical design (ADR-091).
+    assert "writes no design document" in " ".join(plan.split()), (
+        "the governance-check skill does not say Compass writes no design document")
     assert "ui-contract.md" not in plan, (
-        "`/compass:plan` claims the designer's artifact")
-    assert "technical-design.md" not in design, (
-        "`/compass:design` claims the engineering stage's artifact")
+        "the engineering design rules claim the designer's artifact")
 
 
 def test_trc_b4():
@@ -313,26 +318,23 @@ def test_trc_b4():
     it pointed at its replacement. 4.0.0 removed them, so the scenario now
     checks the opposite - and checks that the replacement it used to name is
     still the live command, which is the half that still matters to a reader
-    whose script broke.
+    whose script broke. A replacement that 9.0.0 removed with the role entry
+    points (ADR-093) must be gone too.
 
-    `design` is deliberately excluded: it is retired for one stage and live
-    for another, and was never a stub.
+    `design` is deliberately excluded as a retired name: it was never a stub.
     """
     names = _command_names()
     for retired, replacement in RETIRED_COMMANDS.items():
         assert not (COMMANDS / ("%s.md" % retired)).is_file(), (
             "`/compass:%s` still ships. It was a redirect stub through 3.x "
             "and was removed at 4.0.0 (ADR-019, ADR-024)." % retired)
+        if replacement in ROLE_COMMANDS_REMOVED:
+            assert replacement not in names, replacement
+            continue
         assert replacement in names, (
             "`/compass:%s` is gone but its replacement `/compass:%s` does "
             "not exist, so the rename left a reader nowhere to go"
             % (retired, replacement))
-
-    assert "design" in names, "the design command vanished"
-    design = (COMMANDS / "design.md").read_text(encoding="utf-8")
-    assert "/compass:plan" not in design or "designer" in design.lower(), (
-        "`/compass:design` reads as a stub pointing at `/compass:plan`. It is "
-        "the designer's command now, not a redirect")
 
 
 # ---------------------------------------------------------------------------
@@ -400,69 +402,10 @@ def test_trc_b6():
             "artifact_path took the retired %s over %s" % (retired, current))
 
 
-def test_trc_b7():
-    """`compass plan lint` still reads a landed issue's design (`TRC-B7`).
-
-    Every other artifact reader goes through `artifact_path`, which knows both
-    names. This one joined the filename itself, so it reported "no such file"
-    on all 36 landed issues that have a design - and then explained the absence
-    with a reason it could have checked and did not, that the design stage
-    collapses on some approaches.
-    """
-    import subprocess
-    import sys
-    import tempfile
-
-    project = Path(tempfile.mkdtemp(prefix="compass-rename-"))
-    work = project / ".compass" / "work" / "landed"
-    work.mkdir(parents=True)
-    (project / ".compass" / "config.yml").write_text("version: 1.0.0\n")
-    (project / ".compass" / "current-task").write_text("landed\n")
-    (work / "manifest.yml").write_text(
-        'schema_version: "2.0"\ntask: "landed"\ncreated: "2026-03-01"\n'
-        "status: landed\ndelivery_approach: feature\n"
-        "stages: {plan: full}\n")
-    # The name 36 landed issue directories actually hold.
-    (work / "design.md").write_text(
-        "# Design - landed\n\n## DD-1\n\nChosen: this. Rejected: that.\n")
-
-    # `compass design lint` was the spelling when this was written; the alias
-    # was removed at 4.0.0 and the verb is `plan`. The defect guarded here -
-    # joining the filename instead of going through `artifact_path` - is a
-    # property of the reader, not of which name invoked it.
-    run = subprocess.run([sys.executable, str(REPO_ROOT / "cli" / "compass"),
-                          "plan", "lint"],
-                         cwd=str(project), capture_output=True, text=True,
-                         timeout=120)
-    combined = run.stdout + run.stderr
-    assert "no such file" not in combined.lower(), (
-        "the design lint could not find the design.md sitting in a landed "
-        "issue directory:\n" + combined)
-    assert run.returncode == 0, combined
-
-
 # ---------------------------------------------------------------------------
 # Group A (continued) - the command moved; its call sites did not
 # ---------------------------------------------------------------------------
 
-def test_trc_a4():
-    """The planning stage answers to `plan` in the CLI too (`TRC-A4`).
-
-    `commands/design.md` was renamed to `commands/plan.md` while the CLI verb
-    stayed `compass design lint` - the same word meaning the engineering
-    design in the CLI and the designer's UI contract in the slash command, in
-    one release. The verb moved to `plan` with a hidden `design` alias, and
-    4.0.0 removed the alias - which is the exact ambiguity this rename exists
-    to remove.
-    """
-    import subprocess
-    import sys
-
-    cli = REPO_ROOT / "cli" / "compass"
-    run = subprocess.run([sys.executable, str(cli), "plan", "lint", "--help"],
-                         capture_output=True, text=True)
-    assert run.returncode == 0, (
-        "`compass plan lint` is not a verb: " + (run.stderr or run.stdout))
 
 
 # Files that may name `/compass:design` without saying which design they mean.
@@ -579,8 +522,8 @@ def _terminology():
 def _banned_spellings(doc):
     """Every individual word a `banned:` entry retires.
 
-    A `term:` may name several at once - "Specify / Clarify / Distribute / <!-- vocabulary-scan: allow - quotes governance/terminology.yml's own term string as the example -->
-    Land" is one entry retiring four words - so the slash-separated parts are <!-- vocabulary-scan: allow - quotes governance/terminology.yml's own term string as the example -->
+    A `term:` may name several at once - "Clarify / Distribute / Land" is <!-- vocabulary-scan: allow - quotes governance/terminology.yml's own term string as the example -->
+    one entry retiring three words - so the slash-separated parts are
     split out and lowercased.
     """
     out = {}
@@ -996,11 +939,14 @@ def test_trc_b8_a_policy_floor_written_with_a_retired_stage_key_still_applies():
     import copy
     import os
 
-    from compass_pkg import core
     from compass_pkg.routing import evaluate_route
 
-    policy = core.load_yaml(
-        os.path.join(core.find_governance(), "routing-policy.yml"))
+    # The shipped floor drops `require_phase` since 9.0.0, which has no stage
+    # modes (ADR-092); the 8.0.4 governance copy keeps it, so the floor is read there.
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+    import compat_baseline as cb
+    policy = cb.policy_8_0_4()
     assessment = {"risk": "contained", "familiarity": "brownfield-unmapped",
                   "size": "medium", "goal": "delivery", "role": "engineer",
                   "labels": []}
@@ -1144,13 +1090,14 @@ def test_trc_a3():
             "the entry for %r says nothing about what it means" % word)
 
     # `design` is the word that caused this. Its entry has to say which
-    # stage and which verb carry the engineering meaning, or it is a
-    # definition of one of five meanings.
+    # stage carries the engineering meaning, or it is a definition of one of
+    # five meanings. The placeholder scan, `compass plan lint`, was removed in
+    # 9.0.0 (ADR-091), so the entry names only the stage.
     design = " ".join(str(terms["design"].get("means", "")).split())
-    assert "/compass:plan" in design and "compass plan lint" in design, (
-        "the `design` entry does not say where the engineering design and "
-        "the placeholder scan live - naming five things without saying "
-        "which is which is how it stayed ambiguous")
+    assert "/compass:plan" in design, (
+        "the `design` entry does not say where the engineering design "
+        "lives - naming five things without saying which is which is how it "
+        "stayed ambiguous")
 
     # The engineering artifact. `TDD` in this repository is red-green-refactor
     # and nothing else, so the entry says the abbreviation is never used.

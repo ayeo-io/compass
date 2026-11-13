@@ -1,81 +1,82 @@
-# How an approach is composed and constrained
+# How the evidence is computed
 
 Assess does not load this file.
 
-This describes what `compass approach evaluate` does: how a candidate shape
-is composed from the three scored dimensions, and how floors, caps, immovable gates
-and artifact rules then constrain it. A session does not do any of it by hand -
-that is the determinism boundary. The CLI computes; you read the dimensions
-and run the command.
+This describes what `compass approach evaluate` does: how the evidence a
+change owes is computed from the assessment and the configuration in force.
+A session does not do any of it by hand - that is the determinism boundary.
+The CLI computes; you score the dimensions and run the command.
 
-Read this when tuning `governance/routing-policy.yml`, or when you need to
-understand why the CLI returned the approach it did. `compass approach
-evaluate --verbose` prints which rules fired for any assessment, and that is
-usually the faster answer.
+Read this when you tune a project's `compass.yml`, or when you need to
+understand why the CLI returned the evidence it did. `compass approach
+evaluate --verbose` names the row that matched and each rule that fired for
+any assessment, and that is usually the faster answer.
 
-## Composing the candidate delivery approach (Step 1 is in `rubric.md`)
+## One path, and the evidence on it
 
-The candidate delivery approach is a composition, not a lookup. Assess
-assembles it from per-dimension contributions:
+Every delivery issue runs the same four stages: assess, specify, build and
+ship (`approaches/path.md`). The stages have no modes, so nothing about them
+is computed. What is computed is the `evidence_required` list, and from it
+the gates, the four-layer acceptance strategy (`S17`) block and the
+checkpoints. `cli/compass_pkg/evidence_required.py` holds the function. It is
+a pure function: the same assessment and the same configuration give the
+same list, every time.
 
-| The delivery approach is heavier when… | The delivery approach is lighter when… |
-|---|---|
-| risk is `cross-cutting`/`critical` | risk is `trivial` |
-| familiarity is `brownfield-unmapped`, unless the change is atomic or small with trivial or contained risk and no domain label | familiarity is `greenfield` or `brownfield-mapped` |
-| size is `large`/`product` | size is `atomic`/`small` |
-| `intent.md` or `positioning.md` is present (more artifacts, more gates) | neither document is present |
+The computation, in order:
 
-Concretely, `compass approach evaluate` decides, per stage:
+1. **Match one row.** The spike row for `goal: exploration`; the common row
+   (`RP-EVID-COMMON`) for every other assessment. Risk, size, familiarity and
+   urgency add nothing to it.
+2. **Apply the additions.** A `G5` label (`auth`, `payments`, `personal-data`,
+   `migrations`, and each label in `signoff_labels`) or critical risk adds
+   `scenario-approval`; a `G5` label adds `human-approval`.
+3. **Add what the configuration adds.** Each `require_evidence` rule that
+   matches adds its tokens; it fires as `RP-SETTING-<n>`. Each floor of the
+   project's own that matches adds its gate (`add_gate`) or asks for a skill
+   (`require_skill`, such as `atdd` from `RP-FLOOR-002`). Each immovable gate
+   and project guardrail is added. The advisory strategies are listed. The
+   shipped check set has no floor that adds a gate.
+4. **Route the `S17` strategy** from the tokens owed. With no `S17` token
+   owed (`outer-loop`, `isolation`, `layering`) the routing is `guidance` and
+   no check of the strategy runs. A token owed turns it on, unless the
+   project turns the strategy off or assess is told `--expected-acceptance
+   validation` or `refactor`.
 
-- **Define** - how many scenarios, discovery vs. behavior mapping, how deep.
-- **Refine** - thorough pass, lightweight pass, or collapsed (only collapsible when the
-  spec is a single unambiguous scenario *and* no routing rule needs it).
-- **Plan** - "edit this file" one-liner, a real technical plan, or a plan plus
-  a distribution map.
-- **Breakdown** - skipped (solo), pair, or multiagent. Subtask count comes from the
-  distribution map; orchestration thresholds come from `compass.yml` (or `.compass/config.yml` in a project without one).
-- **Implement** - test surface target, scaled to risk.
-- **Verify** - which review dimensions apply (see below), how many gates.
-- **Ship** - trivial integration vs. coordinated multi-worktree merge; which
-  follow-ups are owed.
+The function never reads a configuration's approaches, shapes, stage modes
+or caps. A frozen preset or a stored generation can still hold them; they
+stay valid for the issues assessed under them and are not read for a new
+assessment. Familiarity does not change the evidence.
 
-Most compositions land near one of the five reference shapes
-(quick fix, regular, full, hotfix, spike). Assess names the
-nearest reference shape in `delivery-approach.md` for shared vocabulary, then lists any
-stage-level deviations from it. A delivery approach that is "Regular, but Verify also runs
-the security dimension because risk is cross-cutting" is a normal output.
+The rows, the additions and the tokens of each are in
+`governance/routing-policy.md`, "The evidence rows". This file does not copy
+them.
 
-### Review dimensions by delivery approach (the default; routing rules can add but not remove)
+## The review dimensions
 
-| Dimension | quick fix | Regular | Full | Hotfix | Spike |
-|---|---|---|---|---|---|
-| correctness | ✓ | ✓ | ✓ | ✓ | - |
-| governance | ✓ | ✓ | ✓ | ✓ | - |
-| traceability | ✓ | ✓ | ✓ | ✓ | - |
-| regression | - | ✓ | ✓ | ✓ | - |
-| security | - | scaled | ✓ | ✓ | - |
-| clarity | - | ✓ | ✓ | - | - |
-| claims | if positioning | if positioning | if positioning | if positioning | - |
+The gates are the review dimensions. A delivery issue owes three by default:
 
-"scaled" = applied in proportion to risk. "if positioning" = applied when
-`positioning.md` is present (rule RP-ART-001). `correctness`, `governance`, `traceability`
-are on for every delivery approach because they *are* the default guardrails in
-review form. **Spike** runs none of these - it ships nothing, so it has only
-its own Conclude gate ("was the question answered?"); see `approaches/spike.md`.
+| Dimension | Common row | Spike |
+|---|---|---|
+| correctness | yes | - |
+| governance | yes | - |
+| traceability | yes | - |
+| regression, security, clarity, architecture | only where `require_evidence` adds the token | - |
 
----
+`correctness`, `governance` and `traceability` are on for every delivery
+issue because they *are* the default guardrails in review form. `compass
+quick-fix finish` passes them from the test records and the output of
+`compass check`. A spike runs none of them: it ships nothing, so it has only
+its own gate, `spike.conclude` ("was the question answered?"); see
+`approaches/spike.md`.
 
-## Constraining with the routing rules
+## The configuration bounds the evidence
 
-The candidate delivery approach - already biased by the routing strategies
-above - is now bounded by the **routing rules** in `governance/routing-policy.md`:
+The configuration in force can add evidence, never remove it:
 
-1. **floors** raise the delivery approach or force stages back to thorough weight.
-2. **caps** limit scale-up (e.g. the worktree ceiling on critical risk).
-3. **immovable_gates** are added whatever the delivery approach.
-4. **blocking artifact_rules** add required artifacts and stage blocks, from the
-   documents present.
+1. **Floors** add a gate, a skill or a document to an assessment they match.
+2. **Immovable gates** are added to every delivery issue.
+3. **Project guardrails** add their gates.
 
-Every routing rule that fires is recorded. Assess never applies a
-constraint silently - if quick fix became the full approach, `delivery-approach.md` says which floor
-did it and quotes the floor's rationale.
+Every rule that fires is recorded in the manifest's `policy_rules_fired:`.
+Assess never applies a constraint silently: if a label added a gate, the
+manifest says which rule did it and quotes its rationale.

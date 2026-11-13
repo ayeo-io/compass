@@ -60,6 +60,9 @@ class Project(_Part):
     def hasIssueWithNoApproachRecord(self, issue=DEFAULT_ISSUE):
         self._driver.hasIssueWithNoApproachRecord(self._alias(issue))
 
+    def hasPathIssue(self, issue=DEFAULT_ISSUE, scenarios=1):
+        self._driver.hasPathIssue(self._alias(issue), scenarios)
+
 
 class Machine(_Part):
     """The machine the hook runs on: its tools, not Compass's own code."""

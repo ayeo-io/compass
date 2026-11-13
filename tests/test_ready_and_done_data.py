@@ -1,12 +1,13 @@
-"""The Definition of Ready and the Definition of Done are data in the default preset.
+"""The Definition of Ready and the Definition of Done are data in a preset.
 
-The seven Definition of Ready items and the seven Definition of Done items are
-`human` checks in `governance/presets/default/checks.yml`. The templates
-`templates/requirements-review.md` and `templates/verification-report.md` hold
-an empty rendered block for each (`dor` and `dod`): `compass issue render` writes
-the items from the lists, so the preset is the only place their text lives. The
-`plan` stage's `entry` list holds the first seven and the `verify` stage's `exit`
-list holds the second seven.
+The seven Definition of Done items are `human` checks in the check set
+(`governance/check-set.yml`, ADR-094), the only place their text lives, and
+the `build` stage's `exit` list holds them. The four-stage path owes no
+Definition of Ready (ADR-092), so the live default declares none of its seven
+checks; the frozen preset `default@7` keeps them in its `plan` stage's `entry`
+list, where a stored generation still reads them, and its Definition of Done in
+the `verify` stage's `exit` list. 9.0.0 deleted the templates that held a block
+for each and `compass issue render`, which wrote the items into them (ADR-091).
 The capability `entry-exit-evaluation` is off in `default@6`, so nothing runs
 them yet and the generated legacy views do not name them.
 
@@ -15,7 +16,6 @@ Scenario ids: `RD-1` to `RD-8` (issue `ready-and-done-as-data`).
 from __future__ import annotations
 
 import copy
-import importlib
 import re
 import sys
 from pathlib import Path
@@ -25,10 +25,14 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
-PRESET = ROOT / "governance" / "presets" / "default"
-READY_TEMPLATE = ROOT / "templates" / "requirements-review.md"
-DONE_TEMPLATE = ROOT / "templates" / "verification-report.md"
+#: The shipped default: the check set since 9.0.0 (ADR-094), which replaced the
+#: preset directory `governance/presets/default/`.
+PRESET = None
+FROZEN = ROOT / "tests" / "fixtures" / "presets" / "default@7"
 CAPABILITY = "entry-exit-evaluation"
 
 READY_IDS = [
@@ -75,12 +79,21 @@ def template_items(path: Path, heading: str) -> list[str]:
     return out
 
 
-def load_preset() -> dict:
+def load_preset(folder: Path = PRESET) -> dict:
+    if folder is None:
+        return {name: shipped(f"{name}.yml")[name] if name != "preset"
+                else shipped("preset.yml") for name in ("checks", "stages", "preset")}
     out = {}
     for name in ("checks", "stages", "preset"):
-        doc = yaml.safe_load((PRESET / f"{name}.yml").read_text(encoding="utf-8"))
+        doc = yaml.safe_load((folder / f"{name}.yml").read_text(encoding="utf-8"))
         out[name] = doc.get(name, doc) if name != "preset" else doc
     return out
+
+
+def _done_stage(stages: dict) -> str:
+    """The stage whose exit list is the Definition of Done: `build` on the path
+    (ADR-092), `verify` in a preset that declares the legacy stages."""
+    return "build" if "build" in stages else "verify"
 
 
 def _check(preset: dict, check_id: str) -> dict:
@@ -89,20 +102,23 @@ def _check(preset: dict, check_id: str) -> dict:
     return check
 
 
-def statements(ids: list[str]) -> list[str]:
+def statements(ids: list[str], folder: Path = PRESET) -> list[str]:
     """The statement of each check, from the preset."""
-    checks = load_preset()["checks"]
+    checks = load_preset(folder)["checks"]
     return [" ".join(checks[i]["statement"].split()) for i in ids]
 
 
-def problems(preset: dict, ready_items: list[str], done_items: list[str]) -> list[str]:
-    """Every way the preset's lists differ from the template text."""
+def problems(preset: dict, ready_items, done_items) -> list[str]:
+    """Every way the preset's lists differ from the template text. A list whose
+    items are None is not compared: the live default has no Definition of Ready."""
     found: list[str] = []
     checks, stages = preset["checks"], preset["stages"]
     for label, ids, items, stage, side in (
         ("Definition of Ready", READY_IDS, ready_items, "plan", "entry"),
-        ("Definition of Done", DONE_IDS, done_items, "verify", "exit"),
+        ("Definition of Done", DONE_IDS, done_items, _done_stage(stages), "exit"),
     ):
+        if items is None:
+            continue
         if len(items) != len(ids):
             found.append(f"the {label} template has {len(items)} items, expected {len(ids)}")
         listed = stages.get(stage, {}).get(side)
@@ -122,69 +138,63 @@ def problems(preset: dict, ready_items: list[str], done_items: list[str]) -> lis
 
 
 def _problems_now() -> list[str]:
-    return problems(load_preset(), statements(READY_IDS), statements(DONE_IDS))
+    return (problems(load_preset(), None, statements(DONE_IDS))
+            + problems(load_preset(FROZEN), statements(READY_IDS, FROZEN),
+                       statements(DONE_IDS, FROZEN)))
 
 
-def _block_under(path: Path, heading: str, kind: str) -> bool:
-    """True when the section under `heading` holds an empty `kind` block and no checkbox."""
-    text = path.read_text(encoding="utf-8")
-    start = text.index(f"\n{heading}\n") + len(heading) + 2
-    section = re.split(r"\n#{1,6} |\nNext stage:", text[start:], maxsplit=1)[0]
-    block = f"<!-- compass:render {kind} -->\n<!-- /compass:render -->"
-    return block in section and not re.search(r"^- \[[ xX]\]", section, re.M)
-
-
-def test_rd_1_the_ready_checks_are_the_plan_entry_list_and_the_template_holds_a_block():
-    preset = load_preset()
+def test_rd_1_the_ready_checks_are_the_plan_entry_list():
+    # The live default owes no Definition of Ready (ADR-092): no check, no list.
+    live = load_preset()
+    assert not [c for c in live["checks"] if c.startswith("dor-")]
+    assert not [s for s, body in live["stages"].items() if body.get("entry")]
+    # The frozen preset keeps them, so a stored generation still reads them.
+    preset = load_preset(FROZEN)
     assert preset["stages"]["plan"].get("entry") == READY_IDS
     for check_id in READY_IDS:
         check = _check(preset, check_id)
         assert check["kind"] == "human" and check["statement"].strip(), check_id
-    assert _block_under(READY_TEMPLATE, "### Definition of Ready", "dor")
 
 
-def test_rd_2_the_done_checks_are_the_verify_exit_list_and_the_template_holds_a_block():
+def test_rd_2_the_done_checks_are_the_build_exit_list():
     preset = load_preset()
-    assert preset["stages"]["verify"].get("exit") == DONE_IDS
+    assert preset["stages"]["build"].get("exit") == DONE_IDS
+    assert load_preset(FROZEN)["stages"]["verify"].get("exit") == DONE_IDS
     for check_id in DONE_IDS:
         check = _check(preset, check_id)
         assert check["kind"] == "human" and check["statement"].strip(), check_id
-    assert _block_under(DONE_TEMPLATE, "### Definition of Done", "dod")
 
 
 def test_rd_3_the_checks_are_inactive_blocking_and_say_what_a_skipped_stage_returns():
-    preset = load_preset()
+    preset, frozen = load_preset(), load_preset(FROZEN)
     assert preset["preset"]["capabilities"][CAPABILITY] is False
-    for check_id in READY_IDS + DONE_IDS:
-        check = _check(preset, check_id)
-        assert check.get("requires") == [CAPABILITY], check_id
-        assert check.get("severity") == "blocking", check_id
-        assert "locked" not in check, check_id
-        assert "impl" not in check, check_id
+    for source, ids in ((preset, DONE_IDS), (frozen, READY_IDS + DONE_IDS)):
+        for check_id in ids:
+            check = _check(source, check_id)
+            assert check.get("requires") == [CAPABILITY], check_id
+            assert check.get("severity") == "blocking", check_id
+            assert "locked" not in check, check_id
+            assert "impl" not in check, check_id
     for check_id in READY_IDS:
-        assert _check(preset, check_id)["on_skipped"] == "not-applicable", check_id
+        assert _check(frozen, check_id)["on_skipped"] == "not-applicable", check_id
     for check_id in DONE_IDS:
         assert _check(preset, check_id)["on_skipped"] == "fail", check_id
     lists = {(stage, side) for stage, body in preset["stages"].items()
              for side in ("entry", "exit") if side in body}
-    assert lists == {("plan", "entry"), ("verify", "exit")}, lists
+    assert lists == {("build", "exit")}, lists
     humans = {name for name, c in preset["checks"].items() if c["kind"] == "human"}
-    assert humans == set(READY_IDS + DONE_IDS)
+    assert humans == set(DONE_IDS)
 
 
-def test_rd_4_the_views_do_not_name_the_human_checks():
-    views = importlib.import_module("compass_pkg.legacy_views")
-    preset = load_preset()
-    deterministic = {n for n, c in preset["checks"].items() if views.has_implementation(c)}
-    guardrails = yaml.safe_load((ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8"))
-    assert set(guardrails["checks"]) == deterministic
-    generated = views.generate(ROOT)
-    for rel in ("governance/routing-policy.yml", "governance/guardrails.yml"):
-        text = (ROOT / rel).read_text(encoding="utf-8")
-        assert text == generated[rel], rel
-        for check_id in READY_IDS + DONE_IDS:
-            assert check_id not in text, f"{rel} names {check_id}"
-    for gate in yaml.safe_load((PRESET / "gates.yml").read_text(encoding="utf-8"))["gates"].values():
+def test_rd_4_no_gate_names_a_human_check():
+    """No item of the Definitions of Ready and Done is a deterministic check, and
+    no gate of the check set lists one. 9.0.0 deleted the two views that once
+    held the deterministic checks alone (ADR-098)."""
+    from compass_pkg import check_set
+    checks = check_set.resolved()
+    deterministic = {n for n, c in checks["checks"].items() if c["kind"] == "deterministic"}
+    assert not deterministic & set(READY_IDS + DONE_IDS)
+    for gate in checks["gates"].values():
         assert not set(gate.get("checks", [])) & set(READY_IDS + DONE_IDS)
 
 
@@ -209,24 +219,24 @@ def _owed_checks(preset: dict, approaches: dict, approach: str) -> list[str]:
 
 
 def _approaches() -> dict:
-    return yaml.safe_load((PRESET / "approaches.yml").read_text(encoding="utf-8"))["approaches"]
+    return shipped("approaches.yml")["approaches"]
 
 
 def test_rd_6_a_spike_owes_none_of_the_checks_while_the_capability_is_off():
     preset, approaches = load_preset(), _approaches()
     assert _owed_checks(preset, approaches, "spike") == []
-    assert _owed_checks(preset, approaches, "regular") == []
-    # With the capability on, a spike owes the Definition of Ready checks (each
-    # is not-applicable, because refine is skipped) and no Definition of Done
-    # check: each of those carries `when: {ships: true}`. A delivery owes all.
+    assert _owed_checks(preset, approaches, "delivery") == []
+    # With the capability on, a spike owes no Definition of Done check: each of
+    # those carries `when: {ships: true}`. A delivery owes all of them. No
+    # stage holds a Definition of Ready (ADR-092).
     planted = copy.deepcopy(preset)
     planted["preset"]["capabilities"][CAPABILITY] = True
-    assert sorted(_owed_checks(planted, approaches, "spike")) == sorted(READY_IDS)
-    assert sorted(_owed_checks(planted, approaches, "regular")) == sorted(READY_IDS + DONE_IDS)
-    # Without the condition a spike owes the Definition of Done again.
+    assert _owed_checks(planted, approaches, "spike") == []
+    assert sorted(_owed_checks(planted, approaches, "delivery")) == sorted(DONE_IDS)
+    # Without the condition a spike, which runs build, owes the Definition of Done again.
     for check_id in DONE_IDS:
         del planted["checks"][check_id]["when"]
-    assert sorted(_owed_checks(planted, approaches, "spike")) == sorted(READY_IDS + DONE_IDS)
+    assert sorted(_owed_checks(planted, approaches, "spike")) == sorted(DONE_IDS)
 
 
 def test_rd_7_a_stray_line_in_a_template_section_is_refused(tmp_path):
@@ -250,57 +260,48 @@ def test_rd_5_the_committed_preset_has_no_problems():
 
 
 def test_rd_5_a_drifted_preset_or_template_names_the_item_that_differs():
-    ready, done = statements(READY_IDS), statements(DONE_IDS)
+    ready, done = statements(READY_IDS, FROZEN), statements(DONE_IDS)
     base = load_preset()
-    assert problems(base, ready, done) == []
+    assert problems(base, None, done) == []
+    frozen = load_preset(FROZEN)
+    assert problems(frozen, ready, statements(DONE_IDS, FROZEN)) == []
 
     changed = list(ready)
     changed[2] = changed[2] + " Edited."
     assert any("dor-behavior-is-gwt" in p and "differs" in p
-               for p in problems(base, changed, done))
+               for p in problems(frozen, changed, None))
 
     missing = copy.deepcopy(base)
     del missing["checks"]["dod-suite-green"]
-    assert any("checks.dod-suite-green is missing" in p for p in problems(missing, ready, done))
+    assert any("checks.dod-suite-green is missing" in p for p in problems(missing, None, done))
+
+    reordered = copy.deepcopy(frozen)
+    reordered["stages"]["plan"]["entry"].reverse()
+    assert any(p.startswith("stages.plan.entry") for p in problems(reordered, ready, None))
 
     reordered = copy.deepcopy(base)
-    reordered["stages"]["plan"]["entry"].reverse()
-    assert any(p.startswith("stages.plan.entry") for p in problems(reordered, ready, done))
+    reordered["stages"]["build"]["exit"].reverse()
+    assert any(p.startswith("stages.build.exit") for p in problems(reordered, None, done))
 
-    wrong_kind = copy.deepcopy(base)
+    wrong_kind = copy.deepcopy(frozen)
     wrong_kind["checks"]["dor-no-open-questions"]["kind"] = "judged"
     assert any("dor-no-open-questions is not kind human" in p
-               for p in problems(wrong_kind, ready, done))
+               for p in problems(wrong_kind, ready, None))
 
-    assert any("has 6 items" in p for p in problems(base, ready[:-1], done))
-
-
-def test_rd_8_the_preset_headers_do_not_claim_the_adapter_wrote_the_files_once():
-    """The preset is the source and its files are edited by hand, so a header
-    that says the adapter wrote them once misleads the next editor."""
-    adapter = (ROOT / "cli" / "compass_pkg" / "legacy_adapter.py").read_text(encoding="utf-8")
-    assert "wrote these files once" not in adapter
-    files = sorted(PRESET.glob("*.yml"))
-    assert len(files) == 11
-    for path in files:
-        header = path.read_text(encoding="utf-8").split("schema:")[0]
-        assert "wrote these files once" not in header, path.name
-        assert "source of the shipped defaults" in header, path.name
+    assert any("has 6 items" in p for p in problems(frozen, ready[:-1], None))
+    assert any("has 6 items" in p for p in problems(base, None, done[:-1]))
 
 
 # --- The Definition of Done names report sections (TRC-001, issue dod-statements-name-sections)
 
-def test_dsn_1_done_statements_name_report_sections():
-    """A Definition of Done statement names the verification report section it points at,
-    because the report's headings carry no number (ADR-064) and `§1` finds nothing. Scenario
+def test_dsn_1_no_item_names_a_section_of_a_removed_document():
+    """9.0.0 writes no requirements review or verification report (ADR-091), so no
+    Definition of Done statement names a section of one, or a removed document,
+    and the shipped default holds no Definition of Ready (ADR-092). Scenario
     `TRC-001`."""
-    headings = {line.lstrip("#").strip()
-                for line in DONE_TEMPLATE.read_text(encoding="utf-8").splitlines()
-                if line.startswith("## ")}
-    named = []
+    assert not [c for c in load_preset()["checks"] if c in READY_IDS]
     for check_id, statement in zip(DONE_IDS, statements(DONE_IDS)):
         assert not re.search(r"§\s*\d", statement), (check_id, statement)
-        for section in re.findall(r'the "([^"]+)" section', statement):
-            assert section in headings, (check_id, section, sorted(headings))
-            named.append(section)
-    assert sorted(set(named)) == ["Scenario acceptance results", "Test suite evidence"], named
+        assert not re.search(r'the "[^"]+" section', statement), (check_id, statement)
+        for removed in ("intent.md", "delivery-approach.md", "ledger above"):
+            assert removed not in statement, (check_id, removed)

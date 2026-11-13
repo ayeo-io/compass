@@ -50,7 +50,7 @@ The Claude Code adapter registers four local hooks:
 
 | Hook | Purpose | Can block? |
 |---|---|---|
-| `pre-tool.sh` | Applies approach-aware red-before-green checks before edits. | Yes |
+| `pre-tool.sh` | Checks before an edit that scenarios exist and, where the issue owes it, that a person approved them. | Yes |
 | `post-tool.sh` | Updates the issue history after relevant actions. | No |
 | `stop.sh` | Warns about unfinished or inconsistent issue state. | No |
 | `session-start.sh` | Loads the operating contract into the session. In every repository, it also keeps two launchers in the plugin's own data folder under `~/.claude/plugins/data/`: `compass-statusline` for the status line, and `compass` for the person's own terminal. It writes nothing else and prints nothing for them. | No |
@@ -64,103 +64,51 @@ relying on this document.
 Compass works on your machine and in your repository. It reaches the network
 only in the cases below, and each one starts only when you ask for it.
 
-- **Fetches** a brief you name over HTTPS, with `compass intent ingest --from
-  <url>`. It refuses any scheme but `https`, on redirects too.
-- **Fetches** a git parent when the project's `extends:` names one
-  (`github:<owner>/<repo>@<ref>#<sha>`). It runs `git` for the one pinned
-  commit, reads its `compass.yml` as data, and caches it under
-  `.compass/cache/parents/`. Only `compass policy lint`, `compass policy show`,
-  `compass policy diff` (when a reference is a git parent), `compass policy
-  update`, `compass preset test` and `compass approach evaluate --write` fetch,
-  and only a commit that is not cached yet; never `compass check`.
-  `compass issue configure --commit` fetches too, because it runs the
-  reassess. `compass policy update` always asks the remote which commit its
-  ref names, unless
-  `COMPASS_OFFLINE=1` is set. `--offline` or `COMPASS_OFFLINE=1` stops the others
-  fetching. `COMPASS_PARENT_REMOTE_BASE`
-  names a mirror in place of `https://github.com`. Git runs with your own git
-  configuration, so your credential helper runs
-  ([git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md)).
+- **Fetches nothing for a configuration.** Since 9.0.0 Compass runs one fixed
+  check set (ADR-094). An `extends:` that names a git parent
+  (`github:<owner>/<repo>@<ref>#<sha>`) is refused with `L-PARENT-REMOVED`, and
+  no command runs `git` to fetch one: not `compass policy lint`, `compass
+  policy show`, `compass approach evaluate --write` or `compass check`. In 8.x
+  the first three fetched a pinned commit that was not cached.
 - **Sends** your delivery record to a git repository you configure, with
   `compass record sync`, which `compass ship-commit` also runs. It happens
   only when `compass.yml` (or `.compass/config.yml` in a project without one)
   names a `record:` remote; it redacts
   credentials, and rival product names when `record.names_key` is set.
-- **Starts** host sessions (`claude -p`) with `compass run`, which sends their
-  prompts through Claude Code as any session does. Those sessions may not push
-  or merge.
 - **Runs** commands on your machine: the test command you give `compass
   tdd-red`, `compass tdd-green` and `compass quick-fix finish`, your
   project's own guardrails declared with `check: command-passes`, git in your
   repository, and the CLI itself from the plugin's hooks.
-- **Reads** the current Claude Code session's own transcript when a quick fix
-  finishes, keeping only token counts, model names and times
-  (`docs/headless-runner.md`).
-- **Clones and installs** other frameworks only in the evaluation harness,
-  `evals/harness.py`, which maintainers run by hand to compare conditions.
+- **Clones and installs** no other framework. The evaluation harness that
+  compares frameworks is `harness.py` in the sdd-bench `tools` folder, which
+  maintainers run by hand (ADR-093).
 
 ## Git parents
 
-A project can extend a git parent, `github:<owner>/<repo>@<ref>#<sha>`, which
-makes the CLI fetch one pinned commit from a remote. A git parent is data: the
-CLI reads one file, `compass.yml` at the repository root, as strict YAML, and
-runs nothing from the repository. It refuses a settings key (so a parent cannot
-authorise project commands), an `unlock:` and a check implementation outside the
-registry. It refuses a fetched commit that is not the pinned sha, and a
-`compass.yml` that is a symbolic link or larger than 1 MiB.
+9.0.0 removed git parents (ADR-094). An `extends:` that names one is refused
+with `L-PARENT-REMOVED`, and no command runs `git` to fetch it, so no remote
+content reaches a configuration. A `.compass/cache/parents/` folder that an
+8.x run left is not read; you can delete it.
 
-The fetch runs `git` with an argument list and no shell, only over `https`, with
-hooks off and no prompts. It runs with your own git configuration, so your
-credential helper runs and your `url.*.insteadOf` rules apply. Only `compass
-policy lint`, `policy show`, `policy diff` (when a reference is a git parent),
-`policy update`, `preset test` and `compass approach evaluate --write` fetch,
-including a reassess that commits a `compass issue configure` proposal.
-`policy update` always asks the remote which commit its ref names, unless
-`COMPASS_OFFLINE=1` is set.
-`compass policy diff` prints a line on stderr before it fetches. `compass check`
-never fetches. `compass issue configure --commit` fetches, because it runs the
-reassess; the preview and the proposal never fetch. Compass
-checks each cached parent against a digest it recorded at fetch, and `compass
-policy lint` fails on a mismatch. That catches an accidental edit of the cache,
-not a deliberate one by someone who can write the cache, because the digest
-is stored next to the file and can be rewritten with it. If you doubt the cache,
-delete `.compass/cache/parents/`.
-Review
-[git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
+## Calls to GitHub
 
-## Labels and the issue page written to GitHub
+Compass writes nothing to GitHub. 9.0.0 removed the label sync (ADR-093), so a
+project's `github_labels` setting is not read, and `compass policy lint` names
+it with `L-SETTING-REMOVED`.
 
-When a project sets `github_labels` in `compass.yml`, Compass writes to the
-linked GitHub issue by running `gh`. All three switches (`domain`, `status`
-and `page`) are off by default, and with all three off no command calls
-GitHub. A published preset cannot switch them on, because a parent may not
-carry a settings key.
-
-Compass runs `gh` with an argument list and no shell, with your own login. It
-reads no token and stores none. It checks the repository and issue number
-against a strict pattern before each call. A call that takes longer than 15
-seconds is abandoned.
-
-- **Labels.** With `domain` or `status` on, Compass sends label names and the
-  issue number.
-- **The issue page.** With `github_labels.page` on, Compass also sends the
-  issue's README as one comment, and the ask from `intent.md` into an empty
-  issue body. That is the issue's own prose, decisions and file names. It
-  reaches everyone who can read the GitHub issue, so turn the switch on only
-  for an issue whose readers may see those documents. The text travels on
-  standard input, never as an argument.
-- **Two checks before the page is sent.** They read the text as it is posted
-  and look for paths to files the project keeps out of git (and anything
-  under `.compass/private/`), and credential shapes. A hit means the post is
-  refused whole: nothing is sent, nothing is redacted and sent in its place,
-  and one line on standard error names the place and not the hit. These
-  checks find those two kinds of text. They do not find other private
-  prose, so read the README before you turn `page` on.
-- **Read back.** Compass reads only comment ids, the first line of a comment
-  and whether the issue body is empty. It stores no text from GitHub.
+`compass issue link set --pr` reads one pull request with `gh pr view`: its
+number, state, author, head commit, merge commit, merge time and URL. After
+the merge it also reads the pull request's reviews with `gh api` and the
+login `gh` reads as with `gh api user`, to record the ship approval. Compass
+runs `gh` with an argument list and no shell, with your own login. It reads
+no token and stores none. It checks the repository and number against a
+strict pattern before the call. A call that takes longer than 15 seconds is
+abandoned. Of a review Compass reads its id, state, time, commit, URL and
+the reviewer's login and account type, and never its text. It stores no other
+text from GitHub.
 
 Review
-[github-labels.md](https://github.com/ayeo-io/compass/blob/main/docs/github-labels.md).
+[github-links.md](https://github.com/ayeo-io/compass/blob/main/docs/github-links.md).
 
 ## Dependencies
 
@@ -182,25 +130,23 @@ test tools from `.github/requirements/`, which lists each package at an exact
 version; the cucumber-js adapter installs from its lockfile with `npm ci`. The
 workflows in `ci/` that you copy pin their actions the same way.
 
-## Project guardrails are executable code
+## Project governance is executable code
 
-A project guardrail can use `command-passes` - a shipped check **whose
+A project check (`project_checks` in `compass.yml`, see
+`docs/configuration.md`) uses `command-passes` - a shipped check **whose
 parameter is the command**, not a setting that selects one. `compass check`
-runs that string with `subprocess.run(..., shell=True)` from the project root. Its `command:` form still runs a shell; the `script:`
-form does not - it runs a file directly, so a value cannot add a
-pipeline or a substitution. That difference is the reason to prefer the script
-form, and it is the only reason.
-
-The command form runs from the project root with the Compass process's
-permissions.
+runs that string with `subprocess.run(..., shell=True)` from the project
+root, with the Compass process's permissions.
 
 ```yaml
-checks: [command-passes]
-params:
-  command: "python3 scripts/architecture-fitness.py"
+project_checks:
+  - id: arch-fitness
+    name: Architecture fitness
+    command: "python3 scripts/architecture-fitness.py"
+    stage: build
 ```
 
-Treat governance files that declare `command-passes` **as code, not as configuration** - anything a shell can do, a project guardrail can do. It matters because
+Treat a `compass.yml` that declares a project check **as code, not as configuration** - anything a shell can do, a project check can do. It matters because
 continuous integration normally runs on a pull request **before** it is
 approved, so a contribution's command runs before anyone has read it. The
 explicit opt-in that closes this gap is
@@ -215,17 +161,19 @@ allow_project_commands: true
 ```
 
 This prevents accidental execution; it is not a security boundary because a
-repository change can edit both the command and the setting. Since 6.0.0 a
-project can declare a `command-passes` check in `compass.yml`, the same file
-that holds `allow_project_commands`, so the setting is in the same file as the checks it
-authorises and one change can add both. Before, the setting lived apart from
-the governance files that held the checks. That separation was never a
-control. The control is the trust decision, which runs first and reads nothing
-from the project. A parent (data that `extends:` names), a preset and an issue's
-own layer cannot set the key; lint refuses it there. A parent is data and is
-never executed.
+repository change can edit both the command and the setting. A project check
+is in `compass.yml`, the same file that holds `allow_project_commands`, so
+one change can add both. That was so from 6.0.0; before, the setting lived
+apart from the governance files that held the checks. That separation was
+never a control. The control is the trust decision, which runs first and
+reads nothing from the project.
 
-Prefer the non-shell script form:
+### The script form, for an 8.x project guardrail
+
+A project check takes only `command`, which still runs a shell. An 8.x
+project guardrail, kept in an issue's stored generation or in a project's
+copy of the governance files, can also use the script form, which runs a
+file directly, so a value cannot add a pipeline or a substitution:
 
 ```yaml
 checks: [command-passes]
@@ -257,28 +205,6 @@ env:
 ```
 
 Do this only for a job whose trigger and source are genuinely trusted.
-
-### Readiness runs project commands too
-
-`compass readiness` runs up to five commands the project declares: the build,
-test, lint, type-check and format-check commands. It asks the same question in
-the same order as `command-passes`, through one function,
-`project_commands.command_permission`: the trust decision first, then
-`allow_project_commands`. On an untrusted contribution none of them runs and
-the setting is not read.
-
-What differs from `command-passes`:
-
-- each command runs in a temporary worktree of HEAD in the system temp folder,
-  so nothing it writes reaches the working tree, and the worktree is removed
-  when the run ends;
-- each command starts in its own process group, and the whole group is stopped
-  at its time limit;
-- the readiness record it writes is a plain file in the checkout, so it proves
-  nothing about a contribution: a contribution could commit one.
-
-No readiness signal opens a network connection. A declared command can. See
-`docs/readiness.md`.
 
 ## CI hardening
 
@@ -326,7 +252,7 @@ enough information for the gate to remain meaningful.
 - Shell commands can hide file writes inside scripts and build tools. Hook
   detection is best-effort for shell activity.
 - Shell scripts, makefiles and extensionless scripts are not part of the
-  default production-file classification for red-before-green checks.
+  default production-file classification of the pre-tool hook.
 - A contributor with trusted push and merge rights is inside the repository's
   trust boundary.
 - Agent instructions are powerful even when they are Markdown rather than

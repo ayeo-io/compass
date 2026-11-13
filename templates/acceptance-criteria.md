@@ -1,16 +1,15 @@
 <!--
 TEMPLATE: acceptance-criteria.md
-Role in the pipeline: The shared artifact. Every role reads the same
-acceptance criteria from its own perspective. It is read twice: as the
-specification when defined, and as the acceptance check at verify. It
-satisfies the "Acceptance defined before it is built" guardrail (`G2`) via the
-BDD strategy: every change to production code must be described by a
-scenario here.
+Role in the pipeline: the one document Compass needs and checks. Every
+role reads the same acceptance criteria from its own perspective. It is read
+twice: as the specification when defined, and as the acceptance check at
+verify. It satisfies the "Acceptance defined before it is built" guardrail
+(`G2`) via the BDD strategy: every change to production code must be
+described by a scenario here.
 
-Scenarios are grouped by independence - that grouping seeds the
-distribution map at the plan stage. Every scenario carries a traceability id
-and a link back to the intent it serves - that is the traceability
-guardrail at work.
+Scenarios are grouped by independence, so independent groups can be built
+in parallel. Every scenario carries a traceability id and a link back to the
+intent it serves - that is the traceability guardrail at work.
 
 Fill every {{PLACEHOLDER}}. Keep the Gherkin clean: one behavior per
 scenario, concrete Given/When/Then, no implementation detail.
@@ -20,9 +19,6 @@ scenario, concrete Given/When/Then, no implementation detail.
 <!-- absorbed: "BDD strategy: no code may exist that no scenario here describes." -->
 
 # Spec - {{ISSUE_SLUG}}
-
-<!-- compass:render document-header -->
-<!-- /compass:render -->
 
 ## Summary
 
@@ -38,10 +34,9 @@ scenario, concrete Given/When/Then, no implementation detail.
        regular     - ordinary paragraphs.
        full        - up to 200 words per field, where the work warrants it.
 
-     An unfilled field is caught twice: by the author's placeholder scan
-     when the criteria are finished, and by the Definition of Ready at the
-     foot of requirements-review.md, which will not let an empty Summary
-     reach plan. -->
+     An unfilled field is caught by the author's placeholder scan when the
+     criteria are finished, and the Definition of Ready will not let an
+     empty Summary reach plan. -->
 
 **Goal:** {{One sentence - what this change delivers, in user terms. Not the
 implementation, not the ticket title.}}
@@ -63,7 +58,7 @@ today. If nothing observable changes, say so plainly and explain what does.}}
 
 | Intent id | Source | Statement |
 |---|---|---|
-| INT-1 | {{intent.md desired outcome \| ui-contract.md \| the issue description}} | {{one line}} |
+| INT-1 | {{the issue description \| a brief \| a note of your team's own}} | {{one line}} |
 | INT-2 | {{…}} | {{…}} |
 
 ---
@@ -71,8 +66,8 @@ today. If nothing observable changes, say so plainly and explain what does.}}
 ## Scenario group {{LETTER}} - {{NAME, e.g. "Export generation"}}
 
 <!-- A group is a set of scenarios that touch disjoint code/surface from the
-     other groups. Independent groups can become parallel subtasks in the
-     distribution map. If everything is one group, that is fine - say so. -->
+     other groups. Independent groups can become parallel subtasks. If
+     everything is one group, that is fine - say so. -->
 
 **Independence note:** {{what makes this group separable from the others - or "single group, no parallelism expected"}}
 
@@ -158,13 +153,3 @@ Scenario: {{scenario title}}
 | privacy | {{…}} | {{…}} |
 | operability | {{…}} | {{…}} |
 | accessibility | {{…}} | {{…}} |
-
----
-
-## Coverage ledger
-
-<!-- Written by `compass issue render` from the scenarios and the red and green records in
-     the manifest. Do not edit between the markers: the next render replaces it. -->
-
-<!-- compass:render coverage -->
-<!-- /compass:render -->

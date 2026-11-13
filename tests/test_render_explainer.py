@@ -1,9 +1,9 @@
 """The README's animated explainer is drawn from the shipped policy.
 
 `scripts/render-explainer.py` runs each example assessment through
-`evaluate_route` and draws the approach the policy returns. The committed
+`evidence_required.evaluate` and draws the evidence the policy returns. The committed
 `assets/compass-explainer.svg` must be what the script writes, so the README
-cannot disagree with `governance/routing-policy.yml`.
+cannot disagree with the check set, `governance/check-set.yml`.
 """
 from __future__ import annotations
 
@@ -41,32 +41,45 @@ def test_the_committed_explainer_is_what_the_script_writes():
 
 def test_two_renders_write_the_same_bytes():
     module = _load()
-    policy = module.load_yaml(module.POLICY)
+    policy = module.load_policy()
     assert module.render(policy) == module.render(policy)
 
 
-def test_each_scene_draws_the_approach_the_policy_computes():
+def test_each_scene_draws_the_evidence_the_policy_computes():
+    import sys
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import evidence_required
+    from compass_pkg.stable_ids import PATH_STAGE_IDS
     module = _load()
-    policy = module.load_yaml(module.POLICY)
+    policy = module.load_policy()
     computed = module.scenes(policy)
     svg = module.render(policy)
-    # The three example assessments land on three different approaches, so
-    # the picture shows the process changing, not one approach three times.
-    names = [s["approach"] for s in computed]
-    assert len(set(names)) == len(names), names
-    for scene in computed:
-        assert scene["approach"] in svg
+    # Every change owes the one common row (ADR-099). The three example
+    # assessments owe three different sets of evidence on top of it, so the
+    # picture shows the evidence changing, not one set three times.
+    owed = [tuple(s["evidence"]) for s in computed]
+    assert len(set(owed)) == len(owed), owed
+    assert len({s["label"] for s in computed}) == len(computed)
+    for scene, (_, assessment) in zip(computed, module.SCENES):
+        fresh = evidence_required.evaluate(dict(assessment), policy)
+        assert scene["row"] == fresh["rules_fired"][0]
+        assert scene["evidence"] == fresh["evidence_required"]
+        # Each owed token is drawn at one stage, so the bars add up to it.
+        assert sum(scene["items"].values()) == len(scene["evidence"]) + 1
+        assert scene["label"] in svg
+        assert str(len(scene["evidence"])) in scene["label"]
         assert scene["caption"] in svg
-    # One bar per shipped stage, each with its height animated.
-    assert svg.count('<rect x=') == len(module.STAGE_IDS)
-    assert svg.count('attributeName="height"') == len(module.STAGE_IDS)
+    # One bar per stage of the path, each with its height animated.
+    assert module.STAGE_IDS == PATH_STAGE_IDS
+    assert svg.count('<rect x=') == len(PATH_STAGE_IDS)
+    assert svg.count('attributeName="height"') == len(PATH_STAGE_IDS)
 
 
 def test_the_explainer_holds_no_script_and_names_its_source():
     text = COMMITTED.read_text(encoding="utf-8")
     assert "<script" not in text
     assert "scripts/render-explainer.py" in text
-    assert "governance/routing-policy.yml" in text
+    assert "governance/check-set.yml" in text
     # Every animation loops, so a reader who arrives late still sees all three.
     assert re.search(r'repeatCount="indefinite"', text)
 

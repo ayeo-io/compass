@@ -1,6 +1,6 @@
 # Release notes from the release line
 
-`compass release notes --since <ref>` lists the issues completed since a git reference, each with its release line. The living spec shows the same line under each issue heading. This document owns the verb, the placement rule and the shared module behind both.
+`compass release notes --since <ref>` lists the issues completed since a git reference, each with its release line. This document owns the verb, the placement rule and the shared module behind it.
 
 The verb is a read. It writes no file and runs no git command that writes.
 
@@ -31,24 +31,28 @@ An issue squash-merged to main has a `land_commit` that main never reaches. The 
 2. Otherwise the issue is listed when HEAD reaches its `land_commit`, or when the living spec committed at HEAD names it.
 3. An issue placed by neither part is counted in the closing line and not listed.
 
-The living spec is `docs/system-spec.md` and `docs/system-spec-archive.md`. A `land_commit` that git cannot resolve counts as unreachable.
+The living spec is the pair of files `cli/compass_pkg/shipped_issues.py` names in `LIVING_SPEC_FILES`: the spec and its archive under `docs/`. A `land_commit` that git cannot resolve counts as unreachable.
 
-## The release line in the living spec
+### A revision with no living spec
 
-`compass _derive-system-spec --internal` prints an issue's `release_note` as a paragraph directly under the issue heading, before the scenario lines. An issue with no `release_note` prints exactly the lines it printed before the field existed, so an archive of older issues derives byte for byte as it did.
+9.0.0 derives no living spec (ADR-091), so a release made with 9.0.0 or later holds neither file. Before then each landing re-derived the spec, so a tag or commit made before 9.0.0 still holds it, and the verb reads it there with `git show`.
 
-The text rules that stop a line from adding a heading to the spec are checked where the line is written, not here.
+At a revision with no living spec, that part names no issue, and only reachability places the issue:
+
+- At the reference, an issue is left out only when the reference reaches its `land_commit`.
+- At HEAD, an issue is listed only when HEAD reaches its `land_commit`.
+
+So an issue squash-merged after 9.0.0, whose `land_commit` HEAD never reaches, is not listed. It is counted in the closing line as one that could not be placed. An issue squash-merged before 9.0.0 is still placed by the spec that the older revision holds.
 
 ## Public text
 
-The output is meant for public release text. With a names key set in `record.names_key`, the whole output goes through the same redaction as the living spec, so a rival name prints as its code. A configured key that is missing stops the verb.
+The output is meant for public release text. With a names key set in `record.names_key`, the whole output goes through the same redaction as the delivery record, so a rival name prints as its code. A configured key that is missing stops the verb.
 
 ## Modules
 
 | Module | Holds |
 |---|---|
-| `cli/compass_pkg/shipped_issues.py` | The rule for a completed issue that ships, the pattern that reads issue headings out of a living spec, and `completed_issues`. The derivation and the verb both import it. |
+| `cli/compass_pkg/shipped_issues.py` | The rule for a completed issue that ships, the pattern that reads issue headings out of an older living spec, and `completed_issues`. |
 | `cli/compass_pkg/release_notes.py` | `register`, `cmd_release_notes` and `placement`. |
-| `cli/compass_pkg/flow.py` | The derivation. It imports `shipped_issues` and prints the release line. |
 
 `release_notes.py` and `shipped_issues.py` must not import `flow.py` or the parse cache. `tests/test_intent_and_release_line_readers.py` checks this in a fresh interpreter.

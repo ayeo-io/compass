@@ -29,6 +29,27 @@ ADR-006 is the other half of this: backward compatibility is non-negotiable
 it, and a breaking change happens once, at a major version, with the reason
 recorded.
 
+Before the release notes name a cost or token ratio, `sdd-bench-9-0-0.md` in
+`docs/` must record a pass; the GitHub release body, the repository
+description and the ayeo.io page are not scanned by any test, so check them
+by hand.
+
+### What changes at 9.0.0
+
+9.0.0 ends most 8.x legacy readers and adds `compass migrate`, which moves an
+8.x project to 9.0.0 and keeps its evidence (ADR-098). It keeps the readers of
+old words in a stored manifest or generation, and it still reads
+`.compass/config.yml` when a project has no `compass.yml`. The facts are in `docs/upgrade-9-0-0.md`.
+
+The 9.0.0 release notes must hold this line, as `SECURITY.md` and the upgrade
+guide do:
+
+> Compass 8.x gets security fixes only, for 90 days after 9.0.0 is released.
+> After that, only 9.x is supported.
+
+The release commit adds the end date to `SECURITY.md`.
+`tests/test_upgrade_9_0_0_guide.py` checks that the three files hold the line.
+
 ### What changed at 8.0.0
 
 8.0.0 is a major release because of one change: delegation works across git
@@ -106,8 +127,8 @@ rows for `issue dashboard` and `issue labels sync` stay and each prints one line
 that names the new spelling.
 
 **What is kept until 9.0.0.** Old words, old approach names, copied 5.x
-governance (with the generated views `governance/routing-policy.yml` and
-`governance/guardrails.yml`) and `.compass/config.yml` (when `compass.yml` is
+governance (with the generated views `routing-policy.yml` and
+`guardrails.yml`) and `.compass/config.yml` (when `compass.yml` is
 absent) are read until 9.0.0, not 7.0.0. Only the command spellings end at 7.0.0
 (`governance/decisions/2026-10-25-legacy-readers-readable-until-9-0-0.md`).
 
@@ -166,7 +187,7 @@ copied governance and `.compass/config.yml`) are read in their old words until
   extends `compass:default@6`, and a project that sets nothing runs on the
   default. A 6.x release of the default never changes a value that 6.0.0 defines.
 - The shipped default is a preset directory, `governance/presets/default/`.
-  `governance/routing-policy.yml` and `governance/guardrails.yml` are views
+  `routing-policy.yml` and `guardrails.yml` are views
   generated from it, and they stay until 9.0.0 for the projects, the drift
   report and the tests that read them.
 - A layer can add, set, replace or remove an entry. The classifier compares a
@@ -186,13 +207,12 @@ copied governance and `.compass/config.yml`) are read in their old words until
   and asks again for approval of each waiver the move affects. `compass preset
   test` runs a preset's fixtures and checks its locks, and `compass preset
   init` scaffolds a team preset repository.
-- `compass issue configure` proposes, previews, discards or recovers a change to
-  an issue's own configuration. `compass issue migrate --config` pins an issue's
+- `compass issue migrate --config` pins an issue's
   configuration to the installed versions. An implementation major that differs
   from the one a generation recorded is refused, and a check can be advisory.
 - A project can name git parents, singly or in a chain, and each is pinned by
-  sha and judged against the default like any other layer
-  (`docs/git-parents.md`).
+  sha and judged against the default like any other layer. 9.0.0 removed git
+  parents (ADR-094).
 - A check can be judged: it passes on a recorded review (`docs/judged-checks.md`).
   `approvers` name who may approve a waiver, a human check or an exit, and an
   evidence approval is recorded with its approver.
@@ -200,7 +220,7 @@ copied governance and `.compass/config.yml`) are read in their old words until
   rendered from the issue's stage lists. The receipt shows where each rule,
   waiver, lock and check came from.
 - Compass can write an issue's domain labels and workflow state to its linked
-  GitHub issue (`docs/github-labels.md`). It is opt-in: the `github_labels` key
+  GitHub issue (9.0.0 removed this label sync, ADR-093). It is opt-in: the `github_labels` key
   in `compass.yml` has two switches, both off by default, and with both off no
   command calls GitHub. `compass issue link set` links an issue and
   `compass issue labels sync` writes its labels. The manifest schema gains an
@@ -253,6 +273,16 @@ copied governance and `.compass/config.yml`) are read in their old words until
 
 ### Keeping the previous default major
 
+9.0.0 replaced the live preset with the fixed check set (ADR-094), so no
+release after it keeps a preset folder: a stored generation holds its own
+resolved policy, and `tests/fixtures/check-set-digests.yml` pins each version
+of `governance/check-set.yml`. The two folders kept before then,
+`default@6` and `default@7`, left the product in 9.0.0 and are test fixtures
+under `tests/fixtures/presets/`. The artifacts catalog 8.0.4 shipped stays
+as `governance/artifacts-8.0.4.yml`, because the CLI still reads it.
+`tests/test_frozen_files_unchanged.py` pins all three and compares them byte
+for byte with the release that shipped them. Until 9.0.0 the rule was:
+
 A release that moves the shipped default to a new major (`default@7` after
 `default@6`) must keep the previous major's preset files in
 `governance/presets/default@<major>`, a copy of the last preset that major
@@ -261,13 +291,9 @@ than the release: v6.1.0 ships `version: 6.0.0`, and `default@6` holds that
 same file. The copy is frozen, so do not edit it. A project on v6.0.1, which shipped different
 `default@6.0.0` values, has its waivers re-checked against the v6.1.0 values,
 because no record stores what an approval saw. The live default wins for
-its own major. `compass policy update` reads both folders to tell which waived
-fields moved, and exits 2 for a project on a major that is not kept. The live preset takes the new major's version at the first change to it after
+its own major. The live preset takes the new major's version at the first change to it after
 the previous major ships, not at the release: from then on the live preset and the
-kept copy no longer share a pin. Pin the
-new preset with `python3 scripts/generate-legacy-views.py --pin`; the old
-pins stay. `tests/test_policy_update.py` fails when a kept folder does not
-match its pinned digest or when an earlier pinned major is not kept.
+kept copy no longer share a pin.
 
 ### What changed at 5.0.0
 
@@ -278,7 +304,7 @@ its replacement:
 | Removed | Use instead |
 |---|---|
 | `traceability` skill | `evidence-gates` skill, which now holds it as `traceability.md` |
-| `role-translation` skill | `intent-interview` skill, which now holds it as `role-translation.md` |
+| `role-translation` skill | `intent-interview` skill, which held it as `role-translation.md` until 9.0.0 deleted it (ADR-093) |
 
 Issue documents moved too. The acceptance criteria, technical design,
 delivery approach and the other prose documents now live in
@@ -371,8 +397,7 @@ with the version hidden.
    - `tests/test_cli_surface_drift.py` (every CLI subcommand documented
      in the public CLI surface blocks)
    - `tests/test_release_invariants.py` (the partial-version-bump guard
-     + the `comparison-requirements` ADR-006 backward-compat fixture +
-     `signals.yml` shape invariants)
+     + the `comparison-requirements` ADR-006 backward-compat fixture)
    - All other existing tests (delivery-approach selection, guardrail
      checks, evidence handling, Spike safety, CI exit codes, the
      retrospective signal, architecture consistency, etc.)
@@ -389,8 +414,8 @@ with the version hidden.
    every issue. (`compass ci` is what CI runs; failing it locally means CI
    will fail.) Run `COMPASS_FULL_ARCHIVE=1 make test` too: the archive
    tests then read every local issue instead of the tracked sample,
-   `tests/fixtures/archive-sample.tar.gz`, and the living-spec and citation
-   tests, which skip without it, run.
+   `tests/fixtures/archive-sample.tar.gz`, and the citation tests, which
+   skip without it, run.
 
 5. **`make release`** - produces `dist/compass-<version>.tar.gz`.
 
@@ -445,14 +470,9 @@ with the version hidden.
 
 10. **Tag and publish.** The release-script run, the out-of-tree smoke
    test, and the seven-locations version bump are the gate; tagging is
-   the consequence. After pushing the tag, run
-   `python3 scripts/generate-shipped-releases.py` and land the updated
-   `governance/shipped-releases.yml` and `governance/shipped-releases.tar.xz`
-   through a pull request. `compass policy migrate` reads this table to
-   recognize a project's copied governance, and `test_PM_12` fails wherever
-   tags are fetched until the table lists the new tag.
-   `python3 scripts/generate-shipped-releases.py --check` exits 0 once it
-   does.
+   the consequence. `governance/shipped-releases.tar.xz` is frozen: 9.0.0
+   removed `compass policy migrate`, which read it (ADR-094), so a release
+   adds nothing to it.
 
 11. **Publish the plugin copy.** Users and the plugin directory install
    Compass from the `plugin` branch, which `.claude-plugin/marketplace.json`
@@ -498,7 +518,10 @@ Run these on top of steps 1 to 9, before step 10.
    `tests/test_compat_configurations.py` (B and C),
    `tests/test_compat_contract_4.py` and `tests/test_compat_contract_5.py`.
    Each contract must hold under these configurations:
-   - **A.** No configuration: the shipped default alone.
+   - **A.** No configuration: the shipped default alone. Contracts 1 and 2
+     read a copy of the 8.0.4 shipped governance in its place
+     (`tests/fixtures/compat/v8.0.4-governance.tgz`, from the `v8.0.4` tag),
+     because 9.0.0 replaces the approaches they compare (ADR-092).
    - **B.** An empty overlay: a `compass.yml` holding `schema: 1` and
      `extends: compass:default@6` and nothing else.
    - Under B, two corpus entries are left out because their answer is about
@@ -547,20 +570,6 @@ Run these on top of steps 1 to 9, before step 10.
 
 ---
 
-## Artifact freshness at ship
-
-Compass records the digest of each document when it is written. With the
-`artifact-freshness` capability on, `ship` also refuses a document that is
-stale, because an artifact it depends on changed after it was written. The
-capability is off in the shipped default, so a stale document is refused only
-when the `artifact-freshness` capability is on. Run `compass policy show` to
-see the setting. Before a release, check whether your project turned it on,
-and rewrite each stale document it names. See
-[artifact-freshness.md](artifact-freshness.md) for how to switch it on and how
-to rewrite an approved document.
-
----
-
 ## Before changing the words sessions act on
 
 Three texts decide most of what a session does under Compass. A change to
@@ -570,27 +579,24 @@ any of them must be measured, not judged:
 - a refusal message in `hooks/pre-tool.sh`;
 - `skills/tdd-discipline/SKILL.md`.
 
-Before the change is merged:
+Before the change is merged, measure it with sdd-bench, the only
+measurement Compass accepts (ADR-093). The runner is `harness.py` in the
+sdd-bench `tools` folder:
 
-1. Commit the change: the harness loads the checkout's `HEAD`. Then run
-   the scenarios the text serves under the compass condition, into a
-   directory of their own:
-   `python3 evals/harness.py --scenario <id> --condition compass --runs 5 --out <dir>`.
-2. Score them with the model judge, which the baseline used:
-   `python3 evals/judge.py <dir>/*.json --report <file> --llm`. Each
-   result the rules leave undecided costs one more call, capped at $0.50.
-3. Compare the report with the baseline and put the comparison in the PR.
-   The baseline is the latest eval report in `docs/compass/`, named
-   `<date>-eval-*.md`; the first is `2026-09-26-eval-pilot.md`.
+1. Commit the change. Then run the sdd-bench scenarios under the compass
+   condition, with `--plugin-source` naming this checkout, into a directory
+   of their own. The runner records the checkout's `HEAD` as the commit
+   under measurement.
+2. Score each finished tree with the sdd-bench scorer, `score.py` in the
+   same `tools` folder.
+3. Compare the scores with the latest published sdd-bench result for
+   Compass, and put the comparison in the PR.
 
-A change that lowers a behavior's pass rate against the baseline does not
-merge without a written reason. This blocks only when both reports have at
+A change that lowers a behavior's pass rate against that result does not
+merge without a written reason. This blocks only when both results have at
 least five runs per scenario and condition: with fewer, one flipped result
 can be chance, so the comparison goes in the PR and does not block. The
-published baseline has one run per scenario and condition, so no
-comparison blocks until a five-run baseline is published.
-`evals/README.md` says which scenarios each text serves, and what a run
-costs.
+sdd-bench README says how to run a scenario and what a run records.
 
 ---
 
@@ -629,15 +635,14 @@ queue, and marking it ready for review (`ready_for_review`) runs them.
 | `fast-tests` | Runs on a pull request only. Runs the tests in the test files the pull request changes and in a fixed set of house-rule test files, listed by `scripts/ci-fast-tests.py` (below). |
 | `shard` | A matrix of shard jobs. Each runs its share of the test files on parallel workers, prints every test's duration and ends at 45 minutes. |
 | `serial` | Runs the tests marked `serial` alone, and prints its 20 slowest tests. |
-| `self-check` | In a merge group, and on a push to main that runs the suite, passes only when every suite job succeeded, `fast-tests` skipped and the shard counts add up to the `count` total. On a pull request, passes when `checks`, `count` and `fast-tests` succeeded and every suite job skipped. It needs every job above, the four `bdd-adapter` jobs, `atdd-adapter-python` and `check-mutation`. On a title or body edit it reports the earlier result instead (below). |
+| `self-check` | In a merge group, and on a push to main that runs the suite, passes only when every suite job succeeded, `fast-tests` skipped and the shard counts add up to the `count` total. On a pull request, passes when `checks`, `count` and `fast-tests` succeeded and every suite job skipped. It needs every job above, the four `bdd-adapter` jobs, `atdd-adapter-python`, `atdd-adapter-typescript` and `check-mutation`. On a title or body edit it reports the earlier result instead (below). |
 | `bdd-adapter`, `bdd-adapter-behave`, `bdd-adapter-cucumber-js`, `bdd-adapter-godog` | Run each BDD reference adapter. |
 | `atdd-adapter-python` | Runs the Python reference example of four-layer acceptance tests (`examples/atdd-adapters/python/`) through its API driver and its CLI driver on two workers each, then its layering test. |
-| `harness-root` | Runs the real-root harness tests, only when the change touches the files they depend on. It is not a required check. |
+| `atdd-adapter-typescript` | Installs the TypeScript reference example's pinned packages (`examples/atdd-adapters/typescript/`, `npm ci`) on Node 22.13.0, type-checks it, runs it through its API driver and its CLI driver on two workers each, then its layering test. Then it runs the Compass tests that need Node (`TRC-C5`, `TRC-J6`, `TRC-X3`) with `COMPASS_REQUIRE_TYPESCRIPT=1`, so a missing Node or package fails them instead of skipping them. Other jobs skip those tests. It is not a ruleset-required check, but `self-check` needs it. |
 | `check-mutation` | Breaks each shipped check and confirms its register tests go red. |
 
-The shards, `serial`, `check-mutation`, the adapter jobs and
-`harness-root` are the suite jobs: they run in a merge group and on a push
-to main only. A new push to a pull request, or a change of its base branch,
+The shards, `serial`, `check-mutation` and the adapter jobs are the suite
+jobs: they run in a merge group and on a push to main only. A new push to a pull request, or a change of its base branch,
 cancels the run it replaces. A merge group and a push to main are never
 cancelled by this workflow; GitHub cancels a merge group's run itself when
 it rebuilds the group.
@@ -726,7 +731,7 @@ pull request passes there, and `self-check` carries the real result:
 - `docs.yml`'s `build` runs on every pull request and in every merge
   group. When the change touches none of `docs/`, `mkdocs.yml` and
   `.github/workflows/docs.yml`, it skips its own steps and ends in success.
-  `harness-root` uses the same change test, `scripts/ci-changed.py`;
+  The change test is `scripts/ci-changed.py`;
 - `pr-text.yml` runs in a merge group too. A merge group has no title or
   body, so the job passes there without a scan; the pull request's own runs
   scanned its text, on every edit.
@@ -823,15 +828,7 @@ minutes. Each entry the queue builds runs the whole suite, so
 `max_entries_to_build` sets how many suite runs can go at once.
 
 After the rule is on, merge a pull request with "Merge when ready", which
-adds it to the queue. The living spec is not committed on a branch
-(`living_spec: refresh` in `compass.yml`, see `docs/configuration.md`).
-Before a release, a maintainer re-derives it in one pull request:
-
-```bash
-git switch -c refresh-living-spec origin/main
-compass spec sync
-git push -u origin refresh-living-spec
-```
+adds it to the queue.
 
 ### The pull request text
 
@@ -902,7 +899,6 @@ catch common drift:
 |---|---|
 | All seven version locations agree | `tests/test_release_invariants.py` (partial-bump guard) |
 | Pre-v1.1.0 manifest.yml shapes still lint clean | `tests/test_release_invariants.py` (ADR-006 backward-compat, via the `tests/fixtures/comparison-requirements/` fixture) |
-| `signals.yml` shape stays valid | `tests/test_release_invariants.py` (`design_smell` category, etc.) |
 | Every CLI subcommand appears in the public CLI blocks | `tests/test_cli_surface_drift.py` (parses `compass --help`) |
 | `docs/install-smoke-test.md` shows the current version | `tests/test_cli_surface_drift.py` (reads `VERSION`, asserts the smoke-test matches) |
 | `install.sh` does not double-register hooks in a plugin-source repo | `tests/test_install_plugin_detection.py` |

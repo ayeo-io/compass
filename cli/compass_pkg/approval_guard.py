@@ -100,6 +100,17 @@ r"""Decide whether the agent's tool call touches approval state it must not
   escape-spelled `compass` in command position) and a word of ANSI-C quoting
   with an escape is refused even when `evidence` is spelled with escapes too:
   `compass $'\x65vidence' $'appro\x76e'` runs `evidence approve`.
+- **An approving review of a pull request** (#355). A review approval by
+  another person on the merged pull request is the ship approval, and the
+  agent runs `gh` with the person's login. So `pr-review-protected` is given
+  for `gh pr review` with `--approve`, `--approve=...` or `-a` (also joined to
+  other short options), for `gh api` on `pulls/<n>/reviews` with a method other
+  than `GET` or `HEAD` (with no `-X` or `--method`, a field or `--input` makes
+  it a `POST`, as `gh` sends it) or a field `event=APPROVE`, and for a GraphQL
+  `addPullRequestReview` or `submitPullRequestReview`. Each command of a chain
+  is read, and each quoted word that names a review is read again as
+  commands, to `NESTING` levels. A path, field or body held in a variable or a
+  file, a `gh` alias and another HTTP client are not seen.
 - **Limit: a text-matching guard cannot follow what the shell, a spelling or
   an interpreter builds at run time** (variables, command substitution, a
   glob that expands against a file the agent wrote, such as `appro?e` or
@@ -872,9 +883,10 @@ def _judge_words(commands, event, folder):
     except message text. An exemption holds only for a command that stands alone and has
     no redirect to a file (a copy of a descriptor, `2>&1`, names no file), with one operand
     and plain options, and only for a word with no `..` segment."""
-    items, top = [], []
+    items, top, segments = [], [], []
     for command in commands:
         words = command.words
+        segments.append([w for i, w in enumerate(words) if i not in command.text])
         allowed = (EXEMPT.get(words[0], ()) if len(commands) == 1 and not command.targets
                    and _one_plain_operand(words) else ())
         for i, word in enumerate(words):
@@ -885,7 +897,7 @@ def _judge_words(commands, event, folder):
         for target in command.targets:
             items.append((target, (), False))
             top.append(target)
-    return _judge(event, folder, items, top, " ".join(top), False, False)
+    return _judge(event, folder, items, top, " ".join(top), False, False, segments)
 
 
 def _judge_text(command, event, folder):
@@ -899,7 +911,7 @@ def _judge_text(command, event, folder):
     # add refusals of a protected name.
     items = [(command, (), True)] + ([(text, (), True)] if text != command else [])
     return _judge(event, folder, items, _words(command), text,
-                  _escaped_command(text), True)
+                  _escaped_command(text), True, _segments(command))
 
 
 def _refusal(code, tool, text, found, whole):
@@ -919,11 +931,13 @@ def _first(items, find):
     return None
 
 
-def _judge(event, folder, items, top, raw, escaped, whole):
+def _judge(event, folder, items, top, raw, escaped, whole, segments):
     """`(code, params)` for a Bash call to refuse, else None. The checks keep the
     order of the earlier guard, so a call it refused keeps its code: the request,
     delegation and transcript names; the caller rules; then the same names in any
-    letter case, a configuration folder, a folder above the transcript and a glob."""
+    letter case, a configuration folder, a folder above the transcript and a glob;
+    last, an approving review of a pull request. `segments` holds the words of each
+    command, without message text."""
     tool = "Bash"
     for code, find in (
             ("approval-request-protected", lambda t, e: _names_request(t, e)),
@@ -960,4 +974,151 @@ def _judge(event, folder, items, top, raw, escaped, whole):
     word = _bash_glob_reaches(nested, str(event.get("cwd") or ""))
     if word:
         return _refusal("delegation-protected", tool, word, word, False)
+    form = _review_approval(segments)
+    if form:
+        return "pr-review-protected", {"target": form, "tool": tool}
     return None
+
+
+# --- Bash: an approving review of a pull request (#355) ----------------------------------------
+
+#: A pull request's reviews in a REST path, with or without a review id or `events`.
+REVIEWS_PATH = re.compile(r"pulls/[^/\s]*/reviews\b", re.I)
+#: The GraphQL mutations that create or submit a review. `addPullRequestReviewComment` and
+#: `addPullRequestReviewThread` add a comment, so they do not match.
+REVIEW_MUTATION = re.compile(r"\b(?:add|submit)PullRequestReview\b", re.I)
+#: Shell operators: each ends one command of a segment list.
+_OPERATOR = re.compile(r"[;&|()<>\n]+")
+#: `gh pr review` options that take a value, so the next word is not an option.
+_REVIEW_VALUES = frozenset(("-b", "--body", "-F", "--body-file", "-R", "--repo"))
+#: `gh api` options that take a value; `-X`, `-f` and `-F` are read on their own.
+_API_VALUES = frozenset(("-H", "--header", "-q", "--jq", "-t", "--template", "--hostname",
+                         "--cache", "-p", "--preview"))
+_API_FIELDS = frozenset(("-f", "-F", "--field", "--raw-field", "--input"))
+
+
+def _segments(text):
+    """The commands of `text`, each as a list of words, split at every shell operator and
+    new line. Quotes are removed as the shell removes them; a text the reader cannot split
+    (an open quote) is split at white space, so it is still judged."""
+    text = re.sub(r"\$(?=['\"])", "", text).replace("\\\n", "")
+    try:
+        lexer = shlex.shlex(text, posix=True, punctuation_chars=";&|()<>\n")
+        lexer.whitespace = " \t\r"
+        lexer.whitespace_split = True
+        lexer.commenters = ""
+        tokens = list(lexer)
+    except ValueError:
+        tokens = text.split()
+    segments, current = [], []
+    for token in tokens:
+        if token and _OPERATOR.fullmatch(token):
+            segments.append(current)
+            current = []
+        else:
+            current.append(token)
+    return [s for s in segments + [current] if s]
+
+
+def _approve_flag(args):
+    """The approve flag of `gh pr review`, else ''. `args` are the words after `review`.
+    `-a` may be joined to other short options (`-ab text`); a value option ends the
+    letters, so `-ba` is a body of `a`."""
+    skip = False
+    for word in args:
+        if skip:
+            skip = False
+        elif word in _REVIEW_VALUES:
+            skip = True
+        elif word == "--approve" or word.startswith("--approve="):
+            return word
+        elif word.startswith("-") and not word.startswith("--"):
+            for letter in word[1:]:
+                if letter == "a":
+                    return word
+                if letter in "bFR":
+                    break
+    return ""
+
+
+def _api_write(args):
+    """`(method, path)` when the words after `gh api` write to a pull request's reviews, or
+    name a review mutation, else None. With no `-X` or `--method`, `gh api` sends a POST
+    when a field or `--input` is given, as `gh` does. A field `event=APPROVE` counts with
+    any method."""
+    mutation = next((w for w in args if REVIEW_MUTATION.search(w)), "")
+    if mutation:
+        return "graphql", REVIEW_MUTATION.search(mutation).group(0)
+    path = next((w for w in args if REVIEWS_PATH.search(w)), "")
+    if not path:
+        return None
+    method, body, approve, i = None, False, False, 0
+    while i < len(args):
+        word, value = args[i], None
+        nxt = args[i + 1] if i + 1 < len(args) else ""
+        if word in ("-X", "--method"):
+            method, i = nxt, i + 1
+        elif word.startswith("--method="):
+            method = word[len("--method="):]
+        elif word in _API_FIELDS:
+            body, value, i = True, nxt, i + 1
+        elif word.split("=", 1)[0] in ("--field", "--raw-field", "--input"):
+            body, value = True, word.split("=", 1)[1]
+        elif word in _API_VALUES:
+            i += 1
+        elif word.startswith("-") and not word.startswith("--") and len(word) > 1:
+            letters = word[1:].lstrip("i")      # `-i` takes no value
+            if letters[:1] == "X":
+                method = letters[1:] or nxt
+                i += not letters[1:]
+            elif letters[:1] in ("f", "F"):
+                body, value = True, letters[1:] or nxt
+                i += not letters[1:]
+            elif letters[:1] in ("H", "q", "t", "p") and not letters[1:]:
+                i += 1
+        if value is not None and re.fullmatch(r"event=approve", value, re.I):
+            approve = True
+        i += 1
+    if method is None:
+        method = "POST" if body else "GET"
+    if approve or method.upper() not in ("GET", "HEAD"):
+        return method.upper(), path
+    return None
+
+
+def _review_form(words):
+    """The refused form that one command holds, as a refusal shows it, else ''."""
+    for i, word in enumerate(words):
+        if os.path.basename(word).lower() != "gh":
+            continue
+        args = words[i + 1:]
+        if "pr" in args and "review" in args[args.index("pr") + 1:]:
+            after = args[args.index("pr") + 1:]
+            flag = _approve_flag(after[after.index("review") + 1:])
+            if flag:
+                return "gh pr review %s" % shown_word(flag)
+        if "api" in args:
+            found = _api_write(args[args.index("api") + 1:])
+            if found:
+                return "gh api %s %s" % (found[0], shown_word(found[1], "reviews"))
+    return ""
+
+
+def _review_approval(segments):
+    """The first approving review of a pull request that the commands hold, else ''. Each
+    word with white space that names a review is read again as commands, so `bash -c`,
+    `eval` and a quoted command piped into `sh` are read too, to `NESTING` levels."""
+    level = [s for s in segments if any("review" in w.lower() for w in s)]
+    for _ in range(NESTING):
+        if not level:
+            break
+        following = []
+        for words in level:
+            form = _review_form(words)
+            if form:
+                return form
+            for word in words:
+                if re.search(r"\s", word) and "review" in word.lower():
+                    following.extend(_segments(word))
+        level = [s for s in following if any("review" in w.lower() for w in s)]
+    return ""

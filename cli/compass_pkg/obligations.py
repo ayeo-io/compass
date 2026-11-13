@@ -1,40 +1,28 @@
 # compass_pkg.obligations - what a resolved configuration owes an assessment
-"""The facts a configuration owes an assessment, computed by today's evaluator.
+"""The routing policy of a resolved configuration, in the shape the evaluator reads.
 
-The classifier compares two configurations by what each owes at an
-assessment (ADR-037). This module computes those facts for one
-configuration and one assessment. It does not route: `evaluate_route` is the
-one implementation of routing, and `policy_adapter` turns the merged
-catalogues into the input that function already takes, so a replay can show
-the two paths agree. When the evaluator takes the catalogue form itself the
-adapter becomes the identity.
+`evaluate_route` is the one implementation of routing. `policy_adapter` turns
+the catalogues of a resolved configuration (the check set, a stored
+generation or a governance copy) into the input that function takes:
+the reverse of the legacy adapter's `adapt`. `issue_input` hands the evaluator
+an 8.x issue's own layer, which a stored generation keeps (ADR-094).
+`dimension_orders` and `listing_assessment` give the order a `when:` compares
+by and the assessment a check's `when:` reads.
 
-An assessment the evaluator refuses (an exploration that a floor would turn
-into delivery, or a forbidden approach) is an outcome at that point, not a
-failure of the comparison, so it comes back as `Refused`. A fault in the
-configuration itself (an issue naming a mode its stage does not have) is a
-different thing and raises.
+The classifier that compared two configurations by what each owed (ADR-037)
+was removed in 9.0.0 with the configuration layers (ADR-094).
 """
-# DEPENDENCY: standard library (copy, dataclasses); compass_pkg.catalogue_spec,
-# compass_pkg.core (CompassError, reading_matches, canonical_shape,
-# _stage_key_renames),
-# compass_pkg.loop_ceilings (the ceiling names) and compass_pkg.routing
-# (evaluate_route, RoutingConflict, prepare_policy, route_checkpoints), and
-# compass_pkg.stable_ids (the approach ids), and compass_pkg.model_tiers (model_rules).
-# Only compass_pkg.classify, compass_pkg.effective and compass_pkg.replay import this module.
+# DEPENDENCY: compass_pkg.catalogue_spec (AUTONOMY, ISSUE_KEYS), compass_pkg.core
+# (CompassError, canonical_shape), compass_pkg.loop_ceilings (the ceiling names) and
+# compass_pkg.stable_ids (the approach ids).
+# Only compass_pkg.effective may import this module.
 from __future__ import annotations
 
-import copy
-from dataclasses import dataclass, fields
-
-from compass_pkg.catalogue_spec import AUTONOMY, CAPABILITIES, ISSUE_KEYS
-from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE
-from compass_pkg.core import (CompassError, _stage_key_renames, canonical_shape,
-                              reading_matches)
+from compass_pkg.catalogue_spec import AUTONOMY, ISSUE_KEYS
+from compass_pkg.stable_ids import (APPROACH_DELIVERY, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX,
+                                    APPROACH_REGULAR, APPROACH_SPIKE)
+from compass_pkg.core import CompassError, canonical_shape
 from compass_pkg.loop_ceilings import CEILINGS
-from compass_pkg import model_tiers
-from compass_pkg.routing import (RoutingConflict, evaluate_route, prepare_policy,
-                                 route_checkpoints)
 
 # The effect names the evaluator reads, from the catalogue spelling (ADR-041).
 # A test holds this equal to the inverse of the table the legacy adapter
@@ -54,8 +42,10 @@ DEFAULT_HIT = "collect"
 # spike as a literal where it adds the gates every shipping approach carries,
 # and its checkpoint table accepts only these names, so another approach, or a
 # changed `ships`, would be a fact it never reads.
+# `delivery` is the shipped default's fallback (ADR-092); the evaluator routes
+# to it only to collect the floors, so it is never written as an approach.
 EVALUATOR_APPROACHES = {APPROACH_SPIKE: False, APPROACH_QUICK_FIX: True, APPROACH_REGULAR: True,
-                        APPROACH_HOTFIX: True, APPROACH_FULL: True}
+                        APPROACH_HOTFIX: True, APPROACH_FULL: True, APPROACH_DELIVERY: True}
 
 # Which legacy block a rule set's `kind` fills (`role-rules`: a 6.x generation).
 _GUARDRAIL_BLOCKS = {"floors": "floors", "caps": "caps", "ceilings": "loop_ceilings",
@@ -215,7 +205,6 @@ def policy_adapter(config):
     table = _checkpoints(config.get("approaches") or {})
     if table:
         policy["autonomy_checkpoints"] = table
-    policy.update(model_tiers.policy_block(config.get("rules") or {}))
     ranks = _ranks(config.get("stages") or {})
     if ranks is not None:
         policy["stage_mode_ranks"] = ranks
@@ -227,112 +216,8 @@ def policy_adapter(config):
 
 # --- the result ------------------------------------------------------------------
 
-@dataclass(frozen=True)
-class Refused:
-    """The evaluator refused this assessment with a routing conflict.
-    `reason` is its message. Any other evaluator error is a fault in an
-    input and raises."""
-    reason: str
-
-
-@dataclass(frozen=True)
-class Obligations:
-    """What a configuration owes an assessment. Every field but `approach`,
-    `rules_fired` and `ignored_overrides` is a fact the classifier compares;
-    those three are outcomes, not obligations. `release_line` (ADR-065) is
-    last because it has a default."""
-    stage_mode: dict
-    entry: dict
-    exit: dict
-    gate_set: tuple
-    gate_checks: dict
-    gate_accepts: dict
-    artifacts_owed: dict
-    required_skills: tuple
-    blocked_stages: tuple
-    required_artifacts: tuple
-    checkpoints: dict
-    ceilings: dict
-    checks: dict
-    artifact_depends_on: dict
-    artifact_checks: dict
-    readiness: dict
-    artifact_required_when: dict
-    artifact_word_ceiling: dict
-    approach: str = ""
-    rules_fired: tuple = ()
-    ignored_overrides: dict = None   # the issue's stage modes a floor replaced
-    release_line: bool = False
-
-    def compared(self):
-        return {f.name: getattr(self, f.name) for f in fields(self)
-                if f.name in COMPARED_FACTS}
-
-
-# Which fact carries each key of `catalogue_spec.OBLIGATION_FIELDS` that an
-# evaluation produces. A key that is not here is in FOOTPRINT_ONLY: a lock
-# reads it from the configuration, and no assessment changes it.
-FACT_FOR_FIELD = {
-    "approaches.stages": "stage_mode",
-    "stages.mode": "stage_mode",
-    "approaches.gates": "gate_set",
-    "approaches.artifacts": "artifacts_owed",
-    "approaches.artifacts.depth": "artifacts_owed",
-    "approaches.checkpoints": "checkpoints",
-    "approaches.subtask_ceiling": "ceilings",
-    "rules.ceilings": "ceilings",
-    "evaluation.max_worktrees": "ceilings",
-    "stages.entry": "entry",
-    "stages.exit": "exit",
-    "gates.checks": "gate_checks",
-    "gates.accepts": "gate_accepts",
-    "checks.kind": "checks",
-    "checks.impl": "checks",
-    "checks.params": "checks",
-    "checks.accepts": "checks",
-    "checks.reviewers": "checks",
-    "checks.approvers": "checks",
-    "checks.inputs": "checks",
-    "checks.severity": "checks",
-    "checks.on_skipped": "checks",
-    "checks.statement": "checks",
-    "artifacts.depends_on": "artifact_depends_on",
-    "artifacts.checks": "artifact_checks",
-    "artifacts.required_when": "artifact_required_when",
-    "artifacts.word_ceiling": "artifact_word_ceiling",
-    "readiness.impl": "readiness",
-    "readiness.params": "readiness",
-    "readiness.required_for_autonomous": "readiness",
-    "evaluation.required_skills": "required_skills",
-    "evaluation.blocked_stages": "blocked_stages",
-    "evaluation.required_artifacts": "required_artifacts",
-    "approaches.release_line": "release_line",
-}
-FOOTPRINT_ONLY = ("approaches.ships", "stages.order", "gates.stage")
-COMPARED_FACTS = frozenset(FACT_FOR_FIELD.values())
-
-# `statement` is compared for a check a person or a model judges: its text is
-# the instruction. For a deterministic check the implementation is.
-STATEMENT_KINDS = ("human", "judged")
-
 
 # --- the verdict of a check with nothing to check -----------------------------------
-
-# What `compass check` reports for a check, from what the preset's
-# `on_skipped` says of one that cannot run. `not-applicable` is today's
-# `nothing-to-check`: the check inspected nothing, so it neither passed nor
-# failed anything.
-SKIPPED_STATUS = {"pass": "pass", "not-applicable": "nothing-to-check", "fail": "fail"}
-
-
-def skipped_verdict(check):
-    """The verdict, as `compass check --json` spells it, that the obligation
-    path gives a check with nothing to check."""
-    value = check.get("on_skipped")
-    if value not in SKIPPED_STATUS:
-        raise CompassError(f"on_skipped is '{value}'; it must be one of "
-                           f"{', '.join(SKIPPED_STATUS)}")
-    return SKIPPED_STATUS[value]
 
 
 # --- the facts -------------------------------------------------------------------
@@ -340,14 +225,6 @@ def skipped_verdict(check):
 def dimension_orders(dimensions):
     return {name: list(d.get("values") or []) for name, d in dimensions.items()
             if d.get("type") == "ordered-enum"}
-
-
-def _known_capabilities(names, who):
-    """A misspelt switch would turn nothing on and nobody would be told."""
-    for name in names:
-        if name not in CAPABILITIES:
-            raise CompassError(f"{who} the capability '{name}', which is not one of "
-                               f"{', '.join(CAPABILITIES)}")
 
 
 def listing_assessment(assessment, approach):
@@ -359,99 +236,6 @@ def listing_assessment(assessment, approach):
     Definition of Done). `approach` is the catalogue's entry for the approach
     the route chose."""
     return {**assessment, "ships": bool((approach or {}).get("ships", True))}
-
-
-def _active(check, assessment, orders, capabilities):
-    """A check is active when its `when` matches and every capability it
-    needs is on."""
-    _known_capabilities(check.get("requires") or (), "a check requires")
-    return (reading_matches(check.get("when"), assessment, orders)
-            and set(check.get("requires") or ()) <= set(capabilities))
-
-
-def _active_ids(ids, checks, assessment, orders, capabilities):
-    out = []
-    for check_id in ids:
-        if check_id not in checks:
-            raise CompassError(f"a list names the check '{check_id}', which the "
-                               f"configuration does not define")
-        if _active(checks[check_id], assessment, orders, capabilities):
-            out.append(check_id)
-    return tuple(sorted(out))
-
-
-def _check_facts(check, assessment, orders):
-    """The fields of an active check that two configurations are compared on.
-    The severity is the one in force at this assessment: a `blocking_when`
-    that does not match makes a finding advisory, as `compass check` reads
-    it. It reads the configured orders, as every other clause does."""
-    severity = check.get("severity", "blocking")
-    blocking_when = check.get("blocking_when")
-    if blocking_when and not reading_matches(blocking_when, assessment, orders):
-        severity = "advisory"
-    facts = {
-        "kind": check.get("kind"), "impl": check.get("impl"),
-        "params": copy.deepcopy(check.get("params") or {}),
-        "accepts": sorted(check.get("accepts") or []),
-        "reviewers": sorted(check.get("reviewers") or []),
-        "approvers": sorted(check.get("approvers") or []),
-        "inputs": sorted(check.get("inputs") or []),
-        "severity": severity, "on_skipped": check.get("on_skipped"),
-    }
-    if check.get("kind") in STATEMENT_KINDS:
-        facts["statement"] = check.get("statement")
-    return facts
-
-
-def _readiness_facts(signals):
-    """The fields of each readiness signal that two configurations are
-    compared on. They do not depend on the assessment: the readiness floor is
-    the same at every point. `required_for_autonomous` is false when absent."""
-    return {signal_id: {"impl": entry.get("impl"),
-                        "params": copy.deepcopy(entry.get("params") or {}),
-                        "required_for_autonomous":
-                            entry.get("required_for_autonomous") is True}
-            for signal_id, entry in sorted((signals or {}).items())
-            if isinstance(entry, dict)}
-
-
-def _guardrail_gates(gates, ships, assessment, orders):
-    """The guardrail gates in force: those that apply to an approach that
-    ships (or not), and whose own condition matches."""
-    out = []
-    for gate_id, gate in gates.items():
-        if gate.get("kind") != "guardrail":
-            continue
-        applies = gate.get("applies_to") or {}
-        if "ships" in applies and applies["ships"] != ships:
-            continue
-        if reading_matches(gate.get("when"), assessment, orders):
-            out.append(gate_id)
-    return out
-
-
-def _loop_ceilings(rules, assessment, orders):
-    """For each loop ceiling the lowest limit among the matching rules, so a
-    rule can only lower one (the reading `loop_ceilings.loop_ceilings` gives
-    the policy file)."""
-    found = {}
-    for rule_set in rules.values():
-        if rule_set.get("kind") != "ceilings":
-            continue
-        for _, rule in _ordered(rule_set):
-            then = rule.get("then") or {}
-            name, limit = then.get("ceiling"), then.get("limit")
-            if (name not in CEILINGS or not isinstance(limit, int)
-                    or isinstance(limit, bool) or limit < 1):
-                continue
-            if reading_matches(rule.get("when"), assessment, orders):
-                found[name] = min(limit, found.get(name, limit))
-    return found
-
-
-def _artifact_id(value):
-    value = str(value)
-    return value[:-3] if value.endswith(".md") else value
 
 
 def _mapping(value, what):
@@ -523,111 +307,3 @@ def issue_input(config, issue, waived=None):
     return out
 
 
-class Preparation:
-    """What `obligations` builds from a configuration and an issue layer and
-    would otherwise build again for every assessment: the adapted policy,
-    prepared for the evaluator, and the issue's input. A caller that asks about
-    one configuration at many assessments passes one `Preparation` for it. It
-    fills itself on the first call, so a fault in the configuration surfaces at
-    the same point as without one, and it is built again for a configuration or
-    an issue it was not made from."""
-
-    def __init__(self):
-        self._made_from = None
-        self._built = None
-
-    def get(self, config, issue):
-        if self._made_from is None or (self._made_from[0] is not config
-                                       or self._made_from[1] is not issue):
-            built = (prepare_policy(policy_adapter(config)), issue_input(config, issue))
-            self._made_from, self._built = (config, issue), built
-        return self._built
-
-
-def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
-                issue=None, preparation=None):
-    """`Obligations`, or `Refused` when the evaluator refuses the assessment.
-    `capabilities` names the switches that are on, and `issue` is the issue's
-    own layer, applied before the floors, caps and role rules (`issue_input`).
-    The evaluator runs once, because only the checkpoints depend on the
-    autonomy value, and the rest are read from the same route."""
-    _known_capabilities(capabilities, "obligations were asked for")
-    policy, evaluator_issue = (preparation or Preparation()).get(config, issue)
-    values = tuple(autonomy_values) or ("balanced",)
-    try:
-        result = evaluate_route(copy.deepcopy(assessment), policy,
-                                autonomy=values[0], issue=evaluator_issue)
-    except RoutingConflict as exc:
-        return Refused(str(exc))
-    results = {values[0]: result}
-    for value in values[1:]:
-        results[value] = {"checkpoints": route_checkpoints(
-            policy, result["stages"], result["delivery_approach"], value)}
-    dimensions = config.get("dimensions") or {}
-    orders = dimension_orders(dimensions)
-    checks, gates = config.get("checks") or {}, config.get("gates") or {}
-    approach = (config.get("approaches") or {}).get(result["delivery_approach"]) or {}
-    review = list(result["gates"])
-    # What a `when` of a check or a gate reads: the assessment and whether the
-    # route ships.
-    reading = listing_assessment(assessment, approach)
-    in_force = sorted(set(review) | set(_guardrail_gates(
-        gates, approach.get("ships", True), reading, orders)))
-
-    entry, exit_ = {}, {}
-    for stage, body in (config.get("stages") or {}).items():
-        entry[stage] = _active_ids(body.get("entry") or [], checks, reading,
-                                   orders, capabilities)
-        exit_[stage] = _active_ids(body.get("exit") or [], checks, reading,
-                                   orders, capabilities)
-    gate_checks = {g: _active_ids((gates.get(g) or {}).get("checks") or [], checks,
-                                  reading, orders, capabilities)
-                   for g in in_force}
-    gate_accepts = {g: tuple(sorted((gates.get(g) or {}).get("accepts") or []))
-                    for g in in_force}
-    artifacts = {a["kind"]: a["depth"] for a in result["artifacts"]}
-    listed = set()
-    for ids in (*entry.values(), *exit_.values(), *gate_checks.values()):
-        listed.update(ids)
-    held = {kind: (config.get("artifacts") or {}).get(kind) or {} for kind in artifacts}
-    artifact_checks = {kind: _active_ids(body.get("checks") or [], checks, reading, orders,
-                                         capabilities) for kind, body in held.items()}
-    artifact_depends_on = {kind: tuple(sorted(body.get("depends_on") or []))
-                           for kind, body in held.items()}
-    artifact_required_when = {kind: body["required_when"] for kind, body in held.items()
-                              if body.get("required_when")}
-    artifact_word_ceiling = {kind: body["word_ceiling"] for kind, body in held.items()
-                             if body.get("word_ceiling")}
-    listed.update(*artifact_checks.values())
-    renames = _stage_key_renames()
-    ceilings = {"subtask_ceiling": result["subtask_ceiling"],
-                "max_worktrees": result["max_worktrees"],
-                **_loop_ceilings(config.get("rules") or {}, assessment, orders)}
-    # An issue can lower a loop ceiling and never raise it: the rules that
-    # set one are caps, and caps apply after the issue layer.
-    for name, limit in (issue or {}).get("ceilings", {}).items():
-        if name != "subtask_ceiling":
-            ceilings[name] = min(limit, ceilings.get(name, limit))
-    return Obligations(
-        stage_mode=dict(result["stages"]),
-        entry=entry, exit=exit_,
-        gate_set=tuple(in_force),
-        gate_checks=gate_checks, gate_accepts=gate_accepts,
-        artifacts_owed=artifacts,
-        required_skills=tuple(sorted(result["required_skills"])),
-        blocked_stages=tuple(sorted({renames.get(b["phase"], b["phase"])
-                                     for b in result["blocked_phases"]})),
-        required_artifacts=tuple(sorted(_artifact_id(a)
-                                        for a in result["required_artifacts"])),
-        checkpoints={v: tuple(r["checkpoints"]) for v, r in results.items()},
-        ceilings=ceilings,
-        checks={c: _check_facts(checks[c], reading, orders) for c in sorted(listed)},
-        artifact_depends_on=artifact_depends_on, artifact_checks=artifact_checks,
-        readiness=_readiness_facts(config.get("readiness")),
-        artifact_required_when=artifact_required_when,
-        artifact_word_ceiling=artifact_word_ceiling, approach=result["delivery_approach"],
-        rules_fired=tuple(f["id"] for f in result["policy_rules_fired"]),
-        ignored_overrides=dict((result.get("issue_overrides") or {}).get("ignored")
-                               or {}),
-        release_line=approach.get("release_line") is True,
-    )

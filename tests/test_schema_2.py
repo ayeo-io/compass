@@ -89,7 +89,10 @@ def test_route_evaluate_writes_a_v2_spine(tmp_path):
     out = yaml.safe_load((root / ".compass" / "work" / "t" / "manifest.yml").read_text())
     assert str(out.get("schema_version")) == "3.0"
     assert out.get("delivery_approach"), "no delivery_approach recorded"
-    assert out.get("stages"), "no stages recorded"
+    # ADR-092 decision D1: the path has no stage modes, so a new assessment
+    # records the evidence it owes in place of a `stages:` map.
+    assert out.get("evidence_required"), "no evidence_required recorded"
+    assert "stages" not in out, "a path manifest recorded a stages map"
     assert "policy_rules_fired" in out
     leaked = (V1_TOP_KEYS & set(out)) | (V1_ASSESSMENT_KEYS & set(out.get("assessment", {})))
     assert not leaked, f"v1 keys leaked into a written manifest: {sorted(leaked)}"
@@ -174,7 +177,7 @@ def test_policy_keys_speak_v2():
     """The routing policy's machine keys follow the manifest - the
     dimension keys in shapes and rules use risk/familiarity/size/goal and
     labels, not the v1 names (TRC-A7)."""
-    text = (REPO_ROOT / "governance" / "routing-policy.yml").read_text()
+    text = (REPO_ROOT / "governance" / "check-set.yml").read_text()
     for stale in ("blast_radius", "terrain:", "magnitude", "touches_any",
                   "touches_common"):
-        assert stale not in text, f"routing-policy.yml still says {stale!r}"
+        assert stale not in text, f"check-set.yml still says {stale!r}"

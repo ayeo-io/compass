@@ -25,7 +25,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
-GUARDRAILS = ROOT / "governance" / "guardrails.yml"
 
 
 def _git(repo, *args):
@@ -174,7 +173,8 @@ def test_scn_c1_no_new_check_name_in_governance():
     """ADR-002: growth is by artifacts, not by new checks. This behaviour rides
     on the existing check rather than adding one."""
     from tests.test_stream_c_no_new_checks_or_gates import BASELINE_CHECKS
-    doc = yaml.safe_load(GUARDRAILS.read_text(encoding="utf-8"))
+    from check_set_files import view as shipped_view
+    doc = shipped_view("guardrails.yml")
     names = set()
     for g in doc.get("guardrails", {}).get("framework", []):
         names.update(g.get("checks") or [])

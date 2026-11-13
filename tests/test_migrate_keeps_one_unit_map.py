@@ -2,8 +2,10 @@
 
 The stub rule renames a lightweight map on an issue with fewer than two
 subtasks to `distribution-map.md.v6.bak` and supersedes its entry. A map that
-declares one work unit is not a stub: `multiagent-run-recorded` reads it from
-the registry, so the rename made the check fail on every such issue.
+declares one work unit is not a stub: before 9.0.0 `multiagent-run-recorded`
+read it from the registry, so the rename made the check fail on every such
+issue. 9.0.0 removed the check (ADR-090) and the migrate keeps the map as it
+did.
 
 The fixture builds a synthetic 6.x work root in a temporary folder. It touches
 no real archive.
@@ -22,7 +24,16 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg.multiagent_check import map_units  # noqa: E402
+
+
+def map_units(folder):
+    """The units the issue's registered distribution map declares, read as the
+    migrate reads them, or None when no map is found."""
+    from compass_pkg.core import FOUND, resolve_artifact
+    from compass_pkg.migrate_kinds import declared_units
+    state, path, _ = resolve_artifact(str(folder), "distribution-map")
+    return declared_units(path) if state == FOUND and path else None
+
 
 ONE_UNIT_MAP = "# Distribution map\n\nunits: 1\n\nThe main session builds it.\n"
 

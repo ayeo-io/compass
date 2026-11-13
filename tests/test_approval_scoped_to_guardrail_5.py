@@ -30,11 +30,14 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from compass_pkg import checks, status_words  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 SLUG = "feature"
 CHECK = "human-approval-present"
@@ -121,7 +124,7 @@ def _project(tmp_path, evidence=()):
                                     encoding="utf-8")
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write",
                           *[f"--justify={dim}=test" for dim in
-                            ("risk", "familiarity", "size", "goal", "role")])
+                            ("risk", "familiarity", "size", "goal")])
     assert code == 0, out + err
     body = _manifest(root)
     assert body["generation"] == 1
@@ -368,25 +371,30 @@ def test_agf_11_major_1_and_locked_entries_unchanged():
     lock = yaml.safe_load((ROOT / "tests" / "fixtures" / "impls" / "versions.lock.yml")
                           .read_text(encoding="utf-8"))["implementations"][CHECK]
     assert str(lock["version"]).split(".")[0] == "1"
-    preset = ROOT / "governance" / "presets" / "default"
+    # The two entries were the hard locks of the 8.x preset; the check set holds
+    # them with no `locked:` field and names them in `never_waived` (ADR-094), so
+    # the field is put back before the pinned digest is compared.
+    never_waived = shipped("preset.yml")["never_waived"]
     for (name, section, key), digest in LOCKED.items():
-        entry = yaml.safe_load((preset / name).read_text(encoding="utf-8"))[section][key]
+        entry = dict(shipped(name)[section][key])
+        assert f"{section}.{key}" in never_waived, (section, key)
+        entry["locked"] = "hard"
         assert hashlib.sha256(json.dumps(entry, sort_keys=True).encode()).hexdigest() \
             == digest, f"{section}.{key} changed"
 
 
-# --- AGF-17: version 1.2.0 (ADR-069 moved it on from 1.1.0), and a generation that ------
+# --- AGF-17: version 1.3.0 (ADR-069 moved it to 1.2.0, ADR-099 to 1.3.0), and a generation that ---
 # --- recorded 1.0.0 is judged -----------------------------------------------------------
 
 def test_agf_17_version_1_1_0_within_major_1(tmp_path):
     from compass_pkg.check_registry import REGISTRY
     from impl_versions_support import record_versions
-    assert REGISTRY[CHECK].version == "1.2.0"
+    assert REGISTRY[CHECK].version == "1.3.0"
     lock = yaml.safe_load((ROOT / "tests" / "fixtures" / "impls" / "versions.lock.yml")
                           .read_text(encoding="utf-8"))["implementations"][CHECK]
-    assert str(lock["version"]) == "1.2.0"
+    assert str(lock["version"]) == "1.3.0"
     page = (ROOT / "docs" / "check-implementations.md").read_text(encoding="utf-8")
-    assert f"### `{CHECK}` (version 1.2.0)" in page
+    assert f"### `{CHECK}` (version 1.3.0)" in page
     root = _project(tmp_path, [G5])
     record_versions(root / ".compass" / "work" / SLUG, implementations={CHECK: "1.0.0"})
     _, row = _check_row(root)
@@ -405,8 +413,7 @@ def _flat(text):
 
 def test_agf_12_docs_and_decision_entry_state_the_rule():
     from compass_pkg.check_cmd import CHECK_GUIDANCE
-    guardrails = yaml.safe_load((ROOT / "governance" / "guardrails.yml")
-                                .read_text(encoding="utf-8"))
+    guardrails = shipped_view("guardrails.yml")
     evidence_type = json.dumps(guardrails["evidence_types"]["human-approval"])
     for name, text in [
         ("docs/safety-contract.md", (ROOT / "docs" / "safety-contract.md").read_text()),
@@ -461,7 +468,8 @@ def test_agf_12_docs_and_decision_entry_state_the_rule():
     schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text())
     props = schema["properties"]["evidence"]["items"]["properties"]
     assert props["guardrail"]["type"] == "string"
-    assert props["waiver"]["type"] == "object"
+    # An issue layer waiver's approval names a map (ADR-039); a 9.0.0 waiver's, its id.
+    assert props["waiver"]["type"] == ["object", "string"]
     reference = (ROOT / "schemas" / "manifest.reference.yml").read_text(encoding="utf-8")
     assert re.search(r"^\s+guardrail:\s+#", reference, re.M)
     assert re.search(r"^\s+waiver:\s+#", reference, re.M)
@@ -527,7 +535,9 @@ def test_agf_16_guardrail_form_refuses_rejected(tmp_path):
 # The functions under cli/ that build a `human-approval` record holding a
 # decision. A new one must be added here, so its test is written with it.
 KNOWN_WRITERS = {("compass_pkg/approvals.py", "_record_check"),
-                 ("compass_pkg/approvals.py", "_record_guardrail")}
+                 ("compass_pkg/approvals.py", "_record_guardrail"),
+                 ("compass_pkg/approvals.py", "_record_waiver"),
+                 ("compass_pkg/approvals.py", "_record_ship")}
 
 
 def _writers():
@@ -555,7 +565,7 @@ def _writers():
 def test_agf_18_every_writer_names_a_subject(tmp_path):
     from compass_pkg import approval_records, approve_cmd
     assert approval_records.SUBJECT_KEYS == (
-        "check", "waiver", "checkpoint", "artifact", "decisions")
+        "check", "waiver", "checkpoint", "artifact", "decisions", "ship")
     assert checks.approval_records is approval_records
     from compass_pkg import approvals
     assert approve_cmd.approval_records is approval_records
@@ -585,6 +595,36 @@ def test_agf_18_every_writer_names_a_subject(tmp_path):
     assert code == 0, out + err
     record = manifest_of(task_dir)["evidence"][-1]
     assert record["type"] == "human-approval" and subject_named(record)
+
+    # _record_waiver (ADR-094): the record names the waiver it approves.
+    import approval_support
+    (tmp_path / "waiver").mkdir()
+    wroot = approval_support.project(tmp_path / "waiver")
+    code, out, err = approval_support.run(wroot, "waiver", "add", "--check", "suite-passed",
+                                          "--reason", "x")
+    assert code == 0, out + err
+    code, out, err = approval_support.run(wroot, "evidence", "approve", "--waiver", "W-1",
+                                          "--approver", "jed72", "--role", "owner",
+                                          terminal=True)
+    assert code == 0, out + err
+    record = approval_support.manifest_of(wroot)["evidence"][-1]
+    assert record["type"] == "human-approval" and subject_named(record)
+    assert not approval_records.gives_g5(record)
+
+    # _record_ship (#355): the typed ship approval names the issue under `ship`.
+    (tmp_path / "ship").mkdir()
+    sroot = approval_support.project(tmp_path / "ship")
+    body = approval_support.manifest_of(sroot)
+    owed = list(body.get("evidence_required") or [])
+    body["evidence_required"] = owed + [t for t in ["ship-approval"] if t not in owed]
+    approval_support.save_manifest(sroot, body)
+    code, out, err = approval_support.run(sroot, "evidence", "approve", "--ship",
+                                          "--approver", "jed72", "--role", "owner",
+                                          terminal=True)
+    assert code == 0, out + err
+    record = approval_support.manifest_of(sroot)["evidence"][-1]
+    assert record["type"] == "human-approval" and record["ship"] == approval_support.SLUG
+    assert subject_named(record) and not approval_records.gives_g5(record)
 
     # `compass evidence add --type human-approval` is refused (`TRC-G2`), so it
     # is not a writer.

@@ -2,7 +2,7 @@
 
 <!-- HOW ASSESS USES THIS FILE
      Assess reads this file and includes it in architecture-loaded.yml as a
-     narrative artifact.  The `architect` agent reads it to determine
+     narrative artifact.  The architect perspective reads it to determine
      which labels in the manifest map to known service names, so it
      fires automatically when acceptance criteria are defined and a
      manifest label matches a service named here.

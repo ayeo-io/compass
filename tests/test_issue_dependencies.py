@@ -63,7 +63,7 @@ def env_for(root, **extra):
     (Path(root) / ".home").mkdir(parents=True, exist_ok=True)
     env = {"PATH": f"{_bin(root)}:{Path(sys.executable).parent}:/usr/bin:/bin",
            "HOME": str(Path(root) / ".home"), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
-           "NO_COLOR": "1", "COLUMNS": "100", "COMPASS_RENDER_AFTER": "0",
+           "NO_COLOR": "1", "COLUMNS": "100",
            "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
     env.update(extra)
     return env
@@ -198,8 +198,8 @@ def _result(done, root):
 
 def dbi5_outputs(root, cli_dir=CLI_DIR):
     """Every output the comparison reads, by capture file name, in the order
-    the commands run. The commands that write (the board page and the issue
-    pages) run after the ones that only read."""
+    the commands run. 9.0.0 renders no issue page or project index (ADR-091) and
+    no board page (ADR-093), so their captures are gone."""
     root = Path(root)
     out = {}
     run = lambda *a: compass(root, *a, cli_dir=cli_dir, clock=FIXED_AT)  # noqa: E731
@@ -209,17 +209,6 @@ def dbi5_outputs(root, cli_dir=CLI_DIR):
         out[f"lint-{slug}.txt"] = _result(run("issue", "lint", "--issue", slug), root)
     out["flow.txt"] = _result(run("flow"), root)
     out["flow-json.txt"] = _result(run("flow", "--json"), root)
-    page = root / "board.html"
-    out["board-render.txt"] = _result(run("board", "render", "--no-open", "--out", str(page)),
-                                      root)
-    out["board-page.html"] = _masked(page.read_text(encoding="utf-8"), root)
-    for slug in slugs:
-        out[f"render-{slug}.txt"] = _result(run("issue", "render", "--issue", slug), root)
-        for doc in sorted((root / "docs" / "compass").glob(f"*-{slug}/README.md")):
-            out[f"page-{slug}.md.txt"] = _masked(doc.read_text(encoding="utf-8"), root)
-    index = root / "docs" / "compass" / "README.md"
-    if index.exists():
-        out["index.md.txt"] = _masked(index.read_text(encoding="utf-8"), root)
     return out
 
 
@@ -241,8 +230,8 @@ def _capture(cli_dir, out_file):
     root = build_dbi5_project(Path(tempfile.mkdtemp(prefix="dbi5-")) / "project")
     outputs = {name: _Block(text) for name, text in dbi5_outputs(root, cli_dir).items()}
     assert_no_gh_call(root)
-    header = ("# What compass next, issue lint, flow, flow --json, board render and issue\n"
-              "# render printed on the project that build_dbi5_project in\n"
+    header = ("# What compass next, issue lint, flow and flow --json printed\n"
+              "# on the project that build_dbi5_project in\n"
               "# tests/test_issue_dependencies.py writes, captured from the code before\n"
               "# depends_on existed, under a fixed clock. The project's own folder reads\n"
               "# <ROOT> and the board page's Generated line is masked.\n")
@@ -394,6 +383,21 @@ def dep(issue, until="done", reason="needs it"):
     return {"issue": issue, "reason": reason, "until": until}
 
 
+def resolved_stage(project, slug):
+    """The legacy stage the resolver gives for `slug`, which the dependency rules
+    act on. `compass next` shows it as the path stage it maps to (ADR-092)."""
+    from compass_pkg import next_cmd
+    from compass_pkg.core import normalize_spine
+    return next_cmd._current_phase_from_task(
+        next_cmd._typed(normalize_spine(project.manifest(slug))), str(project.dir(slug)))
+
+
+def shown(stage):
+    """The path stage word `compass next` prints for a legacy stage."""
+    from compass_pkg.stable_ids import LEGACY_TO_PATH
+    return LEGACY_TO_PATH[stage].capitalize()
+
+
 def next_line(project, slug):
     done = compass(project.root, "next", "--issue", slug)
     assert done.returncode == 0, done
@@ -451,7 +455,8 @@ def test_dbi_8_until_vocabulary(tmp_path):
         derived = lifecycle.dependency_block(manifest, str(project.dir(waiting)), deps)
         assert derived == expected[waiting], (row, derived)
         line = next_line(project, waiting)
-        assert line.startswith("Implement"), (row, line)
+        assert resolved_stage(project, waiting) == "implement", row
+        assert line.startswith("Build"), (row, line)
         if expected[waiting]:
             assert line.rstrip("\n").endswith(" | blocked: " + expected[waiting]), (row, line)
         else:
@@ -540,38 +545,14 @@ def _page(project, slug):
     return pages[0].read_text(encoding="utf-8")
 
 
-def test_dbi_21_remove_rerenders_the_removed_dependency(tmp_path):
-    project = Project(tmp_path)
-    project.issue("b", "define")
-    project.issue("a", "define", depends=[dep("b")])
-    for slug in ("a", "b"):
-        done = compass(project.root, "issue", "render", "--issue", slug)
-        assert done.returncode == 0, done
-    assert "depended on by: [a]" in _page(project, "b")
-    assert "depends on: [b]" in _page(project, "a")
-    done = compass(project.root, "issue", "depends", "remove", "b", "--issue", "a",
-                   COMPASS_RENDER_AFTER="1")
-    assert done.returncode == 0, done
-    assert "renders failed" not in done.stderr, done
-    # Read without rendering again: the remove itself must have refreshed both pages.
-    assert "depended on by" not in _page(project, "b")
-    assert "depends on: [b]" not in _page(project, "a")
-    # A removed dependency with no manifest has no page, and no render fails for it.
-    project.issue("a", "define", depends=[dep("gone")])
-    done = compass(project.root, "issue", "depends", "remove", "gone", "--issue", "a",
-                   COMPASS_RENDER_AFTER="1")
-    assert done.returncode == 0, done
-    assert "renders failed" not in done.stderr, done
-    assert_no_gh_call(project.root)
-
-
 def test_dbi_3_depends_add_input_checks(tmp_path):
     from compass_pkg import lifecycle
     project = Project(tmp_path)
     project.issue("a", "define")
     project.issue("b", "define")
     nine = ", ".join(lifecycle.UNTIL_VALUES)
-    assert nine == "done, in-review, define, refine, plan, breakdown, implement, verify, ship"
+    assert nine == ("done, in-review, specify, build, ship, define, refine, plan, breakdown, "
+                    "implement, verify")
     cases = [
         (["a", "--reason", "self"], "cannot depend on itself", False),
         (["b", "--reason", "x", "--until", "ready"], "'ready' is not an until value", True),
@@ -717,20 +698,23 @@ def test_dbi_6_next_blocks_at_implement_until_done(tmp_path):
     project.issue("a", "implement", depends=[dep("b")])
     before = project.bytes("a")
     line = next_line(project, "a")
-    assert line.startswith("Implement"), line
+    assert resolved_stage(project, "a") == "implement"
+    assert line.startswith("Build"), line
     assert "blocked: waits for b to reach done" in line, line
     assert project.bytes("a") == before
     project.issue("c", "define")
     project.issue("a", "implement", depends=[dep("b"), dep("c", "plan")])
     before = project.bytes("a")
     line = next_line(project, "a")
-    assert line.startswith("Implement"), line
+    assert resolved_stage(project, "a") == "implement"
+    assert line.startswith("Build"), line
     assert "blocked: waits for b to reach done; waits for c to reach plan" in line, line
     assert project.bytes("a") == before
     project.issue("b", "ship", close="completed")
     project.issue("c", "plan")
     line = next_line(project, "a")
-    assert line.startswith("Implement") and "blocked" not in line, line
+    assert resolved_stage(project, "a") == "implement"
+    assert line.startswith("Build") and "blocked" not in line, line
     assert project.bytes("a") == before
     assert_no_gh_call(project.root)
 
@@ -756,14 +740,16 @@ def test_dbi_7_stages_before_implement_not_blocked(tmp_path):
     for stage in ("define", "refine", "plan", "breakdown"):
         project.issue("a", stage, depends=[dep("b")])
         line = _no_reader_blocks(project)
-        assert line.lower().startswith(stage), (stage, line)
+        assert resolved_stage(project, "a") == stage, stage
+        assert line.startswith(shown(stage)), (stage, line)
         docs = project.root / "docs" / "compass" / "2026-10-01-a"
         for name in ("acceptance-criteria.md", "technical-design.md"):
             done = hook(project, docs / name)
             assert done.returncode == 0, (stage, name, done)
             assert "depends on" not in done.stderr, (stage, name, done)
     project.issue("a", "verify", depends=[dep("b")])
-    assert _no_reader_blocks(project).startswith("Verify")
+    assert _no_reader_blocks(project).startswith("Ship")
+    assert resolved_stage(project, "a") == "verify"
     for setup in (dict(hold=True), dict(close="not-planned")):
         project.issue("a", "implement", depends=[dep("b")], marker=True, **setup)
         _no_reader_blocks(project)
@@ -807,11 +793,8 @@ def test_dbi_13_derived_block_never_written(tmp_path):
     before = {slug: project.bytes(slug) for slug in ("a", "b")}
     assert "blocked: waits for b to reach done" in next_line(project, "a")
     assert flow_rows(project)["a"]["blocked"] == "waits for b to reach done"
-    page = project.root / "board.html"
-    for args in (("board", "render", "--no-open", "--out", str(page)),
-                 ("issue", "render", "--issue", "a")):
-        done = compass(project.root, *args)
-        assert done.returncode == 0, done
+    done = compass(project.root, "flow")
+    assert done.returncode == 0, done
     hook(project, code_file(project))
     assert {slug: project.bytes(slug) for slug in ("a", "b")} == before
     assert "blocked" not in project.manifest("a")
@@ -823,9 +806,6 @@ def test_dbi_13_derived_block_never_written(tmp_path):
     assert flow_rows(project)["a"]["blocked"] == both
     done = compass(project.root, "flow")
     assert "BLOCKED: " + both in done.stdout, done
-    done = compass(project.root, "board", "render", "--no-open", "--out", str(page))
-    assert done.returncode == 0, done
-    assert "blocked: " + both in page.read_text(encoding="utf-8")
     assert_no_gh_call(project.root)
 
 

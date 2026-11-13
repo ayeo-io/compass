@@ -29,7 +29,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
-sys.path.insert(0, str(ROOT / "evals"))
 
 try:
     from compass_pkg import rival_names  # noqa: E402
@@ -220,73 +219,7 @@ def test_rn_3_a_name_inside_a_longer_word_does_not_match(fake):
 
 
 # --- RN-4: rival eval conditions load from the key ---------------------------
-
-def test_rn_4_a_rival_condition_without_the_key_is_skipped(tmp_path, capsys):
-    import harness
-    out = tmp_path / "out"
-    # Any real scenario folder, found rather than named: the plugin copy
-    # this repository ships must name no eval scenario.
-    scenario = next(p for p in sorted((ROOT / "evals" / "scenarios").iterdir())
-                    if (p / "seed").is_dir())
-    code = harness.main(["--scenario", str(scenario), "--condition", "R1",
-                         "--out", str(out),
-                         "--frameworks-config", str(tmp_path / "absent.yml")])
-    err = capsys.readouterr().err
-    assert code == 0
-    assert "skipped" in err and "key" in err, err
-    assert not list(out.glob("*.json")) if out.exists() else True
-
-
-def test_rn_4_the_conditions_are_codes():
-    import harness
-    choices = next(a for a in harness._build_arg_parser()._actions
-                   if a.dest == "condition").choices
-    assert sorted(choices) == ["R1", "R3", "bare", "compass"]
-
-
-def test_rn_4_a_key_shaped_file_pins_the_rival_condition(tmp_path):
-    import harness
-    key = tmp_path / "key.yml"
-    key.write_text(yaml.safe_dump({"rivals": {
-        "R1": {"name": "x", "aliases": [], "urls": [],
-               "eval": {"repo": "https://example.invalid/r1", "commit": "a" * 40}},
-        "R2": {"name": "y", "aliases": [], "urls": []}}}), encoding="utf-8")
-    config = harness.load_frameworks_config(key)
-    assert config == {"R1": {"repo": "https://example.invalid/r1",
-                             "commit": "a" * 40}}
-    harness._check_framework_commit_pin("R1", "a" * 40, config)
-
-
-# Hashes of each rival condition's command line before the sweep renamed the
-# conditions, so the rename provably changed nothing a session runs.
-_ARGS_BEFORE_THE_SWEEP = {
-    "R1": "a95fd410f345ec6357acf2c544f0939b4c71c71c6ddaccc12a261a57ff6643a5",
-    "R3": "588c1d39d5b268e72ebc9abd664af376fbab5b1e0a699e1916cbde451971eda3",
-}
-
-
-@pytest.mark.parametrize("code", sorted(_ARGS_BEFORE_THE_SWEEP))
-def test_rn_4_the_rename_leaves_each_command_line_unchanged(code):
-    import harness
-    args = harness._common_claude_args(code, None, Path("/framework"),
-                                       Path("/scripts"))
-    digest = hashlib.sha256("\0".join(args).encode()).hexdigest()
-    assert digest == _ARGS_BEFORE_THE_SWEEP[code]
-
-
-def test_rn_4_the_seed_path_map_applies_to_the_overlay_only():
-    import harness
-    paths = {"docs/R1": "docs/real-folder"}
-    assert harness._mapped("docs/R1/plans/p.md", paths) == "docs/real-folder/plans/p.md"
-    assert harness._mapped("docs/R1", paths) == "docs/real-folder"
-    assert harness._mapped("docs/R10/p.md", paths) == "docs/R10/p.md"
-    assert harness._mapped("src/a.py", paths) == "src/a.py"
-
-
-def test_rn_4_no_frameworks_file_is_tracked():
-    tracked = subprocess.run(["git", "ls-files", "evals/frameworks.yml"],
-                             cwd=str(ROOT), capture_output=True, text=True)
-    assert tracked.stdout.strip() == ""
+# The eval harness and its RN-4 tests moved to sdd-bench (ADR-093).
 
 
 # --- RN-5: record sync redacts, and refuses without the key ------------------
@@ -420,27 +353,6 @@ def test_rn_5_this_project_configures_its_key():
     if not record:
         pytest.skip("this checkout has no delivery record configured")
     assert record.get("names_key") == ".compass/private/rival-codes.yml"
-
-
-def test_rn_5_the_living_spec_derivation_writes_codes(fake, tmp_path, monkeypatch):
-    """The living spec is committed but derived from local issue records,
-    whose scenario titles may name a rival."""
-    from compass_pkg import flow
-    key, _ = fake
-    root, _ = _record_project(tmp_path, monkeypatch, key)
-    task = root / ".compass" / "work" / "compare"
-    task.mkdir(parents=True)
-    (task / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "issue": "compare", "status": "landed",
-        "land_timestamp": "2026-10-04T00:00:00+00:00",
-        "scenarios": [{"id": "CMP-1", "intent": "INT-1",
-                       "title": "Given a run, then Compass costs at most "
-                                "twice Zorblax Kit."}]}), encoding="utf-8")
-    flow.derive_system_spec(str(root))
-    derived = "".join((root / rel).read_text(encoding="utf-8")
-                      for rel in flow.LIVING_SPEC_FILES)
-    assert "CMP-1" in derived
-    assert "zorblax" not in derived.lower() and "R0" in derived
 
 
 # --- RN-6: CI runs the gate over pull request text ---------------------------

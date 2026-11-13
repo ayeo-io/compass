@@ -10,11 +10,11 @@ made each one reported it complete - that is the evidence this strategy
 exists to act on.
 
 This file pins the strategy entry in `governance/strategies.md` and the
-pointer from the verify stage guidance (`commands/verify.md`,
+pointer from the ship stage guidance (`commands/ship.md`,
 `skills/evidence-gates/SKILL.md`) that names where it lives without
 repeating it.
 
-Criteria: docs/system-spec.md
+Criteria: the issue's acceptance criteria
 """
 
 # These tests assert the current file names; files written under older
@@ -27,7 +27,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent
 
 STRATEGIES = REPO_ROOT / "governance" / "strategies.md"
-VERIFY_CMD = REPO_ROOT / "commands" / "verify.md"
+SHIP_CMD = REPO_ROOT / "commands" / "ship.md"
 EVIDENCE_GATES = REPO_ROOT / "skills" / "evidence-gates" / "SKILL.md"
 
 def _evidence_gates_text():
@@ -193,11 +193,11 @@ def test_trc_a2_strategy_states_prohibition_evidence_and_cross_references_s8():
 
 
 # ---------------------------------------------------------------------------
-# `TRC-B1` - the verify stage guidance points at the strategy, not repeat it
+# `TRC-B1` - the ship stage guidance points at the strategy, not repeat it
 # ---------------------------------------------------------------------------
 
 def test_trc_b1_verify_guidance_points_at_the_strategy_not_repeat_it():
-    verify_cmd = VERIFY_CMD.read_text(encoding="utf-8")
+    ship_cmd = SHIP_CMD.read_text(encoding="utf-8")
     gates = _evidence_gates_text()
 
     strategy_heading = _strategy_entry().split("\n", 1)[0].strip()
@@ -205,7 +205,7 @@ def test_trc_b1_verify_guidance_points_at_the_strategy_not_repeat_it():
     assert match, "TRC-A1 must land before this scenario can"
     s_number = match.group(1)
 
-    for name, text in (("commands/verify.md", verify_cmd),
+    for name, text in (("commands/ship.md", ship_cmd),
                         ("skills/evidence-gates/SKILL.md", gates)):
         assert "governance/strategies.md" in text, (
             f"{name} must point at governance/strategies.md"
@@ -322,9 +322,8 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
 
     import yaml
 
-    guardrails = yaml.safe_load(
-        (REPO_ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8")
-    )
+    from check_set_files import view as shipped_view
+    guardrails = shipped_view("guardrails.yml")
     assert len(guardrails["defaults"]) == 5
 
     terminology = yaml.safe_load(
@@ -346,7 +345,15 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # word_ceiling. 101 since ADR-076 added execution-profile and component-registry.
     # 109 since the four-layer acceptance strategy's eight terms joined
     # (governance/decisions/2026-10-29-a-strategy-can-carry-checks-a-step-off-makes-advisory.md).
-    assert len(terminology["terms"]) == 109, (
+    # 107 since 9.0.0 removed execution profiles with their two terms (ADR-090).
+    # 111 since 9.0.0 added specify, build, evidence-required and path for the
+    # one four-stage path (ADR-092). 114 since ADR-094 added check-set,
+    # tighten-only-setting and policy-digest; the retired layer terms stay.
+    # 118 since ADR-095 added ship-approval, pr-approval, scenario-freeze and
+    # delegation-copy. 122 since ADR-096 added trail, request-link,
+    # record-mode and landed-with-record. 123 since ADR-098 added
+    # legacy-record, the manifest key `compass migrate` writes.
+    assert len(terminology["terms"]) == 123, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )
@@ -356,19 +363,22 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         cwd=REPO_ROOT, capture_output=True, text=True, check=True,
     )
     known_verbs = {
-        "approach", "bdd", "check", "analyze", "retro", "ci", "tdd-red",
-        "tdd-green", "policy", "plan", "intent", "issue", "acceptance", "adr",
-        "rework-scan", "flow", "next", "follow-up", "ship-commit", "gate",
-        "scenario", "changed-file", "evidence", "review-rule", "spec", "preset", "terminology",
+        "approach", "bdd", "check", "ci", "tdd-red",
+        "tdd-green", "policy", "issue", "acceptance", "adr",
+        "flow", "next", "follow-up", "ship-commit", "gate",
+        "scenario", "changed-file", "evidence", "review-rule", "terminology",
         "init", "quick-fix",
         "decision",  # decisions-ledger (ADR-027): the settled-decisions ledger
         "lesson",  # project-lessons (ADR-029): lessons for later sessions
-        "run",  # headless-runner (ADR-030): a stage run with nobody in the session
         "record",  # delivery-record (ADR-031): the record kept off the laptop
-        "board",  # compass-board (ADR-046): the delivery board page
-        "profile",  # execution-profile-manifests (ADR-076): `profile lint|add|show`
-        "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
+        # "board" (compass-board, ADR-046): ADR-093 removed the delivery board page.
+        # "readiness" (ADR-061): ADR-093 removed the readiness measure.
         "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
+        # isolation-and-layering (#328, ADR-086): `isolation record`, `layering record`
+        "isolation", "layering",
+        "waiver",  # one-check waivers (#357, ADR-094 decision 8): `waiver add|withdraw`
+        "trail",  # the issue record ships with the code (#356, ADR-096 decision 19)
+        "migrate",  # #359: `compass migrate` moves an 8.x project's open issues to 9.0.0
     }
     line = next(l for l in result.stdout.splitlines() if l.strip().startswith("{"))
     verbs = set(line.strip().strip("{}").split(","))

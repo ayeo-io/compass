@@ -4,7 +4,7 @@ prose - so the two halves cannot disagree about what prose is.
 
 Before this module existed, each file held its own copy, and the two
 disagreed: this list carried `biases` and `tests/test_writing_style.py`'s
-did not. `governance/routing-policy.yml`'s `biases:` block was reworded by
+did not. `routing-policy.yml`'s `biases:` block was reworded by
 this issue and no sweep read it, because the sweep's copy of this list
 never named the key - found and fixed as finding 1, `review-dimensions.md`.
 """

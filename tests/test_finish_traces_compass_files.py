@@ -10,11 +10,11 @@ Scenario id: FT-1 (issue `finish-traces-compass-files`).
 """
 from __future__ import annotations
 
-from test_quick_fix_verbs import (_finish, _git, _ready_to_finish,  # noqa: F401
+from test_quick_fix_verbs import (_git, _land, _ready_to_finish,  # noqa: F401
                                   repo)
 
 
-def test_ft_1_a_tracked_compass_file_lands_with_one_finish(repo):
+def test_ft_1_a_tracked_compass_file_lands_with_the_fix(repo):
     config = repo / ".compass" / "config.yml"
     config.parent.mkdir(exist_ok=True)
     config.write_text("mode: enforced\n")
@@ -22,12 +22,14 @@ def test_ft_1_a_tracked_compass_file_lands_with_one_finish(repo):
     _git(repo, "commit", "-q", "-m", "config")
     _ready_to_finish(repo, "fix-greeting")
     config.write_text("mode: enforced\nproject: {}\n")
-    result = _finish(repo, "fix-greeting")
+    result = _land(repo, "fix-greeting")
     assert result.returncode == 0, result.stdout + result.stderr
-    committed = _git(repo, "show", "--name-only", "--format=", "HEAD~1")
+    committed = _git(repo, "show", "--name-only", "--format=", "HEAD")
     assert ".compass/config.yml" in committed, committed
+    # The record is committed with the fix (#356): the issue's own folder and
+    # the ignore file that keeps its per-checkout files out. Nothing else.
     assert ".compass/work/" not in committed.replace(
-        ".compass/work/fix-greeting/", ""), committed
+        ".compass/work/fix-greeting/", "").replace(".compass/work/.gitignore", ""), committed
 
 
 def test_ft_1_tracked_issue_state_stays_out(repo):
@@ -40,7 +42,7 @@ def test_ft_1_tracked_issue_state_stays_out(repo):
     _git(repo, "commit", "-q", "-m", "other issue")
     _ready_to_finish(repo, "fix-greeting")
     other.write_text("first\nsecond\n")
-    result = _finish(repo, "fix-greeting")
+    result = _land(repo, "fix-greeting")
     assert result.returncode == 0, result.stdout + result.stderr
-    committed = _git(repo, "show", "--name-only", "--format=", "HEAD~1")
+    committed = _git(repo, "show", "--name-only", "--format=", "HEAD")
     assert ".compass/work/other-issue/" not in committed, committed

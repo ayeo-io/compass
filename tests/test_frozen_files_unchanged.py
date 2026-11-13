@@ -1,11 +1,14 @@
 """Frozen and exempt files stay as they are on main (issue
 language-key-and-us-english).
 
-The word pass changes the spelling of many files. Six classes must not move:
+The word pass changes the spelling of many files. Seven classes must not move:
 
 - the merged decision records under `governance/decisions/` and
   `architecture/decisions/`;
-- the files of `governance/presets/default@6`;
+- the frozen 8.x presets `default@6` and `default@7`, kept since 9.0.0 only as
+  test data under `tests/fixtures/presets/` (VD-055);
+- `governance/artifacts-8.0.4.yml`, the artifacts catalogue as 8.0.4 shipped it,
+  which `artifact_kinds.shipped()` reads (VD-055);
 - `governance/shipped-releases.tar.xz`;
 - the compatibility corpora under `tests/fixtures/compat/`, except the one
   stdout pin that the CLI message pass changes;
@@ -14,14 +17,17 @@ The word pass changes the spelling of many files. Six classes must not move:
 
 `tests/fixtures/frozen-digests.yml` holds a digest for each file of the
 tarball, the corpus folder and `cli/vendor`, taken from main before the word
-pass. The preset keeps its existing digest file. A merged record is checked
-against the base ref with git. Each check is run on a copy with one planted
+pass. The two presets and the 8.0.4 catalogue are pinned here, in
+`PRESET_PINS` and `CATALOGUE_8_0_4_PIN`, and compared byte for byte with the
+release that shipped them when the release tags are present. A merged record
+is checked against the base ref with git. Each check is run on a copy with one planted
 respelling, to show that it fails.
 """
 from __future__ import annotations
 
 import hashlib
 import re
+import pytest
 import shutil
 import subprocess
 import sys
@@ -33,8 +39,53 @@ from compass_pkg import atomic_io  # noqa: E402  (puts the bundled yaml first)
 import yaml  # noqa: E402
 
 DIGESTS = ROOT / "tests" / "fixtures" / "frozen-digests.yml"
-PRESET_DIGESTS = ROOT / "tests" / "fixtures" / "preset-digests.yml"
-PRESET = "governance/presets/default@6"
+# The frozen presets, kept as test data since 9.0.0 (VD-055). Each is the last
+# preset its major shipped: `default@6` as v6.1.0 shipped `governance/presets/
+# default/`, and `default@7` as v8.0.4 shipped it. A digest is over the parsed
+# content of a file, so a comment or layout change does not move it; the byte
+# check against the release tag finds that.
+PRESET = "tests/fixtures/presets/default@6"
+PRESET_7 = "tests/fixtures/presets/default@7"
+PRESET_TAGS = {PRESET: "v6.1.0", PRESET_7: "v8.0.4"}
+PRESET_PINS = {
+    PRESET: {
+        "files": {
+            "approaches.yml": "sha256:9c76a01450517f511cd1f6ee624ef3d34fc5114734f6509c1cca375a3c9d1cff",
+            "artifacts.yml": "sha256:a434417c8f0551b4c837ab4af2c42d64ea646eed715b98181b5633f00a800b69",
+            "checks.yml": "sha256:0281a6f3227b0386039bc3e0f6ec15feb0fd0eb0c7f44361ac92e8c444de50d1",
+            "dimensions.yml": "sha256:401eb199005f3f59a0de898a6e804301df7056727336581bfa0e5a396ef1467c",
+            "evidence-types.yml": "sha256:d56f9caa383f0481f3c62ee693c8f0d73cd0a162d3da73201574f9a4b2419207",
+            "gates.yml": "sha256:3737c10ec386c344c67b3f104e2ad63bf7b17d13a3ec54b9ed1150c3a7250660",
+            "preset.yml": "sha256:a006de6765ae230c2e95f355eee962360f1989602ac54f50180627afeb57b369",
+            "readiness.yml": "sha256:2b420d6d890b687e8e39750caa8ee3a96d0c9b359f8a8b61ab436994eb160cad",
+            "rules.yml": "sha256:b2e9f953d13fc05c6b0189e0af62cfecb77ed4d2f7235e3dd97561f516c49d76",
+            "stages.yml": "sha256:ae48f1af2f41356057eef5661512b664feac27c284dc065d069571446f4345e0",
+            "vocabulary.yml": "sha256:2aaa873481f45ca0f64091c0a623cd7b37942501b179730f0775eb593c7ccc24",
+        },
+        "preset": "sha256:c1aa3ce5989b37b3a92bd29a9b9533888fb1ca9df7ff065ddfa400bd47f9d330",
+    },
+    PRESET_7: {
+        "files": {
+            "approaches.yml": "sha256:603f45e38f0b0a594e7e16fd68a4874ec851ce27faec97f057f626952798379d",
+            "artifacts.yml": "sha256:0daaed5944cb0507f329d8bed740f5933d77ecfefb348241cd4bccf6888577eb",
+            "checks.yml": "sha256:bb7e76e1360aa0d7f9b4384f181fee093556b0d108cc30d76cfbc07f00d7129a",
+            "dimensions.yml": "sha256:401eb199005f3f59a0de898a6e804301df7056727336581bfa0e5a396ef1467c",
+            "evidence-types.yml": "sha256:aab3aa2e58f835e8b98f0c91e7f7ba9d64a6dd9121a74b29f6f3cc0626dfe95a",
+            "gates.yml": "sha256:3737c10ec386c344c67b3f104e2ad63bf7b17d13a3ec54b9ed1150c3a7250660",
+            "preset.yml": "sha256:b26ee0e76cc1e453f237c480231cd6eb8a4f1029cb63529c582f4386de68fcf9",
+            "readiness.yml": "sha256:2b420d6d890b687e8e39750caa8ee3a96d0c9b359f8a8b61ab436994eb160cad",
+            "rules.yml": "sha256:5000d6ec64a350bcd96d250bde9fae3bff92d107253c248560dbdac2a7fd4b54",
+            "stages.yml": "sha256:31b45fd40d19e23dfaba50fe9b454314362db500a2d3a878ba2bffe46890851e",
+            "vocabulary.yml": "sha256:2aaa873481f45ca0f64091c0a623cd7b37942501b179730f0775eb593c7ccc24",
+        },
+        "preset": "sha256:0cdafd87d6908e0cc80df8760fa61651fb865abb235aed6b5a3234ef7d469ed6",
+    },
+}
+# The one 8.x data file the CLI still reads (VD-055): the bytes of the default
+# preset's `artifacts.yml` as the v8.0.4 tag holds it.
+CATALOGUE_8_0_4 = "governance/artifacts-8.0.4.yml"
+CATALOGUE_8_0_4_TAG = ("v8.0.4", "/".join(("governance", "presets", "default", "artifacts.yml")))
+CATALOGUE_8_0_4_PIN = "sha256:b0e00b7d26b1399040859df0f7cd425d862e0dcd0387f7a8fb804f5f3f5a8e3f"
 TARBALL = "governance/shipped-releases.tar.xz"
 CORPORA = "tests/fixtures/compat"
 VENDOR = "cli/vendor"
@@ -49,6 +100,8 @@ FROZEN_PATHS = (
     "governance/decisions/",
     "architecture/decisions/",
     PRESET,
+    PRESET_7,
+    CATALOGUE_8_0_4,
     TARBALL,
     CORPORA + "/",
     VENDOR,
@@ -91,9 +144,9 @@ def digest_problems(root, pinned):
     return problems
 
 
-def preset_problems(root, pins):
-    """One line for each file of `default@6` that differs from its pin."""
-    folder = Path(root) / PRESET
+def preset_problems(root, pins, preset=PRESET):
+    """One line for each file of a frozen preset that differs from its pin."""
+    folder = Path(root) / preset
     parsed = {p.name: yaml.safe_load(p.read_text(encoding="utf-8"))
               for p in sorted(folder.glob("*.yml"))}
     now = {name: atomic_io.digest(doc) for name, doc in parsed.items()}
@@ -157,8 +210,9 @@ def test_trc_039():
     """Each class is unchanged against main, and a planted respelling in a
     copy fails the check of its class."""
     assert decision_problems(ROOT, base_ref()) == []
-    pins = yaml.safe_load(PRESET_DIGESTS.read_text(encoding="utf-8"))["default@6.0.0"]
-    assert preset_problems(ROOT, pins) == []
+    for preset, pins in PRESET_PINS.items():
+        assert preset_problems(ROOT, pins, preset) == [], preset
+    assert digest_of(ROOT, CATALOGUE_8_0_4) == CATALOGUE_8_0_4_PIN
     assert digest_problems(ROOT, _pinned()) == []
 
 
@@ -204,12 +258,54 @@ def test_trc_039_a_planted_respelling_in_vendor_fails(tmp_path):
 
 def test_trc_039_a_planted_respelling_in_the_preset_fails(tmp_path):
     root = _copy(tmp_path, PRESET)
-    pins = yaml.safe_load(PRESET_DIGESTS.read_text(encoding="utf-8"))["default@6.0.0"]
+    pins = PRESET_PINS[PRESET]
     assert preset_problems(root, pins) == []
     target = root / PRESET / "rules.yml"
     target.write_text(target.read_text(encoding="utf-8").replace(
         "rationale:", "rationale: behaviour", 1), encoding="utf-8")
     assert preset_problems(root, pins), "the respelling went unseen"
+
+
+def test_trc_039_a_planted_respelling_in_the_8_0_4_catalogue_fails(tmp_path):
+    root = _copy(tmp_path, CATALOGUE_8_0_4)
+    assert digest_of(root, CATALOGUE_8_0_4) == CATALOGUE_8_0_4_PIN
+    _respell(root / CATALOGUE_8_0_4)
+    assert digest_of(root, CATALOGUE_8_0_4) != CATALOGUE_8_0_4_PIN
+
+
+def _release_tags():
+    """The `v*` tags of this checkout. Skip when there are none (a shallow
+    clone), so a missing tag is named rather than passed in silence."""
+    done = _git(ROOT, "tag", "--list", "v*")
+    tags = done.stdout.split() if done.returncode == 0 else []
+    if not tags:
+        pytest.skip("no v* release tags in this checkout; fetch the tags to compare")
+    return tags
+
+
+def _shown(tag, path):
+    done = subprocess.run(["git", "show", f"{tag}:{path}"], cwd=ROOT, capture_output=True)
+    assert done.returncode == 0, done.stderr.decode(errors="replace")
+    return done.stdout
+
+
+def test_the_8_0_4_catalogue_is_the_one_v8_0_4_shipped_byte_for_byte():
+    tag, path = CATALOGUE_8_0_4_TAG
+    assert tag in _release_tags(), f"release tags exist but {tag} is not one of them"
+    assert _shown(tag, path) == (ROOT / CATALOGUE_8_0_4).read_bytes()
+
+
+@pytest.mark.parametrize("preset", sorted(PRESET_TAGS))
+def test_each_frozen_preset_is_the_one_its_release_shipped_byte_for_byte(preset):
+    tag = PRESET_TAGS[preset]
+    assert tag in _release_tags(), f"release tags exist but {tag} is not one of them"
+    listed = _git(ROOT, "ls-tree", "-r", "--name-only", tag, "--", "governance/presets/default")
+    assert listed.returncode == 0, listed.stderr
+    shipped = {Path(line).name: line for line in listed.stdout.split()}
+    here = {p.name: p for p in (ROOT / preset).iterdir() if p.is_file()}
+    assert set(here) == set(shipped), (preset, sorted(set(here) ^ set(shipped)))
+    for name, path in sorted(here.items()):
+        assert _shown(tag, shipped[name]) == path.read_bytes(), f"{preset}/{name}"
 
 
 def test_trc_039_a_planted_respelling_in_a_merged_record_fails(tmp_path):

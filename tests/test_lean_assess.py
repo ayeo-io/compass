@@ -27,7 +27,9 @@ PROCEDURE_PARTS = (
     "1. **Create the manifest.**", "1a. **Load project architecture if present.**",
     "2. **Read the three scored dimensions - this is the judgment**",
     "3. **Compute the delivery approach - this is the mechanism.**",
-    "4. **Write `delivery-approach.md`**",
+    # Step 4 opened the devlog; the path writes none (ADR-092, D12), so the
+    # step reads the evidence line back instead.
+    "4. **Read back the evidence.**",
     "5. **Set the `.compass/current-task` pointer**",
     "6. **On a spike, write the `.spike` marker.**", "7. **Confirm.**",
     "## Voice", "## Gate",
@@ -41,11 +43,16 @@ def test_la_1_assess_is_within_its_budget():
 
 def test_la_1_assess_keeps_the_light_path_and_names_the_procedure():
     text = ASSESS.read_text(encoding="utf-8")
-    for needed in ("compass quick-fix start", "compass tdd-red",
-                   "compass quick-fix finish", "--labels", "created:",
-                   "settled decisions", "compass init",
-                   "approaches/assess-procedure.md", "--reassess", "--reason"):
+    # ADR-099: `start` makes `.compass/` and `finish` proves the red, so the
+    # command no longer names `compass init`, `compass tdd-red`, the `created:`
+    # line or the settled decisions. The procedure holds `--reassess` and
+    # `--reason`.
+    for needed in ("compass quick-fix start", "compass quick-fix finish",
+                   "--labels", "approaches/assess-procedure.md"):
         assert needed in text, f"commands/assess.md no longer says {needed!r}"
+    procedure = PROCEDURE.read_text(encoding="utf-8")
+    for needed in ("--reassess", "--reason"):
+        assert needed in procedure, f"the assess procedure no longer says {needed!r}"
 
 
 def test_la_1_the_procedure_keeps_every_step():

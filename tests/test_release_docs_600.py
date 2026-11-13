@@ -11,9 +11,12 @@ Scenario ids: IDR-8 and IDR-9, in the acceptance criteria of the issue
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
 
 
 def _read(rel):
@@ -43,13 +46,14 @@ def test_idr_8_configuration_md_says_what_writes_compass_yml_and_how_to_move():
 
 
 def test_idr_8_the_settings_conflict_way_out_is_not_a_command_that_refuses():
-    """`policy migrate` refuses while a `compass.yml` holds the project's
-    settings, so the doc must not send a conflicted project to it."""
+    """`policy migrate` refused while a `compass.yml` held the project's
+    settings, and 9.0.0 removed it (ADR-094), so the doc must not send a
+    conflicted project to a migration command."""
     text = _read("docs/configuration.md")
     way_out = text[text.index("**The way out.**"):]
     way_out = way_out[:way_out.index("\n- **")]
     assert "delete them from `.compass/config.yml`" in way_out
-    assert "refuses" in way_out
+    assert "names no" in way_out and "migration command" in way_out
 
 
 def test_idr_8_security_md_places_the_project_command_setting_beside_its_checks():
@@ -71,10 +75,6 @@ def test_idr_8_runtime_skill_lays_out_the_project_files_as_6_does():
     text = _read("skills/compass-runtime/SKILL.md")
     assert "compass.yml" in text.split("## Where state lives", 1)[1][:600]
     assert "if `/compass:init` copied one in" not in text
-
-
-def test_idr_8_receipt_md_describes_the_conformance_line():
-    assert "Conformance" in _read("docs/receipt.md")
 
 
 # --- IDR-9: the release entry -------------------------------------------------
@@ -139,8 +139,16 @@ def _removed_later(words):
     spelling and a later release removed it: release notes keep naming such a verb."""
     import yaml
     table = yaml.safe_load(_read("cli/aliases.yml"))
-    return any(row.get("removed_in") and row["old"][:len(words)] == words
-               for row in table.get("hints") or [])
+    if any(row.get("removed_in") and row["old"][:len(words)] == words
+           for row in table.get("hints") or []):
+        return True
+    # A verb 9.0.0 removed names its removal when it is run (removed_parts).
+    import sys
+    if str(ROOT / "cli") not in sys.path:
+        sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import removed_parts
+    return any(list(tokens[:len(words)]) == list(words)
+               for tokens, *_ in removed_parts.COMMANDS)
 
 
 def _missing(verbs):
@@ -172,18 +180,14 @@ def test_the_verb_check_fails_on_a_verb_the_cli_lacks():
 PLUGIN_ROOT = "${CLAUDE_PLUGIN_ROOT}/"
 
 S1_FILES = (
-    "agents/router.md", "agents/reviewer.md", "agents/verifier.md",
-    "agents/planner.md", "agents/product-owner.md", "agents/product-marketer.md",
-    "commands/consult.md", "commands/design.md", "commands/intent.md",
-    "commands/position.md", "commands/refine.md", "commands/plan.md",
-    "commands/verify.md", "commands/flow.md",
+    "commands/go.md", "commands/ship.md",
+    "commands/flow.md",
     "skills/governance-check/SKILL.md", "skills/adaptive-routing/SKILL.md",
     "skills/adaptive-routing/composition.md",
     "skills/evidence-gates/review-dimensions.md",
     "skills/receiving-code-review/SKILL.md",
     "skills/tdd-discipline/test-surface-and-worktrees.md",
     "approaches/assess-procedure.md", "approaches/rubric.md",
-    "templates/delivery-approach.md",
 )
 
 # A paragraph that says one of these is about a project's own files, so a bare
@@ -301,8 +305,7 @@ def test_trc_s1_the_plugin_ships_the_governance_prose_the_instructions_name():
 # --- Instructions use evidence types, verbs and fields that exist -------------
 
 def _evidence_types():
-    import yaml
-    preset = yaml.safe_load(_read("governance/presets/default/evidence-types.yml"))
+    preset = shipped("evidence-types.yml")
     return set(preset["evidence_types"])
 
 
@@ -326,10 +329,18 @@ def s9_findings(text, known_types):
 
 
 S9_FILES = (
-    "agents/architect.md", "agents/verifier.md", "agents/router.md",
-    "commands/verify.md", "approaches/assess-procedure.md",
-    "skills/worktree-multiagent/SKILL.md",
+    "commands/ship.md", "approaches/assess-procedure.md",
 )
+
+
+def test_trc_s9_ship_teaches_the_evidence_add_and_gate_pass_forms():
+    """The `verify` command's gate steps moved to ship with the four-stage path
+    (ADR-092). ADR-099 cut them from `commands/ship.md`: `finish` passes the
+    three gates, and the older record commands are no longer taught. No file of
+    `commands/`, `skills/` or `approaches/` gives these two forms now."""
+    ship = _read("commands/ship.md")
+    assert "compass evidence add <EV-id> --type <type> --path <file>" in ship
+    assert "compass gate pass <gate> --evidence <EV-id>" in ship
 
 
 def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
@@ -339,47 +350,20 @@ def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
     report = {rel: found for rel, found in report.items() if found}
     assert not report, report
 
-    verify = _read("commands/verify.md") + _read("agents/verifier.md")
-    assert "compass evidence add <EV-id> --type <type> --path <file>" in verify
-    assert "compass gate pass <gate> --evidence <EV-id>" in verify
-
-    for rel in ("agents/router.md", "approaches/assess-procedure.md"):
+    # The path writer writes no `subtask_ceiling` and no breakdown stage
+    # records an orchestration (ADR-092): the procedure names the fields the
+    # write stores now, and says it stores no stage map.
+    for rel in ("approaches/assess-procedure.md",):
         text = _read(rel)
-        assert "`subtask_ceiling`" in text, rel
-        assert "Breakdown records the" in text, rel
-    assert "`set` for the report" in _read("skills/worktree-multiagent/SKILL.md")
+        assert "`evidence_required`" in text, rel
+        assert "It writes no `stages:` map" in text, rel
+        assert "`subtask_ceiling`" not in text, rel
 
     runtime = _read("skills/compass-runtime/SKILL.md")
     assert "The aliases were removed at 7.0.0" in " ".join(runtime.split())
     assert "until 7.0.0" not in runtime
     assert "unknown command rather than a\npointer" not in runtime
     assert "docs/upgrade-7-0-0.md" in runtime
-
-
-def architect_registration_runs(text, tmp_path):
-    """Run the `compass evidence add` command that agents/architect.md documents
-    in a scratch issue whose notes sit where step 4 writes them; return the exit
-    code."""
-    import shlex
-    block = re.search(r"```\n\s*(compass evidence add .*?)```", text, re.S).group(1)
-    argv = shlex.split(block.replace("\\\n", " "))
-    assert argv[:3] == ["compass", "evidence", "add"], argv
-    slug = _scratch_issue(tmp_path, "architect-issue")
-    notes = tmp_path / ".compass" / "work" / slug / "architecture-notes.md"
-    notes.write_text("notes\n", encoding="utf-8")
-    return _cli(tmp_path, *argv[1:], "--issue", slug).returncode
-
-
-def test_trc_s9_the_architect_registration_command_runs(tmp_path):
-    assert architect_registration_runs(_read("agents/architect.md"), tmp_path) == 0
-
-
-def test_trc_s9_the_architect_run_reports_a_path_the_cli_cannot_resolve(tmp_path):
-    wrong = _read("agents/architect.md").replace(
-        "--path architecture-notes.md",
-        "--path docs/compass/<created>-<slug>/architecture-notes.md")
-    assert wrong != _read("agents/architect.md")
-    assert architect_registration_runs(wrong, tmp_path) != 0
 
 
 def test_trc_s9_the_scan_reports_the_old_text():
@@ -395,8 +379,9 @@ def test_trc_s9_the_scan_reports_the_old_text():
 
 # --- Stage-weight tables use the stored words ----------------------------------
 
-S10_FILES = tuple(f"approaches/{name}.md"
-                  for name in ("quick-fix", "regular", "full", "hotfix", "spike"))
+# The four 8.x delivery approach files went with the path (ADR-092); the
+# scan reads the two approach files there are now.
+S10_FILES = tuple(f"approaches/{name}.md" for name in ("path", "spike"))
 STAGES = ("Assess", "Define", "Refine", "Plan", "Breakdown", "Implement", "Verify", "Ship")
 
 
@@ -417,9 +402,10 @@ def test_trc_s10_stage_weight_tables_use_the_stored_words():
     report = {rel: s10_findings(_read(rel)) for rel in S10_FILES}
     report = {rel: found for rel, found in report.items() if found}
     assert not report, report
-    regular = _read("approaches/regular.md")
-    assert "**Lightweight pass.**" in regular
-    assert "Light-to-full" not in regular
+    # The regular approach's refine row, which held the stored word, went with
+    # the stage weights (ADR-092): no approach file has a weight table now.
+    for rel in S10_FILES:
+        assert "Light-to-full" not in _read(rel), rel
 
 
 def test_trc_s10_the_scan_reports_the_old_words():
@@ -474,8 +460,9 @@ def test_trc_s11_readme_badges_name_real_targets():
     assert len(BADGE.findall(readme)) == 4, "no badge beyond the four"
     site = yaml.safe_load(_read("mkdocs.yml"))["site_url"]
     assert site == "https://docs.ayeo.io/compass/"
-    assert readme.index("[![") > readme.index("**Adaptive spec-driven development")
-    assert readme.index("[![") < readme.index("> Enough process")
+    # The badges sit between the tagline and the pitch (9.0.0 wording, #360).
+    assert readme.index("[![") > readme.index("**Acceptance-test-driven development for Claude Code")
+    assert readme.index("[![") < readme.index("Compass lets a team under change control")
 
 
 def test_trc_s11_the_scan_reports_a_badge_for_a_missing_workflow():
@@ -490,8 +477,9 @@ def test_trc_s11_the_scan_reports_a_badge_for_a_missing_workflow():
 
 # --- The front pages route a reader to compass.yml and the upgrade page -------
 
-# 6.0.0 verbs the README command list had left out.
-S4_VERBS = ("approach show", "approach render", "policy migrate", "policy update",
+# 6.0.0 verbs the README command list had left out. `policy migrate` and
+# `policy update` were two until 9.0.0 removed them (ADR-094).
+S4_VERBS = ("approach show", "approach render",
             "evidence approve", "evidence review", "issue blocked remove")
 
 
@@ -499,7 +487,7 @@ def s4_findings(readme, cli, index, docs_readme, upgrade):
     found = []
     start = readme[:readme.index("## What Compass changes")]
     for needle in ("compass.yml", "docs/configuration.md", "docs/upgrade-6-0-0.md",
-                   "docs/github-labels.md"):
+                   "docs/github-links.md"):
         if needle not in start:
             found.append(f"README 'Start here' does not name {needle}")
     for verb in S4_VERBS:
@@ -547,6 +535,7 @@ def _cli(tmp_path, *argv):
 
 
 def _scratch_issue(tmp_path, slug="scratch-issue"):
+    """A quick fix started in `tmp_path`, on the four-stage path (ADR-092)."""
     import subprocess
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     assert _cli(tmp_path, "init").returncode == 0
@@ -555,14 +544,14 @@ def _scratch_issue(tmp_path, slug="scratch-issue"):
                  "--intent", "scratch", "--scenario", "Given a When b Then c",
                  "--test", "tests/test_x.py::test_a")
     assert start.returncode == 0, start.stdout + start.stderr
+    manifest = tmp_path / ".compass" / "work" / slug / "manifest.yml"
+    assert "evidence_required:" in manifest.read_text(encoding="utf-8")
     return slug
 
 
 S8_OLD_TEXT = (
     ("docs/configuration.md", "the hooks detect npm, Make and pytest conventions",
      "says the hooks detect a test command"),
-    ("docs/policy-migrate.md", "change nothing in `compass check` or the evaluator yet",
-     "says editing compass.yml changes nothing yet"),
     ("docs/generation-store.md", "It refuses a landed issue", "uses the retired word 'landed'"),
     ("docs/releasing.md", "A landed issue keeps the configuration it landed under",
      "uses the retired word 'landed'"),
@@ -573,8 +562,6 @@ S8_OLD_TEXT = (
 
 S8_NEW_TEXT = (
     ("docs/configuration.md", "`tdd-red` and `tdd-green` need the command after `--`"),
-    ("docs/configuration.md", "`scripts/integrate.sh` falls back to `npm test` or `make test`"),
-    ("docs/policy-migrate.md", "an issue with no stored generation is judged by it at once"),
     ("docs/generation-store.md", "It refuses a closed issue"),
     ("docs/releasing.md", "A closed issue keeps the configuration it closed under"),
     ("docs/entry-exit-evaluation.md", "A closed issue has every list due"),
@@ -624,19 +611,6 @@ def test_trc_s8_configuration_upgrade_migrate_and_ci_pages_match_the_code(tmp_pa
     assert apply_.returncode == 2 and "--i-have-a-copy" in apply_.stdout + apply_.stderr
 
 
-def test_trc_s8_the_migrate_closing_note_says_compass_yml_is_read_at_once(tmp_path):
-    import shutil
-    import subprocess
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    (tmp_path / "governance").mkdir()
-    for name in ("guardrails.yml", "routing-policy.yml"):
-        shutil.copy(ROOT / "governance" / name, tmp_path / "governance" / name)
-    assert _cli(tmp_path, "init").returncode == 0
-    dry = _cli(tmp_path, "policy", "migrate")
-    assert dry.returncode == 0, dry.stdout + dry.stderr
-    assert "an issue with no stored generation is judged by it at once" in dry.stdout
-
-
 # --- The quickstart, five-minutes and portability pages match the code --------
 
 def _policy_line_with_compass_yml(tmp_path):
@@ -669,14 +643,21 @@ def test_trc_s7_quickstart_five_minutes_and_portability_match_the_code(tmp_path)
     assert line in five.splitlines() or line.strip() in five, line
     assert "<your project>/governance/routing-policy.yml" not in five
 
-    # A regular approach under `balanced` does not wait at assess.
-    policy = yaml.safe_load(_read("governance/routing-policy.yml"))
-    balanced = policy["autonomy_checkpoints"]["balanced"]["regular"]
-    assert balanced == ["define", "plan"]
+    # A delivery issue under `balanced` does not wait, and under `controlled`
+    # waits at assess and specify (ADR-092 open question 7). The quickstart
+    # states both, and the code gives both.
+    from compass_pkg.path_writer import checkpoints_for
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
+    assert policy["autonomy_checkpoints"]["balanced"]["delivery"] == []
+    assert policy["autonomy_checkpoints"]["controlled"]["delivery"] == ["assess", "specify"]
+    light = ["scenarios", "red-before-green", "suite-green"]
+    assert checkpoints_for(light, "balanced", True) == []
+    assert checkpoints_for(light, "controlled", False) == ["assess", "specify"]
     quickstart = _flat(_read("docs/quickstart.md"))
     assert "presents the delivery approach and waits" not in quickstart
-    assert "a regular approach goes on and logs that it did not wait" in quickstart
-    assert "it waits at define and plan" in quickstart
+    assert "under `balanced` a delivery issue goes on and does not wait" in quickstart
+    assert "under `controlled` it waits at assess and specify" in quickstart
 
     # portability lists the skill directories there are.
     # A skill kept only as a redirect to its renamed successor ("Renamed to
@@ -684,8 +665,11 @@ def test_trc_s7_quickstart_five_minutes_and_portability_match_the_code(tmp_path)
     real = sorted(p.name for p in (ROOT / "skills").iterdir()
                   if p.is_dir() and "\ndescription: Renamed to " not in
                   (p / "SKILL.md").read_text(encoding="utf-8"))
-    # 14 since `atdd` joined (issue atdd-skill).
-    assert len(real) == 14
+    # 14 since `atdd` joined (issue atdd-skill). 13 since 9.0.0 removed
+    # `worktree-multiagent` (ADR-090). 12 since the plan stage and
+    # `plan-authoring` went with the path (ADR-092). 10 since `bdd-specification`
+    # and `behavior-mapping` merged into `atdd` (#360).
+    assert len(real) == 10
     assert skills_listed(_read("docs/portability.md")) == real
 
 
@@ -768,38 +752,84 @@ def _case_3(text):
     return text[start:text.index("## Case 4 ")]
 
 
+# The assessment Case 3 walks through.
+CASE_3 = {"risk": "critical", "familiarity": "brownfield-mapped", "size": "small",
+          "goal": "delivery", "urgency": "none", "labels": "payments,migrations"}
+
+
+def _fired_rules(verbose):
+    """`(rule id, adds evidence)` for each rule the `policy rules fired:` block of
+    `approach evaluate --verbose` lists, in order. A rule adds evidence when an
+    `- evidence owed:` line follows its line."""
+    lines = verbose.split("policy rules fired:", 1)[1].splitlines()[1:]
+    fired = []
+    for line in lines:
+        if not line.startswith("    ") or line.strip().startswith("gate set"):
+            break
+        rule = re.search(r"\((`?[A-Z][A-Z0-9-]*`?), [a-z]+\)\s*$", line)
+        if rule:
+            fired.append([rule.group(1).strip("`"), False])
+        elif line.strip().startswith("- evidence owed:") and fired:
+            fired[-1][1] = True
+    return [tuple(f) for f in fired]
+
+
+def case_3_findings(case, verbose):
+    """What Case 3 says that the CLI's output for its assessment contradicts, or
+    leaves out: the evidence row, each rule that fires, and each rule that fires
+    but adds nothing, which the case must say adds nothing. An 8.x floor the path
+    removed must not be named."""
+    flat = _flat(case)
+    found = []
+    row = re.search(r"evidence row\s*:\s*(\S+)", verbose).group(1)
+    if row not in flat:
+        found.append(f"Case 3 does not name the evidence row {row}")
+    for rule, adds in _fired_rules(verbose):
+        if rule not in flat:
+            found.append(f"Case 3 does not name {rule}, which fires")
+        elif not adds and not re.search(rf"{re.escape(rule)}`?.{{0,200}}adds nothing", flat):
+            found.append(f"Case 3 must say {rule} fires but adds nothing")
+    for gone in ("RP-FLOOR-001", "RP-FLOOR-003", "RP-CAP-001", "Two floors fire"):
+        if gone in flat:
+            found.append(f"Case 3 names {gone}, which 9.0.0 does not fire")
+    return found
+
+
 def test_trc_s3_routing_deep_dive_matches_the_evaluator():
+    from compass_pkg.evidence_required import G5_LABELS
     import yaml
     text = _flat(_read("docs/routing-deep-dive.md"))
 
-    # The floor list names the labels the floor reads, and no others.
-    policy = yaml.safe_load(_read("governance/routing-policy.yml"))
-    floor = next(r for r in policy["routing_guardrails"]["floors"] if r["id"] == "RP-FLOOR-003")
-    labels = floor["when"]["labels_any"]
-    listed = re.search(r"floor list \(([^)]*)\)", text)
-    assert listed, "the floor list sentence is gone"
+    # The `G5` label list names the labels the rules read, and no others.
+    labels = list(G5_LABELS)
+    listed = re.search(r"not a `G5` label \(([^)]*)\)", text)
+    assert listed, "the `G5` label list sentence is gone"
     assert re.findall(r"`([a-z-]+)`", listed.group(1)) == labels, listed.group(1)
+    stated = re.search(r"The `G5` labels are ([^.]*)\.", text)
+    assert stated, "the sentence that names the `G5` labels is gone"
+    assert re.findall(r"`([a-z-]+)`", stated.group(1)) == labels, stated.group(1)
 
-    # The CSV quick fix has as many gates as the CLI gives a quick fix.
+    # The CSV export on an internal tool has the row and as many gates as the CLI gives.
     csv = _evaluate_verbose(risk="contained", familiarity="brownfield-mapped",
-                            size="small", goal="delivery", role="engineer")
+                            size="small", goal="delivery")
     gates = len(re.search(r"gate set\s+:\s+(.*)", csv).group(1).split(","))
+    row = re.search(r"evidence row\s*:\s*(\S+)", csv).group(1)
     words = {1: "one", 2: "two", 3: "three", 4: "four"}
     section = text[text.index('"Add a CSV export" - engineer'):]
     section = section[:section.index('"Add a CSV export" - product owner')]
     assert f"{words[gates]} gates" in section, (gates, section)
+    assert row in section, (row, section)
 
-    # Case 3 names every rule the CLI says fires, and not a floor that does not.
-    out = _evaluate_verbose(risk="critical", familiarity="brownfield-mapped", size="small",
-                            goal="delivery", role="engineer", labels="payments,migrations")
-    fired = re.findall(r"\((RP-[A-Z]+-\d+),", out)
+    # Case 3 names the row and every rule the CLI says fires on the path, says
+    # which fires and adds nothing, and names no 8.x floor or cap.
     case = _case_3(_read("docs/routing-deep-dive.md"))
-    assert "RP-FLOOR-001" in fired and "RP-FLOOR-003" not in fired
-    for rule in fired:
-        assert rule in case, f"Case 3 does not name {rule}, which fires"
-    assert re.search(r"RP-FLOOR-003.{0,200}does not list it", _flat(case)), (
-        "Case 3 must say the label floor is not among the rules the CLI lists")
-    assert "Two floors fire" not in case
+    verbose = _evaluate_verbose(**CASE_3)
+    fired = _fired_rules(verbose)
+    # The check set no longer holds `RP-REQUIRE-003` and `RP-REQUIRE-004` (ADR-099),
+    # so they do not fire. The row and the sign-off
+    # rows are what fire, and each adds evidence.
+    assert fired == [("RP-EVID-COMMON", True), ("RP-EVID-SIGNOFF", True), ("G5", True)], fired
+    assert not case_3_findings(case, verbose), case_3_findings(case, verbose)
 
     # A routing change is a change to compass.yml, not to the generated file.
     assert "amending that file" not in text
@@ -809,10 +839,21 @@ def test_trc_s3_routing_deep_dive_matches_the_evaluator():
 
 
 def test_trc_s3_the_case_3_scan_would_report_the_old_text():
-    old = "## Case 3 - x\nTwo floors fire, and they reinforce each other.\n## Case 4 - y"
-    case = _case_3(old)
-    assert "Two floors fire" in case
-    assert "RP-FLOOR-001" not in case
+    verbose = _evaluate_verbose(**CASE_3)
+    old = ("## Case 3 - x\nRP-EVID-STANDARD. Two floors fire, and they reinforce each "
+           "other: RP-FLOOR-001 and RP-REQUIRE-003.\n## Case 4 - y")
+    found = case_3_findings(_case_3(old), verbose)
+    assert "Case 3 does not name the evidence row RP-EVID-COMMON" in found, found
+    assert "Case 3 does not name RP-EVID-SIGNOFF, which fires" in found, found
+    assert "Case 3 names RP-FLOOR-001, which 9.0.0 does not fire" in found, found
+    assert "Case 3 names Two floors fire, which 9.0.0 does not fire" in found, found
+    named = ("## Case 3 - x\nRP-EVID-COMMON, RP-EVID-SIGNOFF and G5 fire.\n## Case 4 - y")
+    assert case_3_findings(_case_3(named), verbose) == []
+    # A rule that fires and adds no evidence must be said to add nothing: take the
+    # evidence line off the sign-off row to play one.
+    silent = verbose.replace("        - evidence owed: scenario-approval\n", "")
+    assert case_3_findings(_case_3(named), silent) == [
+        "Case 3 must say RP-EVID-SIGNOFF fires but adds nothing"]
 
 
 # --- The governance prose describes the 6.0.0 model ---------------------------
@@ -845,10 +886,12 @@ S2_OLD_TEXT = (
 S2_NEW_TEXT = (
     ("governance/README.md", "## A project that copied governance under 5.x"),
     ("governance/README.md", "`compass.yml` cannot hold strategies"),
-    ("governance/guardrails.md", "`K-LOCK-REFUSED`"),
-    ("governance/guardrails.md", "`compass policy show` prints the resolved configuration"),
-    ("governance/routing-policy.md", "Routing changes go in the project's `compass.yml`"),
-    ("governance/routing-policy.md", "reads the same resolved configuration"),
+    # 9.0.0 runs one fixed check set (ADR-094): a project adds to it with the
+    # tighten-only settings of `compass.yml`, and nothing removes or loosens it.
+    ("governance/guardrails.md", "no project can remove or loosen one"),
+    ("governance/guardrails.md", "the tighten-only settings of its `compass.yml`"),
+    ("governance/routing-policy.md", "a project does not change a"),
+    ("governance/routing-policy.md", "reads the resolved configuration"),
 )
 
 
@@ -876,10 +919,14 @@ def test_trc_s2_the_scan_reports_the_old_text():
 
 
 def test_trc_s2_a_locked_guardrail_cannot_be_removed_in_compass_yml(tmp_path):
-    """The claim the guardrails page now makes: `compass policy lint` refuses a
-    `compass.yml` that removes a check from a locked guardrail."""
+    """`compass.yml` cannot remove a check from a guardrail. Since 9.0.0 it holds
+    settings only (ADR-094): a `gates:` block is a removed setting that the lint
+    names and nothing reads, so the guardrail keeps every check, and a key that
+    is not a setting is refused."""
     import subprocess
     import sys
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import effective
     (tmp_path / ".compass").mkdir()
     (tmp_path / "compass.yml").write_text(
         "schema: 1\nextends: compass:default@6\nowner: me\n"
@@ -888,10 +935,13 @@ def test_trc_s2_a_locked_guardrail_cannot_be_removed_in_compass_yml(tmp_path):
     cli = [sys.executable, str(ROOT / "cli" / "compass")]
     lint = subprocess.run(cli + ["policy", "lint"], cwd=tmp_path, capture_output=True,
                           text=True, timeout=60)
-    assert lint.returncode != 0 and "K-LOCK-REFUSED" in lint.stdout, lint.stdout
+    assert "L-SETTING-REMOVED [project] gates:" in lint.stdout, lint.stdout
+    resolved = effective.resolve_live(str(tmp_path)).resolved
+    assert "scenario-has-id-and-intent" in resolved["gates"]["G2"]["checks"]
     (tmp_path / "compass.yml").write_text(
         "schema: 1\nextends: compass:default@6\nowner: me\nstrategies:\n  - id: X\n",
         encoding="utf-8")
     lint = subprocess.run(cli + ["policy", "lint"], cwd=tmp_path, capture_output=True,
                           text=True, timeout=60)
-    assert "L-SCHEMA" in lint.stdout and "strategies" in lint.stdout, lint.stdout
+    assert lint.returncode == 1, lint.stdout
+    assert "L-SETTING-UNKNOWN [project] strategies" in lint.stdout, lint.stdout

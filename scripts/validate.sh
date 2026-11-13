@@ -4,7 +4,7 @@
 # =============================================================================
 # A consistency check for the Compass repository ITSELF - not for a project using
 # Compass. It checks the directory structure is intact and that the adapter
-# layer's internal references resolve: commands referencing skills, agents, and
+# layer's internal references resolve: commands referencing skills and
 # templates that actually exist; no dangling pointers.
 #
 # Run it locally before committing, and in CI on every push.
@@ -20,8 +20,10 @@
 #
 # WHAT IT CHECKS
 #   1. The directories and top-level files the repo needs are present.
-#   2. Every expected artifact template exists in templates/.
-#   3. Every agent referenced anywhere in commands/ exists in agents/.
+#   2. Every shipped template exists in templates/: the acceptance criteria,
+#      the devlog and the five role templates.
+#   3. No command in commands/ names an agent: 9.0.0 ships none (ADR-090), so
+#      any agent a command names would not exist.
 #   4. Every skill referenced anywhere in commands/ exists in skills/.
 #   5. Every template referenced in commands/ exists in templates/.
 #   6. Every script and hook referenced in the repo exists and is executable.
@@ -66,7 +68,7 @@ say ""
 # --- 1. required structure --------------------------------------------------
 say "1. Directory structure and top-level files"
 for d in docs governance approaches templates commands \
-         agents skills hooks scripts .compass; do
+         skills hooks scripts .compass; do
   if [ -d "$d" ]; then ok "dir  $d/"; else fail "missing directory: $d/"; fi
 done
 for f in CLAUDE.md AGENTS.md README.md docs/methodology.md \
@@ -77,19 +79,17 @@ for f in CLAUDE.md AGENTS.md README.md docs/methodology.md \
 done
 say ""
 
-# --- 2. expected artifact templates -----------------------------------------
-say "2. Artifact templates"
-for t in delivery-approach intent bug-report incident acceptance-criteria \
-         requirements-review technical-design distribution-map \
-         threat-model rollback-plan \
-         positioning launch-readiness ui-contract verification-report devlog; do
+# --- 2. shipped templates ---------------------------------------------------
+say "2. Templates"
+# 9.0.0 needs only the acceptance criteria (ADR-091). The five role templates
+# went with their entry points (ADR-093).
+for t in acceptance-criteria devlog; do
   if [ -f "templates/$t.md" ]; then ok "template $t.md"; else fail "missing template: templates/$t.md"; fi
 done
 say ""
 
 # --- helpers for reference checks -------------------------------------------
 # Collect the names that actually exist.
-EXISTING_AGENTS="$(cd agents 2>/dev/null && ls *.md 2>/dev/null | sed 's/\.md$//' || true)"
 EXISTING_SKILLS="$(cd skills 2>/dev/null && ls -d */ 2>/dev/null | sed 's:/$::' || true)"
 EXISTING_TEMPLATES="$(cd templates 2>/dev/null && ls *.md 2>/dev/null | sed 's/\.md$//' || true)"
 
@@ -99,18 +99,17 @@ has() { # needle  haystack(newline-separated)
   grep -qxF "$1" <<<"$2"
 }
 
-# --- 3. agents referenced by commands exist ---------------------------------
+# --- 3. no command names an agent --------------------------------------------
 say "3. Agent references in commands/"
-# Match the patterns the command files actually use, e.g. "the `builder` agent",
-# "`orchestrator` agent", "invoke the `router` agent".
+# 9.0.0 ships no agents (ADR-090), so any agent a command names would not
+# exist. Match the patterns the command files used, e.g. "the `builder` agent".
 REFS="$(grep -rohE '`[a-z][a-z-]+`[[:space:]]+agent' commands/ 2>/dev/null \
         | sed -E 's/`([a-z-]+)`.*/\1/' | sort -u || true)"
 if [ -z "$REFS" ]; then
-  say "  (no agent references found in commands/ - nothing to check)"
+  ok "no command names an agent"
 else
   for a in $REFS; do
-    if has "$a" "$EXISTING_AGENTS"; then ok "agent  $a  <- referenced, exists"
-    else fail "command references agent '$a' but agents/$a.md does not exist"; fi
+    fail "command names the agent '$a', but 9.0.0 ships no agents"
   done
 fi
 say ""
@@ -132,7 +131,7 @@ say ""
 
 # --- 5. templates referenced by commands exist ------------------------------
 say "5. Template references in commands/"
-# Commands say "from `templates/delivery-approach.md`" or "templates/verification-report.md".
+# Commands say "from `templates/acceptance-criteria.md`".
 REFS="$(grep -rohE 'templates/[a-z][a-z.-]+\.md' commands/ 2>/dev/null \
         | sed -E 's:templates/([a-z.-]+)\.md:\1:' | sort -u || true)"
 if [ -z "$REFS" ]; then
@@ -170,24 +169,32 @@ else
           | xargs -0 grep -ohE '(scripts|hooks)/[a-z-]+\.sh' 2>/dev/null \
           | sort -u || true)"
 fi
+# The scripts 9.0.0 removed (ADR-090). Decision records, archived issues and
+# the release history name them as they were, and are never rewritten to
+# follow a deletion, so a reference to one of these is not a broken one.
+REMOVED_SCRIPTS="scripts/integrate.sh
+scripts/multiagent.sh
+scripts/run-demo.sh"
 for ref in $REFS; do
   if [ -f "$ref" ]; then
     if [ -x "$ref" ]; then ok "exec $ref  <- referenced, exists, executable"
     else fail "referenced $ref exists but is not executable (chmod +x it)"; fi
+  elif has "$ref" "$REMOVED_SCRIPTS"; then
+    ok "gone $ref  <- removed in 9.0.0 (ADR-090), named by a record of earlier work"
   else
     fail "referenced $ref does not exist"
   fi
 done
 # Also assert the canonical set is present regardless of references.
 for f in hooks/pre-tool.sh hooks/post-tool.sh hooks/stop.sh \
-         scripts/install.sh scripts/multiagent.sh scripts/integrate.sh scripts/validate.sh; do
+         scripts/install.sh scripts/validate.sh; do
   [ -f "$f" ] || fail "expected file missing: $f"
 done
 say ""
 
-# --- 7. the five reference approach docs -------------------------------------
+# --- 7. the approach docs: the path and the spike (ADR-092) ------------------
 say "7. Reference approaches"
-for r in quick-fix regular full hotfix spike; do
+for r in path spike; do
   if [ -f "approaches/$r.md" ]; then
     if grep -qiE "(\`|/| )$r\b" approaches/rubric.md 2>/dev/null; then
       ok "shape  $r  <- exists, named in rubric.md"
@@ -209,16 +216,14 @@ if [ -f "cli/compass" ]; then
 else
   fail "missing the CLI: cli/compass"
 fi
-# 8b. the machine-readable governance the CLI runs
-for f in governance/routing-policy.yml governance/guardrails.yml; do
-  if [ -f "$f" ]; then ok "file $f"; else fail "missing machine-readable governance: $f"; fi
-done
+# 8b. the machine-readable policy the CLI runs: the check set (ADR-094)
+if [ -f governance/check-set.yml ]; then ok "file governance/check-set.yml"
+else fail "missing machine-readable policy: governance/check-set.yml"; fi
 # 8c. the schemas directory: an executable JSON Schema and a readable
-#     companion for each of the three machine-readable files.
+#     companion for the issue manifest.
 if [ -d "schemas" ]; then
   ok "dir  schemas/"
-  # vocabulary-scan: allow - the loop iterates schema basenames on disk
-  for s in routing-policy guardrails manifest; do
+  for s in manifest; do
     if [ -f "schemas/$s.schema.json" ]; then ok "schema $s.schema.json"
     else fail "missing executable schema: schemas/$s.schema.json"; fi
     if [ -f "schemas/$s.reference.yml" ]; then ok "ref    $s.reference.yml"

@@ -1,7 +1,0 @@
-{
-  "command": "pytest tests/api/",
-  "exit_code": 0,
-  "passed": true,
-  "timestamp": "2026-04-24T11:38:40+00:00",
-  "log_excerpt": "tests/api/test_rate_limit.py .....                                       [ 11%]\ntests/api/test_search.py ...........                                     [ 36%]\ntests/api/test_auth.py ..................                               [ 77%]\ntests/api/test_upload_errors.py ........                                 [ 95%]\ntests/api/test_health.py ..                                             [100%]\n\n========================== 44 passed in 3.10s =============================\n\n(the 5 new rate-limit scenarios pass; the 39 pre-existing api tests still pass\n- regression clean.)"
-}

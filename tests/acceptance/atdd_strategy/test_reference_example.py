@@ -16,8 +16,13 @@ scenario says, and runs the example's own pytest there.
 | `TRC-F2` | a driver name the factory does not know is refused at start-up |
 | `TRC-F3` | the suite passes on two workers and one scenario twice, against one store |
 | `TRC-F4` | a CI job runs the example through both drivers and its layering test |
+| `TRC-J5` | a DSL method named after a banned term fails the layering test, naming the method and the term |
+| `TRC-J6` | the TypeScript example passes through both drivers and its layering test, which fails a planted assertion; a CI job runs it, and its packages are pinned |
 
-Spec: atdd-python-example/acceptance-criteria.md.
+Spec: atdd-python-example/acceptance-criteria.md. The TypeScript example,
+`examples/atdd-adapters/typescript/`, is ayeo-io/compass-delivery#330, "Add a
+TypeScript reference example and stage 1 red". Its tests need Node and the
+example's packages, and skip when they are missing (`typescript.py`).
 """
 from __future__ import annotations
 
@@ -35,6 +40,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.acceptance.atdd_strategy import typescript
+
 ROOT = Path(__file__).resolve().parents[3]
 EXAMPLE = ROOT / "examples" / "atdd-adapters" / "python"
 SPECS = "tests/acceptance/test_todos.py"
@@ -46,6 +53,8 @@ JOB = "atdd-adapter-python"
 RULE_NO_CHECK = "the DSL makes no check"
 RULE_ALIAS = "every identifier goes through an alias"
 RULE_ONE_CALL = "one DSL call per Given, When or Then line"
+RULE_BANNED = "a DSL method name uses no banned term"
+TERMINOLOGY = ROOT / "governance" / "terminology.yml"
 
 
 def _copy(tmp_path: Path) -> Path:
@@ -68,6 +77,11 @@ def _pytest(folder: Path, *args: str, env: dict | None = None) -> subprocess.Com
     scratch = folder.parent / "tmp"
     scratch.mkdir(exist_ok=True)
     environment["TMPDIR"] = str(scratch)
+    # The layering test imports yaml. The CI test job installs no PyYAML, so
+    # the example's pytest finds the copy Compass ships, as an adopter's
+    # project finds the one its requirements.txt pins.
+    environment["PYTHONPATH"] = os.pathsep.join(
+        p for p in (str(ROOT / "cli" / "vendor"), environment.get("PYTHONPATH")) if p)
     environment.update(env or {})
     return subprocess.run(
         [sys.executable, "-m", "pytest", "-p", "xdist.plugin", *args],
@@ -269,6 +283,55 @@ def test_trc_j2_the_layering_test_fails_each_planted_breach(tmp_path, breach):
     assert re.search(r"\b1 failed\b", run.stdout), _output(run)
 
 
+# --- a banned term in a DSL method name (`TRC-J5`) ------------------------------------
+
+def _with_terminology(folder: Path) -> None:
+    """Give the copy the banned list a governed project has: Compass's own
+    `governance/terminology.yml`, at the copy's root."""
+    (folder / "governance").mkdir()
+    shutil.copyfile(TERMINOLOGY, folder / "governance" / "terminology.yml")
+
+
+def test_trc_j5(tmp_path):
+    """A banned term in a DSL method name fails the layering test."""
+    folder = _copy(tmp_path)
+    _with_terminology(folder)
+    banned = [entry["term"] for entry in yaml.safe_load(TERMINOLOGY.read_text(
+        encoding="utf-8"))["banned"]]
+    assert "route" in banned, banned
+    path = folder / DSL
+    text = path.read_text(encoding="utf-8")
+    anchor = "\n\nclass Dsl:"
+    method = ("\n    def routeTodo(self, name):\n"
+              "        self._driver.complete(self._scenario.account, name)\n")
+    assert text.count(anchor) == 1
+    text = text.replace(anchor, method + anchor)
+    path.write_text(text, encoding="utf-8")
+    line = text.splitlines().index("    def routeTodo(self, name):") + 1
+    run = _pytest(folder, LAYERING)
+    assert run.returncode == 1, _output(run)
+    assert (f"{DSL}:{line}: {RULE_BANNED}: the method Todo.routeTodo uses the banned "
+            f"term 'route'") in run.stdout, _output(run)
+    assert f"FAILED {LAYERING}::test_no_dsl_method_name_uses_a_banned_term" in run.stdout, \
+        _output(run)
+    assert re.search(r"\b1 failed\b", run.stdout), _output(run)
+
+
+def test_trc_j5_the_example_as_shipped_uses_no_banned_term(tmp_path):
+    folder = _copy(tmp_path)
+    _with_terminology(folder)
+    run = _pytest(folder, LAYERING)
+    assert run.returncode == 0, _output(run)
+    assert _passed(run) == 4, _output(run)
+
+
+def test_trc_j5_without_a_banned_list_the_rule_skips_and_says_why(tmp_path):
+    folder = _copy(tmp_path)
+    run = _pytest(folder, "-rs", LAYERING)
+    assert run.returncode == 0, _output(run)
+    assert "no governance/terminology.yml" in run.stdout, _output(run)
+
+
 # --- the layering test passes within 5 seconds (`TRC-J3`) -----------------------------
 
 @pytest.mark.serial
@@ -419,3 +482,94 @@ def test_trc_f4_a_ci_job_runs_the_example():
     assert not loose, f"requirements that do not pin one exact version: {loose}"
     names = {line.split("==")[0].lower() for line in lines}
     assert {"pytest", "pytest-xdist"} <= names, names
+
+
+# --- the TypeScript reference example (`TRC-J6`) --------------------------------------
+
+TS_DSL = "tests/acceptance/dsl.ts"
+TS_JOB = "atdd-adapter-typescript"
+
+
+def _plant_ts_assert(folder: Path) -> int:
+    """Put an assertion on the line after `async complete(`; return its line number."""
+    path = folder / TS_DSL
+    lines = path.read_text(encoding="utf-8").splitlines()
+    at = next(i for i, line in enumerate(lines) if line.strip().startswith("async complete("))
+    lines.insert(at + 1, '    assert.ok(name, "a todo needs a name");')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return at + 2
+
+
+@pytest.mark.parametrize("state", ["as shipped", "with an assertion planted in a DSL method"])
+def test_trc_j6(tmp_path, state):
+    """A reference example in a second language."""
+    typescript.need(packages=True)
+    folder = typescript.copy(tmp_path / "example")
+    if state == "as shipped":
+        specifications = 5
+        for driver in ("api", "cli"):
+            run = typescript.npm(folder, "acceptance", "--driver", driver, "--workers", "2")
+            assert run.returncode == 0, typescript.output(run)
+            assert f"acceptance driver: {driver}" in run.stdout, typescript.output(run)
+            assert typescript.passed(run) == specifications, typescript.output(run)
+        run = typescript.npm(folder, "layering")
+        assert run.returncode == 0, typescript.output(run)
+        assert typescript.passed(run) >= 3, typescript.output(run)
+        return
+    line = _plant_ts_assert(folder)
+    run = typescript.npm(folder, "layering")
+    assert run.returncode == 1, typescript.output(run)
+    assert (f"{TS_DSL}:{line}: {RULE_NO_CHECK}: a call to assert.ok in Todo.complete"
+            in run.stdout), typescript.output(run)
+    assert re.search(r"^ℹ fail 1$", run.stdout, re.M), typescript.output(run)
+
+
+def test_trc_j6_an_unknown_driver_is_refused_before_any_scenario(tmp_path):
+    typescript.need()
+    folder = typescript.copy(tmp_path / "example")
+    run = typescript.npm(folder, "acceptance", "--driver", "web")
+    assert run.returncode == 2, typescript.output(run)
+    assert "no driver 'web': choose one of api, cli" in run.stderr, typescript.output(run)
+    assert "ℹ pass" not in run.stdout, typescript.output(run)
+
+
+def test_trc_j6_a_ci_job_runs_the_typescript_example():
+    jobs = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    assert TS_JOB in jobs, sorted(jobs)
+    steps = jobs[TS_JOB]["steps"]
+    folder = "examples/atdd-adapters/typescript"
+    node = [s for s in steps if str(s.get("uses", "")).startswith("actions/setup-node@")]
+    assert node and node[0]["with"]["node-version"] == "22.13.0", node
+    in_folder = [s.get("run", "") for s in steps if s.get("working-directory") == folder]
+    assert any(r.startswith("npm ci") for r in in_folder), in_folder
+    for driver in ("api", "cli"):
+        assert any(f"npm run acceptance -- --driver {driver}" in r for r in in_folder), in_folder
+    assert any("npm run layering" in r for r in in_folder), in_folder
+    assert any("npm run typecheck" in r for r in in_folder), in_folder
+    compass = [s for s in steps if "pytest" in s.get("run", "")]
+    assert compass and compass[0].get("env", {}).get(typescript.REQUIRE) == "1", compass
+    self_check = jobs["self-check"]
+    assert TS_JOB in self_check["needs"], self_check["needs"]
+    assert not re.search(r"\bnpx\b", " ".join(s.get("run", "") for s in steps)), steps
+
+
+def test_trc_j6_every_node_package_is_pinned_by_a_committed_lock_file():
+    import json
+    package = json.loads((typescript.EXAMPLE / "package.json").read_text(encoding="utf-8"))
+    wanted = {**package.get("dependencies", {}), **package.get("devDependencies", {})}
+    assert {"typescript", "@types/node", "yaml"} <= set(wanted), wanted
+    loose = {name: v for name, v in wanted.items() if not re.fullmatch(r"\d+\.\d+\.\d+", v)}
+    assert not loose, f"dependencies that do not pin one exact version: {loose}"
+    assert not any(re.search(r"\bnpx\b", v) for v in package["scripts"].values()), package
+    lock = json.loads((typescript.EXAMPLE / "package-lock.json").read_text(encoding="utf-8"))
+    assert lock["lockfileVersion"] == 3, lock["lockfileVersion"]
+    installed = {path: entry for path, entry in lock["packages"].items() if path}
+    assert installed, lock
+    for path, entry in installed.items():
+        assert entry.get("version") and entry.get("integrity"), (path, entry)
+        assert entry["resolved"].startswith("https://registry.npmjs.org/"), (path, entry)
+    for name, version in wanted.items():
+        assert installed[f"node_modules/{name}"]["version"] == version, name
+    tracked = subprocess.run(["git", "ls-files", str(typescript.EXAMPLE)], cwd=ROOT,
+                             capture_output=True, text=True, check=True).stdout.split()
+    assert not [p for p in tracked if "/node_modules/" in p], tracked

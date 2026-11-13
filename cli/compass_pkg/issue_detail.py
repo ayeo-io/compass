@@ -1,28 +1,25 @@
-# compass_pkg.issue_detail - the facts of one issue that the board and the issue page share
+# compass_pkg.issue_detail - the facts of one issue that the board reads
 """One function that reads an issue's approach, state, stage and gate count.
 
-`compass flow` (the board) and the header block of the issue page both call
-`detail` through this module, so the two cannot disagree (ADR-051). They
-call it through the module, not by name, so a test can replace it and see both
-surfaces follow.
+`compass flow` (the board) calls `detail` through this module, not by name, so a
+test can replace it and see the board follow (ADR-051). Before 9.0.0 the header
+block of the issue page called it too (ADR-091 removed the page).
 
 The function takes the manifest and the issue's folder and reads nothing else,
-unless the caller passes a reader for the issues it depends on (ADR-062). The
-board can read an issue from another worktree (ADR-048) while the page reads
-this checkout, so the two share the function and not the checkout.
+unless the caller passes a reader for the issues it depends on (ADR-062), so the
+board can read an issue from another worktree (ADR-048).
 
-This module is a leaf: it imports `artifact_owed`, `lifecycle`, `readiness_record`,
-`status_words` and `effective` (inside a function), and none of `flow`, `check_cmd`
-or `render_cmd`.
+This module is a leaf: it imports `lifecycle`, `status_words` and `effective`
+(inside a function), and none of `flow` or `check_cmd`.
 """
-# DEPENDENCY: standard library (dataclasses, os); compass_pkg.artifact_owed, lifecycle,
-# readiness_record, status_words, effective (imported inside a function).
+# DEPENDENCY: standard library (dataclasses, os); compass_pkg.lifecycle,
+# status_words, effective (imported inside a function).
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
 
-from compass_pkg import artifact_owed, lifecycle, readiness_record, status_words
+from compass_pkg import lifecycle, status_words
 
 NOT_ASSESSED = "not assessed"
 
@@ -39,8 +36,6 @@ class IssueDetail:
     stage_problem: object = None
     #: The reason of the blocked flag while it counts (an issue in progress or in review), else None.
     blocked: object = None
-    #: The repository readiness line, from the manifest's `readiness:` summary.
-    readiness: str = ""
     #: One `{id, kind, round, status, path}` for each registered document, in registry order. A
     #: kind that repeats has one for each round, so no reader shows only the first, and a
     #: kind with a document per work unit has one for each `unit`.
@@ -62,34 +57,15 @@ def _gate_counts(manifest):
     return sum(1 for g in entries if g.get("status") == "pass"), len(entries)
 
 
-def _view(task_dir, manifest=None, other=False):
-    from compass_pkg import effective
-    try:
-        return effective.view_or_legacy(task_dir, manifest=manifest)
-    except Exception:                                       # noqa: BLE001 - nothing declares a condition
-        return None
-    except effective.MajorRefusal:
-        # A row about another issue shows what its manifest says; only a command on
-        # the issue itself is refused for its generation's major.
-        if other:
-            return None
-        raise
-
-
 def _documents(manifest, task_dir=None, other=False):
-    """The registered documents, each as the facts a reader shows. `text` is the
-    "not needed: ..." line of a document whose condition is false and that has no
-    file. It comes from `artifact_owed`, the function the issue page uses."""
+    """The documents an older release registered, each as the facts a reader shows.
+    9.0.0 registers none and judges none owed (ADR-091), so `text` is always None; the
+    key stays so a reader of the old shape still parses it."""
     found = []
-    view, read = None, False
     for entry in manifest.get("artifacts") or []:
         if isinstance(entry, dict) and entry.get("kind"):
             rnd = entry.get("round")
             text = None
-            if task_dir and not entry.get("path") and entry.get("status") != "omitted":
-                if not read:
-                    view, read = _view(task_dir, manifest, other), True
-                text = artifact_owed.not_needed(manifest, view, entry)
             fact = {"id": str(entry.get("id") or ""), "kind": str(entry["kind"]),
                     "round": rnd if isinstance(rnd, int) else None,
                     "status": str(entry.get("status") or ""),
@@ -102,6 +78,22 @@ def _documents(manifest, task_dir=None, other=False):
     return tuple(found)
 
 
+def _refuse_another_major(manifest, task_dir, other):
+    """Raise the major refusal of an issue whose generation another major built, unless the
+    caller views many issues (`other`). Before 9.0.0 the document rows read the issue's
+    configuration and raised it on the way; they read none now (ADR-091), so the read is
+    made here and its result is not used."""
+    if not task_dir or other:
+        return
+    from compass_pkg import effective
+    try:
+        effective.effective_for(task_dir, manifest=manifest)
+    except effective.MajorRefusal:
+        raise
+    except Exception:                                       # noqa: BLE001 - no configuration
+        return
+
+
 def _stage(manifest, task_dir, state):
     """`(stage, problem)`, from `lifecycle.stage_of`: the dependency derivation
     compares stages there, so the board and the derivation read one rule."""
@@ -112,6 +104,7 @@ def detail(manifest, task_dir, read=None, other=False):
     """The `IssueDetail` of one issue. `read` is a `lifecycle` reader for the
     issues it depends on; without one, no dependency is judged. `other` is for a
     view of many issues: a generation built by another major is then not refused."""
+    _refuse_another_major(manifest, task_dir, other)
     state = lifecycle.state_of(manifest, task_dir)
     stage, problem = _stage(manifest, task_dir, state)
     passed, total = _gate_counts(manifest)
@@ -123,7 +116,6 @@ def detail(manifest, task_dir, read=None, other=False):
     return IssueDetail(str(manifest.get("delivery_approach") or NOT_ASSESSED), state, stage,
                        passed, total, problem,
                        str(flag.get("reason") or "no reason recorded") if flag else None,
-                       readiness_record.line(manifest.get("readiness")),
                        _documents(manifest, task_dir, other), waits, deps)
 
 

@@ -6,15 +6,12 @@ implementations:
   acceptance-applicability-agrees:
     verdict_digest: baea34d02ee85c6644cd8c6952d7edd0a933ddbe885ba1e6bb85984b86564ead
     version: 1.0.0
-  artifacts-approved:
-    verdict_digest: 2b8b264f4e34df9c0cde464b3ed58cb558076b012c74e8a6551bad4b58a93e9f
+  acceptance-support-present:
+    verdict_digest: cc450f0b647aa8431e0b650e49382539554bbeda7de277369a5bf61859fb8796
     version: 1.0.0
   backfills-paid:
     verdict_digest: 62ed50f7712aa0d5df96f6e1235080bf0b4d3902d30cb7eb4e49bc5f253f2f65
-    version: 1.0.0
-  borrowed-documents-answered:
-    verdict_digest: 87eee465479486d9dba453319a9a5f124e12ecbe667501313d82b22d1bdf7160
-    version: 1.0.0
+    version: 1.1.0
   changed-code-traces-to-scenario:
     verdict_digest: 394197b1855fd37b7bf458182823a4835d1dc90e0af00f64e027e8677570660b
     version: 1.0.0
@@ -24,50 +21,47 @@ implementations:
   command-passes:
     verdict_digest: 4b8c7eeaacbf5c4fdcfab903572f07572aea5ab0addbc8dc1d1a14d6b91b356f
     version: 1.0.0
-  consistency-check-passes:
-    verdict_digest: 208c4262608b2760cd1c26c8edb8b86714518fa28c596331c658a618de56bb81
-    version: 1.0.0
-  contracts-declared:
-    verdict_digest: 96de578c9906d02aecacad67edc3aa19ee80f1da5a06a28e98a2e0da40c5ef6f
-    version: 1.0.0
   declared-tests-resolve:
     verdict_digest: 135069d070419a5861e8a4693bd0be2979076b5f97afb2c1669a44c9a9f159a0
     version: 1.0.0
-  design-within-word-ceiling:
-    verdict_digest: a9dad9171ccb7e7c48197ef40ab987cc62ccce86200cc1d40df9d887be30bb99
-    version: 1.0.0
   dod-evidence-typed:
     verdict_digest: ed4b25b3f2949cc152fe8e7808fbd7dfb9879d29b051d68943830149194b7b3d
-    version: 2.0.0
+    version: 2.2.0
   evidence-identity-matches:
     verdict_digest: a19eb720d6c5908a4e1d1dd236c92d2bd8a22a6ec55faa6e8a35a3a048b90a87
     version: 1.0.0
   evidence-matches-tree:
     verdict_digest: 47a194d3c9acc6cb71c710aa4d061ba711aa813ef7207314e9f4ec0363bafd8d
-    version: 1.0.0
+    version: 1.1.0
   gate-evidence-present:
     verdict_digest: b53aa32d1beaf81e57c6d644ca7cb886b57c6433811a7592d75105009abbe720
     version: 1.0.0
   human-approval-present:
     verdict_digest: 7a180471d638a2e8f78ffed9af7c7cd3d7610a13c5c6d328701e1b7bf493295c
-    version: 1.2.0
+    version: 1.3.0
+  isolation-proven:
+    verdict_digest: 2d0fb3ab4201d8d53c58b96a2b0b80f68d5841a0fb2efc3c5b2e09c55d941fd6
+    version: 1.0.0
   landed-by-resolves:
     verdict_digest: af8f3456b7e7a6f5a0edae951ecf4656fce567367fded6fc0e4bd2cf7e53b80e
     version: 1.0.0
-  multiagent-run-recorded:
-    verdict_digest: 31e31868b5a0bb6885734f2817617272e4e7bf1356cd55fd6ea8da3c492c7201
-    version: 1.1.0
+  layering-test-passed:
+    verdict_digest: ff42a18ab71e9098b28123e08d4e1f25f333f443e06b7c29f5340158770dca18
+    version: 1.0.0
   nfr-rows-resolved:
     verdict_digest: 17cdacf146eaedcfa44275a3cc748d75e4239f9952b7f5cbe83ee1f3069934c8
     version: 1.0.0
   no-trusted-rerun:
     verdict_digest: ad2da5db60a39f075be271164795dce779783d540bfd8f2194757e0574fca505
     version: 1.0.0
+  outer-loop-attempts-recorded:
+    verdict_digest: 95b1279220c8c7f2cb3495019aaae7d371f71886f17f28a6536a3819f65f7f1a
+    version: 1.0.0
   outer-loop-recorded:
     verdict_digest: 7e8e64e96ca3605804ee13912e9a8a629e0bec8fe96cc4439e7d115ab46d9b21
     version: 1.0.0
-  rendered-blocks-current:
-    verdict_digest: 8942dbb4d40c6f28e25aa58db3e88567677c04c5e81768042df1ad36ec1134d1
+  request-recorded:
+    verdict_digest: 55b2011d4592a7d64fc69205208d45d7910815ee982825cbc24491784a67b573
     version: 1.0.0
   scenario-has-id-and-intent:
     verdict_digest: 6ad20aed1f0071aa85c61afe4e62b17c0984bd98a763244787490bf78ae2c2fd
@@ -78,6 +72,9 @@ implementations:
   scenarios-have-tests:
     verdict_digest: 3c4e371a588f04aa5cae9422d92ff4d8d811b7ee26252e8547aae97fb4092bcc
     version: 1.0.0
+  ship-approval-present:
+    verdict_digest: 2ce5ee2a5e14a2104d251f5b9d92a3edf863ed888ebc6025409a2e439cd42890
+    version: 1.1.0
   spike-conclusion-present:
     verdict_digest: 692e3eaafa7389de3b91748737a76ea6233c1aa3e4694c4321123b46ca026d63
     version: 1.0.0
@@ -86,4 +83,4 @@ implementations:
     version: 1.0.0
   suite-passed:
     verdict_digest: e395bdee510411c77a8231034c59c54485c800d6bc047e12e1b28f1bfd97d531
-    version: 1.0.0
+    version: 1.1.0

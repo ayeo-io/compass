@@ -167,8 +167,13 @@ def test_f4_delegated_g5_recorded(tmp_path):
     ok, detail = checks._check_human_approval(manifest_of(root), str(task_dir(root)))
     assert ok and f"by {OWNER} via {ARCHITECT} under DL-1" in detail, detail
     assert _delegations(root)["DL-1"]["uses"] == 1
-    devlog = (task_dir(root) / "devlog.md").read_text(encoding="utf-8")
-    assert rec["id"] in devlog and ARCHITECT in devlog and "DL-1" in devlog
+    # The authority is copied into the record in the same save; the devlog gets
+    # no line (ADR-095 decision 12).
+    copy = manifest_of(root)["delegations_used"]["DL-1"]
+    assert copy["agent"] == ARCHITECT and copy["delegated_by"] == OWNER
+    assert copy["forms"] == ["g5", "checks", "documents"]
+    devlog = task_dir(root) / "devlog.md"
+    assert not devlog.is_file() or "DL-1" not in devlog.read_text(encoding="utf-8")
 
 
 # --- an agent with no delegation cannot approve (`TRC-F5`) -----------------------------------
@@ -274,20 +279,14 @@ def _hook_json(script, root, body, **env_extra):
 
 
 def _overnight(root):
-    """Three approvals under DL-1: a check, a document the agent registered in
-    the same session, and the decisions taken."""
+    """Two approvals under DL-1: a check and the decisions taken. 9.0.0 removed the
+    document form, --artifact, with the document statuses (ADR-091)."""
     body = manifest_of(root)
-    (root / "docs").mkdir(exist_ok=True)
-    (root / "docs" / "td.md").write_text("# design\n", encoding="utf-8")
-    body["artifacts"] = [{"id": "ART-TD", "kind": "technical-design",
-                          "status": "awaiting-approval", "path": "docs/td.md",
-                          "registered_session": "sess-agent"}]
     body["decisions_taken"] = [{"id": "DEC-1", "question": "q", "resolution": "r",
                                 "by": "spec-author", "stage": "define", "status": "open"}]
     save_manifest(root, body)
     assert not _type(root, f"--agent {ARCHITECT} --until {_soon()}").block
-    for argv in (["--check", CHECK, "--scope", "the review"],
-                 ["--artifact", "technical-design"], ["--decisions"]):
+    for argv in (["--check", CHECK, "--scope", "the review"], ["--decisions"]):
         code, out, err = delegated(root, ARCHITECT, "--issue", SLUG, *argv,
                                    session="sess-agent")
         assert code == 0, out + err
@@ -304,7 +303,7 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
     assert delegations.review_summary(str(root / ".compass")) == ""
     monkeypatch.undo()
     ids = _overnight(root)
-    assert len(ids) == 3, ids
+    assert len(ids) == 2, ids
     start = _hook_json("session-start.sh", root, {"session_id": "sess-1","source": "startup"})
     prompt = _hook_json("approval-summary.sh", root,
                         {"session_id": "sess-1","hook_event_name": "UserPromptSubmit",
@@ -312,8 +311,6 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
     for shown in (start["systemMessage"], prompt["systemMessage"]):
         for needle in ids + [SLUG, ARCHITECT, "/compass:approve", "/compass:reject"]:
             assert needle in shown, (needle, shown)
-        flagged = [line for line in shown.splitlines() if "technical-design" in line]
-        assert flagged and "wrote" in flagged[0], shown
     # Shown again until the person marks them reviewed; nothing was written.
     before = (task_dir(root) / "manifest.yml").read_bytes()
     again = _hook_json("approval-summary.sh", root,
@@ -322,7 +319,7 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
     assert again["systemMessage"] == prompt["systemMessage"]
     assert (task_dir(root) / "manifest.yml").read_bytes() == before
     result = _type(root, "", command="compass:approve")
-    assert not result.block and "3" in result.message, result
+    assert not result.block and "2" in result.message, result
     for rec in manifest_of(root)["evidence"]:
         if rec["id"] in ids:
             assert rec["reviewed_by"] == OWNER and rec["reviewed_at"], rec
@@ -332,29 +329,25 @@ def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
     assert "systemMessage" not in after, after
 
 
-# --- the person overrules a delegated check or document approval (`TRC-F14`) ------------------
+# --- the person overrules a delegated check approval (`TRC-F14`) ------------------------------
+#
+# The document half went with --artifact in 9.0.0 (ADR-091).
 
-def test_f14_overrule_check_and_document(tmp_path):
-    from compass_pkg import approval_records, effective, review_records
+def test_f14_overrule_a_delegated_check(tmp_path):
+    from compass_pkg import approval_records, effective
     root = project(tmp_path)
     ids = _overnight(root)
     check_id = next(i for i in ids if CHECK in i)
-    doc_id = next(i for i in ids if "ARTIFACT" in i)
     result = _type(root, f"{check_id} the review missed the migration",
                    command="compass:reject")
     assert not result.block, result
     last = manifest_of(root)["evidence"][-1]
     assert last["check"] == CHECK and last["decision"] == "rejected"
     assert last["overrules"] == check_id and last["via"] == "prompt"
-    view = effective.view_or_legacy(str(task_dir(root)))
+    view = effective.effective_for(str(task_dir(root)))
     status, detail = approval_records.judge(CHECK, view.config["checks"][CHECK],
                                             manifest_of(root), str(task_dir(root)))
     assert status == "fail" and detail.startswith("approval withdrawn"), detail
-    result = _type(root, f"{doc_id} the threat model is missing", command="compass:reject")
-    assert not result.block, result
-    entry = manifest_of(root)["artifacts"][0]
-    assert entry["status"] == "draft" and entry["rejected_by"] == OWNER
-    assert entry["rejected_digest"] == review_records.file_digest(str(root / "docs" / "td.md"))
     # A record that was not made under a delegation is not overruled this way.
     result = _type(root, "EV-NOPE reason", command="compass:reject")
     assert result.block

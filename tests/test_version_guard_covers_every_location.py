@@ -19,7 +19,7 @@ spelling, an evidence record with no identity, and `OLD_VERSIONS`, which no
 code read and which a missing comma had silently corrupted. A check that
 cannot fail gives false confidence, which is worse than no check.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 

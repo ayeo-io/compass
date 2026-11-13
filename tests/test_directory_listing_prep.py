@@ -33,7 +33,8 @@ def test_dl_1_the_readme_says_what_compass_runs_sends_and_fetches():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     section = readme.split("## What Compass runs, sends and fetches", 1)[1]
     section = section.split("\n## ", 1)[0]
-    for named in ("compass intent ingest", "compass record sync",
-                  "compass run", "command-passes", "evals/harness.py",
-                  "transcript"):
+    # Since 9.0.0 Compass reads no session transcript (ADR-093); the one read of
+    # GitHub it makes is the pull request `issue link set --pr` names. Since
+    # 9.0.0 a project's own commands are its `project_checks` (ADR-094).
+    for named in ("compass record sync", "project_checks", "issue link set"):
         assert named in section, named

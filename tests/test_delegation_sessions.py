@@ -131,8 +131,9 @@ def test_TRC_034_a_subagent_of_the_delegating_session_approves_on_an_issue_in_an
     assert (last["approver"], last["approved_by_agent"], last["delegation"]) == (
         OWNER, ARCH, "DL-1")
     assert delegations(top)["DL-1"]["uses"] == 1
-    devlog = (wt / "devlog.md").read_text(encoding="utf-8")
-    assert ARCH in devlog and "DL-1" in devlog
+    # The copy of the delegation goes into the worktree issue's own record.
+    copy = _yaml_of(wt / "manifest.yml")["delegations_used"]["DL-1"]
+    assert copy["covers_session"] is True and "sess-S" not in str(copy)
     assert not delegations(work)
 
 

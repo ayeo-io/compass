@@ -1,9 +1,10 @@
-"""The pre-tool hook and the two multiagent scripts read project settings
-through the one settings reader, so `compass.yml` is honoured and a project
+"""The pre-tool hook reads project settings through the one settings reader, so `compass.yml` is honoured and a project
 with only `.compass/config.yml` is decided as before (ADR-043).
 
-Each test runs a copy of the hook or the scripts made by `compat_hook.install`,
-in a project built for the case, so no run reads or writes this repository.
+Each test runs a copy of the hook made by `compat_hook.install`, in a project
+built for the case, so no run reads or writes this repository. The two
+multiagent scripts were tested here too (SH-3 and SH-9) until 9.0.0 removed
+them (ADR-090); the reader tests of SH-3 and SH-9 stay.
 
 Scenario ids: SH-1 to SH-3, SH-9 and SH-10, in the acceptance criteria of the
 issue `settings-reader-hook`.
@@ -152,63 +153,6 @@ def _output(result):
     return result.stdout + result.stderr
 
 
-@pytest.mark.parametrize("where", ["compass", "old"])
-def test_sh3_multiagent_reads_root_and_cap_from_either_file(box, where):
-    framework, base = box
-    repo = make_repo(base, **{where: SETTINGS % (where, 3, where)})
-    text = _output(run_script(framework, repo, "multiagent.sh", "--dry-run"))
-    assert f"wt-{where}" in text and "config max 3" in text, text
-
-
-def test_sh3_an_older_heading_and_top_level_keys_still_read_from_the_old_file(box):
-    framework, base = box
-    for body, root in (
-            ("swarm:\n  worktree_root: ../wt-heading\n  max_worktrees: 2\n",
-             "wt-heading"),
-            ("worktree_root: ../wt-flat\nmax_worktrees: 2\n", "wt-flat")):
-        repo = make_repo(base, old="mode: enforced\n" + body)
-        text = _output(run_script(framework, repo, "multiagent.sh",
-                                  "--dry-run"))
-        assert "config max 2" in text, text
-        assert root in text, text
-
-
-def test_sh3_compass_yml_is_read_when_both_exist_and_the_old_file_has_only_state(
-        box):
-    framework, base = box
-    repo = make_repo(base, compass="schema: 1\n" + SETTINGS % ("new", 3, "new"),
-                     old=STATE)
-    text = _output(run_script(framework, repo, "multiagent.sh", "--dry-run"))
-    assert "wt-new" in text and "config max 3" in text, text
-    text = _output(run_script(framework, repo, "integrate.sh"))
-    assert "test command:  run-new" in text, text
-
-
-def test_sh3_a_script_stops_on_a_settings_conflict(box):
-    framework, base = box
-    repo = make_repo(base, compass="schema: 1\n" + SETTINGS % ("new", 3, "new"),
-                     old=SETTINGS % ("old", 5, "old"))
-    for script, flags in (("multiagent.sh", ("--dry-run",)), ("integrate.sh", ())):
-        result = run_script(framework, repo, script, *flags)
-        assert result.returncode != 0, script
-        assert "settings-conflict" in _output(result), script
-
-
-def test_sh3_a_project_with_no_settings_uses_the_defaults(box):
-    framework, base = box
-    repo = make_repo(base)
-    text = _output(run_script(framework, repo, "multiagent.sh", "--dry-run"))
-    assert ".compass-worktrees" in text and "config max 6" in text, text
-
-
-@pytest.mark.parametrize("where", ["compass", "old"])
-def test_sh3_integrate_reads_the_test_command_from_either_file(box, where):
-    framework, base = box
-    repo = make_repo(base, **{where: SETTINGS % (where, 3, where)})
-    out = run_script(framework, repo, "integrate.sh")
-    assert f"test command:  run-{where}" in _output(out), out.stdout
-
-
 def test_sh3_scalar_stops_on_a_recursive_alias(tmp_path):
     """A settings file can anchor a mapping inside itself. The lookup must end
     and report the key as missing, not recurse until Python gives up."""
@@ -245,30 +189,6 @@ def test_sh9_a_key_outside_its_documented_path_is_not_read_from_compass_yml(
     (tmp_path / "compass.yml").write_text(DECOYS)
     for key in ("test_command", "worktree_root", "max_worktrees"):
         assert project_settings.scalar(str(tmp_path), key) == "", key
-
-
-def test_sh9_the_scripts_ignore_a_decoy_key_in_compass_yml(box):
-    framework, base = box
-    repo = make_repo(base, compass=DECOYS + DOCUMENTED)
-    text = _output(run_script(framework, repo, "multiagent.sh", "--dry-run"))
-    assert "config max 2" in text and "wt-right" in text, text
-    assert "wrong" not in text, text
-    text = _output(run_script(framework, repo, "integrate.sh"))
-    assert "test command:  right" in text, text
-
-
-@pytest.mark.parametrize("where", ["compass", "old"])
-@pytest.mark.parametrize("script,args", [("multiagent.sh", ("--dry-run",)),
-                                         ("integrate.sh", ())])
-def test_sh9_a_settings_file_that_cannot_be_read_stops_the_script(
-        box, where, script, args):
-    framework, base = box
-    repo = make_repo(base, **{where: "multiagent: [unclosed\n"})
-    out = run_script(framework, repo, script, *args)
-    name = "compass.yml" if where == "compass" else "config.yml"
-    assert out.returncode == 1, _output(out)
-    assert name in out.stderr, out.stderr
-    assert "config max" not in out.stdout and "test command" not in out.stdout
 
 
 # SH-10: the hook starts Python for the globs only when a settings file exists.

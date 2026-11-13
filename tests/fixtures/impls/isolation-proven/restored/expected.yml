@@ -1,0 +1,2 @@
+verdict: pass
+input: an in-scope issue whose isolation proof shows the `parallel` run and both `runs` of each `repeat` entry passed

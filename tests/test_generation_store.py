@@ -10,6 +10,7 @@ starts with its scenario id.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -177,10 +178,14 @@ def test_gs_2_resolved_holds_the_catalogues_and_the_issue_inputs(project):
     assert resolved["autonomy"] == "balanced"
     assert resolved["approach"] is None
     assert resolved["conformance"] == {"status": "conformant", "unlocked": []}
-    assert set(resolved["capabilities"]) >= {"entry-exit-evaluation", "artifact-freshness"}
+    # 9.0.0 removed artifact-freshness from the shipped default (ADR-091).
+    assert "entry-exit-evaluation" in resolved["capabilities"]
+    assert "artifact-freshness" not in resolved["capabilities"]
     for name in ("dimensions", "stages", "approaches", "rules", "checks", "gates",
-                 "artifacts", "vocabulary", "evidence_types"):
+                 "vocabulary", "evidence_types"):
         assert resolved[name], name
+    # 9.0.0 declares no document kind (ADR-091), so the empty catalogue is not stored.
+    assert not resolved.get("artifacts"), resolved.get("artifacts")
 
 
 def test_gs_2_versions_record_the_resolver_the_parent_and_the_implementations(project):
@@ -189,11 +194,14 @@ def test_gs_2_versions_record_the_resolver_the_parent_and_the_implementations(pr
     root, task_dir = project
     _commit(root, task_dir)
     versions = _load(_gen(task_dir, 1) / "versions.yml")
-    assert versions["resolver"] == "1.0.0"
+    # 1.1.0 since the resolver reads the fixed check set (ADR-094); the stored
+    # shape did not change, so the major stays 1.
+    assert versions["resolver"] == "1.1.0"
     assert versions["cli"] == COMPASS_VERSION
     parent = versions["parents"][0]
-    assert (parent["ref"], parent["source"]) == ("compass:default@8", "shipped")
-    assert parent["version"].startswith("8.") and parent["digest"].startswith("sha256:")
+    assert (parent["ref"], parent["source"]) == ("compass:checks@9", "shipped")
+    assert parent["version"].startswith("9.") and parent["digest"].startswith("sha256:")
+    assert re.fullmatch(r"[0-9a-f]{64}", parent["sha256"]), parent
     assert versions["project"] is None and versions["issue_overlay_digest"] is None
     used = versions["implementations"]
     assert used["suite-passed"] == check_registry.installed_version("suite-passed")
@@ -211,28 +219,31 @@ def test_gs_2_the_marker_holds_the_digest_of_each_file(project):
     assert marker["written"]
 
 
-def test_gs_2_provenance_names_the_layer_and_operation_behind_a_field(tmp_path, monkeypatch):
+def test_gs_2_versions_name_the_project_file_whose_settings_were_applied(tmp_path, monkeypatch):
+    """No layer merges since 9.0.0 (ADR-094), so the provenance names no layer
+    behind a field; `versions.yml` names the file whose tighten-only settings
+    were applied, and the digest of those settings."""
     root, task_dir = _project(tmp_path, compass_yml={
-        "schema": 1, "checks": {"extra": _new_check()}})
+        "schema": 1, "signoff_labels": ["billing"]})
     monkeypatch.chdir(root)
     _commit(root, task_dir)
-    fields = _load(_gen(task_dir, 1) / "provenance.yml")["fields"]
-    assert fields["checks.extra"]["steps"] == [{"layer": "project", "op": "add"}]
-    assert fields["checks.suite-passed"]["steps"][0] == {"layer": "default", "op": "add"}
+    assert _load(_gen(task_dir, 1) / "provenance.yml")["fields"] == {}
     versions = _load(_gen(task_dir, 1) / "versions.yml")
     assert versions["project"]["path"] == "compass.yml"
     assert versions["project"]["digest"].startswith("sha256:")
 
 
-def test_gs_2_an_issue_overlay_is_recorded_by_digest(tmp_path, monkeypatch):
+def test_gs_2_a_manifest_config_is_not_resolved_or_recorded(tmp_path, monkeypatch):
+    """9.0.0 has no issue layer (ADR-094): a manifest's `config:` adds nothing to
+    the generation, and no overlay digest is recorded."""
     manifest = dict(MANIFEST, config={"checks": {"extra": _new_check()}})
     root, task_dir = _project(tmp_path, manifest=manifest)
     monkeypatch.chdir(root)
     _commit(root, task_dir)
     versions = _load(_gen(task_dir, 1) / "versions.yml")
-    assert versions["issue_overlay_digest"].startswith("sha256:")
-    fields = _load(_gen(task_dir, 1) / "provenance.yml")["fields"]
-    assert fields["checks.extra"]["steps"] == [{"layer": "issue", "op": "add"}]
+    assert versions["issue_overlay_digest"] is None
+    assert "checks.extra" not in _load(_gen(task_dir, 1) / "provenance.yml")["fields"]
+    assert "extra" not in _load(_gen(task_dir, 1) / "resolved.yml")["checks"]
 
 
 def test_gs_2_records_start_empty_and_carry_an_invalidation(project):
@@ -374,53 +385,29 @@ def test_gs_5_a_different_project_layer_commits_the_next_generation(project):
     root, task_dir = project
     _commit(root, task_dir)
     (root / "compass.yml").write_text(
-        yaml.safe_dump({"schema": 1, "checks": {"extra": _new_check()}}), encoding="utf-8")
+        yaml.safe_dump({"schema": 1, "signoff_labels": ["billing"]}), encoding="utf-8")
     assert _commit(root, task_dir).number == 2
     assert _commit(root, task_dir).committed is False
 
 
-def test_gs_5_a_different_issue_overlay_commits_the_next_generation(project):
+def test_gs_5_a_changed_config_commits_nothing(project):
+    """A manifest's `config:` is not read (ADR-094), so writing one is no change."""
     root, task_dir = project
     _commit(root, task_dir)
-    _write_manifest(task_dir, config={"checks": {"extra": _new_check()}})
-    assert _commit(root, task_dir).number == 2
-
-
-def test_gs_5_an_overlay_that_restates_a_default_is_still_a_different_overlay(project):
-    root, task_dir = project
-    _commit(root, task_dir)
-    _write_manifest(task_dir, config={"autonomy": "balanced"})
+    _write_manifest(task_dir, config={"checks": {"extra": _new_check()},
+                                      "autonomy": "controlled"})
     again = _commit(root, task_dir)
-    assert (again.number, again.committed) == (2, True)
-    assert _load(_gen(task_dir, 2) / "resolved.yml")["autonomy"] == "balanced"
-
-
-def test_gs_5_a_commit_with_no_change_does_not_run_the_lint(project, monkeypatch):
-    """The lint is slow on a project layer, and a stored generation was linted
-    when it was committed, so the lint runs only when a write follows."""
-    from compass_pkg import effective, policy_lint
-    root, task_dir = project
-    manifest = _manifest(task_dir)
-    manifest.update(OUTCOME)
-    assert effective.commit_generation(str(task_dir), manifest).committed
-    calls = []
-    real = policy_lint.lint_loaded
-    monkeypatch.setattr(policy_lint, "lint_loaded",
-                        lambda *a, **k: calls.append(1) or real(*a, **k))
-    again = effective.commit_generation(str(task_dir), _manifest(task_dir))
     assert (again.number, again.committed) == (1, False)
-    assert calls == []
-    manifest = _manifest(task_dir)
-    manifest["delivery_approach"] = "full"
-    assert effective.commit_generation(str(task_dir), manifest).committed
-    assert calls == [1]
+    assert not _gen(task_dir, 2).exists()
 
 
 # --- GS-6: the target folder -------------------------------------------------------------
 
-def test_gs_6_a_complete_unreferenced_target_is_refused(project, monkeypatch):
+def test_gs_6_a_complete_unreferenced_target_is_written_again(project, monkeypatch):
+    """A crash between the marker and the manifest replace leaves a complete folder
+    the manifest does not name. It holds only files a commit writes, so the next
+    commit writes it again from the configuration resolved now."""
     from compass_pkg import generation
-    from compass_pkg.core import CompassError
     root, task_dir = project
     _write_manifest(task_dir, generation=0)
     monkeypatch.setattr(generation, "_after_step",
@@ -430,10 +417,12 @@ def test_gs_6_a_complete_unreferenced_target_is_refused(project, monkeypatch):
         _commit(root, task_dir)
     monkeypatch.undo()
     monkeypatch.chdir(root)
-    with pytest.raises(CompassError) as caught:
-        _commit(root, task_dir)
-    assert "complete" in str(caught.value) and "delete" not in str(caught.value).lower()
-    assert (_gen(task_dir, 1) / "complete").is_file()
+    assert {g.number: g.state for g in generation.states(str(task_dir))} == {
+        1: "complete-unreferenced"}
+    result = _commit(root, task_dir)
+    assert (result.number, result.committed) == (1, True)
+    assert _manifest(task_dir)["generation"] == 1
+    assert {g.number: g.state for g in generation.states(str(task_dir))} == {1: "current"}
 
 
 def test_gs_6_an_incomplete_target_is_overwritten(project, monkeypatch):
@@ -491,10 +480,10 @@ def test_gck_1_a_file_the_commit_did_not_write_is_refused(project, stray):
         _commit(root, task_dir)
     message = str(caught.value)
     assert named in message and str(folder) in message, message
-    # The issue is named: a person may be pointed at another issue, and `--discard`
-    # without it would remove that issue's folder instead.
-    assert "compass issue configure --issue feature --discard 1" in message, message
-    assert "everything in it" in message, message
+    # The folder is named by its path, which names the issue: a person may be
+    # pointed at another issue, and a bare number would not say which.
+    assert f"remove the folder {folder} and everything in it" in message, message
+    assert "compass issue configure" not in message, message
     assert _snapshot(folder) == before
     assert (task_dir / "manifest.yml").read_bytes() == manifest_before
 
@@ -521,52 +510,14 @@ def test_gck_3_files_a_commit_writes_are_still_overwritten(project):
     assert _load(folder / "resolved.yml")["schema"] == 1
 
 
-# --- GRN: a refusal's commands name the refused issue (generation-refusals-name-issue) ----
+# --- GRN: no refusal names a removed command ------------------------------------------------
 
-def _printed_commands(message):
-    import re
-    return re.findall(r"`(compass (?:issue configure|approach evaluate)[^`]*)`", message)
-
-
-def test_grn_1_the_printed_command_acts_on_the_refused_issue(tmp_path, monkeypatch):
-    """A person can be pointed at another issue when a commit refuses. Each command the
-    refusal prints must act on the refused issue, never on the one the pointer names."""
-    import shlex
-    import shutil
-    from compass_pkg.core import CompassError
-    root, task_dir = _project(tmp_path)
-    _, other_dir = _project(tmp_path, slug="other")
-    for slug in (SLUG, "other"):
-        code, out, err = _run(root, "approach", "evaluate", "--issue", slug, "--write")
-        assert code == 0, out + err
-        shutil.copytree(_gen(task_dir.parent / slug, 1), _gen(task_dir.parent / slug, 2))
-    (root / ".compass" / "current-task").write_text("other\n", encoding="utf-8")
-    monkeypatch.chdir(root)
-    with pytest.raises(CompassError) as caught:
-        _commit(root, task_dir, delivery_approach="full")
-    commands = _printed_commands(str(caught.value))
-    assert [c for c in commands if "--commit" in c] and [c for c in commands if "--discard" in c]
-    for command in commands:
-        assert f"--issue {SLUG}" in command, command
-    other_before = _snapshot(_gen(other_dir, 2))
-    for command in sorted(commands, key=lambda c: "--discard" in c):
-        code, out, err = _run(root, *shlex.split(command)[1:])
-        assert "other" not in out + err, out + err
-        assert _snapshot(_gen(other_dir, 2)) == other_before
-    assert not _gen(task_dir, 2).exists()
-
-
-def test_grn_2_every_printed_configure_command_names_the_issue():
-    """Each refusal in these modules that prints `compass issue configure` names
-    `--issue`, so no new message can act on the issue the pointer names."""
-    import re
-    for name in ("generation", "issue_config_cmd"):
+def test_grn_2_no_message_names_the_removed_issue_configure():
+    """`compass issue configure` was removed with the issue layer (ADR-094), so no
+    refusal of the store may tell a person to run it."""
+    for name in ("generation", "effective"):
         source = (PACKAGE / f"{name}.py").read_text(encoding="utf-8")
-        # Join the pieces of an implicitly concatenated string, so a command split
-        # across source lines reads as one.
-        joined = re.sub(r"\"\s*\n\s*f?\"", "", source)
-        bare = re.findall(r"issue configure --(?!issue)\S*", joined)
-        assert not bare, (name, bare)
+        assert "issue configure" not in source, name
 
 
 # --- GS-7: atomic writes -----------------------------------------------------------------
@@ -607,15 +558,18 @@ def test_gs_7_a_failed_write_leaves_no_temporary_file(project, monkeypatch):
 
 def test_gs_8_effective_for_returns_the_stored_generation_offline(tmp_path, monkeypatch):
     from compass_pkg import effective
-    root, task_dir = _project(tmp_path, compass_yml={
-        "schema": 1, "checks": {"extra": _new_check()}})
+    import stored_generation
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1})
     monkeypatch.chdir(root)
-    _commit(root, task_dir)
+    # A check the check set does not hold, as a generation stored before 9.0.0
+    # could hold it.
+    held = stored_generation.commit(
+        root, task_dir, lambda resolved: resolved["checks"].update(extra=_new_check()))
     (root / "compass.yml").unlink()
     view = effective.effective_for(str(task_dir))
-    assert (view.source, view.generation, view.issue) == ("generation", 1, SLUG)
+    assert (view.source, view.generation, view.issue) == ("generation", held, SLUG)
     assert "extra" in view.config["checks"]
-    assert view.versions["resolver"] == "1.0.0"
+    assert view.versions["resolver"] == "1.1.0"
     assert view.autonomy == "balanced"
 
 
@@ -625,9 +579,13 @@ def test_gs_8_a_later_project_change_does_not_reach_the_issue(tmp_path, monkeypa
     monkeypatch.chdir(root)
     _commit(root, task_dir)
     (root / "compass.yml").write_text(
-        yaml.safe_dump({"schema": 1, "checks": {"later": _new_check()}}), encoding="utf-8")
-    assert "later" not in effective.effective_for(str(task_dir)).config["checks"]
-    assert "later" in effective.effective_for(None).config["checks"]
+        yaml.safe_dump({"schema": 1, "signoff_labels": ["later"]}), encoding="utf-8")
+
+    def labels(view):
+        return view.config["gates"]["G5"]["when"]["labels_any"]
+
+    assert "later" not in labels(effective.effective_for(str(task_dir)))
+    assert "later" in labels(effective.effective_for(None))
 
 
 @pytest.mark.parametrize("damage", ["no-marker", "edited-file", "no-folder"])
@@ -748,7 +706,9 @@ def test_gs_11_write_commits_generation_one_for_an_issue_with_none(tmp_path):
     assert "committed generation 1" in out
     assert _manifest(task_dir)["generation"] == 1
     assert (_gen(task_dir, 1) / "complete").is_file()
-    assert _manifest(task_dir)["delivery_approach"] == "regular"
+    # The path stores `delivery` and the evidence owed (ADR-092 decisions 2 and 3).
+    assert _manifest(task_dir)["delivery_approach"] == "delivery"
+    assert _manifest(task_dir)["evidence_required"]
 
 
 def test_gs_11_write_commits_generation_one_for_generation_zero(tmp_path):
@@ -767,16 +727,18 @@ def test_gs_11_a_repeat_says_no_change_and_a_new_assessment_commits_two(tmp_path
     assert "no change" in out and "generation 1" in out
     assert _manifest(task_dir)["generation"] == 1 and not _gen(task_dir, 2).exists()
     body = _manifest(task_dir)
-    body["assessment"]["size"] = "large"
+    # Every path issue owes the same evidence whatever its size (ADR-099
+    # decision 4), so the new assessment adds a label that owes the sign-off.
+    body["assessment"]["labels"] = ["auth"]
     _write_manifest(task_dir, assessment=body["assessment"])
-    code, out, err = _evaluate_write(root, "--reason", "larger than thought")
+    code, out, err = _evaluate_write(root, "--reason", "smaller than thought")
     assert code == 0, out + err
     assert "committed generation 2" in out
     assert _manifest(task_dir)["generation"] == 2
 
 
 def test_gs_11_a_configuration_that_does_not_resolve_refuses_before_writing(tmp_path):
-    root, task_dir = _project(tmp_path, compass_yml="schema: 1\nstages: oops\n")
+    root, task_dir = _project(tmp_path, compass_yml="schema: 1\nsignoff_labels: oops\n")
     before = (task_dir / "manifest.yml").read_bytes()
     code, out, err = _evaluate_write(root)
     assert code == 2, out + err
@@ -785,14 +747,14 @@ def test_gs_11_a_configuration_that_does_not_resolve_refuses_before_writing(tmp_
 
 
 def test_gs_11_a_chain_the_lint_refuses_is_not_stored(tmp_path):
-    """A project layer that loosens a locked check without a waiver resolves,
-    so only the lint stands between it and a stored generation."""
-    root, task_dir = _project(tmp_path, compass_yml={
-        "schema": 1, "checks": {"suite-passed": {"set": {"severity": "advisory"}}}})
+    """A project check that reuses a shipped id has a shape that applies, so
+    only the lint, which knows the check set, stands between it and a stored
+    generation."""
+    root, task_dir = _project(tmp_path, compass_yml=REJECTED)
     before = (task_dir / "manifest.yml").read_bytes()
     code, out, err = _evaluate_write(root)
     assert code == 2, out + err
-    assert "nothing was written" in out + err
+    assert "nothing can be resolved" in out + err
     assert (task_dir / "manifest.yml").read_bytes() == before
     assert not (task_dir / "generations").exists()
 
@@ -805,17 +767,15 @@ def test_gs_11_without_write_nothing_is_committed(tmp_path):
     assert "generation" not in _manifest(task_dir)
 
 
-def test_gs_11_a_project_with_copied_governance_is_stored_against_its_copies(tmp_path):
-    import shutil
+def test_gs_11_a_project_with_copied_governance_is_refused_and_stores_nothing(tmp_path):
+    """9.0.0 reads no copy of the governance files (ADR-098): the write is
+    refused and no generation is stored."""
+    import compat_baseline as cb
     root, task_dir = _project(tmp_path)
-    (root / "governance").mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copyfile(ROOT / "governance" / name, root / "governance" / name)
+    cb.add_governance_copy(root, source=cb.GOVERNANCE_8_0_4)
     code, out, err = _evaluate_write(root)
-    assert code == 0, out + err
-    versions = _load(_gen(task_dir, 1) / "versions.yml")
-    assert (versions["parents"][0]["ref"], versions["parents"][0]["source"]) == (
-        "legacy", "legacy")
+    assert code == 2 and "[governance-copy-removed]" in err, out + err
+    assert not (task_dir / "generations").exists()
 
 
 def test_gs_11_the_compat_regular_issue_state_gains_a_generation(tmp_path):
@@ -925,11 +885,10 @@ def test_gs_13_ci_prints_nothing_new_for_an_issue_with_no_generation(tmp_path):
 import ast  # noqa: E402
 
 PACKAGE = ROOT / "cli" / "compass_pkg"
-READERS = ("checks", "check_cmd", "routing", "receipt", "manifest", "calibration", "flow",
-           "quick_fix_cmd", "loop_ceilings", "lessons", "review_rules", "approach_diagram",
-           "subtasks", "run_cmd", "multiagent_check")
+READERS = ("checks", "check_cmd", "routing", "manifest", "flow",
+           "quick_fix_cmd", "loop_ceilings", "lessons", "review_rules", "approach_diagram")
 RESOLVER_MODULES = {"merge", "obligations", "classify", "waivers", "policy_lint",
-                    "generation"}
+                    "policy_effective", "generation"}
 
 
 def _imported(path, whole=None):
@@ -979,17 +938,18 @@ def test_gs_15_check_and_evaluate_create_no_generation_files(tmp_path):
 
 
 def test_gs_15_effective_for_reads_the_same_live_configuration_as_lint_resolves(tmp_path, monkeypatch):
-    from compass_pkg import effective, policy_lint
-    root, task_dir = _project(tmp_path, compass_yml={"schema": 1, "checks": {"extra": _new_check()}})
+    """The lint judges `compass.yml` over the check set, and the live view is
+    that check set with the settings applied (ADR-094)."""
+    from compass_pkg import check_set, effective, tighten
+    settings = {"project_checks": [{"id": "extra", "name": "Extra", "command": "true",
+                                    "stage": "build"}]}
+    root, task_dir = _project(tmp_path, compass_yml={"schema": 1, **settings})
     monkeypatch.chdir(root)
     view = effective.effective_for(str(task_dir))
-    loaded = policy_lint.load_layers(str(root), manifest=_manifest(task_dir))
-    eff = policy_lint.resolve_effective(loaded.parent, loaded.project, loaded.issue,
-                                        meta=loaded.meta, slug=SLUG)
-    paths = {r.path for r in eff.rows
-             if r.path.startswith("checks.") and not r.path.endswith(".locked")}
-    held = {f"checks.{c}.{f}" for c, body in view.config["checks"].items() for f in body}
-    assert paths <= held
+    expected = tighten.apply(check_set.resolved(), settings)
+    assert view.config["checks"] == expected["checks"]
+    assert view.config["gates"] == expected["gates"]
+    assert "extra" in view.config["checks"]
 
 
 # --- GS-16: the bench, headers, owning doc and line cap -------------------------------------
@@ -1048,7 +1008,9 @@ def test_gs_17_the_command_refuses_a_symlinked_folder_with_exit_2(tmp_path):
     (victim / "keep.txt").write_text("mine\n", encoding="utf-8")
     _link(_gen(task_dir, 2), victim)
     body = _manifest(task_dir)
-    body["assessment"]["size"] = "large"
+    # A label whose evidence differs, so the write commits generation 2 (ADR-099
+    # decision 4: size does not change the evidence a path issue owes).
+    body["assessment"]["labels"] = ["auth"]
     _write_manifest(task_dir, assessment=body["assessment"])
     code, out, err = _evaluate_write(root)
     assert code == 2, out + err
@@ -1120,7 +1082,10 @@ def test_gs_17_a_concurrent_change_says_no_generation_not_none(project):
     assert "None" not in text and "no generation" in text and "generation 3" in text
 
 
-REJECTED = {"schema": 1, "checks": {"suite-passed": {"set": {"severity": "advisory"}}}}
+#: A `compass.yml` whose shape applies but which the settings lint refuses: a
+#: project check that reuses the id of a shipped check (ADR-094).
+REJECTED = {"schema": 1, "project_checks": [{"id": "suite-passed", "name": "Suite",
+                                             "command": "true", "stage": "build"}]}
 
 
 def test_gs_17_a_rejected_compass_yml_names_the_file_the_first_error_and_the_lint(tmp_path):
@@ -1129,14 +1094,20 @@ def test_gs_17_a_rejected_compass_yml_names_the_file_the_first_error_and_the_lin
     text = out + err
     assert code == 2, text
     assert "compass.yml" in text
-    assert "K-LOCK-REFUSED" in text
-    assert "`compass policy lint --issue feature`" in text
+    assert "L-SETTING-INVALID project_checks[0].id" in text
+    assert "`compass policy lint`" in text
 
 
-def test_gs_17_evaluate_without_write_still_works_on_a_rejected_compass_yml(tmp_path):
+def test_gs_17_evaluate_without_write_also_refuses_a_rejected_compass_yml(tmp_path):
+    """Since 9.0.0 every resolution runs the settings lint (VD-020 of #357), so a
+    read-only evaluate refuses a file the lint refuses too, and writes nothing.
+    8.x linted only before a write."""
     root, task_dir = _project(tmp_path, compass_yml=REJECTED)
+    before = (task_dir / "manifest.yml").read_bytes()
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG)
-    assert code == 0, out + err
+    assert code == 2, out + err
+    assert "`compass policy lint`" in out + err
+    assert (task_dir / "manifest.yml").read_bytes() == before
 
 
 def _commands_in(text):
@@ -1172,10 +1143,11 @@ def test_gs_17_messages_name_only_commands_the_cli_has(project, tmp_path):
     shutil.rmtree(_gen(task_dir, 1))
     _write_manifest(task_dir, generation=0)
     _commit(root, task_dir)
-    shutil.copytree(_gen(task_dir, 1), _gen(task_dir, 2))
-    with pytest.raises(CompassError) as unreferenced:
+    _gen(task_dir, 2).mkdir()
+    (_gen(task_dir, 2) / "notes.md").write_text("mine\n", encoding="utf-8")
+    with pytest.raises(CompassError) as unwritten:
         _commit(root, task_dir, delivery_approach="full")
-    messages.append(str(unreferenced.value))
+    messages.append(str(unwritten.value))
     with pytest.raises(CompassError) as zero:
         from compass_pkg import effective
         _write_manifest(task_dir, generation=0)
@@ -1184,31 +1156,8 @@ def test_gs_17_messages_name_only_commands_the_cli_has(project, tmp_path):
     named = [words for text in messages for words in _commands_in(text)]
     assert named, "the messages should name the command that fixes the fault"
     assert [w for w in named if not _exists(w)] == []
-    assert ["issue", "configure"] in named
-    assert not [m for m in messages if "migrate-config" in m]
-
-
-def test_cr_10_the_unreferenced_folder_message_gives_the_path_then_both_commands(project):
-    """Scenario CR-10 (issue configure-and-reassess). The ruling for a complete,
-    unreferenced folder: the path first, then the two commands. The fallback
-    of deleting the folder is gone now the commands exist."""
-    from compass_pkg import generation
-    from compass_pkg.core import CompassError
-    root, task_dir = project
-    _commit(root, task_dir)
-    import shutil
-    shutil.copytree(_gen(task_dir, 1), _gen(task_dir, 2))
-    with pytest.raises(CompassError) as caught:
-        _commit(root, task_dir, delivery_approach="full")
-    text = str(caught.value)
-    folder = str(_gen(task_dir, 2))
-    assert text.startswith(folder)
-    assert "compass issue configure --issue feature --commit" in text
-    assert "compass issue configure --issue feature --discard" in text
-    assert text.index("compass issue configure --issue feature --commit") < text.index(
-        "compass issue configure --issue feature --discard")
-    assert "delete the folder" not in text and "delete" not in text.lower()
-    assert "--reason" in text          # a reason given to the interrupted reassess is kept
+    assert ["approach", "evaluate"] in named
+    assert not [m for m in messages if "migrate-config" in m or "issue configure" in m]
 
 
 def test_gs_17_the_wording_check_can_fail():
@@ -1422,9 +1371,10 @@ def test_gs_22_evaluator_policy_is_the_adapter_over_the_resolved_configuration(
     stored = effective.effective_for(str(task_dir))
     for view in (live, stored):
         policy = view.evaluator_policy()
-        # The adapter's policy, plus the kinds every approach carries (the catalogue flag
-        # `every_approach`), which only the evaluator reads.
-        assert policy.pop("every_approach") == {"delivery-approach": "assess"}
+        # The adapter's policy. The kinds every approach carries (the catalogue flag
+        # `every_approach`) join it only when the catalogue marks one, and the live
+        # default declares no kind since 9.0.0 (ADR-091).
+        assert "every_approach" not in policy
         assert policy == obligations.policy_adapter(view.config)
         assert {"route_shapes", "assessment_vocabulary", "routing_strategies"} <= set(policy)
     assert live.evaluator_policy() == stored.evaluator_policy()

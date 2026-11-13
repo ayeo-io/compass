@@ -1,0 +1,2 @@
+verdict: fail
+input: an in-scope issue whose layering record has `exit_code` 1

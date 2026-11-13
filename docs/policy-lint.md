@@ -1,227 +1,98 @@
-# Policy lint and the effective view
+# Policy lint and the policy view
 
 This page is the owning doc for `compass policy lint` and `compass policy
-show` on a project that has a `compass.yml`. It states what each
-command checks or shows, in what order, and the exact shape of the JSON each
-one prints. From 6.0.0 the finding codes and both JSON shapes are a public
+show`. It states what each command checks or shows and the exact shape of the
+JSON each one prints. The finding codes and both JSON shapes are a public
 contract: a change to a key, its order or a code is a breaking change.
 
-The code is `cli/compass_pkg/policy_lint.py` (the checks and the views) and
-`cli/compass_pkg/policy_cmd.py` (the two commands). The decisions behind it
-are ADR-035 (the merge grammar), ADR-037 (classification), ADR-039 (waivers
-and locks), ADR-042 (the shipped preset) and ADR-043 (one project file).
+Since 9.0.0 Compass runs one fixed check set, `governance/check-set.yml`
+(ADR-094). `compass.yml` holds settings only, and five of them can tighten the
+set ([configuration.md](configuration.md)). So `policy lint` lints a file of
+settings, and `policy show` names the check set, its digest and the settings
+that tighten it.
 
-## When the layered lint runs
+The code is `cli/compass_pkg/policy_cmd.py` (the two commands),
+`cli/compass_pkg/settings_lint.py` (the settings lint and the schema of
+`compass.yml`) and `cli/compass_pkg/governance.py` (the step `compass ci` runs).
 
-| Project | What `compass policy lint` runs |
+## What `compass policy lint` runs
+
+| Project | What it runs |
 |---|---|
-| No `compass.yml`, or a `compass.yml` that Compass does not read | The legacy lint, with the output it always had |
-| The framework's own repository, with no arguments | The legacy lint, then the layered lint of its `compass.yml` |
-| A root `compass.yml` that Compass reads | The layered lint below |
-| `--file PATH` | The layered lint over that one file, with the shipped default as its parent |
+| A root `compass.yml` that Compass reads, the framework's own repository included | The settings lint, and the lint of the project's own governance files |
+| No `compass.yml` Compass reads | The lint of the project's own governance files: the project has no settings |
+| No `compass.yml` Compass reads, and a copy of `routing-policy.yml` or `guardrails.yml` | A refusal with exit 2 (`governance-copy-removed`) |
+| `--file PATH` | The settings lint of that one file |
 
 A `compass.yml` is read when it is the only settings file, or when it has a
-top-level `schema:` key. `compass ci` calls the legacy lint directly, so its
-output and exit code do not change.
+top-level `schema:` key. 9.0.0 does not read a copy of the governance files
+(ADR-098): such a project runs `compass policy migrate` on 8.x first, which
+writes its `compass.yml`.
 
-`--issue`, `--file` and `compass policy show` read the chain a write reads
-(`effective.resolve_live`) in every project, the framework's own repository
-included, so they report what `compass approach evaluate --write` would
-refuse.
+The lint of the project's own governance files checks the optional files of
+its `governance/` folder, read by path: `quarantine.yml`, `review-rules.yml`
+and `architecture-sources.yml`. Each fault is an `L-GOVERNANCE-FILE` error.
+`compass ci` runs the same lint as its first step.
 
-With no arguments in the framework's own repository, `compass policy lint`
-runs the legacy lint and then the layered lint, and fails if either fails.
-The text output is the legacy lint's lines, then the layered lint's. With
-`--json` it prints one document whose `mode` is `framework`: `layers` lists
-the `legacy` layer and then the layered chain, `findings` holds both sets,
-`counts` and `result` cover both, and `stopped_after` is the legacy lint's
-stop, or the layered lint's when the legacy lint did not stop.
-If `governance/routing-policy.yml` is not valid YAML, the legacy lint runs
-first and reports the YAML error as a structure error. The output starts with
-`compass policy lint: FAIL`, the layered lint does not run, and the exit
-code is 1, in text and in `--json`.
-`scripts/validate.sh` runs this lint, so CI fails on a `compass.yml` a write
-would refuse.
+9.0.0 removed the drift report, which compared a governance copy with the
+framework's, and the `governance_drift` setting that made it fail (ADR-098).
+It also removed the framework mode, which linted the framework's frozen
+`governance/` files before its `compass.yml`. `scripts/validate.sh` runs this
+lint, so CI fails on a `compass.yml` a commit would refuse.
 
-## The layers
+Every command that resolves a policy (`compass check` on an issue with no
+stored generation, `compass approach evaluate`, assess) runs the same settings
+lint first, and refuses with exit 2 when it finds an error.
 
-| Layer name | Kind | Where it comes from |
-|---|---|---|
-| `default` | `parent` | `governance/presets/default/` (the shipped preset) |
-| `project` | `project` | `compass.yml` in the project root |
-| `issue` | `issue` | the `config:` of the issue's `manifest.yml`, only with `--issue SLUG` |
+## The settings lint
 
-A project whose `extends:` names a git parent has one more `parent` layer
-between `default` and `project`, named `github:<owner>/<repo>@<ref>#<sha7>`
-(the first seven characters of the pinned commit). [git-parents.md](git-parents.md)
-owns how it is pinned, fetched and cached.
-
-A `compass.yml` in a folder below the project root is ignored, and lint
-warns about it.
-
-## The order of the checks
-
-Lint runs five groups in this order. It stops after the first group that has
-an error, so a later group never reports a fault that only follows from an
-earlier one. Warnings never stop it and never fail it.
-
-| Group | What it checks | Codes |
-|---|---|---|
-| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), the eleven `L-PARENT-*` codes below for a git parent, and the four `S-PARENT-*` state codes |
-| `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
-| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning), `M-FIELD-SHAPE`, `M-READINESS-IMPL`, `M-READINESS-PARAM`, `M-WHEN-RETIRED`, `M-WHEN-DOCUMENTS`, `M-ACCEPTANCE-SUSPENDED` |
-| `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
-| `classification` | Waivers, the classifier's verdict on each layer, and the vocabulary | `C-LOOSENING`, `C-INCOMPARABLE`, `V-VOCABULARY-CHANGE`, `W-UNNEEDED`, the waivers' own `W-*` codes, `E-EVALUATION` |
-
-### Codes
+The settings lint (`settings_lint.lint`) checks the file over the resolved
+check set:
 
 | Code | Level | Meaning |
 |---|---|---|
-| `L-LOAD` | error | The file does not parse, or repeats a key. The path is from the project root, or the file's own name when it is outside it |
-| `L-KEY-NOT-TEXT` | error | A mapping key anywhere in a layer that YAML reads as a boolean, a number or null, such as an unquoted `on:`, `no:`, `true:` or `1:`. The path is the mapping that holds it, and the message gives the key as parsed and the quoted form to write, such as `"on":`. The layer is not read further, so no later group runs |
-| `L-SCHEMA` | error | A key or value that the layer's schema does not allow |
-| `L-SETTINGS-KEY` | error | A settings key in a parent. Settings belong in the project's own `compass.yml` |
-| `L-UNLOCK-PLACEMENT` | error | An `unlock` outside the project layer, or a top-level `unlocks` |
-| `L-IMPL-UNKNOWN` | error | A check names an `impl` that the check registry does not hold |
-| `L-IMPL-TEMPLATED` | error | An `impl` that is a template, not a name |
-| `L-IGNORED-FILE` | warning | A `compass.yml` below the project root, which is not read |
-| `L-PARENT-FORM` | error | An `extends:` that is neither `compass:default@<major>` nor `github:<owner>/<repo>@<ref>#<sha>`, or a sha that is not 7 to 40 lowercase hexadecimal characters, or a short sha that names no cached commit of the same repository, or a sha that names a tree or a file. Git is not run for a bad spelling |
-| `L-PARENT-NO-SHA` | error | A remote ref with no sha. A git parent is pinned by commit. Git is not run |
-| `L-PARENT-NOT-CACHED` | error | The pinned commit is not in `.compass/cache/parents/` and this run may not fetch it: `compass check`, a reader of a stored generation, `--offline` or `COMPASS_OFFLINE` |
-| `L-PARENT-FETCH` | error | Git could not fetch the pinned commit, is not installed, timed out, or `COMPASS_PARENT_REMOTE_BASE` is not an `https://` URL or an absolute folder |
-| `L-PARENT-CONTENT` | error | The commit has no regular `compass.yml` file at its root, or it is 1 MiB or larger |
-| `L-PARENT-SHA-MISMATCH` | error | The fetch returned an object other than the pinned one. Nothing is cached |
-| `L-PARENT-SYMLINK` | error | The root `compass.yml` of the fetched commit is a symbolic link. Nothing is cached. No other file in the tree is read |
-| `L-PARENT-CACHE` | error | `.compass/cache` or `.compass/cache/parents` is a symbolic link, a cached parent or its owner or repository folder is a link or resolves outside `.compass/`, or the cache holds a different file for the commit |
-| `L-PARENT-CHAIN` | error | A chain holds more than three git parents. Reported on the third parent, and the fourth is not fetched |
-| `L-PARENT-CYCLE` | error | A parent names a commit that is already in the chain. Reported on the parent that names it |
-| `L-PARENT-SHA-AMBIGUOUS` | error | A short sha names more than one cached commit |
-| `S-PARENT-UP-TO-DATE` | info | A git parent whose cache holds the pin and for which no other commit is known |
-| `S-PARENT-STALE` | warning | `seen.yml` holds another commit for the parent's ref, which this machine fetched last. It can be older or newer than the pin. The pin does not move |
-| `S-PARENT-MODIFIED` | error | The cached `compass.yml` no longer matches the digest recorded when it was fetched, or `seen.yml` holds no digest for it. The lint stops at the first group |
-| `S-PARENT-BOTH` | error | Stale, and the cached file was edited. The lint stops at the first group |
-| `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalog each effect names), names an id that no entry defines, or an artifact's `owner` is neither an agent, a perspective (engineer, product-owner, product-marketer, designer or qa) nor a value of a `role` dimension the project declares |
-| `M-WHEN-RETIRED` | error | A rule, check or gate's `when` reads `role`, which 7.0.0 removed from the assessment, in a configuration that declares no `role` dimension. A rule can read the documents on disk with `artifacts_any` instead, and any `when` can read a label (ADR-070) |
-| `M-WHEN-DOCUMENTS` | error | A check or gate's `when` reads `artifacts_any`. Only a rule's evaluation reads the documents on disk; `compass check` does not, so the condition would never match there (ADR-070) |
-| `M-WEIGHT-TIE` | error | Two delivery approaches have the same weight |
-| `M-LIST-KIND-UNEVALUATED` | warning | A stage's `entry` or `exit` list names a check of a kind this version does not evaluate (`judged` or `evidence`). The check fails in `compass check`, whatever the capability. The exit code does not change |
-| `M-READINESS-IMPL` | error | A readiness signal names an `impl` that the readiness registry does not hold. The message names the signal and the implementation |
-| `M-READINESS-PARAM` | error | A readiness signal sets a parameter its implementation does not take, a parameter of the wrong type, or a value outside the implementation's allowed choices |
-| `M-ACCEPTANCE-SUSPENDED` | error | An approach that ships sets `acceptance_strategy: suspended`. Only the spike, which ships nothing, suspends the four-layer acceptance strategy; a project turns it off with the settings key `acceptance_strategy: {state: off, reason: <why>}` (decided by jed72, 2026-10-30) |
-| `M-HIT-MISSING` | error | A rule set uses an effect and names no `hit:` policy for it. `EFFECT_POLICIES` in `catalogue_spec.py` lists the effects and the policies each allows |
-| `M-HIT-DISALLOWED` | error | A `hit:` policy the effect does not allow, or an unknown effect |
-| `M-ALIAS-COLLISION` | error | One name or alias belongs to two entries of a catalog |
-| `M-CYCLE` | error | Artifacts depend on each other in a cycle. The message gives the path, such as `a -> b -> a`, and the finding sits on the `depends_on` of the first artifact in id order |
-| `M-BOOKKEEPING-INPUT` | error | An artifact lists in `depends_on` an artifact marked `bookkeeping: true`, a record the framework keeps about the work (the dashboard, the receipt, the verification report). A bookkeeping artifact may itself depend on others. The finding sits on the dependent artifact's `depends_on` |
-| `M-DIRECTORY-DEPENDENCY` | error | An artifact lists in `depends_on` an artifact whose `file` ends in `/`, a directory. An artifact depends on files, so a verification report names the evidence ids it cites instead. The finding sits on the dependent artifact's `depends_on` |
-| `M-EFFECT-UNKNOWN` | error | A rule's `then:` holds a key that is neither an effect nor a qualifier (`ceiling`, `until`), such as a misspelt `force_minimum_aproach`. `EFFECT_QUALIFIERS` in `catalogue_spec.py` lists the qualifiers |
-| `M-ADD-EXISTS` | error | A full entry names an id that exists, with no `replace: true` |
-| `M-ADD-PARTIAL` | error | A new entry lacks a required field |
-| `M-SET-UNKNOWN` | error | `set:` on an id the layer above does not hold |
-| `M-REPLACE-UNKNOWN` | error | `replace: true` on an id the layer above does not hold |
-| `M-REMOVE-UNKNOWN` | error | `remove: true` on an id the layer above does not hold |
-| `M-OP-CONFLICT` | error | One entry holds more than one of a full entry, `set`, `replace` and `remove` |
-| `M-OP-DUPLICATE` | error | One id or key is in two documents of one layer (found when split files are combined, not in a single file) |
-| `M-OP-LAYER` | error | A layer uses an operation it may not |
-| `M-LIST-OP-OUTSIDE-SET` | error | `add:` or `remove:` on a list outside `set:` |
-| `M-LIST-REMOVE-ABSENT` | error | `remove:` of an item the list does not hold |
-| `M-LIST-ADD-PRESENT` | error | `add:` of an item the list already holds |
-| `M-MAP-OP-OUTSIDE-SET` | error | `set:` or `remove:` on a map outside `set:` |
-| `M-MAP-REMOVE-ABSENT` | error | `remove:` of a key the map does not hold |
-| `M-FIELD-UNKNOWN` | error | `set:` names a field the catalog does not define |
-| `M-FIELD-LAYER` | error | A field this layer may not set, such as a stage's `mode` outside the issue layer |
-| `M-FIELD-SHAPE` | error | A value of the wrong shape, or a blank name or alias. In the `resolved` group it also covers the fields of an artifacts entry: a `sections` key that is not an artifact depth, a `sections` value that is not a list of headings, an empty list for a document that is not one rendered block, a blank `audience`, `owner` or `stands_for`, a `file` that is not a bare file name (one folder is allowed only in a name that holds `<unit>`), a `file` that holds both `<n>` and `<unit>`, a `required_when` condition that is not `subtasks: {min: N}`, and a `word_ceiling` that is not a map, holds a limit that is not a whole number of at least 1, or names a depth the kind's `sections` does not list. All are reported in one run |
-| `M-REF-REMOVED` | error | `remove: true` on an entry something still refers to |
-| `K-LOCK-REFUSED` | error | A layer loosens, or changes in a way that cannot be compared, an entry a lock covers |
-| `K-UNLOCK-REFUSED` | error | An `unlock` that does not stand: not the owner's, no waiver, a hard lock, or an entry that is not locked |
-| `K-UNPROVABLE` | error | The configuration has more than eight named labels, so no lock can be shown to hold |
-| `E-EVALUATION` | error | The evaluator rejects the configuration. It is reported once, with the evaluator's own text, and the lock refusal that says the same is not counted again |
-| `C-LOOSENING` | error | A layer is looser than the layer above, and no waiver excuses it |
-| `C-INCOMPARABLE` | error | A layer changes something that cannot be compared with the layer above, and no waiver excuses it |
-| `V-VOCABULARY-CHANGE` | warning | A layer adds or removes a value of a dimension. The classifier does not read a value that no rule reads, so this is reported on its own |
-| `W-APPROVED-ON-ISSUE` | error | An issue waiver carries `approved_on` |
-| `W-UNNEEDED` | warning | A waiver excuses nothing |
-| `W-NO-OPERATION` | error | A waiver sits in an entry with none of `set`, `replace` and `remove` |
-| `W-SHAPE` | error | A waiver is not a mapping |
-| `W-KEY-UNKNOWN` | error | A waiver holds a key it may not, such as `covers` |
-| `W-REASON` | error | A waiver has no reason |
-| `W-APPROVED-BY` | error | A waiver has no `approved_by` |
-| `W-UNAPPROVED` | error | `approved_by` is `UNAPPROVED` |
-| `W-LEGACY` | warning before 9.0.0, error from 9.0.0 | `approved_by: LEGACY`: no approval is recorded. Lint accepts the shape through every 7.x and 8.x release, and from 9.0.0 the waiver no longer excuses its departure |
-| `W-LEGACY-DATED` | error | A `LEGACY` waiver carries `approved_on` |
-| `W-LEGACY-ISSUE` | error | An issue waiver uses `LEGACY` |
-| `W-APPROVED-ON-MISSING` | error | A project waiver has no `approved_on` |
-| `W-APPROVED-ON-FORM` | error | `approved_on` is not a date |
-| `W-APPROVED-ON-FUTURE` | error | `approved_on` is later than today |
-| `W-NO-OWNER` | error | The project names no owner, so nobody may approve a waiver |
-| `W-APPROVERS-SHAPE` | error | `approvers` is not a mapping of kind to a list of names |
-| `W-APPROVER-NOT-ALLOWED` | error | The approver is not in the allowed list |
-| `W-APPROVAL-MISSING` | error | An issue waiver's `approved_by` is not a record in the issue's evidence |
-| `W-APPROVAL-TYPE` | error | That record is not a `human-approval` |
-| `W-APPROVAL-WITHDRAWN` | error | An `approval-withdrawal` record withdraws that approval |
-| `W-APPROVAL-DECISION` | error | The record does not hold `decision: approved` |
-| `W-APPROVAL-FIELDS` | error | The record lacks `approver`, `role`, `scope` or `timestamp` |
-| `W-APPROVAL-WAIVER` | error | The record does not approve this waiver's entry and values |
-| `W-APPROVAL-UNCHECKED` | error | The waiver's values were not derived, so the record cannot be matched |
-| `LEGACY-STRUCTURE` | error | A structural fault in the copied governance files (legacy mode) |
-| `LEGACY-WAIVER` | error | A malformed `waived:` entry (legacy mode) |
-| `LEGACY-WAIVED` | info | A rule the project waived: a recorded decision, not drift (legacy mode, JSON only) |
-| `LEGACY-DRIFT` | warning, or error with `governance_drift: strict` | The copied governance lacks a rule or check the framework ships (legacy mode) |
-| `LEGACY-DRIFT-UNCOMPARED` | warning | The copy could not be compared with the framework's (legacy mode) |
+| `L-SETTING-UNKNOWN` | error | A key `compass.yml` cannot hold |
+| `L-SETTING-INVALID` | error | A value of the wrong shape, a tighten-only setting that would not add to what an issue owes (a token outside the closed set, a project check that reuses a shipped id, a stage other than `build` or `ship`, a capability other than `entry-exit-evaluation`), or an assessment value the check set does not declare |
+| `L-IMPL-UNKNOWN` | error | After the tighten-only settings are applied, a check names an implementation the CLI does not hold (safety-contract guarantee 2) |
+| `L-PARENT-REMOVED` | error | `extends:` names a git parent. A team parent can hold checks this file does not show, so every command that resolves a policy refuses with exit 2 until it is deleted. Move the team's checks into the tighten-only settings and delete `extends:`, or stay on 8.x. `compass migrate` refuses a git parent too |
+| `L-GOVERNANCE-FILE` | error | A fault in `governance/quarantine.yml`, `review-rules.yml` or `architecture-sources.yml`, such as a quarantine entry with no `tracking_task`. The path names the file |
+| `L-SETTING-REMOVED` | warning | A key 9.0.0 removed. It is not read. The catalog keys `dimensions`, `stages`, `rules`, `checks`, `gates` and `vocabulary`, with every entry operation inside them, `extends: compass:default@<n>`, `preset`, `preset_index` and `approvers.project-waiver` (ADR-094); and the keys of ADR-090 to ADR-093 (`models`, `multiagent`, `living_spec`, `artifacts`, `approaches`, `prices`, `github_labels`, `readiness` and the readiness-only fields of `project`); and `governance_drift` (ADR-098). The message ends with what replaces the key, "Replacement: `<setting>`." or "Removed: nothing replaces it.", then "`compass migrate` rewrites it." when `compass migrate` handles the key. An `extends:` that pins the default below `@8` kept the acceptance strategy `S17` off in 8.x. 9.0.0 does not read it, so the message says `S17` is no longer kept off, and the replacement is `acceptance_strategy: {state: off, reason: ...}` |
 
 ## Options and exit codes
 
 | Option | Meaning |
 |---|---|
-| `--file PATH` | Lint one `compass.yml` as the project layer, over the shipped default |
-| `--issue SLUG` | Add the issue's `config:` as the issue layer, judged at the issue's own assessment and not over the whole grid (a project layer is still judged over the grid), and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
-| `--exhaustive` | Classify with the full grid, not the grouped one |
-| `--offline` | Read a git parent from the cache only and fetch nothing; `COMPASS_OFFLINE=1` does the same. `compass policy show` takes it too |
+| `--file PATH` | Lint one `compass.yml` as settings over the check set |
 | `--json` | Print the document below |
+
+9.0.0 removed `--offline` (nothing is fetched), and `--issue` and
+`--exhaustive` (an issue has no config layer, and the classifier went). A
+command line that names one fails to parse with one line that names ADR-094.
 
 | Exit | Meaning |
 |---|---|
 | 0 | Pass: no error. Warnings may be printed |
 | 1 | Fail: at least one error |
-| 2 | An input cannot be read: a `--file` that is not there, or an issue that does not exist |
+| 2 | An input cannot be read, or the project holds a governance copy and no `compass.yml` |
 
 Text output is `compass policy lint: PASS` or `compass policy lint: FAIL`,
-then one line per finding: `  - CODE [layer] path: message`. A warning line
+then one line per finding: `  - CODE [project] path: message`. A warning line
 starts `  - warning CODE`.
-
-### Advisory for retired words
-
-A layer written before the depth words and the size were renamed still loads:
-`full` reads as `thorough`, `light` as `lightweight`, the longest old stage
-mode as `thorough-with-follow-up` and the size `standard` as `medium`, in the
-fields that hold them and nowhere else. The lint prints one advisory line to standard
-error for each word it read that way. The line names the layer (a git parent by
-its ref and short sha), the path, the new word and that the old word is read
-until 9.0.0:
-
-```
-advisory: project: stages.implement.set.modes reads 'full' as 'thorough'; the old word is read until 9.0.0
-```
-
-An advisory is not a finding. It changes no exit status and no count, it is
-not in the `--json` document. `compass preset test` prints the same lines.
-`compass check` prints none.
-`compass policy migrate --words` rewrites the layer and its fixtures in the
-new words, so the advisory goes (`docs/policy-migrate.md`).
 
 ## `compass policy lint --json`
 
 ```json
 {
   "schema": 1,
-  "mode": "layered",
+  "mode": "settings",
   "result": "fail",
-  "layers": [{"name": "default", "kind": "parent"}, {"name": "project", "kind": "project"}],
-  "stopped_after": "layer",
+  "layers": [{"name": "project", "kind": "project"}],
+  "stopped_after": null,
   "counts": {"errors": 1, "warnings": 0},
   "findings": [
-    {"code": "L-SCHEMA", "level": "error", "layer": "project", "path": "stages",
-     "group": "layer", "message": "expected a mapping keyed by id", "detail": null}
+    {"code": "L-SETTING-INVALID", "level": "error", "layer": "project",
+     "path": "autonomy", "group": "settings",
+     "message": "...", "detail": null}
   ]
 }
 ```
@@ -229,139 +100,76 @@ new words, so the advisory goes (`docs/policy-migrate.md`).
 | Key | Type | Meaning |
 |---|---|---|
 | `schema` | integer | The version of this shape. It is 1 |
-| `mode` | `layered`, `legacy` or `framework` | Which lint ran. `framework` is both, in the framework's own repository |
+| `mode` | `settings` | Which lint ran. 8.x also wrote `legacy`, for the lint of a governance copy, which 9.0.0 removed |
 | `result` | `pass` or `fail` | `fail` when `counts.errors` is above 0 |
-| `layers` | list | Each layer in order, root first, as `name` and `kind`. A project file that did not load is still named. Legacy mode has one: `legacy` |
-| `stopped_after` | string or null | The group after which the lint stopped, or null |
+| `layers` | list | `project` |
+| `stopped_after` | null | Kept for the 8.x shape |
 | `counts` | object | `errors` and `warnings`, both integers |
-| `findings` | list | Every finding, in the order below |
+| `findings` | list | Every finding, errors first, in file order |
 
-Each finding has these keys, in this order:
-
-| Key | Type | Meaning |
-|---|---|---|
-| `code` | string | One of the codes above |
-| `level` | `error`, `warning` or `info` | Only an error fails the lint. `info` is a recorded decision and appears in legacy mode only |
-| `layer` | string | The layer the finding belongs to |
-| `path` | string | The key path, such as `checks.tests-pass.severity`, or a waiver id such as `project:checks.tests-pass` |
-| `group` | string | `layer`, `merge`, `resolved`, `locks`, `classification` or `legacy` |
-| `message` | string | A sentence for a person |
-| `detail` | object or null | Extra facts for a machine, below |
-
-`detail` is null except for these:
-
-- `C-LOOSENING`, `C-INCOMPARABLE`: `result`, `assessment` (the first assessment where the change shows), `outcome`, `field`, `key`, `parent` (the value in the layer above) and `child` (the new value).
-- `K-LOCK-REFUSED`: `field`, `key`, `outcome`, `level` (`true` or `"hard"`), `parent`, `child` and `where`.
-- `V-VOCABULARY-CHANGE`: `dimension`, `added` and `removed`.
-
-Findings are ordered by group (in the order of the table above), then by
-layer (root first), then by `path`, `code` and `message`. The document holds
-no time and no path outside the project, so the same input gives the same
-bytes. `tests/test_policy_lint.py` pins each key list.
+Each finding has the keys `code`, `level`, `layer`, `path`, `group`
+(`settings`), `message` and `detail` (null), in that order. An
+`L-SETTING-REMOVED` finding also has `replacement`, last: the settings that
+replace the key, joined with "or", or null when nothing replaces it. One
+table, `removed_parts.REPLACEMENTS`, gives the message and `replacement` for
+every removed key, so the two cannot disagree (ADR-098 decision 7).
 
 ## `compass policy show`
 
-`compass policy show` prints what the configuration resolves to now. `compass
-check` and the evaluator judge an issue that has a stored generation by that
-generation, so this view can differ from what they use
-([generation-store.md](generation-store.md)). It prints every
-resolved field of the project, one line each: the path, the value, the source layer, the operation and the
-waiver. A stage list that a capability switch has not turned on is marked
-`(inactive: entry-exit-evaluation off)`.
-
-In an unmigrated 5.x project (no `compass.yml`, a copied `governance/`), the
-rows are the shipped default, not the copy that `compass approach evaluate`
-reads. The text view then adds a notice under its header line that names the
-copy and points to `compass policy migrate`. `--json` is unchanged.
+`compass policy show` names the policy the project runs now:
 
 ```
-stages.plan.entry   [dor-summary-filled, ...]   default@6.0.0 (add)  (inactive: entry-exit-evaluation off)
-checks.suite-passed.severity   advisory   project (set, waiver by jed72, 2026-10-05)
-stages.define.mode   lightweight   issue (set)
+Policy: compass-checks@9.0.0 (sha256 7472...)
+Settings: compass.yml (sha256 9ab0...)
+Tightened:
+  signoff_labels: ["billing"]
 ```
 
-| Option | Meaning |
-|---|---|
-| `--issue SLUG` | Resolve the issue's `config:` over the live project file. No generation is stored yet, so the view always reads the live file. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback |
-| `--json` | Print the document below |
+- `Policy:` is the check set's id and version and the sha256 of its file, as
+  `sha256sum` prints it.
+- `Settings:` is the sha256 of `compass.yml`, or `no compass.yml`.
+- `Tightened:` lists the tighten-only settings the file applies, as written,
+  or `nothing`.
 
-Exit 0 on success. Exit 2 when the layers cannot be resolved (the message
-names the first fault and points to `compass policy lint`).
+With `--issue SLUG` it adds the issue's `policy:` block (the policy its stored
+generation was committed under, [generation-store.md](generation-store.md)) and
+its waivers. An issue assessed before 9.0.0 has no block, and the view says so.
+Without `--issue` no issue is read: there is no `COMPASS_ISSUE` or
+current-task fallback.
 
-A project with no `compass.yml` shows the shipped default alone.
-
-### Which fields are listed
-
-- `capabilities.<name>`, then `owner`, then `approvers.<kind>`: each takes the value of the last layer that holds it.
-- Then each catalog in this order: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, `vocabulary`. Within one, entries are in id order, and fields are in the order of the field table in `catalogue_spec.py`.
-- A field is listed only when its entry holds it. After an entry's fields comes `<entry>.locked` when a lock holds the entry, read from the layers: `true` or `"hard"`, with the layer that declared it. A lock an owner's unlock lifted is not listed.
-- Settings keys (`autonomy`, `adoption` and the others) are not part of a layer and are not listed.
-
-### Operations
-
-`op` is how the source layer last wrote the field:
-
-| `op` | Meaning |
-|---|---|
-| `add` | The layer added the entry or the capability |
-| `replace` | The layer replaced the entry with `replace: true` |
-| `set` | The layer changed the field with `set:` |
+Exit 0 on success. Exit 2 when `compass.yml` cannot be read or extends a git
+parent, or when the project holds a governance copy and no `compass.yml`
+(`governance-copy-removed`).
 
 ## `compass policy show --json`
 
 ```json
 {
-  "schema": 1,
-  "scope": {"kind": "project", "issue": null, "resolved": "live"},
-  "layers": [
-    {"name": "default", "kind": "parent", "version": "6.0.0", "digest": "sha256:..."},
-    {"name": "project", "kind": "project", "version": null, "digest": "sha256:..."}
-  ],
-  "fields": [
-    {"path": "checks.suite-passed.severity", "value": "advisory", "source": "project",
-     "op": "set",
-     "waiver": {"id": "project:checks.suite-passed", "scope": "project",
-                "approved_by": "jed72", "approved_on": "2026-10-05"},
-     "note": null}
-  ]
+  "check_set": "compass-checks@9.0.0",
+  "check_set_sha256": "7472...",
+  "settings_sha256": null,
+  "tightened": {},
+  "issue": {"issue": "feature", "generation": 1, "policy": {"...": "..."},
+            "waivers": [{"id": "W-1", "check": "suite-passed", "reason": "..."}]}
 }
 ```
 
 | Key | Type | Meaning |
 |---|---|---|
-| `schema` | integer | The version of this shape. It is 1 |
-| `scope` | object | `kind` (`project` or `issue`), `issue` (the slug or null) and `resolved` (always `live`: the view never reads a stored generation) |
-| `layers` | list | Each layer, root first, with `name`, `kind`, `version` and `digest` |
-| `fields` | list | Every resolved field, in the order above |
+| `check_set` | string | The check set's id and version, such as `compass-checks@9.0.0` |
+| `check_set_sha256` | string | The sha256 of the check set's file, as `sha256sum` prints it |
+| `settings_sha256` | string or null | The sha256 of `compass.yml`, or null without one |
+| `tightened` | object | The tighten-only settings `compass.yml` applies, as written |
+| `issue` | object | Only with `--issue`: the issue, its generation, its `policy` and its `waivers` |
 
-Each layer has these keys, in this order: `name`, `kind`, `version` (the
-shipped default's version, null for the others) and `digest` (over the
-layer's parsed content, so a comment or layout change does not move it).
-
-Each field has these keys, in this order:
-
-| Key | Type | Meaning |
-|---|---|---|
-| `path` | string | `catalog.id.field`, or `capabilities.name`, `owner`, `approvers.kind` |
-| `value` | any | The resolved value |
-| `source` | string | `default@<version>`, `project` or `issue` |
-| `op` | string | `add`, `replace` or `set` |
-| `waiver` | object or null | The waiver that excuses this field, or null |
-| `note` | string or null | `inactive: <capability> off` for a stage list that is switched off |
-
-A waiver object has these keys, in this order: `id` (`scope:catalog.entry`),
-`scope` (`project` or `issue`), `approved_by` (a name for a project waiver,
-an evidence id for an issue waiver) and `approved_on` (a date for a project
-waiver, null for an issue waiver, whose approval record carries its own
-time).
-
-The document holds no time and no path outside the project, so the same
-input gives the same bytes. `tests/test_policy_lint.py` pins each key list.
+`issue` is present only with `--issue`. Its `policy` is the manifest's
+`policy:` block, or null.
 
 ## What this page does not cover
 
-- The per-issue generation store: the effective view reads the live project file, never a stored generation. [generation-store.md](generation-store.md) says what reads a generation.
-- `compass policy diff`, which has its own page: [policy-diff.md](policy-diff.md).
-- `compass policy migrate`, which has its own page: [policy-migrate.md](policy-migrate.md).
-- `compass policy update`, which has its own page: [policy-update.md](policy-update.md).
+- The per-issue generation store. [generation-store.md](generation-store.md)
+  says what reads a generation.
+- `compass policy diff`, `policy update`, `policy migrate`, `preset init` and
+  `preset test`, which 9.0.0 removed (ADR-094). A command line that names one
+  fails to parse with one line that says what replaces it.
 - The settings-conflict refusal (`compass check` and the pre-tool hook own it).

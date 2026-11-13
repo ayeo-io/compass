@@ -16,8 +16,11 @@ happens on the first save, and the test checks what that leaves behind:
 
 The second case is a 5.6.0 project whose `governance/` files and
 `.compass/config.yml` are copies from the release, so they hold the old
-words. This branch's CLI reads and evaluates them to the same delivery
-approach under its new name.
+words. This branch reads and evaluates them to the same delivery approach
+under its new name. On the four-stage path (ADR-092) the CLI shows an
+issue's evidence owed, not its approach, so the approach is read from the
+8.x evaluator (`routing.evaluate_route`) over the project's configuration,
+and the CLI's path view is checked beside it.
 
 Scenario id: UP-2.
 """
@@ -188,17 +191,53 @@ def test_up_2_an_issue_started_in_5_6_0_finishes_under_this_branch(release, tmp_
     assert "this CLI handles '2.0'" in refused.stdout + refused.stderr
 
 
-def _evaluate_lines(r):
-    """The gate count and the key choices of `approach evaluate`, which do not
-    change with the approach's display name."""
-    lines = [ln for ln in r.stdout.splitlines() if ln.strip()]
+def _evaluate_lines(text):
+    """The gate count and the key choices of `approach evaluate`'s output `text`,
+    which do not change with the approach's display name."""
+    lines = [ln for ln in text.splitlines() if ln.strip()]
     head = re.search(r"(\d+) gate\(s\), (.*)$", lines[0])
-    assert head, r.stdout
+    assert head, text
     choices = [ln for ln in lines[1:] if ln.lstrip().startswith("- ")]
     return head.groups(), choices
 
 
-def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(release, tmp_path):
+def _legacy_view(root, slug):
+    """The default view `approach evaluate --issue` printed before the path, rebuilt
+    from the 8.x evaluator over the project's configuration and rendered by the
+    same `Emitter`."""
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import effective, routing
+    from compass_pkg.core import display_shape, load_yaml, normalize_spine
+    from compass_pkg.render import fired_rule_line
+    from compass_pkg.terminal import Emitter
+    # 9.0.0 refuses a project with copied governance (ADR-098), so the copy is
+    # read through the 8.x reader the tests keep.
+    sys.path.insert(0, str(ROOT / "tests"))
+    import legacy_copy
+    policy = effective.EffectiveView("live", None, None,
+                                     legacy_copy.resolved_from_copy(str(root)),
+                                     {}).evaluator_policy()
+    task = normalize_spine(load_yaml(str(_manifest_path(root, slug))))
+    result = routing.evaluate_route(task["assessment"], policy)
+    ceiling = result["subtask_ceiling"]
+    emitter = Emitter(mode="summary")
+    emitter.hand_off(
+        outcome="%s - %d gate(s), %s" % (
+            display_shape(result["delivery_approach"]), len(result["gates"]),
+            "unbounded parallel subtasks" if ceiling is None
+            else "up to %d parallel subtask(s)" % ceiling),
+        items=[fired_rule_line(f) for f in result["policy_rules_fired"]]
+        or ["no policy rule fired - the shape is the assessment's default"],
+        concerns=["%s is blocked until %s" % (b["phase"], b["until"])
+                  for b in result["blocked_phases"]]
+        + (["documents required: " + ", ".join(result["required_artifacts"])]
+           if result["required_artifacts"] else []),
+        next_step="nothing recorded - re-run with --write to fold this into the manifest")
+    return emitter.rendered()
+
+
+def test_up_2_a_5_6_0_project_with_old_governance_words_is_refused_and_reads_the_same(
+        release, tmp_path):
     old_cli = release / "cli" / "compass"
     root = tmp_path / "proj"
     root.mkdir()
@@ -226,31 +265,33 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(relea
         before = _cli(old_cli, root, "approach", "evaluate", "--issue", slug)
         after = _cli(CLI, root, "approach", "evaluate", "--issue", slug)
         assert before.returncode == 0, before.stdout + before.stderr
-        assert after.returncode == 0, after.stdout + after.stderr
+        # 9.0.0 reads no copy of the governance files (ADR-098): the project
+        # runs `compass policy migrate` on 8.x first.
+        assert after.returncode == 2, after.stdout + after.stderr
+        assert "[governance-copy-removed]" in after.stderr, after.stderr
         assert before.stdout.startswith(old_name), before.stdout
-        assert after.stdout.startswith(new_name), after.stdout
-        # 7.0.0 ships a check (`artifacts-approved`) and two evidence types
-        # (`artifact-approval`, ADR-050, and `checkpoint-approval`, ADR-063)
-        # that the 5.6.0 governance copy lacks, so the drift report adds one
-        # concern line. Nothing else moves. The two section checks 7.0.0 adds
-        # (ADR-064) raise the count by 2, the evidence type `approval-withdrawal`
-        # (ADR-069) by 1, the design-size check (ADR-067) by 1, and the two
-        # artifact rules that replace the role rules (ADR-070) by 2 more, and the
-        # four-layer acceptance strategy's advisory check (8.0.0 preset) by 1, and its
-        # outer-loop check (ADR-080) by 1.
-        gates, choices = _evaluate_lines(after)
-        drift = "this project's policy is missing 12 rule(s) or check(s)"
-        assert len([c for c in choices if drift in c]) == 1, slug
-        assert (gates, [c for c in choices if drift not in c]) == _evaluate_lines(before), slug
+        legacy = _legacy_view(root, slug)
+        assert legacy.startswith(new_name), legacy
+        gates, choices = _evaluate_lines(legacy)
+        # 9.0.0 drops the removed gate `verify.analyze` (ADR-091), which the copied
+        # 5.6.0 rules `RP-REQUIRE-001` and `RP-REQUIRE-002` add; a rule that only adds it
+        # no longer fires. That is one gate and one choice line for the `auth` issue.
+        (count, rest), old_choices = _evaluate_lines(before.stdout)
+        count = str(int(count) - (1 if slug == "add-farewell" else 0))
+        old_choices = [c for c in old_choices
+                       if "RP-REQUIRE-001" not in c and "RP-REQUIRE-002" not in c]
+        # With those two lines gone, the output lists one more fired rule, `RP-REQUIRE-005`,
+        # which the copied 5.6.0 rules fire for this issue too.
+        new_choices = [c for c in choices
+                       if not (slug == "add-farewell" and "RP-REQUIRE-005" in c)]
+        assert (gates, new_choices) == ((count, rest), old_choices), (
+            slug, sorted(set(new_choices) - set(old_choices)), sorted(set(old_choices) - set(new_choices)))
         lint = _cli(CLI, root, "issue", "lint", "--issue", slug)
         assert lint.returncode == 0, lint.stdout + lint.stderr
 
-    # The old route names are read, with a notice on standard error that says
-    # what to rename, and the files themselves are not rewritten.
-    after = _cli(CLI, root, "approach", "evaluate", "--issue", "add-farewell")
-    # The notice says "approach", because "route" is a verb only (ADR-044).
-    assert "old approach names" in after.stderr and "expedition -> full" in after.stderr
+    # The lint refuses the copy too, and no file is rewritten.
     policy = _cli(CLI, root, "policy", "lint")
-    assert policy.returncode == 0, policy.stdout + policy.stderr
+    assert policy.returncode == 2 and "[governance-copy-removed]" in policy.stderr, (
+        policy.stdout + policy.stderr)
     assert (root / ".compass" / "config.yml").read_bytes() == config
     assert {p: p.read_bytes() for p in (root / "governance").rglob("*.yml")} == governance

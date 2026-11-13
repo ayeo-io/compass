@@ -3,8 +3,11 @@
 This issue bundles PyYAML, Compass's one *hard* dependency. `jsonschema` is
 already optional and already not bundled: `_jsonschema_errors()` in
 `cli/compass_pkg/policy.py` catches its own ImportError and returns None, and
-both `compass policy lint` and `compass issue lint` fall back to the built-in
-structural linter with a note saying what installing it would add. Nothing in
+`compass issue lint` falls back to the built-in structural linter with a note
+saying what installing it would add. `compass policy lint` checks nothing
+against a JSON Schema since 9.0.0 deleted the two governance views and their
+schemas (ADR-098): it is the settings lint, so it passes the same with or
+without jsonschema and prints no note about it. Nothing in
 this issue touches that path - pinned here so "the dependency is gone" is
 never quietly read as covering jsonschema too.
 
@@ -42,15 +45,18 @@ def _hide_jsonschema(tmp_path: Path) -> dict:
 
 def test_jsonschema_absent_behaves_exactly_as_before(run_cli, make_task, tmp_path):
     """With jsonschema unimportable, `compass policy lint` and
-    `compass issue lint` report the same built-in-linter verdict they report
-    today, and each still prints the note naming what jsonschema would add."""
+    `compass issue lint` report the same verdict they report with it.
+    `issue lint` still prints the note naming what jsonschema would add;
+    `policy lint` reads no schema (ADR-098), so a note would claim a check
+    it does not make."""
     env = _hide_jsonschema(tmp_path)
 
     policy_result = run_cli("policy", "lint", extra_env=env)
+    with_it = run_cli("policy", "lint")
     assert policy_result.returncode == 0, policy_result
     assert "compass policy lint: PASS" in policy_result.stdout, policy_result
-    assert "jsonschema not installed" in policy_result.stdout, policy_result
-    assert "pip install jsonschema" in policy_result.stdout, policy_result
+    assert policy_result.stdout == with_it.stdout, (policy_result, with_it)
+    assert "jsonschema not installed" not in policy_result.stdout, policy_result
 
     body = {
         "task": "no-jsonschema-issue",

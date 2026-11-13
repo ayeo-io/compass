@@ -3,8 +3,7 @@
 A record gains `via`: `prompt` when the Claude Code hook wrote it from a typed
 `/compass:approve`, `terminal` when a person ran `compass evidence approve` at
 a terminal, and `delegation` when an agent recorded it under a delegation. No
-verdict reads `via`; the detail of `human-approval-present` and the receipt
-name it, and a record with no `via` still counts (ADR-006, ADR-068 decision 7).
+verdict reads `via`; the detail of `human-approval-present` names it, and a record with no `via` still counts (ADR-006, ADR-068 decision 7).
 
 Scenario ids: `TRC-E1`, `TRC-D3`. Each test name starts with its scenario id.
 """
@@ -44,7 +43,7 @@ def test_e1_terminal_record_holds_via(tmp_path):
 # --- the agent writes an approval into the manifest by hand (`TRC-D3`) --------------------
 
 def test_d3_hand_written_record_named(tmp_path):
-    from test_approval_scoped_to_guardrail_5 import G5, _run, SLUG
+    from test_approval_scoped_to_guardrail_5 import G5
     cases = [
         ({}, "written without a Compass command"),
         ({"via": "terminal"}, "via a terminal"),
@@ -57,8 +56,3 @@ def test_d3_hand_written_record_named(tmp_path):
         _, row = _check_row(root)
         assert row["status"] == "pass", row
         assert words in row["detail"], (words, row)
-        code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
-        assert code == 0, out + err
-        lines = out.splitlines()
-        at = [i for i, one in enumerate(lines) if "EV-G5" in one and "human-approval" in one]
-        assert at and words == lines[at[0] + 1].strip(), (words, out)

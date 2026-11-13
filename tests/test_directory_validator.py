@@ -13,7 +13,6 @@ environment it needs.
 | `TRC-B2` | a command that writes only issue state writes only there |
 | `TRC-B3` | a command that runs a `compass` verb pre-approves `compass` |
 | `TRC-C1` | `gh` gets an allow-list of the environment |
-| `TRC-C2` | the Codex adapter's shared hooks get an allow-list of the environment |
 | `TRC-K1` | the plugin copy passes the directory checks of the local `claude` command |
 | `TRC-K2` | no new subprocess gets the whole environment, no new binary file, nothing new in `bin/` |
 
@@ -37,7 +36,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg import github_labels  # noqa: E402
+from compass_pkg import issue_link  # noqa: E402
 
 #: The hook scripts the plugin runs. Only the owner changes the approval prompt
 #: hook: the pre-tool hook refuses an agent read or edit of it.
@@ -235,8 +234,13 @@ def test_trc_a3_a_moved_program_reads_stdin_only_where_it_did():
 #: The commands that write only issue state and documents. The rest write code or
 #: project files: define (a hotfix's reproduction test), go, implement, quick-fix,
 #: resume and ship (living documents anywhere in the project).
-ISSUE_STATE_ONLY = ("assess", "breakdown", "consult", "design", "flow", "init", "intent",
-                    "plan", "position", "refine", "status", "verify")
+# The `breakdown`, `plan`, `refine` and `verify` commands also wrote issue state only;
+# ADR-092 decision 7 deleted them with the stages they ran. The role entry points
+# `consult`, `design`, `intent` and `position` went with ADR-093.
+# `assess` left the list with ADR-099: it starts the issue and the session then
+# writes the tests and the code under it.
+ISSUE_STATE_ONLY = ("flow", "init", "status")
+DELETED_STAGE_COMMANDS = ("breakdown", "plan", "refine", "verify")
 SCOPES = ("./.compass/**", "./docs/**")
 
 
@@ -265,6 +269,8 @@ def test_trc_b1_no_command_pre_approves_every_shell_command():
 
 def test_trc_b2_issue_state_commands_scope_their_writes():
     found = []
+    for name in DELETED_STAGE_COMMANDS:
+        assert not (ROOT / "commands" / f"{name}.md").exists(), name
     for name in ISSUE_STATE_ONLY:
         tools = _allowed(ROOT / "commands" / f"{name}.md")
         assert tools is not None, name
@@ -309,43 +315,12 @@ def test_trc_c1_gh_gets_only_the_variables_it_needs(monkeypatch):
     monkeypatch.setenv("HOME", "/home/someone")
     monkeypatch.setenv("GH_TOKEN", "a-token")
     monkeypatch.setenv(SECRET, "do-not-pass")
-    monkeypatch.setattr(github_labels.subprocess, "run", run)
-    github_labels._gh(["api", "user"])
+    monkeypatch.setattr(issue_link.subprocess, "run", run)
+    issue_link._gh(["api", "user"])
     assert seen["PATH"] == "/usr/bin"
     assert seen["HOME"] == "/home/someone"
     assert seen["GH_TOKEN"] == "a-token"
     assert seen["GH_PROMPT_DISABLED"] == "1"
-    assert SECRET not in seen
-
-
-def _runtime():
-    spec = importlib.util.spec_from_file_location(
-        "codex_runtime_under_test", ROOT / "adapters" / "codex" / "runtime.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def test_trc_c2_codex_shared_hooks_get_only_the_variables_they_need(monkeypatch, tmp_path):
-    runtime = _runtime()
-    seen = {}
-
-    def run(argv, **kwargs):
-        seen.update(kwargs["env"])
-        return _Done()
-
-    monkeypatch.setenv("PATH", "/usr/bin")
-    monkeypatch.setenv("HOME", "/home/someone")
-    monkeypatch.setenv("COMPASS_ISSUE", "an-issue")
-    monkeypatch.setenv("CLAUDE_PROJECT_DIR", "/another/project")
-    monkeypatch.setenv(SECRET, "do-not-pass")
-    monkeypatch.setattr(runtime.subprocess, "run", run)
-    runtime.shared_hook("stop.sh", {"cwd": str(tmp_path)})
-    assert seen["PATH"] == "/usr/bin"
-    assert seen["HOME"] == "/home/someone"
-    assert seen["COMPASS_ISSUE"] == "an-issue"
-    assert seen["CLAUDE_PLUGIN_ROOT"] == str(ROOT)
-    assert "CLAUDE_PROJECT_DIR" not in seen
     assert SECRET not in seen
 
 
@@ -504,45 +479,44 @@ _PROJECT = "runs the person's own test or project command, which needs their env
 
 #: The functions whose calls keep the whole environment, with how many such calls
 #: each holds and the reason. 8.0.4 passed the directory with each of them. A new call needs an allow-list, as the tests
-#: above give `gh` and the Codex hooks, or an entry here that a reviewer accepts.
+#: above give `gh`, or an entry here that a reviewer accepts.
 INHERITS_ENVIRONMENT = {
-    ("cli/compass_pkg/analyze.py", "_git_out"): (1, _GIT),
-    ("cli/compass_pkg/analyze.py", "_landed_before"): (1, _GIT),
+    ("cli/compass_pkg/ci_cmd.py", "_git_out"): (1, _GIT),
+    ("cli/compass_pkg/ci_cmd.py", "_landed_before"): (1, _GIT),
+    ("cli/compass_pkg/approvals.py", "_head"): (1, _GIT),
     ("cli/compass_pkg/binding.py", "_git"): (1, _GIT),
-    ("cli/compass_pkg/board_trees.py", "_git"): (1, _GIT + "; it leaves out only GIT_ variables"),
+    ("cli/compass_pkg/record_mode.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/committed_landing.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/trail.py", "_base"): (1, _GIT),
     ("cli/compass_pkg/checks.py", "_git_out"): (1, _GIT),
     ("cli/compass_pkg/checks.py", "_check_command_passes"): (1, _PROJECT),
     ("cli/compass_pkg/decisions.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/decisions.py", "history_problems"): (1, _GIT),
     ("cli/compass_pkg/effective.py", "_git_blob"): (1, _GIT),
-    ("cli/compass_pkg/flow.py", "_completed_on_this_branch.git"): (1, _GIT),
     ("cli/compass_pkg/github_links.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/pull_request_link.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/landed_by.py", "_git_commit_subject"): (1, _GIT),
     ("cli/compass_pkg/landed_by.py", "_git_is_usable"): (1, _GIT),
+    ("cli/compass_pkg/landing.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/lessons.py", "_decider"): (1, _GIT),
     ("cli/compass_pkg/manifest.py", "_git"): (1, _GIT),
-    ("cli/compass_pkg/manifest.py", "cmd_land_commit"):
+    ("cli/compass_pkg/lean.py", "_git"): (1, _GIT),
+    ("cli/compass_pkg/lean.py", "_build_base_copy"):
+        (2, "runs git archive in the person's repository and tar on its output, to copy "
+            "the base commit"),
+    ("cli/compass_pkg/manifest.py", "_land_commit"):
         (1, "runs the project's own pre-commit hooks, which need the person's environment"),
-    ("cli/compass_pkg/publish_check.py", "_ignored"): (1, _GIT),
     ("cli/compass_pkg/quick_fix_cmd.py", "_untracked_paths"): (1, _GIT),
     ("cli/compass_pkg/quick_fix_cmd.py", "_write_start_state"): (3, _GIT),
     ("cli/compass_pkg/quick_fix_cmd.py", "_untraced_since_start"): (1, _GIT),
     ("cli/compass_pkg/quick_fix_cmd.py", "_commit_files"): (1, _GIT),
-    ("cli/compass_pkg/quick_fix_cmd.py", "_write_verification_note"): (1, _GIT),
-    ("cli/compass_pkg/readiness_record.py", "_git"): (1, _GIT),
-    ("cli/compass_pkg/readiness_run.py", "_git"): (1, _GIT),
-    ("cli/compass_pkg/readiness_run.py", "_run_one"): (1, _PROJECT),
     ("cli/compass_pkg/record.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/release_notes.py", "_git"): (1, _GIT),
-    ("cli/compass_pkg/replay.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/ship_commit_reason.py", "_pre_commit_hook_can_run"): (1, _GIT),
-    ("cli/compass_pkg/spec_refresh.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/start_state.py", "_git_changed_paths"): (1, _GIT),
     ("cli/compass_pkg/start_state.py", "_record_path"): (1, _GIT),
     ("cli/compass_pkg/start_state.py", "_tracked_paths"): (1, _GIT),
     ("cli/compass_pkg/migrate_copy_check.py", "_judge.git"): (1, _GIT),
-    ("cli/compass_pkg/subtasks.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/tdd.py", "_run_test"): (1, _PROJECT),
     ("cli/compass_pkg/tip_scope.py", "_git"): (1, _GIT),
     ("cli/compass_pkg/worktree_lookup.py", "run_git"): (1, _GIT + "; it leaves out only GIT_ variables"),
@@ -562,10 +536,10 @@ def _is_binary(data):
 
 #: The binary files the plugin ships, each one in 8.0.4 when it passed the directory.
 BINARY_FILES = {
-    "assets/board-example.png": "the board image the README shows",
     "assets/compass-icon.png": "the plugin's icon",
-    "governance/shipped-releases.tar.xz": "the governance files of each release, which "
-                                          "`compass policy migrate` reads",
+    "governance/shipped-releases.tar.xz": "the governance files of each release, kept "
+                                          "frozen after 9.0.0 removed `compass policy "
+                                          "migrate`, which read them",
 }
 
 #: The launchers in `bin/`. ayeo-io/compass-delivery#312 decides whether `bin/`

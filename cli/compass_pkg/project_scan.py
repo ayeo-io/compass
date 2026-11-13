@@ -12,13 +12,10 @@ reads it once per command and builds the indexes the renderers ask:
 - the ADR records, by id;
 - each issue's state, read once.
 
-Manifests are read through the parse cache (ADR-049, widened by ADR-052). The
-cache serves the render under three conditions: the issue's own manifest is read
-by `render_cmd.plan_issue` with `load_manifest`, never through the cache; no
-command that saves a manifest reads through it; and a planted payload is accepted
-only for the blocks that are advisory (`related`, the governance lines of
-`decisions` and the index row). This module and `flow.py` are the only modules
-that name the cache, and a test pins the list.
+Manifests are read through the parse cache (ADR-049, widened by ADR-052). No
+command that saves a manifest reads through it. Before 9.0.0 the cache also served
+the render of issue pages (ADR-091 removed it). This module and `flow.py` are the
+only modules that name the cache, and a test pins the list.
 
 The scan reads and writes no document. It reads no clock, no git configuration and
 no absolute path into a block.

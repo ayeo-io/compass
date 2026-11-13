@@ -15,7 +15,7 @@ tells them to do, since it is their audit trail - meets it on day one.
 The sweep still lists every issue it saw and says why one was not checked.
 Nothing hides; a queued issue simply does not fail a build for being queued.
 
-Scenario ids: see docs/system-spec.md (TRC-1, `TRC-2`).
+Scenario ids: see the issue's acceptance criteria (TRC-1, `TRC-2`).
 """
 from __future__ import annotations
 
@@ -64,12 +64,6 @@ def _project(tmp_path, slug, status):
         "version: 1.0.0\nmode: enforced\n", encoding="utf-8")
     (work / "manifest.yml").write_text(
         SPINE.format(slug=slug, status=status), encoding="utf-8")
-    gov = tmp_path / "governance"
-    gov.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        (gov / name).write_text(
-            (ROOT / "governance" / name).read_text(encoding="utf-8"),
-            encoding="utf-8")
     return tmp_path
 
 

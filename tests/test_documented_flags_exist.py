@@ -21,13 +21,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CLI = REPO_ROOT / "cli" / "compass"
 
-# The surfaces a reader is taught from. `docs/system-spec.md` is derived and
-# `docs/proposals/` is untracked planning, so neither teaches anyone anything.
+# The surfaces a reader is taught from. `docs/proposals/` is untracked
+# planning, so it teaches no one anything.
 DOC_GLOBS = ("commands/*.md", "skills/*/SKILL.md", "agents/*.md",
              "docs/*.md", "governance/*.md", "approaches/*.md",
              "templates/**/*.md")
 NAMED_DOCS = ("CLAUDE.md", "AGENTS.md", "README.md", "compass-contract.md")
-SKIP_NAMES = {"system-spec.md", "system-spec-archive.md"}
 
 # Flags every verb takes, added by the shared output-mode block rather than by
 # any one parser. Checking these per verb would be noise.
@@ -45,7 +44,7 @@ def _documents():
     out = [REPO_ROOT / n for n in NAMED_DOCS]
     for pat in DOC_GLOBS:
         out += sorted(REPO_ROOT.glob(pat))
-    return [p for p in out if p.is_file() and p.name not in SKIP_NAMES]
+    return [p for p in out if p.is_file()]
 
 
 def _flags_a_verb_accepts(verb: str) -> set[str]:

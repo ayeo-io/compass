@@ -1,16 +1,16 @@
 """The stop hook checks the artifacts that exist today.
 
-The stop hook reads `acceptance-criteria.md` and the "Outstanding
-follow-ups" heading, which are what the current templates write.
+The stop hook reads `acceptance-criteria.md` and the manifest's
+`follow_ups:`, which are what a 9.0.0 issue writes.
 
   * The reproduction-scenario check reads `acceptance-criteria.md`. A check
     that can never pass is worse than one that can never fail: people learn
     to ignore it.
 
-  * The outstanding-follow-up scan looks for a section headed "Outstanding
-    follow-ups", the heading the template writes.
+  * The outstanding-follow-up scan reads the manifest's `follow_ups:`. 9.0.0
+    writes no delivery-approach record to hold a follow-up section (ADR-091).
 
-Scenario ids: see docs/system-spec.md (group G).
+Scenario ids: see the issue's acceptance criteria (group G).
 """
 from __future__ import annotations
 
@@ -19,23 +19,6 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "stop.sh"
-
-# Build the fixture from the shipped template, not by hand: a hand-typed
-# heading only proves the regex matches a string written for the test.
-TEMPLATE = (ROOT / "templates" / "delivery-approach.md").read_text(encoding="utf-8")
-
-
-def _hotfix_record() -> str:
-    """A delivery-approach record shaped like the template's, for a hotfix.
-
-    Fills the template's approach placeholder rather than replacing its
-    headings, so if the template's wording changes this fixture changes with
-    it and the hook's detector has to keep up.
-    """
-    text = TEMPLATE.replace(
-        "{{quick fix | feature | initiative | hotfix | spike}}", "hotfix")
-    return text + "\n- [ ] FU-1 promote the reproduction test into a scenario\n"
-
 
 SPEC_WITH_REPRO = """# Acceptance criteria - demo
 
@@ -80,7 +63,6 @@ def _project(tmp_path, *, spec_body=None, spec_name="acceptance-criteria.md"):
     (tmp_path / ".compass" / "config.yml").write_text(
         "version: 1.0.0\n", encoding="utf-8")
     (work / "manifest.yml").write_text(SPINE, encoding="utf-8")
-    (work / "delivery-approach.md").write_text(_hotfix_record(), encoding="utf-8")
     if spec_body is not None:
         (work / spec_name).write_text(spec_body, encoding="utf-8")
     return tmp_path
@@ -119,11 +101,10 @@ def test_a_missing_reproduction_is_still_reported(tmp_path):
 
 
 def test_an_outstanding_follow_up_is_reported(tmp_path):
-    """The section scan must match the heading the template actually writes."""
+    """The follow-up the manifest records as outstanding is reported."""
     project = _project(tmp_path, spec_body=SPEC_WITH_REPRO)
     out = _run(project).stderr
 
     assert "follow-up" in out.lower() or "follow up" in out.lower(), (
-        f"the unchecked item under 'Outstanding follow-ups' was not reported - "
-        f"the scan is still looking for the retired section heading:\n{out}"
+        f"the outstanding follow-up in the manifest was not reported:\n{out}"
     )

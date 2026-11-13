@@ -25,9 +25,7 @@ SHIPPED_DONE = ["dod-every-scenario-passes", "dod-suite-green", "dod-coverage-fl
 
 
 def _checked(run_cli, slug):
-    """`compass check --verbose` on the issue, after the render that follows each command
-    has written its issue page: a fixture that writes a manifest by hand has no page yet."""
-    run_cli("issue", "render", "--issue", slug)
+    """`compass check --verbose` on the issue."""
     return run_cli("check", "--verbose", "--issue", slug)
 
 

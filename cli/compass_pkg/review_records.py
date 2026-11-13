@@ -56,7 +56,7 @@ def file_digest(path):
     no such file. The bytes are the file's masked text (the lines inside a
     rendered block removed), so a render never changes the digest of a
     document, and a file with no block digests as it always did. Every digest
-    of a document comes through here: the approval digest, freshness and the
+    of a document comes through here: the approval digest and the
     document inputs of a judged check (an evidence input uses `raw_digest`)."""
     from compass_pkg import rendered_blocks
     if not path:

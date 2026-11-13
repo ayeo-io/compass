@@ -1,4 +1,4 @@
-"""Cross-cutting invariants for compass analyze + living-spec + compass next.
+"""Cross-cutting invariants for the CLI surface and compass next.
 
 These tests are structural assertions that protect Compass's USPs across the
 three capabilities introduced in the 1.0 line: legibility budget,
@@ -37,9 +37,8 @@ def test_trc_d1_mental_model_bullets_unchanged():
 
     The pre-issue count is the five-point model - by design (the heading
     promises "five points"). The three candidates introduce zero net-new
-    top-level concepts; the new CLI verbs (`compass analyze`, `compass next`)
-    and the derived artifact (docs/system-spec.md) are products of existing
-    concepts.
+    top-level concepts; the new CLI verb (`compass next`) is a product of
+    existing concepts.
     """
     five_minutes = (ROOT / "docs" / "five-minutes.md").read_text(encoding="utf-8")
     # Find the section by heading
@@ -61,7 +60,7 @@ def test_trc_d1_mental_model_bullets_unchanged():
 
 # ---------------------------------------------------------------------------
 # Public CLI surface guard, an architecture check (`TRC-D2`). Originally
-# froze the surface at two new verbs, `compass analyze` and `compass next`.
+# froze the surface at two new verbs, one of them `compass next`.
 # It is now the framework's living public-surface check: the public
 # subcommand set must equal the known list below, so no verb is added (or a
 # private one exposed) without a deliberate update here.
@@ -75,34 +74,18 @@ def test_trc_d1_mental_model_bullets_unchanged():
 # terminology was added. The assertion's premise is unchanged - the
 # surface equals the known set, and deliberate changes update it here.
 EXPECTED_PUBLIC_SUBCOMMANDS = {
-    "approach", "check", "retro", "ci",
-    "tdd-red", "tdd-green",
+    "approach", "check", "ci",    # 9.0.0 removed `retro`, `rework-scan` and
+    "tdd-red", "tdd-green",       # `board` (ADR-093)
     "policy", "issue", "adr",
-    "rework-scan", "flow", "follow-up",
+    "flow", "follow-up",
     "terminology",                # the CLI-voice slice: the glossary verb
-    "review-rule", "spec",        # `review-rule list` and `spec sync`
-    "preset",                     # `preset init` and `preset test`
-    "profile",                    # `profile lint`, `add` and `show` - execution profiles
-    "analyze", "next",            # cross-issue-architectural-integrity
+    "review-rule",                # `review-rule list`; 9.0.0 removed `spec sync`
+                                  # (ADR-091)
+    "next",                       # cross-issue-architectural-integrity; 9.0.0
+                                  # removed its partner `analyze` and the
+                                  # placeholder scan `plan lint` (ADR-091)
     "ship-commit",                # framework-field-feedback `R5`
     "gate", "scenario", "changed-file", "evidence",  # framework-field-feedback `R6`/`R9`
-    "intent",                     # ingest-an-existing-brief: `compass intent
-                                  # ingest` reads a brief that already exists,
-                                  # by path or https URL, so a team arriving
-                                  # with one does not retype it. New top-level
-                                  # group - `/compass:intent` was a slash
-                                  # command and the CLI had no verb for it.
-    "plan",                       # readable-specs-and-flow shipped this as
-                                  # `compass design lint`, the advisory
-                                  # placeholder scan over technical-design.md.
-                                  # The vocabulary rename moved it to `plan` on
-                                  # 2026-08-25, because `design` now names the
-                                  # DESIGNER's stage and one word cannot mean
-                                  # two stages in one release.
-                                  # The retired spelling `design` still runs -
-                                  # ADR-006 forbids breaking it mid-major - but
-                                  # it is hidden from `--help`, so it is not an
-                                  # advertised verb and is absent from this set.
     "acceptance",                 # honest-acceptance-for-config-and-refactor:
                                   # `compass acceptance start|record`, the
                                   # honest signal for a change with no natural
@@ -129,30 +112,38 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # instead of a dozen, through the same code
                                   # each step already used. A GROUP, so a
                                   # later quick-fix verb has a home.
-    "board",                      # compass-board: `compass board render|refresh`,
-                                  # the delivery board as one page. A GROUP, so
-                                  # a later board verb has a home.
     "lesson",                     # project-lessons (ADR-029)
-    "run",                        # headless-runner (ADR-030)
-    "record",                     # delivery-record (ADR-031)
+    "record",                     # delivery-record (ADR-031); `record commit`, #356 (ADR-096)
     "release",                    # intent-and-release-line (ADR-065): `compass
                                   # release notes --since <ref>`, read-only. A
                                   # GROUP, so a later release verb has a home.
     "decision",                   # decisions-ledger (ADR-027): record|list|
                                   # show|check, the settled-decisions ledger.
                                   # A GROUP; record reads the decider from git.
-    "readiness",                  # project-readiness-caps-autonomy: `compass
-                                  # readiness`, which measures the repository
-                                  # against the readiness signals and writes
-                                  # .compass/readiness.yml. A verb: it has one
-                                  # action and two output forms.
+    # "readiness" (project-readiness-caps-autonomy): ADR-093 removed the
+    # readiness measure.
+    "isolation", "layering",      # isolation-and-layering (#328, ADR-086):
+                                  # `compass isolation record` and `compass
+                                  # layering record`, the only writers of the
+                                  # strategy's two records. GROUPS, so a later
+                                  # record verb has a home.
+    "waiver",                     # #357 (ADR-094): `compass waiver add|withdraw`,
+                                  # one check waived on one issue. A GROUP.
+    "trail",                      # #356 (ADR-096 decision 19): `compass trail
+                                  # [--check]` writes the issue's trail.md. A
+                                  # verb, not a group: it is a noun that is its
+                                  # own command. `compass record commit` (#356)
+                                  # is under the `record` group, not top level.
+    "migrate",                    # #359: `compass migrate [--apply]` moves an
+                                  # 8.x project's open issues to 9.0.0. A verb,
+                                  # not a group: one run moves the project.
 }
 
 
 def test_trc_d2_only_two_new_public_cli_verbs():
     """The public CLI surface equals the known set (no unexpected additions or
-    removals), and `_derive-system-spec` stays hidden from `compass --help`
-    (private entry point per `DD-4`). Deliberate additions update
+    removals), and no private entry point appears in `compass --help`
+    (`DD-4`). Deliberate additions update
     EXPECTED_PUBLIC_SUBCOMMANDS."""
     out = subprocess.run(
         [sys.executable, str(CLI), "--help"],
@@ -167,15 +158,15 @@ def test_trc_d2_only_two_new_public_cli_verbs():
         f"removed {EXPECTED_PUBLIC_SUBCOMMANDS - actual}. If deliberate, update "
         f"EXPECTED_PUBLIC_SUBCOMMANDS in this test."
     )
-    # Private entry point must not appear in --help
-    assert "_derive-system-spec" not in actual, (
-        "_derive-system-spec is a private entry point and must not appear in compass --help"
+    # A private entry point must not appear in --help
+    assert not [verb for verb in actual if verb.startswith("_")], (
+        "a private entry point must not appear in compass --help"
     )
 
 
 # ---------------------------------------------------------------------------
 # No fixed-tier ladder is shipped (`TRC-D3`)
-# Source-of-truth: governance/routing-policy.yml - no `tier`, `level`, or
+# Source-of-truth: routing-policy.yml - no `tier`, `level`, or
 # equivalent process vocabulary, outside the `model_rules` block, which names
 # the model each seat runs on; the four assessment dimensions remain
 # risk/familiarity/size/intent (`BR-012`).
@@ -201,14 +192,15 @@ def model_rules_problems(policy):
 
 
 def test_trc_d3_no_tier_ladder_in_routing_policy():
-    """governance/routing-policy.yml has no `tier` or `level`
-    vocabulary; the four assessment dimensions are unchanged (`TRC-D3`)."""
-    text = (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8")
+    """The check set has no `tier` or `level` vocabulary; the four assessment
+    dimensions are unchanged (`TRC-D3`)."""
+    text = (ROOT / "governance" / "check-set.yml").read_text(encoding="utf-8")
     # The `model_rules` block names a model tier per seat (which model runs a
     # stage), not a process tier a person picks from a menu: it changes no
     # stage, gate or approach. It is checked on its own below, and the rest of
     # the file keeps the hard prohibition.
-    policy = yaml.safe_load(text)
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
     problems = model_rules_problems(policy)
     assert not problems, "\n".join(problems)
     start = text.find("\nmodel_rules:\n")
@@ -216,7 +208,7 @@ def test_trc_d3_no_tier_ladder_in_routing_policy():
     # Hard prohibition - no "tier:" or "level:" keys anywhere else
     for forbidden in ("tier:", "level:"):
         assert forbidden not in rest, (
-            f"routing-policy.yml must not introduce '{forbidden}' - would be a tier-ladder"
+            f"check-set.yml must not introduce '{forbidden}' - would be a tier-ladder"
         )
     # Reading vocabulary keys: the dimensions + urgency. Role left the
     # assessment at 7.0.0 (ADR-070); nothing took its place.
@@ -229,18 +221,13 @@ def test_trc_d3_no_tier_ladder_in_routing_policy():
 
 # ---------------------------------------------------------------------------
 # The five roles are unchanged; no new agent persona was added (`TRC-D4`)
-# Source-of-truth: agents/*.md and the perspectives a document's owner may
-# name. The agent count cannot grow, and the five roles stay the
-# perspectives a session consults; they left the assessment at 7.0.0
-# (ADR-070).
+# Source-of-truth: agents/*.md. The agent count cannot grow. The five roles
+# left the assessment at 7.0.0 (ADR-070).
 # ---------------------------------------------------------------------------
 PRE_TASK_AGENT_FILES = {
     "spec-author.md", "planner.md", "builder.md", "orchestrator.md",
     "verifier.md", "reviewer.md", "router.md",
     "product-owner.md", "product-marketer.md", "architect.md",
-}
-EXPECTED_ROLES = {
-    "engineer", "product-owner", "product-marketer", "designer", "qa",
 }
 
 
@@ -254,25 +241,28 @@ def test_trc_d4_no_new_agent_persona_no_new_role():
     assert not new_agents, (
         f"no new role/lens agent file may be added by this task; observed new: {new_agents}"
     )
-    # The five roles stay the perspectives a document may be owned by
-    from compass_pkg import policy_lint
-    actual_roles = set(policy_lint.PERSPECTIVES)
-    assert actual_roles == EXPECTED_ROLES, (
-        f"the perspectives must remain {EXPECTED_ROLES}; got {actual_roles}"
-    )
+    # The layered lint held the five roles as the perspectives a document kind
+    # may be owned by. 9.0.0 declares no document kind (ADR-091) and removed that
+    # lint with the layers (ADR-094); the role agent files above are what remains.
 
 
 # ---------------------------------------------------------------------------
 # Pipeline phases still flex by delivery approach (`TRC-D5`)
-# Source-of-truth: governance/routing-policy.yml `route_shapes` - at least
+# Source-of-truth: routing-policy.yml `route_shapes` - at least
 # two route shapes differ in their phase-weight maps (`BR-014`).
 # ---------------------------------------------------------------------------
 def test_trc_d5_pipeline_phases_flex_by_route():
     """The five route shapes have different phase-weight maps;
-    none has been flattened to a one-size-fits-all shape (`TRC-D5`, `BR-014`)."""
-    policy = yaml.safe_load(
-        (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8")
-    )
+    none has been flattened to a one-size-fits-all shape (`TRC-D5`, `BR-014`).
+
+    The shapes are read from the 8.0.4 governance copy, the last release that
+    declared them. The shipped default runs one path of four stages with no
+    stage modes since 9.0.0 (ADR-092)."""
+    import tarfile
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        policy = yaml.safe_load(tar.extractfile("governance/routing-policy.yml").read())
     shapes = policy["route_shapes"]
     phase_maps = {name: shape["stages"] for name, shape in shapes.items()}
     # All five shapes present
@@ -293,7 +283,7 @@ def test_trc_d5_pipeline_phases_flex_by_route():
 
 # ---------------------------------------------------------------------------
 # Phases and gates remain enforced (`TRC-D6`)
-# Source-of-truth: governance/routing-policy.yml `immovable_gates` and every
+# Source-of-truth: routing-policy.yml `immovable_gates` and every
 # route_shape's `gates` list (`BR-015`).
 # ---------------------------------------------------------------------------
 IMMOVABLE_GATE_IDS = {"verify.correctness", "verify.governance", "verify.traceability"}
@@ -302,9 +292,8 @@ IMMOVABLE_GATE_IDS = {"verify.correctness", "verify.governance", "verify.traceab
 def test_trc_d6_phases_and_gates_remain_enforced():
     """Immovable gates are still immovable; no route shape's gate
     set is empty - no fluid no-gate mode (`TRC-D6`, `BR-015`)."""
-    policy = yaml.safe_load(
-        (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8")
-    )
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
     # Immovable gates present
     immovable = {g["gate"] for g in policy["routing_guardrails"]["immovable_gates"]}
     assert IMMOVABLE_GATE_IDS.issubset(immovable), (
@@ -337,20 +326,11 @@ def test_trc_d7_tdd_remains_a_strategy_spike_suspends():
 # shipped defaults (`BR-004` / `NFR-ONR-001`).
 # ---------------------------------------------------------------------------
 def test_trc_d8_bare_repo_zero_setup(tmp_path):
-    """`compass analyze` and `compass next` both produce a clean
-    no-op behaviour when invoked from a bare repo without /compass:init (`TRC-D8`)."""
+    """`compass next` produces a clean no-op behaviour when invoked from a
+    bare repo without /compass:init (`TRC-D8`). Exit code may be non-zero
+    because no issue is assessed, but the error must be informative, not a
+    traceback."""
     # Bare repo - just a directory, no .compass/ at all
-    out_analyze = subprocess.run(
-        [sys.executable, str(CLI), "analyze"],
-        cwd=str(tmp_path), capture_output=True, text=True,
-    )
-    # On a bare repo, `compass analyze` should not crash with a parse error;
-    # it should report cleanly that there are no artifacts. Exit code may be
-    # non-zero because no issue is assessed - but the error must be
-    # informative, not a traceback.
-    assert "Traceback" not in out_analyze.stderr, (
-        f"analyze on bare repo crashed: {out_analyze.stderr}"
-    )
     out_next = subprocess.run(
         [sys.executable, str(CLI), "next"],
         cwd=str(tmp_path), capture_output=True, text=True,

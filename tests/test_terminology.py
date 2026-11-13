@@ -103,7 +103,7 @@ BAN_PATTERNS: dict[str, list[re.Pattern]] = {
         re.compile(r"\bprd\.md\b"),
         re.compile(r"\btemplates/prd\b"),
         # The bare acronym, which the two patterns above never touched - so
-        # 24 live occurrences survived, including `commands/intent.md`'s own
+        # 24 live occurrences survived, including the intent command's own
         # description line, the sentence a user reads in the slash-command
         # menu, which said the command captures intent "as a PRD" while <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
         # writing intent.md. Naming the document. "Product requirements" as
@@ -185,23 +185,24 @@ BAN_PATTERNS: dict[str, list[re.Pattern]] = {
         re.compile(r"\bExpedition\b"),
     ],
     # The v1 phase names, as names: command, "X phase", pipeline arrows,
-    # headings. Ordinary lowercase verbs ("specify the format", "landing
-    # gear") stay legal.
-    "Specify / Clarify / Distribute / Land": [
-        re.compile(r"/compass:(?:specify|clarify|distribute|land)\b"),
-        re.compile(r"\b(?:Specify|Clarify|Distribute|Land)\s+phase\b"),
-        re.compile(r"(?:→|->)\s*(?:Specify|Clarify|Distribute|Land)\b"),
-        re.compile(r"\b(?:Specify|Clarify|Distribute|Land)\s*(?:→|->)"),
-        re.compile(r"^#+\s+(?:Specify|Clarify|Distribute|Land)\b", re.M),
+    # headings. Ordinary lowercase verbs ("clarify the format", "landing
+    # gear") stay legal. Specify is not here: ADR-092 brought it back as the
+    # second stage of the four-stage path.
+    "Clarify / Distribute / Land": [
+        re.compile(r"/compass:(?:clarify|distribute|land)\b"),
+        re.compile(r"\b(?:Clarify|Distribute|Land)\s+phase\b"),
+        re.compile(r"(?:→|->)\s*(?:Clarify|Distribute|Land)\b"),
+        re.compile(r"\b(?:Clarify|Distribute|Land)\s*(?:→|->)"),
+        re.compile(r"^#+\s+(?:Clarify|Distribute|Land)\b", re.M),
         # Tuned at the skills-prose review: the capitalised stage name
         # after a preposition or conjunction ("at Land", "and Land", <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
-        # "during Specify") is stage-name usage the suffix forms miss; <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
+        # "during Clarify") is stage-name usage the suffix forms miss; <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
         # lowercase ordinary verbs ("planes land") stay legal.
         re.compile(r"\b(?:during|at|before|after|since|until|and|into)\s+"
-                   r"(?:Specify|Clarify|Distribute|Land)\b"),
+                   r"(?:Clarify|Distribute|Land)\b"),
         # Banned outright, like Frame above and for the same reason. See the <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
         # comment there for the two designs that were measured and rejected.
-        re.compile(r"\b(?:Specify|Clarify|Distribute|Land)\b"),
+        re.compile(r"\b(?:Clarify|Distribute|Land)\b"),
     ],
     # The role-perspective concept, in any casing. Tuned at the
     # skills-prose slice: a hyphen-preceded "lens" is an agent identifier <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
@@ -629,7 +630,7 @@ TERM_SURFACE_EXEMPT = {
     # exempt. governance/strategies.md is different: it is prose a contributor
     # reads, and it is where this project states the rule about bare codes -
     # so the prefix made the one file the rule could not reach the one file
-    # stating it. The identical bare code in agents/reviewer.md was caught in
+    # stating it. The identical bare code in the reviewer agent's file was caught in
     # under a minute while the copy in strategies.md was not.
     #
     # The .md files under governance/ are scanned. A deliberate illustration of
@@ -637,7 +638,7 @@ TERM_SURFACE_EXEMPT = {
     # which is enumerable by grep; a path prefix is not.
     "G1..G5 / S1..S14 codes, bare": (
         "governance/guardrails.yml", "governance/routing-policy.yml",
-        "governance/terminology.yml", "governance/signals.yml",
+        "governance/terminology.yml",
         "schemas/", "architecture/",
     ),
     # writing-voice.md teaches by quoting this repository's own archive
@@ -653,7 +654,7 @@ TERM_SURFACE_EXEMPT = {
     # written, and its own guard failed within seconds. Exempt at file
     # granularity because Python surfaces contribute string literals only, so
     # an inline marker in a comment is invisible to the scanner.
-    "Specify / Clarify / Distribute / Land": (
+    "Clarify / Distribute / Land": (
         "skills/compass-runtime/writing-voice.md",
         "scripts/verify-archive-quotes.py",),
     "Frame / the Needle": ("skills/compass-runtime/writing-voice.md",),
@@ -673,7 +674,7 @@ TERM_SURFACE_EXEMPT = {
     # replaced was only needed while the agents were still called *-lens. <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
     # A file that merely CITES the record carries a line-level
     # `vocabulary-scan: allow` marker instead - see
-    # skills/bdd-specification/refinement-chain.md. A file-wide entry would
+    # skills/atdd/references/refinement-chain.md. A file-wide entry would
     # also excuse a future prose use of the word in that file, silently, and
     # the marker is greppable where a path prefix is not.
     "lens": ("architecture/decisions/ADR-004-one-spec-many-lenses.md",),
@@ -1133,7 +1134,7 @@ def test_repository_scan_is_green():
 #   * what does the code USE      -> an exact list of retired identifiers,
 #                                    read from governance/terminology.yml
 #
-# Spec: docs/system-spec.md (group G).
+# Spec: the issue's acceptance criteria (group G).
 
 RETIRED_NAMES = {
     e["name"]: e["replacement"]
@@ -1699,13 +1700,6 @@ def test_vc5_every_vocabulary_catalogue_in_the_repository_is_clean():
     surfaces = _terminology()["scan"]["vocabulary_surfaces"]
     hits = _vocabulary_catalogue_hits(REPO_ROOT, surfaces)
     assert not hits, _report(hits, "A display name or alias holds a banned term.")
-    if (REPO_ROOT / "governance" / "presets").exists():
-        # Once the shipped preset lands it holds a vocabulary file. If the
-        # scan finds none, discovery is broken and this test would pass empty.
-        assert _vocabulary_files(REPO_ROOT, surfaces), (
-            "governance/presets/ exists but no vocabulary catalogue was found "
-            "under the scan's vocabulary surfaces"
-        )
 
 
 def test_pl_c11_strategies_prose_is_not_path_exempt():
@@ -1747,7 +1741,8 @@ def test_pl_c11_strategies_prose_is_not_path_exempt():
 # exists to repair. See the comment on the Frame patterns above. <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
 # ---------------------------------------------------------------------------
 
-RETIRED_STAGES = ("Frame", "Specify", "Clarify", "Distribute", "Land")
+# Specify was retired with these and came back as a path stage (ADR-092).
+RETIRED_STAGES = ("Frame", "Clarify", "Distribute", "Land")
 
 
 def _sample_holder() -> Path:
@@ -1787,17 +1782,18 @@ def test_b1_label_shape_in_a_table_cell_is_caught():
 
 
 def test_b2_label_shape_in_a_bold_run_is_caught():
-    """The other label form: `- **Specify** - how many scenarios` (`TRC-B2`). <!-- vocabulary-scan: allow - quotes the retired label form this test plants and checks the ban catches -->"""
+    """The other label form: `- **Clarify** - how many scenarios` (`TRC-B2`). <!-- vocabulary-scan: allow - quotes the retired label form this test plants and checks the ban catches -->"""
     for stage in RETIRED_STAGES:
         hits = _scan_text(f"- **{stage}** - how many scenarios and how deep.\n")
         assert hits, f"a bold run holding only '{stage}' was not reported"
 
 
 def test_b3_every_retired_stage_name_has_a_label_pattern():
-    """Five names were retired together and are written alike (`TRC-B3`).
+    """The names retired together are written alike (`TRC-B3`).
 
-    Teaching the shape to one and not the rest is how the next four survive,
-    so this asserts the ban covers all five rather than trusting that it does.
+    Teaching the shape to one and not the rest is how the others survive, so
+    this asserts the ban covers every name still retired rather than trusting
+    that it does.
     """
     for stage in RETIRED_STAGES:
         assert _scan_text(f"| {stage} |\n"), (

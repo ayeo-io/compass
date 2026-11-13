@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 
 from approval_guard_cases import (CALLER, DEL, EXEMPT_COMMANDS, MIN_PER_EXEMPT,  # noqa: E402
-                                  MIN_PER_THING, REFUSED, REQ, REQUEST, THINGS, TRN,
+                                  MIN_PER_THING, PRR, REFUSED, REQ, REQUEST, THINGS, TRN,
                                   UNREFUSED_ON_BASE, bash_event, build_world, drop_world,
                                   payload, run_hook, verdict)
 
@@ -191,7 +191,7 @@ def test_trc_033_the_counter_examples_hold(world, in_process):
 
 
 def test_trc_033_every_row_carries_a_known_code():
-    known = {REQ, DEL, TRN, CALLER}
+    known = {REQ, DEL, TRN, CALLER, PRR}
     assert all(case.code in known for case in REFUSED)
     assert len({case.id for case in REFUSED}) == len(REFUSED), "a row id is used twice"
 

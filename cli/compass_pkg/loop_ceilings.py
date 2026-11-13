@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass - the loop ceilings of a multiagent run
+# compass - the loop ceilings a configuration declares
 # =============================================================================
-# The `loop_ceilings` rules in governance/routing-policy.yml bound a
-# multiagent run: tries per subtask, review rounds, replans, and the same
-# error reported in a row. `compass issue subtask` (subtasks.py) refuses
-# work past them, and `multiagent-run-recorded` (multiagent_check.py) refuses
-# to land a subtask past them without a stop reason. Both read the limits
-# and the cutoff date here, so neither module imports the other. Two more
-# bound an unattended `compass run` (run_cmd.py): the sessions it may start,
-# the minutes it may take and the money it may spend.
+# The `loop_ceilings` rules in routing-policy.yml bounded a
+# multiagent run (tries per subtask, review rounds, replans and the same error
+# reported in a row) and the unattended `compass run` (sessions, minutes and
+# money). 9.0.0 removed both (ADR-090), so nothing applies the limits. They
+# stay a readable part of a configuration, which the classifier compares,
+# until the configuration layers are replaced.
 #
 # DEPENDENCY: standard library (datetime, os), compass_pkg.core and compass_pkg.effective.
 # =============================================================================
@@ -17,9 +15,6 @@
 from __future__ import annotations
 
 import datetime
-import os
-
-from compass_pkg.core import find_governance, load_yaml, reading_matches
 
 #: An issue is compared with its loop ceilings by the check only if created
 #: on or after the day the ceilings landed (ADR-006).
@@ -51,17 +46,12 @@ def on_or_after(created, cutoff):
 def loop_ceilings(task, task_dir=None):
     """`{ceiling: (limit, rule id)}` for this issue, from the routing policy
     in force: the issue's generation when `task_dir` names one, else the
-    governance files. For each ceiling the lowest limit among the rules whose
+    project's live configuration. For each ceiling the lowest limit among the rules whose
     `when` matches the assessment applies, so a rule can only lower a limit. A
     ceiling no rule sets is absent: there is no limit in code."""
     from compass_pkg import effective
-    view = effective.view_or_legacy(task_dir) if task_dir is not None else None
-    if view is not None:
-        rules, matches = view.loop_ceiling_rules(), view.matches
-    else:
-        policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
-        rules = ((policy or {}).get("routing_guardrails") or {}).get("loop_ceilings") or []
-        matches = reading_matches
+    view = effective.effective_for(task_dir)
+    rules, matches = view.loop_ceiling_rules(), view.matches
     readings = task.get("assessment") or {}
     found = {}
     for rule in rules:

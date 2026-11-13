@@ -1,10 +1,12 @@
-"""The old typed names that 7.0.0 still reads (issue language-key-and-us-english).
+"""The old names that 7.0.0 read (issue language-key-and-us-english).
 
 One reader-side table in `cli/migrate-map.yml` (`old_names:`), each row ending at
-8.0.0, read through `cli/compass_pkg/old_names.py`. The sections below test, in
-order: the table and the `--kind` argument; the skill and the check id; the
-state key, the refusal code and the readiness key; the JSON keys, the headings
-and the term; the end of the table at 8.0.0; and the upgrade guide table.
+9.0.0, read through `cli/compass_pkg/old_names.py`. 9.0.0 deletes the typed
+old names and the rows nothing reads (ADR-098); the rows a stored record or a
+compatibility contract needs stay (VD-040). The sections below test, in order:
+the table and the `--kind` argument; the skill and the check id; the state key
+and the refusal code; the headings and the term; the end of the table at 9.0.0;
+and the upgrade guide table.
 """
 from __future__ import annotations
 
@@ -86,10 +88,12 @@ def _reassess(project: Path, *kind_args):
 
 
 def test_trc_043():
+    """9.0.0 reads no typed old kind (ADR-098): `--kind` with the old word is
+    refused as any unknown kind is, and records nothing."""
     import tempfile
-    notice = f"compass: kind {OLD_KIND} is now {NEW_KIND}; the old word is read until 9.0.0."
+    notice = f"compass: kind {OLD_KIND} is now {NEW_KIND}"
     cases = [
-        (["--kind", NEW_KIND], True), (["--kind", OLD_KIND], True),
+        (["--kind", NEW_KIND], True), (["--kind", OLD_KIND], False),
         (["--kind", NEW_KIND.upper()], False), (["--kind", "judg" + "emnt"], False),
         ([], True),
     ]
@@ -103,7 +107,7 @@ def test_trc_043():
         if accepted:
             assert code == 0, (args, out + err)
             assert [e["kind"] for e in entries] == [NEW_KIND], (args, entries)
-            assert err.count(notice) == (1 if args[-1:] == [OLD_KIND] else 0), (args, err)
+            assert notice not in err, (args, err)
         else:
             assert code != 0 and entries == [], (args, out + err)
             for choice in (NEW_KIND, "policy-correction", "scope-change", "configuration"):
@@ -136,23 +140,11 @@ def test_trc_044():
         _two_kinds(new, old=False)
         original = _manifest_path(old).read_bytes()
 
-        for args in (("issue", "lint", "--issue", "sample"), ("check", "--issue", "sample"),
-                     ("retro",)):
+        for args in (("issue", "lint", "--issue", "sample"), ("check", "--issue", "sample")):
             code_old, out_old, _ = _run(old, *args)
             code_new, out_new, _ = _run(new, *args)
             assert code_old == code_new, (args, out_old, out_new)
         assert _run(old, "issue", "lint", "--issue", "sample")[0] == 0
-        assert "total re-assessments : 2" in _run(old, "retro")[1]
-
-        # The block that lists the entries shows the current word.
-        assert _run(old, "issue", "render", "--issue", "sample")[0] == 0
-        page = old / "docs" / "compass" / "2026-08-30-sample" / "README.md"
-        page.write_text(page.read_text(encoding="utf-8")
-                        + "\n<!-- compass:render decisions-taken -->\nstale\n"
-                          "<!-- /compass:render -->\n", encoding="utf-8")
-        assert _run(old, "issue", "render", "--issue", "sample")[0] == 0
-        shown = page.read_text(encoding="utf-8")
-        assert shown.count(f"({NEW_KIND})") == 2 and OLD_KIND not in shown, shown
 
         # A read leaves the file as it was.
         assert _manifest_path(old).read_bytes() == original
@@ -170,39 +162,35 @@ def test_trc_044():
 # --- The skill and the check id ----------------------------------------------
 
 OLD_SKILL = "behav" + "iour-mapping"
-NEW_SKILL = "behavior-mapping"
+# `behavior-mapping` merged into `atdd` in 9.0.0 (#360), so neither old name
+# is a skill folder. The British row keeps its 7.0.0 target, because contract
+# 1 records the 5.6.0 copy as it routed (VD-042).
+NEW_SKILL = "atdd"
+MERGED_SKILL = "behavior-mapping"
 OLD_CHECK = "dor-behav" + "iour-is-gwt"
 NEW_CHECK = "dor-behavior-is-gwt"
-
-
-def _stub_body_lines(text: str) -> list:
-    """The lines of a skill file that follow its frontmatter and hold text."""
-    parts = text.split("---", 2)
-    assert len(parts) == 3, "a skill file opens with frontmatter"
-    return [line for line in parts[2].splitlines() if line.strip()]
 
 
 def test_trc_045():
     new = (ROOT / "skills" / NEW_SKILL / "SKILL.md").read_text(encoding="utf-8")
     assert f"\nname: {NEW_SKILL}\n" in new
-    stub = (ROOT / "skills" / OLD_SKILL / "SKILL.md").read_text(encoding="utf-8")
-    body = _stub_body_lines(stub)
-    assert 1 <= len(body) <= 3, body
-    assert NEW_SKILL in " ".join(body) and "renamed" in " ".join(body), body
-    # A stub that grows past 3 lines of body text is caught by the same reader.
-    assert len(_stub_body_lines(stub + "A second line.\nA third line.\nA fourth line.\n")) > 3
+    # The stub under the old name went in 9.0.0 (#358): its description cost
+    # words on every request. `old_names.py` still maps a project's old name
+    # to the new one until #359.
+    assert not (ROOT / "skills" / OLD_SKILL).exists()
+    assert not (ROOT / "skills" / MERGED_SKILL).exists()
 
-    # Commands, agents, approaches and the default preset name the new skill.
-    named = ["commands/define.md", "agents/spec-author.md", "approaches/full.md",
-             "approaches/quick-fix.md", "approaches/regular.md", "approaches/rubric.md",
-             "governance/presets/default/rules.yml"]
+    # The stage map, the approaches and the check set name the new skill.
+    # The define command and the 8.x approach files went with the path
+    # (ADR-092); the stage map loads the skill at specify now.
+    named = ["skills/compass-runtime/SKILL.md", "approaches/path.md",
+             "approaches/composition-reference.md", "approaches/rubric.md",
+             "governance/check-set.yml"]
     for rel in named:
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert NEW_SKILL in text and OLD_SKILL not in text, rel
-    # The view generated from the 7.0.0 preset, and the template of its comments.
-    for rel in ("governance/routing-policy.yml", "cli/compass_pkg/legacy_views_template.py"):
-        assert OLD_SKILL not in (ROOT / rel).read_text(encoding="utf-8"), rel
-    for folder in ("commands", "agents", "approaches", "governance/presets/default"):
+        assert MERGED_SKILL not in text and "bdd-specification" not in text, rel
+    for folder in ("commands", "agents", "approaches"):
         for path in sorted((ROOT / folder).rglob("*")):
             if path.is_file() and path.suffix in (".md", ".yml"):
                 assert OLD_SKILL not in path.read_text(encoding="utf-8"), path
@@ -237,6 +225,20 @@ def _u5_skill_rules(prefix: str, *, floor: bool, advisory: bool) -> str:
     return out
 
 
+def _stored_view(tmp: Path, mutate):
+    """The view of an issue whose stored generation was changed by `mutate`, as a
+    generation stored before a rename holds the old word. Since 9.0.0
+    `compass.yml` holds no catalog (ADR-094), so a stored generation is where an
+    old check id or skill name is still read."""
+    import stored_generation
+    from compass_pkg import effective
+    from test_generation_store import _evaluate_write, _project
+    root, task_dir = _project(tmp, compass_yml={"schema": 1})
+    assert _evaluate_write(root)[0] == 0
+    stored_generation.commit(root, task_dir, mutate)
+    return effective.effective_for(str(task_dir), None)
+
+
 def test_trc_046():
     import tempfile
     variants = {
@@ -244,24 +246,52 @@ def test_trc_046():
         "strategy entry": _u5_skill_rules("compass:", floor=False, advisory=True),
         "bare names": _u5_skill_rules("", floor=True, advisory=True),
     }
+    # Since 9.0.0 `rules:` in `compass.yml` is a removed setting (ADR-094): the
+    # file is read without it, whatever word it uses.
     for place, text in variants.items():
         with tempfile.TemporaryDirectory() as raw:
             project = _u5_project(Path(raw), text)
             code, out, err = _run(project, "policy", "lint")
             assert code == 0, (place, out + err)
+            assert "L-SETTING-REMOVED [project] rules:" in out, (place, out)
             code, shown, err = _run(project, "policy", "show", "--json")
             assert code == 0, (place, shown + err)
             assert OLD_SKILL not in shown, (place, shown)
-            assert NEW_SKILL in shown, place
     assert (ROOT / "skills" / NEW_SKILL / "SKILL.md").is_file()
+
+    # A stored generation that names the old skill is read with its 7.0.0
+    # name, which contract 1 records (VD-042).
+    for prefix in ("compass:", ""):
+        def old_skill(resolved, prefix=prefix):
+            resolved["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"] = {
+                "require_skill": f"{prefix}{OLD_SKILL}"}
+        with tempfile.TemporaryDirectory() as raw:
+            config = _stored_view(Path(raw), old_skill).config
+        assert config["rules"]["floors"]["rules"]["RP-FLOOR-002"]["then"] == {
+            "require_skill": MERGED_SKILL}, prefix
+        assert OLD_SKILL not in str(config), prefix
 
     # A project preset that extends the default: a parent that names the old skill.
     from compass_pkg import word_map
     layer = {"rules": {"floors": {"set": {"rules": {"set": {"R-1": {
         "then": {"require_skill": f"compass:{OLD_SKILL}"}}}}}}}}
     mapped, changes = word_map.map_layer(layer)
-    assert NEW_SKILL in str(mapped) and OLD_SKILL not in str(mapped), mapped
-    assert changes and changes[0][1:] == (f"compass:{OLD_SKILL}", NEW_SKILL), changes
+    assert MERGED_SKILL in str(mapped) and OLD_SKILL not in str(mapped), mapped
+    assert changes and changes[0][1:] == (f"compass:{OLD_SKILL}", MERGED_SKILL), changes
+
+    # `bdd-specification`, merged into `atdd` (#360), maps to it until 10.0.0.
+    layer = {"rules": {"advisory": {"rules": {"RP-ADV-002": {
+        "then": {"strategy": "bdd-specification"}}}}}}
+    mapped, changes = word_map.map_layer(layer)
+    assert mapped["rules"]["advisory"]["rules"]["RP-ADV-002"]["then"] == {
+        "strategy": NEW_SKILL}, mapped
+    assert changes and changes[0][1:] == ("bdd-specification", NEW_SKILL), changes
+    # `behavior-mapping` has no row (VD-042): a stored generation keeps the
+    # name, as contract 1 records the 8.0.4 copy.
+    layer = {"rules": {"advisory": {"rules": {"RP-ADV-002": {
+        "then": {"strategy": MERGED_SKILL}}}}}}
+    mapped, changes = word_map.map_layer(layer)
+    assert mapped == layer and changes == [], (mapped, changes)
 
 
 def _u5_overlay(check_id: str, severity: str = "advisory", waiver: bool = False) -> str:
@@ -277,11 +307,10 @@ def _u5_overlay(check_id: str, severity: str = "advisory", waiver: bool = False)
 
 def test_trc_047():
     import tempfile
-    # The default preset names the check by its new id, in the catalogue and in
-    # the entry list of the stage; `default@6` keeps the old id (TRC-049).
-    for name in ("checks.yml", "stages.yml"):
-        text = (ROOT / "governance" / "presets" / "default" / name).read_text(encoding="utf-8")
-        assert NEW_CHECK in text and OLD_CHECK not in text, name
+    # The shipped default holds no Definition of Ready since 9.0.0 (ADR-092),
+    # under either id.
+    live = (ROOT / "governance" / "check-set.yml").read_text(encoding="utf-8")
+    assert NEW_CHECK not in live and OLD_CHECK not in live
     for check_id in (NEW_CHECK, OLD_CHECK):
         for waiver in (False, True):
             with tempfile.TemporaryDirectory() as raw:
@@ -289,31 +318,22 @@ def test_trc_047():
                 code, out, err = _run(project, "policy", "lint")
                 assert code == 0, (check_id, waiver, out + err)
                 assert "unknown check" not in out + err
+                # `checks:` in `compass.yml` is a removed setting since 9.0.0
+                # (ADR-094), named once by its key; nothing under it is read.
+                assert "L-SETTING-REMOVED [project] checks:" in out, out
                 code, shown, err = _run(project, "policy", "show")
                 assert code == 0, shown + err
-                rows = [line for line in shown.splitlines()
-                        if ".severity" in line and "dor-behav" in line]
-                assert len(rows) == 1 and NEW_CHECK in rows[0] and "advisory" in rows[0], rows
                 assert OLD_CHECK not in shown, (check_id, waiver)
 
-        # An issue's own `config:` names the id too.
+        # A stored generation that holds the check under either id is read with the
+        # new one. An issue's own `config:` is not read since 9.0.0 (ADR-094).
+        def holds(resolved, check_id=check_id):
+            resolved["checks"][check_id] = {"statement": "Behavior is written as GWT.",
+                                            "kind": "human", "severity": "advisory",
+                                            "on_skipped": "fail"}
         with tempfile.TemporaryDirectory() as raw:
-            project = _u5_project(Path(raw), "schema: 1\nextends: compass:default@7\n")
-            work = project / ".compass" / "work" / "sample"
-            work.mkdir(parents=True)
-            (project / ".compass" / "config.yml").write_text("version: 1.0.0\n", encoding="utf-8")
-            manifest = yaml.safe_load(BASE_MANIFEST)
-            manifest["config"] = {"checks": {check_id: {"set": {"severity": "advisory"}}}}
-            (work / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
-                                               encoding="utf-8")
-            code, out, err = _run(project, "policy", "lint", "--issue", "sample")
-            assert "unknown check" not in out + err, (check_id, out + err)
-            code, shown, err = _run(project, "policy", "show", "--issue", "sample")
-            assert code == 0, shown + err
-            rows = [line for line in shown.splitlines()
-                    if ".severity" in line and "dor-behav" in line]
-            assert len(rows) == 1 and NEW_CHECK in rows[0], rows
-            assert OLD_CHECK not in shown, check_id
+            config = _stored_view(Path(raw), holds).config
+        assert NEW_CHECK in config["checks"] and OLD_CHECK not in config["checks"], check_id
 
 
 def test_trc_048():
@@ -321,52 +341,49 @@ def test_trc_048():
     text = ("schema: 1\nextends: compass:default@7\nchecks:\n"
             f"  {NEW_CHECK}:\n    set: {{severity: advisory}}\n"
             f"  {OLD_CHECK}:\n    set: {{severity: blocking}}\n")
+    # `checks:` in `compass.yml` is a removed setting since 9.0.0 (ADR-094), so the
+    # two ids in it are not read and conflict with nothing.
     with tempfile.TemporaryDirectory() as raw:
         project = _u5_project(Path(raw), text)
         code, out, err = _run(project, "policy", "lint")
-        # A finding on standard output (exit 1), not a read error (exit 2).
-        assert code == 1, (code, out + err)
-        assert "FAIL" in out and "M-ONE-CHECK" in out, out
-        assert NEW_CHECK in out and OLD_CHECK in out, out
-        assert "one check" in out, out
-        code, shown, err = _run(project, "policy", "show")
-        assert code != 0 and "one check" in shown + err, shown + err
+        assert code == 0, (code, out + err)
+        assert "L-SETTING-REMOVED [project] checks:" in out, out
+
+    # The word map, which reads a stored generation, keeps both ids when their
+    # bodies differ, so the new id never hides the conflict. The 8.x copy
+    # reader the tests keep names it (`legacy_copy.one_check_conflicts`).
+    from compass_pkg import word_map
+    import legacy_copy
+    layer = yaml.safe_load(text)
+    mapped, _ = word_map.map_layer(layer)
+    assert {NEW_CHECK, OLD_CHECK} <= set(mapped["checks"]), mapped
+    conflicts = legacy_copy.one_check_conflicts(mapped)
+    assert [(code, path) for code, path, _ in conflicts] == [
+        ("M-ONE-CHECK", f"checks.{OLD_CHECK}")], conflicts
+    assert "one check" in conflicts[0][2]
 
     # The same value under both ids is not a conflict.
-    same = text.replace("severity: blocking", "severity: advisory")
-    with tempfile.TemporaryDirectory() as raw:
-        project = _u5_project(Path(raw), same)
-        code, out, err = _run(project, "policy", "lint")
-        assert code == 0, out + err
+    same = yaml.safe_load(text.replace("severity: blocking", "severity: advisory"))
+    mapped, _ = word_map.map_layer(same)
+    assert legacy_copy.one_check_conflicts(mapped) == []
+    assert NEW_CHECK in mapped["checks"] and OLD_CHECK not in mapped["checks"]
 
 
 def test_trc_049():
     import tempfile
-    from compass_pkg import legacy_views
     with tempfile.TemporaryDirectory() as raw:
         project = _u5_project(Path(raw), "schema: 1\nextends: compass:default@6\n")
         code, out, err = _run(project, "policy", "lint")
         assert code == 0, out + err
         code, shown, err = _run(project, "policy", "show")
         assert code == 0, shown + err
-        assert OLD_CHECK in shown or NEW_CHECK in shown
-    # The frozen 6 files still name the old id, and their digests are unchanged.
-    frozen = (ROOT / "governance" / "presets" / "default@6" / "checks.yml").read_text(
-        encoding="utf-8")
-    assert OLD_CHECK in frozen
-    from compass_pkg import atomic_io
-    folder = ROOT / "governance" / "presets" / "default@6"
-    parsed = {p.name: yaml.safe_load(p.read_text(encoding="utf-8"))
-              for p in sorted(folder.glob("*.yml"))}
-    pinned = yaml.safe_load((ROOT / "tests" / "fixtures" / "preset-digests.yml")
-                            .read_text(encoding="utf-8"))["default@6.0.0"]
-    assert atomic_io.digest(parsed) == pinned["preset"]
-    for name, doc in parsed.items():
-        assert atomic_io.digest(doc) == pinned["files"][name], name
-    assert legacy_views.digest_problems(ROOT) == [], legacy_views.digest_problems(ROOT)
+        # The live preset is resolved whatever major extends names, and it holds
+        # no Definition of Ready (ADR-092).
+        assert OLD_CHECK not in shown and NEW_CHECK not in shown
 
 
-# --- The state key, the refusal code and the readiness key -------------------
+# --- The state key and the refusal code ---------------------------------------
+# The readiness key's test went with the readiness record in 9.0.0 (ADR-093).
 
 # The old words of this unit, spelt from pieces so that no scan of the tests
 # finds an old name in a literal of its own.
@@ -374,8 +391,6 @@ _U6_OLD_CODE = "not-initi" + "alised"
 _U6_NEW_CODE = "not-initi" + "alized"
 _U6_OLD_STATE = "initi" + "alised"
 _U6_NEW_STATE = "initi" + "alized"
-_U6_OLD_DIGEST = "catal" + "ogue_digest"
-_U6_NEW_DIGEST = "catal" + "og_digest"
 
 
 def test_trc_050():
@@ -384,17 +399,16 @@ def test_trc_050():
 
     import compat_hook
 
-    outputs = {}
-    for code in (_U6_NEW_CODE, _U6_OLD_CODE):
-        code_run = _run(ROOT, "_refusal", code, "detail=no work")
-        assert code_run[0] == 0, code_run
-        outputs[code] = code_run[1]
-        assert len(code_run[1].strip().splitlines()) == 3, code_run[1]
-    assert outputs[_U6_NEW_CODE] == outputs[_U6_OLD_CODE]
-    assert outputs[_U6_NEW_CODE].rstrip().endswith(f"[{_U6_NEW_CODE}]")
-    assert _U6_OLD_CODE not in outputs[_U6_OLD_CODE]
-    assert _U6_OLD_CODE in _run(ROOT, "_refusal", _U6_OLD_CODE, "detail=x")[2]
-    assert _U6_OLD_CODE not in _run(ROOT, "_refusal", _U6_NEW_CODE, "detail=x")[2]
+    # 9.0.0 reads no typed old refusal code (ADR-098): the old code is refused
+    # as any unknown code is. The new code renders the three lines.
+    code_run = _run(ROOT, "_refusal", _U6_NEW_CODE, "detail=no work")
+    assert code_run[0] == 0, code_run
+    assert len(code_run[1].strip().splitlines()) == 3, code_run[1]
+    assert code_run[1].rstrip().endswith(f"[{_U6_NEW_CODE}]")
+    assert _U6_OLD_CODE not in code_run[1] + code_run[2]
+    old_run = _run(ROOT, "_refusal", _U6_OLD_CODE, "detail=no work")
+    assert old_run[0] != 0 and old_run[1] == "", old_run
+    assert f"no such refusal code: '{_U6_OLD_CODE}'" in old_run[2], old_run
 
     base = Path(tempfile.mkdtemp(prefix="u6hook-"))
     try:
@@ -414,7 +428,7 @@ def test_trc_050():
     assert f"### `{_U6_NEW_CODE}`" in page
     assert f"### `{_U6_OLD_CODE}`" not in page
     section = page.split(f"### `{_U6_NEW_CODE}`", 1)[1].split("###", 1)[0]
-    assert f"`{_U6_OLD_CODE}` is read until 9.0.0" in section
+    assert _U6_OLD_CODE not in section
 
 
 def _u6_state_project(tmp: Path, name: str, body: str) -> Path:
@@ -424,7 +438,7 @@ def _u6_state_project(tmp: Path, name: str, body: str) -> Path:
 
 
 def test_trc_051(tmp_path):
-    from compass_pkg import init_cmd, policy_migrate, project_settings
+    from compass_pkg import init_cmd, project_settings
 
     held = "  by: someone\n  at: '2026-01-01'\n"
     value = {"by": "someone", "at": "2026-01-01"}
@@ -451,169 +465,30 @@ def test_trc_051(tmp_path):
     assert f"{_U6_NEW_STATE}:" in text and f"{_U6_OLD_STATE}:" not in text
     assert project_settings.state(str(fresh))[_U6_NEW_STATE]["by"] == "compass init"
 
-    # The next write, `compass policy migrate`, holds the new key only.
-    migrate = _u6_state_project(tmp_path / "migrate", "config.yml",
-                                f"mode: advisory\n{_U6_OLD_STATE}:\n{held}")
-    made = policy_migrate.plan(str(migrate))
-    assert list(made.state) == [_U6_NEW_STATE]
-    assert made.state[_U6_NEW_STATE] == value
-
-
-def _u6_record(tmp: Path) -> dict:
-    from compass_pkg import readiness_record
-
-    tmp.mkdir(parents=True, exist_ok=True)
-    return readiness_record.new_record(
-        str(tmp), [], {"commands_seconds": 60, "used_seconds": 1})
-
-
-def test_trc_052(tmp_path):
-    import json
-
-    import jsonschema
-    from compass_pkg import readiness_record
-
-    root = str(tmp_path)
-    written = _u6_record(tmp_path)
-    assert written[_U6_NEW_DIGEST] == written[_U6_OLD_DIGEST]
-    digest = written[_U6_NEW_DIGEST]
-    schema = json.loads((ROOT / "schemas" / "readiness-record.schema.json")
-                        .read_text(encoding="utf-8"))
-    jsonschema.validate(written, schema)
-
-    def variant(**keys):
-        record = {k: v for k, v in written.items()
-                  if k not in (_U6_NEW_DIGEST, _U6_OLD_DIGEST)}
-        record.update(keys)
-        return record
-
-    cases = {
-        "only the old key": (variant(**{_U6_OLD_DIGEST: digest}), True),
-        "only the new key": (variant(**{_U6_NEW_DIGEST: digest}), True),
-        "both keys, equal": (variant(**{_U6_OLD_DIGEST: digest,
-                                        _U6_NEW_DIGEST: digest}), True),
-        "only the old key, not equal": (
-            variant(**{_U6_OLD_DIGEST: "sha256:" + "0" * 64}), False),
-    }
-    for name, (record, expected) in cases.items():
-        assert readiness_record.fresh(root, record).fresh is expected, name
-        jsonschema.validate(record, schema)
-    # A record holding neither key is refused by the schema and is stale.
-    neither = variant()
-    with pytest.raises(jsonschema.ValidationError):
-        jsonschema.validate(neither, schema)
-    assert readiness_record.fresh(root, neither).fresh is False
-
-    (tmp_path / ".compass").mkdir()
-    readiness_record.write(root, written)
-    read =readiness_record.read(root)
-    assert read.status == "ok"
-    assert readiness_record.fresh(root, read.record).fresh is True
-
 
 OLD_BEHAVIOR = "behav" + "iour"
 NEW_BEHAVIOR = "behav" + "ior"
 
 
-def _compliance_json(tmp_path):
-    import json
-    import test_eval_session_compliance as cs
+# --- The headings and the term ------------------------------------------------
 
-    home = tmp_path / "claude"
-    root = cs._project(tmp_path, {"good-fix": "sess-good", "bad-fix": "sess-bad"})
-    cs._clean("good-fix").write(home, "sess-good")
-    cs._route_around("bad-fix").write(home, "sess-bad")
-    done = cs._report(root, home, "--json")
-    assert done.returncode == 0, done.stdout + done.stderr
-    return json.loads(done.stdout), cs._report(root, home).stdout
+def test_trc_054():
+    # 9.0.0 derives no living spec (ADR-091). A spec an older revision holds can
+    # still use the headings 6.1.0 wrote, and `compass release notes` reads it
+    # there: the reader finds an issue by its own heading, not by the section's,
+    # so 9.0.0 deletes the unread heading rows of the table (ADR-098).
+    from compass_pkg import old_names, shipped_issues
 
-
-def _old_keys_emitted(data):
-    """The old twin keys a result still emits, by where they are."""
-    found = [k for k in data if k == OLD_BEHAVIOR + "s"]
-    found += [f"row:{n}" for n, row in data[NEW_BEHAVIOR + "s"].items() if OLD_BEHAVIOR in row]
-    found += [f"failure:{f['issue']}" for f in data["failures"] if OLD_BEHAVIOR in f]
-    return found
-
-
-def test_trc_053(tmp_path):
-    from compass_pkg import old_names
-
-    data, text = _compliance_json(tmp_path)
-    # The id of the behavior the bad session breaks is an eval id, and no
-    # file outside evals/ may name one, so it is joined from two parts.
-    broken = "no_route" + "_around"
-    # The result holds both spellings of the list, with the same content.
-    assert data[NEW_BEHAVIOR + "s"] == data[OLD_BEHAVIOR + "s"]
-    assert data[NEW_BEHAVIOR + "s"][broken]["fail"] == 1
-    # Each row and each failure holds both spellings of its key, equal.
-    for name, row in data[NEW_BEHAVIOR + "s"].items():
-        assert row[NEW_BEHAVIOR] == row[OLD_BEHAVIOR] == name
-    assert data["failures"]
-    for failure in data["failures"]:
-        assert failure[NEW_BEHAVIOR] == failure[OLD_BEHAVIOR]
-    # A consumer that reads only the old keys gets what it got before.
-    assert {"issue": "bad-fix", OLD_BEHAVIOR: broken, "call": 2} in [
-        {k: v for k, v in f.items() if k != NEW_BEHAVIOR} for f in data["failures"]]
-    # The text view prints the US words only.
-    assert OLD_BEHAVIOR not in text and broken in text
-    # The old keys end at 9.0.0: the table lists them, and at 9.0.0 a result
-    # that still emits one is a problem.
-    assert _old_keys_emitted(data)
-    problems = old_names.removal_problems("9.0.0")
-    assert any(f"json_key '{OLD_BEHAVIOR}'" in p for p in problems), problems
-    assert any(f"json_key '{OLD_BEHAVIOR}s'" in p for p in problems), problems
-    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    if old_names._version(version) >= (9, 0, 0):
-        assert _old_keys_emitted(data) == [], "an old JSON key is still emitted"
-
-
-# --- The JSON keys, the headings and the term --------------------------------
-
-def test_trc_054(tmp_path):
-    from compass_pkg import flow, old_names
-
-    work = tmp_path / ".compass" / "work" / "old"
-    work.mkdir(parents=True)
-    (work / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "issue": "old", "created": "2026-05-25",
-        "status": "landed", "land_timestamp": "2026-05-25T08:00:00+00:00",
-        "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "small"},
-        "scenarios": [
-            {"id": "SCN-OLD", "title": "old way", "intent": "INT-1", "tests": [],
-             "superseded_by": ["SCN-NEW"]},
-            {"id": "SCN-NEW", "title": "new way", "intent": "INT-1", "tests": []},
-        ]}, sort_keys=False), encoding="utf-8")
-    spec, archive = (tmp_path / "docs" / "system-spec.md",
-                     tmp_path / "docs" / "system-spec-archive.md")
-    pairs = [(row["new"], row["old"]) for row in old_names.rows("spec_heading")]
-    assert [new for new, _ in pairs] == ["Current Behavior", "Archived Behavior"]
-
-    flow.derive_system_spec(str(tmp_path))
-    fresh = (spec.read_text(encoding="utf-8"), archive.read_text(encoding="utf-8"))
-    assert "## Current Behavior\n" in fresh[0] and "## Archived Behavior\n" in fresh[1]
-
-    # A file written by 6.1.0 holds the old headings.
-    for path in (spec, archive):
-        text = path.read_text(encoding="utf-8")
-        for new, old in pairs:
-            text = text.replace(f"## {new}\n", f"## {old}\n")
-        path.write_text(text, encoding="utf-8")
-    stale = spec.read_text(encoding="utf-8")
+    assert old_names.rows("spec_heading") == []
+    pairs = [("Current Behavior", "Current " + OLD_BEHAVIOR.capitalize()),
+             ("Archived Behavior", "Archived " + OLD_BEHAVIOR.capitalize())]
+    fresh = "## Current Behavior\n\n### old (completed 2026-05-25)\n\n- `SCN-NEW` new way\n"
+    stale = fresh
+    for new, old in pairs:
+        stale = stale.replace(f"## {new}\n", f"## {old}\n")
     assert "## Current Behaviour\n" in stale
-    # The readers of the spec find its issues under either heading.
-    assert flow._issues_named(stale) == flow._issues_named(fresh[0]) == {"old"}
-
-    # The next derive is not an error and rewrites each file once.
-    flow.derive_system_spec(str(tmp_path))
-    again = (spec.read_text(encoding="utf-8"), archive.read_text(encoding="utf-8"))
-    assert again == fresh
-    for text in again:
-        assert not any(f"## {old}" in text for _, old in pairs)
-        assert sum(f"## {new}" in text for new, _ in pairs) == 1
-    # A second derive changes nothing.
-    flow.derive_system_spec(str(tmp_path))
-    assert (spec.read_text(encoding="utf-8"), archive.read_text(encoding="utf-8")) == again
+    # The reader of the spec finds its issues under either heading.
+    assert shipped_issues.issues_named(stale) == shipped_issues.issues_named(fresh) == {"old"}
 
 
 OLD_PAGE = "artifact-catalog" + "ue.md"
@@ -678,18 +553,28 @@ def test_trc_056():
     from compass_pkg import aliases, core, old_names
 
     found = old_names.rows()
-    assert len(found) == 11, found
-    assert len({r["kind"] for r in found}) == 9, found
-    assert {r["removed_in"] for r in found} == {"9.0.0"}, found
+    assert len(found) == 6, found
+    # The refusal code row went in 9.0.0: no stored file holds a refusal code
+    # and a typed old one is refused (ADR-098).
+    assert {r["kind"] for r in found} == {
+        "reassessment_kind", "check_id", "skill", "state_key", "term"}, found
+    # Typed input takes only the 9.0.0 names and stored files keep reading as
+    # stored (VD-043), so every row left is read through 9.x and ends at 10.0.0,
+    # with `bdd-specification`, merged into `atdd` (#360). `behavior-mapping`
+    # has no row (VD-042).
+    assert {r["removed_in"] for r in found} == {"10.0.0"}, found
+    assert not any(r["old"] == MERGED_SKILL for r in found), found
     assert aliases.load_table()["aliases"] == []
 
-    # The table ends at 9.0.0: a planted version lists every row, 8.x none.
-    assert len(old_names.removal_problems("9.0.0")) == 11
+    # A planted version lists each row that ends at or before it: none
+    # through 9.x, every row at 10.0.0.
+    assert old_names.removal_problems("9.0.0") == []
     assert old_names.removal_problems("8.0.0") == []
     assert old_names.removal_problems("8.1.0") == []
-    assert len(old_names.removal_problems("9.1.0")) == 11
+    assert old_names.removal_problems("9.1.0") == []
+    assert old_names.removal_problems("9.10.0") == []    # tuples, not strings
+    assert len(old_names.removal_problems("10.0.0")) == 6
     assert old_names.removal_problems("7.0.0") == []
-    assert old_names.removal_problems("7.10.0") == []    # tuples, not strings
 
     # The in-module copy equals the file (read directly), and the reader falls
     # back to it with the file made unreadable.
@@ -707,8 +592,8 @@ def test_trc_056_the_table_check_fails_for_a_row_that_is_missing(monkeypatch):
     planted = {k: dict(v) for k, v in old_names._FALLBACK.items()}
     planted["term"] = {}
     monkeypatch.setattr(old_names, "_READ", lambda name, fallback: planted)
-    assert len(old_names.rows()) == 10
-    assert old_names.removal_problems("9.0.0") and len(old_names.removal_problems("9.0.0")) == 10
+    assert len(old_names.rows()) == 5
+    assert old_names.removal_problems("10.0.0") and len(old_names.removal_problems("10.0.0")) == 5
 
 
 # --- The upgrade guide table is the reader table ------------------------------
@@ -732,17 +617,49 @@ def _reader_rows() -> set:
             for r in old_names.rows()}
 
 
+# The rows of the 7.0.0 guide that 9.0.0 deletes because nothing reads them
+# (ADR-098). The guide keeps them: it says what 7.0.0 read until 9.0.0.
+DELETED_IN_9_0_0 = {
+    ("readiness key", "catalog" + "ue_digest", "catalog_digest", "9.0.0"),
+    ("JSON key", OLD_BEHAVIOR, NEW_BEHAVIOR, "9.0.0"),
+    ("JSON key", OLD_BEHAVIOR + "s", NEW_BEHAVIOR + "s", "9.0.0"),
+    ("heading", "Current " + OLD_BEHAVIOR.capitalize(), "Current Behavior", "9.0.0"),
+    ("heading", "Archived " + OLD_BEHAVIOR.capitalize(), "Archived Behavior", "9.0.0"),
+    ("refusal code", _U6_OLD_CODE, _U6_NEW_CODE, "9.0.0"),
+}
+
+#: The version that ends each row 9.0.0 kept. The 7.0.0 guide says 9.0.0; 9.0.0
+#: reads stored files as stored (VD-043), so the reader keeps the row to 10.0.0.
+KEPT_UNTIL = "10.0.0"
+
+
+#: The row the reader added when 9.0.0 merged `bdd-specification` into `atdd`
+#: (#360). The 7.0.0 guide does not list it: it is a record of 7.0.0.
+SKILL_ROWS_SINCE_9_0_0 = {("skill", "bdd-specification", NEW_SKILL, "10.0.0")}
+
+
+def _comparable(guide_rows: set) -> set:
+    """The guide's rows the reader must still hold: each kind, old and new name
+    as written, ending at `KEPT_UNTIL` where the guide says 9.0.0."""
+    return {(kind, old, new, KEPT_UNTIL if ends == "9.0.0" else ends)
+            for kind, old, new, ends in guide_rows - DELETED_IN_9_0_0}
+
+
 def test_trc_070():
     text = GUIDE.read_text(encoding="utf-8")
     guide, reader = _guide_rows(text), _reader_rows()
-    assert guide == reader, (sorted(guide - reader), sorted(reader - guide))
+    assert SKILL_ROWS_SINCE_9_0_0 <= reader
+    reader = reader - SKILL_ROWS_SINCE_9_0_0
+    assert _comparable(guide) == reader, (sorted(_comparable(guide) - reader),
+                                          sorted(reader - _comparable(guide)))
+    assert DELETED_IN_9_0_0 <= guide and not DELETED_IN_9_0_0 & reader
     assert len(guide) == 11
 
     # The comparison fails for a planted extra row, a missing row and a changed new name.
     extra = text.replace("## Renamed names\n", "## Renamed names\n\n| term | `frob` | `frab` | 9.0.0 |\n", 1)
-    assert _guide_rows(extra) != reader
+    assert _comparable(_guide_rows(extra)) != reader
     gone = "\n".join(ln for ln in text.splitlines() if "| `catalogue` |" not in ln)
-    assert _guide_rows(gone) != reader
+    assert _comparable(_guide_rows(gone)) != reader
     first = sorted(reader)[0]
     changed = text.replace(f"`{first[1]}` | `{first[2]}`", f"`{first[1]}` | `{first[2]}x`", 1)
-    assert _guide_rows(changed) != reader
+    assert _comparable(_guide_rows(changed)) != reader

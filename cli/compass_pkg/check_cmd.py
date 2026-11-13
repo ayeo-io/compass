@@ -35,12 +35,10 @@ import re as _re
 from compass_pkg.stable_ids import APPROACH_SPIKE
 from compass_pkg.core import CHECK_NAME_MAP, migrate_map_section
 from compass_pkg.landed_by import LANDED_BY_RELAXES, landed_by_holds, _check_landed_by_resolves
-from compass_pkg.check_results import ADVISORY_FAILURE
-from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_coherence_check_passes, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
-from compass_pkg.borrowed_docs import _check_borrowed_documents_answered
+from compass_pkg.check_results import ADVISORY_FAILURE, WAIVED
+from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
 from compass_pkg.binding import _check_evidence_matches_tree
-from compass_pkg.multiagent_check import _check_multiagent_run_recorded
-from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, load_mode, load_manifest, load_yaml, mode_banner, reading_matches, resolve_issue_dir
+from compass_pkg.core import CompassError, exit_for_mode, load_mode, load_manifest, mode_banner, resolve_issue_dir
 
 
 
@@ -61,14 +59,9 @@ from compass_pkg import outside_gate  # noqa: E402
 # and it would change silently whenever the long text was edited. A missing
 # `do` fails the suite rather than falling back to a truncation.
 CHECK_GUIDANCE = {
-    "borrowed-documents-answered": {
-        "why": "A threat model that lists threats and mitigates none is the Threat Modeling Manifesto's named anti-pattern, \"Admiration for the Problem\". A rollback plan nobody has run is a guess - SWEBOK requires the rollback be rehearsed before the deploy, and a guess recorded as a plan is the assertion the evidence-not-assertion guardrail rejects.",
-        "fix": "In threat-model.md, give every threat either a TRC- scenario id in acceptance-criteria.md, or the words `risk accepted` and the reason. In rollback-plan.md, run the rollback against something and record what happened, when, and against what.",
-        "do": "Answer each threat with a TRC- id or `risk accepted`; rehearse the rollback.",
-    },
     "command-passes": {
         "why": 'A project guardrail with `check: command-passes` runs a real command - an architecture check, a linter, a scanner - and the gate is cleared by that command exiting zero, not by anyone saying it would.',
-        "fix": 'Run the command the guardrail names and fix what it reports. If this project declares no such guardrail, nothing was checked and the pass is empty - declare one in governance/guardrails.yml with `check: command-passes` to make the gate mean something.',
+        "fix": 'Run the command the guardrail names and fix what it reports. If this project declares no such guardrail, nothing was checked and the pass is empty - declare one in `project_checks` of compass.yml to make the gate mean something.',
         "do": 'Run the command the guardrail names, or declare one to make this gate real.',
     },
     "landed-by-resolves": {
@@ -91,11 +84,6 @@ CHECK_GUIDANCE = {
         "fix": "Re-run the suite through `compass tdd-green -- <test command>` on the tree you intend to ship, so the newest record names it. For a landed issue, the files the commit landed are not the files that were tested. If a review fix changed them after landing, commit the fix, re-run the suite through `compass tdd-green`, then run `compass ship-commit --issue <slug> -m <message>` with nothing staged: it moves `land_commit` to HEAD once the newest green names HEAD's files.",
         "do": "Re-run the suite with `compass tdd-green` on the tree you ship.",
     },
-    "multiagent-run-recorded": {
-        "why": "A multiagent run splits into subtasks that `compass issue subtask` records. Without this check, an issue could clear every gate and land with a subtask never marked done, or one still failing its last review round, and nothing would say so.",
-        "fix": "Record each subtask's progress with `compass issue subtask set`: `--status done` once it is merged, and `--round pass` once its last review passes. The check reports an empty `subtasks:` list, and names any subtask not done or without a passing last round.",
-        "do": 'Record each named subtask done, with a passing round, via `compass issue subtask set`.',
-    },
     "no-trusted-rerun": {
         "why": "A green recorded from a run nobody observed is an assertion wearing evidence's clothes. The tested-before-ship guardrail wants the run, not a note about it.",
         "fix": 'Re-run the test through `compass tdd-green -- <cmd>`, which runs it, confirms it passes, and records the output it saw.',
@@ -105,11 +93,6 @@ CHECK_GUIDANCE = {
         "why": 'Scenarios are meant to be runnable acceptance criteria. This reads the record `compass bdd verify` writes; it never runs the suite itself.',
         "fix": 'Run `compass bdd verify` so the record exists, and account for any scenario it reports as unmatched. If this project has wired no BDD runner, there is nothing to check - see examples/bdd-adapters/ to opt in.',
         "do": 'Run `compass bdd verify`, or wire a runner (see examples/bdd-adapters/).',
-    },
-    "rendered-blocks-current": {
-        "why": "A rendered block is text Compass writes from the manifest and the evidence: a coverage table, the gates, the Definition of Done. Once the records move or someone edits the block by hand, the document says something the record does not, and a reader cannot tell.",
-        "do": 'Run `compass issue render`, then re-read the document.',
-        "fix": "Run `compass issue render` to rewrite every block of the issue's documents and its issue page from the records, then read the document again. Never edit a block by hand - the next render discards the edit; edit the record instead.",
     },
     "scenarios-have-tests": {
         "why": "Every scenario must have a test that exercises it - without one, the scenario is a wish, not a checkable acceptance criterion (the acceptance-before-code guardrail). EXCEPT a `verifiable: narrative` scenario (a failure-mode playbook), which is cleared by being documented - a non-empty When/Then in acceptance-criteria.md - not by a fabricated test.",
@@ -133,13 +116,13 @@ CHECK_GUIDANCE = {
     },
     "claim-traces-to-scenario": {
         "why": "Public claims must trace to a scenario that backs them (traceability) - an unbacked claim is a promise the framework cannot prove.",
-        "do": 'Point each claim in launch-readiness.md at a passing scenario id.',
+        "do": "Point each claim in manifest.yml's `claims:` at a passing scenario id.",
         "fix": "Add a backing `scenario:` field to the claim in manifest.yml, or remove the claim from `claims:`.",
     },
     "gate-evidence-present": {
         "why": "The evidence-not-assertion guardrail: a gate marked pass must point at registry evidence of the right type. A mechanical gate cannot be cleared with a written note.",
         "do": 'Re-run `compass gate pass <gate> --evidence EV-<id>` with an accepted type.',
-        "fix": "Add the evidence to the top-level `evidence:` registry with the correct `type:` (see governance/guardrails.yml `gate_evidence_requirements`), then reference its id under the gate's `evidence:` list.",
+        "fix": "Add the evidence to the top-level `evidence:` registry with the correct `type:` (see the `accepts:` list of the gate in governance/check-set.yml), then reference its id under the gate's `evidence:` list.",
     },
     "human-approval-present": {
         "why": "The human-sign-off guardrail (a human signs off on the irreversible): this issue touches auth, payments, personal data, or migrations and needs a recorded approval.",
@@ -147,39 +130,54 @@ CHECK_GUIDANCE = {
         "fix": "Only a `human-approval` record given for guardrail `G5` counts: one that names no check, waiver, checkpoint, artifact or decisions, and whose `guardrail` is absent or exactly `G5`. In Claude Code the person types `/compass:approve` for the request Compass shows them; an agent under a delegation that covers g5 records it with `--delegated --as <agent>`; elsewhere a person runs `compass evidence approve --guardrail G5` with `--approver <name> --role <role> --scope <text>` in a terminal. Each stamps the issue, its generation and the time.",
     },
     "backfills-paid": {
-        "why": "Work deferred for speed - a Hotfix follow-up or a de-scoped artifact - must be done before an issue closes. Otherwise the audit trail has a hole.",
-        "do": 'Settle each owed follow-up: `compass follow-up resolve FU-<id>`.',
-        "fix": "Complete each unpaid follow-up (writing the deferred artifact, promoting the reproduction scenario, etc.) and set its `status: paid` in manifest.yml.",
-    },
-    "artifacts-approved": {
-        "why": "A document that is still a draft, or waiting for a person's approval, has not been accepted by anyone, and shipping it makes the registry say something untrue. Declined until every gate has passed, because the stages approve their own documents as they go.",
-        "do": 'Run the command the failure names for each document.',
-        "fix": "For each document named: `compass issue artifact set <kind> --status approved` when it has no human check, or `compass issue artifact set <kind> --status awaiting-approval` and then `compass evidence approve --artifact <kind>` at a terminal when it has one. A document you chose not to write is `compass issue artifact set <kind> --status omitted --reason \"<why>\"`.",
+        "why": "On an issue assessed before 9.0.0, work deferred for speed - a Hotfix follow-up or a de-scoped artifact - must be done before the issue closes. Otherwise the audit trail has a hole. A path issue's follow-ups link to GitHub issues instead, so this check has nothing to check there.",
+        "do": 'Settle each owed follow-up: `compass follow-up resolve --issue <slug> FU-<id>`.',
+        "fix": "Complete each outstanding follow-up (writing the deferred artifact, promoting the reproduction scenario, etc.), then run `compass follow-up resolve --issue <slug> FU-<id>`.",
     },
     "nfr-rows-resolved": {
         "why": "A non-functional concern with neither a scenario nor a reason has not been decided, and a cited scenario whose Then states no number cannot be measured, so nobody can tell whether the build meets it.",
         "do": "Give each row the failure names a scenario id or a reason.",
         "fix": "In the spec's Non-functional requirements table, give each concern the detail names a Scenario cell of ids the manifest holds or a Reason it does not apply. At thorough depth, put a number in the Then line of each cited scenario. Add a missing concern row; remove an id the manifest does not hold.",
     },
-    "contracts-declared": {
-        "why": "A change to a schema, a preset or a command line changes a contract other code and people rely on. Unless the design declares it, a reviewer cannot judge the change before it lands.",
-        "do": "Declare a field table, contract table or erDiagram under Data and interfaces.",
-        "fix": "In the technical design's Data and interfaces section, add a field table (Name, Type, Required, Meaning, Written by, Read by) or a contract table (Inputs, Outputs, Exit codes, Errors) with a row for each changed structure or command, or an erDiagram, for the trigger paths the detail names.",
-    },
-    "design-within-word-ceiling": {
-        "why": "A technical design far over its word limit is too long for a reviewer to read before code is written, so the review it exists for does not happen.",
-        "do": "Shorten the design to the threshold the failure names.",
-        "fix": "Move each work unit's signatures, contracts, file plan and tests to low-level-design/<unit>.md, register each with `compass issue artifact set low-level-design --unit U<n> --path <file>`, and cut the design until its word count is at or under the threshold. Unit files alone do not clear the check: the design's own count decides.",
-    },
     "acceptance-applicability-agrees": {
         "why": "The delivery-approach record tells every reader whether the four-layer acceptance strategy applies. A line the records or the project setting no longer agree with misleads the reader and the strategy's checks alike.",
         "do": "Re-assess the issue with the command the finding names.",
-        "fix": "Run `compass approach evaluate --write --expected-acceptance none|validation|refactor --reason \"...\"`, choosing the kind the records show, then `compass issue render` so the delivery-approach record shows the new line.",
+        "fix": "Run `compass approach evaluate --write --expected-acceptance none|validation|refactor --reason \"...\"`, choosing the kind the records show.",
     },
     "outer-loop-recorded": {
         "why": "A unit-test green meets guardrail `G1`, so on a change a client can observe only the outer loop shows the behavior through a client interface. A green from an older tree shows a tree that no longer exists.",
-        "do": "Record the acceptance suite's red and green with `--loop outer` on the current tree.",
-        "fix": "Run `compass tdd-red --loop outer --scenario <id> -- <acceptance command>` before the code, and `compass tdd-green --loop outer --scenario <id> -- <acceptance command>` after the last change.",
+        "do": "Record the acceptance suite with `--loop outer`, naming the candidate and the client.",
+        "fix": "Run `compass tdd-red --loop outer --scenario <id> -- <acceptance command>` before the code, and `compass tdd-green --loop outer --scenario <id> --candidate <build id>|local --client api|web|cli -- <acceptance command>` after the last change.",
+    },
+    "acceptance-support-present": {
+        "why": "The first issue the four-layer acceptance strategy applies to builds the support code. Until each piece exists, the issue's acceptance tests cannot show what that piece gives, so the issue claims less.",
+        "do": "Build the missing pieces in this issue, or claim no more than the claim limit allows.",
+        "fix": "Name each piece's path under `project.acceptance_support` in compass.yml (`alias_helper`, `driver_factory`, `dsl_root`, `layering_test`) and build the pieces the finding names as missing; `examples/atdd-adapters/python/` shows each one.",
+    },
+    "outer-loop-attempts-recorded": {
+        "why": "Strategy `S5` treats a rerun-to-green as a failure, and `no-trusted-rerun` can tell a rerun from a first pass only from `attempts`. It passes a record with no field, so an outer-loop green with none would hide a rerun.",
+        "do": "Record the outer-loop green again with `compass tdd-green`, which writes `attempts`.",
+        "fix": "Run `compass tdd-green --loop outer --scenario <id> -- <acceptance command>` on the current tree; do not edit `attempts` in the record by hand.",
+    },
+    "isolation-proven": {
+        "why": "Strategy `S17` proves isolation by a record of the project's own runs, never by a note: a suite that fails in parallel, or a scenario that fails its second run, shares data between scenarios.",
+        "do": "Record the isolation proof on the outer-loop green's candidate and the current tree.",
+        "fix": "Run `compass isolation record --candidate <build id>|local --client api|web|cli --parallel \"<command>\" --repeat \"<command> {tests}\"`, then fix each scenario the record shows failing.",
+    },
+    "layering-test-passed": {
+        "why": "Strategy `S17` keeps each test layer calling only the layer below it, and the project's own layering test is what checks that; Compass reads only the record of its run.",
+        "do": "Record a passing run of the project's layering test on the current tree.",
+        "fix": "Run `compass layering record [--test-path <path>] -- <layering test command>`, or set `project.layering_command`, and fix each breach the test names.",
+    },
+    "request-recorded": {
+        "why": "A reviewer must see who asked for the change and where the request is, to judge whether the change answers it.",
+        "do": "Run `compass issue link set --request <url> --requester <name>`.",
+        "fix": "Run `compass issue link set --issue <slug> --request <url> --requester <name>`, with the link to the request and who asked. A change with no request to link needs a waiver that a person approves: `compass waiver add`, then `compass evidence request --waiver <W-id>`.",
+    },
+    "ship-approval-present": {
+        "why": "Every change gets one person's approval at ship. Compass reads it from the merged pull request's review, or a person types it; a sign-off of guardrail `G5` is given before code and does not count.",
+        "do": "Run `compass issue link set --pr <n>` once merged, or `compass evidence request --ship`.",
+        "fix": "Have a person other than the pull request's author approve it on GitHub before the merge, then run `compass issue link set --pr <n> --issue <slug>`. Without such a review, ask with `compass evidence request --ship` and have the person type `/compass:approve`.",
     },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
@@ -192,26 +190,22 @@ CHECK_GUIDANCE = {
         "fix": "Empty `changed_files:` in this Spike's manifest.yml. If the finding is worth keeping, run `/compass:assess` to start a new delivery issue that owns the code under a real delivery approach.",
     },
     "dod-evidence-typed": {
-        "why": "The evidence-not-assertion guardrail: the Definition of Done is a typed gate. Every item must be met by a record in the manifest - evidence, a person's approval or a filed follow-up. A tick on a page and a narrative note in devlog.md do not count.",
-        "do": 'Record each open item: `--meets`, `--defers` or `evidence approve --check`.',
+        "why": "The evidence-not-assertion guardrail: the Definition of Done is a typed gate. Every item must be met by a record in the manifest - evidence, a person's approval or a follow-up that links to an issue. A tick on a page and a narrative note in devlog.md do not count.",
+        "do": 'Record each open item: `--meets`, `--defers ... --github` or `evidence approve --check`.',
         "fix": (
             "For each open item: (a) `compass gate pass <gate> --evidence EV-<id> --meets <item>` "
             "or `compass evidence add EV-<id> --type <type> --path <file> --meets <item>`, "
             "where the type is one a Definition of Done accepts; or (b) "
-            "`compass follow-up add FU-<id> --defers <item> --summary \"...\"` to carry it "
-            "to ship; or (c) `compass evidence approve --check <item>`, which a person "
-            "runs at a terminal when the item needs a person."
+            "`compass follow-up add FU-<id> --defers <item> --github owner/repo#N "
+            "--summary \"...\"` to carry it to a GitHub issue (an issue assessed before "
+            "9.0.0 can omit `--github`); or (c) `compass evidence approve --check <item>`, "
+            "which a person runs at a terminal when the item needs a person."
         ),
-    },
-    "consistency-check-passes": {
-        "why": "Evidence, not assertion: verify.analyze requires a recorded `compass analyze` run with zero coherence findings, backed by a `consistency-check` evidence entry.",
-        "do": 'Run `compass analyze` and settle what it reports.',
-        "fix": "Run `compass analyze` - when verify.analyze is in the gate set it exits non-zero on findings, writes a `consistency-check` evidence record, and clears the gate only when there are zero findings. Resolve any reported orphaned scenarios, approach disagreements, or orphan claims first.",
     },
 }
 
 
-def summarise_counts(ran, failures, nothing_to_check=0, advisory=0):
+def summarise_counts(ran, failures, nothing_to_check=0, advisory=0, waived=0):
     """The one-line verdict `compass check` ends on.
 
     Three of the default checks can clear with nothing to check - no BDD
@@ -221,8 +215,12 @@ def summarise_counts(ran, failures, nothing_to_check=0, advisory=0):
     apart so the count never overstates.
 
     A check that failed and does not block (an advisory failure) is counted
-    apart too: it is not a pass, and it does not fail the run.
+    apart too: it is not a pass, and it does not fail the run. So is a check
+    an approved waiver excuses on this issue.
     """
+    if waived:
+        line = summarise_counts(ran - waived, failures, nothing_to_check, advisory)
+        return line[:-1] + f", {waived} waived (an approved waiver excuses it)."
     if advisory:
         tail = "%d failed as advisory (does not block)" % advisory
         if nothing_to_check:
@@ -265,6 +263,8 @@ class _CheckRun:
 
     def __init__(self, task_dir, task, mode, view=None):
         self.view = view if view is not None and view.source == "generation" else None
+        # Any view, live or stored, for the `Policy:` line (ADR-094).
+        self.policy_view = view
         self.task_dir = task_dir
         self.task = task
         self.slug = os.path.basename(task_dir)
@@ -277,6 +277,17 @@ class _CheckRun:
         self.nothing = 0
         self.refused = set()  # checks not run because their implementation major differs
         self.advisory = 0
+        self.waived = 0
+        # The checks an approved waiver excuses on this issue (ADR-094). An
+        # unreadable check set or project file excuses nothing: every check runs.
+        from compass_pkg import waiver_records
+        try:
+            self.excused = waiver_records.excused(task, task_dir)
+            self.never_gates = waiver_records.never_waived_gates()
+        except Exception as exc:                        # noqa: BLE001
+            self.excused, self.never_gates = {}, set()
+            if waiver_records.listed(task):
+                self.line(f"  waivers not read ({exc}), so every check runs as it is")
 
     def line(self, text):
         self.rows.append(("line", text))
@@ -293,6 +304,19 @@ class _CheckRun:
     def result(self, name, passed, detail):
         self.results.append((getattr(self, "current", "?"), name, passed, detail))
         self.rows.append(("result", (name, passed, detail)))
+
+    def waive(self, name, passed, detail):
+        """`(passed, detail)`, made `WAIVED` when the check failed and an
+        approved waiver of this issue excuses it. A check that was refused
+        (another implementation major), a row of a gate the set never waives,
+        a pass and an advisory finding are returned as they are."""
+        if passed or name not in self.excused or name in self.refused \
+                or getattr(self, "current", None) in self.never_gates:
+            return passed, detail
+        waiver, record = self.excused[name]
+        self.waived += 1
+        return WAIVED, (f"waived by {waiver['id']} ({waiver['reason']}), approved by "
+                        f"{record['approver']} in {record['id']} - {detail}")
 
 
 def _verbose_lines(run):
@@ -316,6 +340,8 @@ def _verbose_lines(run):
                 out.append("    NOTHING TO CHECK %s: %s" % (name, detail))
             elif passed is ADVISORY_FAILURE:
                 out.append("    ADVISORY %s: %s" % (name, detail))
+            elif passed is WAIVED:
+                out.append("    WAIVED %s: %s" % (name, detail))
             elif passed:
                 out.append("    PASS %s: %s" % (name, detail))
             else:
@@ -325,9 +351,27 @@ def _verbose_lines(run):
                 if g and name not in run.refused:
                     out.append("         why : %s" % g["why"])
                     out.append("         fix : %s" % g["fix"])
-    out += ["-" * 60,
-            summarise_counts(run.ran, run.failures, run.nothing, run.advisory)]
+    counts = _distinct_counts(run)
+    if counts[0] < len(run.results):
+        out.append("A check listed under more than one guardrail has a row under each, "
+                   "and is counted once.")
+    out += ["-" * 60, summarise_counts(*counts)]
     return out
+
+
+def _distinct_counts(run):
+    """`(ran, failed, nothing to check, advisory, waived)`, each counting a
+    check once. A check listed under more than one guardrail has a row under
+    each, and the default view counts it once, so the --verbose footer does
+    too. A run with no result rows keeps the counts it set."""
+    if not run.results:
+        return run.ran, run.failures, run.nothing, run.advisory, run.waived
+    def named(test):
+        return len({n for _g, n, p, _d in run.results if test(p)})
+    # The same sets `_summary_lines` counts.
+    return (named(lambda p: True), named(lambda p: not p),
+            named(lambda p: p is NOTHING_TO_CHECK), named(lambda p: p is ADVISORY_FAILURE),
+            named(lambda p: p is WAIVED))
 
 
 def _summary_lines(run):
@@ -381,14 +425,23 @@ def _summary_lines(run):
             advisory_rows.append((n, d))
     nothing += (", %d failed as advisory (does not block)" % len(advisory_rows)
                 if advisory_rows else "")
+    # A waived check failed and an approved waiver excuses it on this issue: it
+    # is not a pass and not a failure, so it is counted apart.
+    waived_rows, waived_seen = [], set()
+    for _g, n, p, d in run.results:
+        if p is WAIVED and n not in waived_seen:
+            waived_seen.add(n)
+            waived_rows.append((n, d))
+    nothing += (", %d waived (an approved waiver excuses it)" % len(waived_rows)
+                if waived_rows else "")
     if distinct_failed:
         verdict = "FAIL - %d of %d check(s) failed%s on '%s' (%s)" % (
             distinct_failed, distinct_ran - distinct_nothing, nothing,
             run.slug, approach)
     else:
         verdict = "PASS - %d check(s) passed%s on '%s' (%s)" % (
-            distinct_ran - distinct_nothing - len(advisory_rows), nothing,
-            run.slug, approach)
+            distinct_ran - distinct_nothing - len(advisory_rows) - len(waived_rows),
+            nothing, run.slug, approach)
     out = [_fit(verdict)]
 
     # Keep the adoption-mode banner in the default view. Without it, an
@@ -414,6 +467,15 @@ def _summary_lines(run):
             out.append(_fit("... and %d more advisory (%s) - run with --verbose"
                             % (len(advisory_rows) - MAX_ITEMS,
                                ", ".join(n for n, _ in advisory_rows[MAX_ITEMS:]))))
+
+    if waived_rows:
+        out.append("")
+        for name, detail in waived_rows[:MAX_ITEMS]:
+            out.append(_fit("%s: %s" % (name, detail), "WAIVED "))
+        if len(waived_rows) > MAX_ITEMS:
+            out.append(_fit("... and %d more waived (%s) - run with --verbose"
+                            % (len(waived_rows) - MAX_ITEMS,
+                               ", ".join(n for n, _ in waived_rows[MAX_ITEMS:]))))
 
     if not failed:
         return out
@@ -441,24 +503,57 @@ def _verdicts(results):
     for _, name, passed, _ in results:
         verdict = ("nothing-to-check" if passed is NOTHING_TO_CHECK
                    else "advisory" if passed is ADVISORY_FAILURE
+                   else "waived" if passed is WAIVED
                    else "pass" if passed else "fail")
         if name not in verdicts or verdict == "fail":
             verdicts[name] = verdict
     return verdicts
 
 
+def _policy_lines(run):
+    """`Policy: compass-checks@9.0.0 (sha256 <hex>)` and the tighten-only
+    settings applied (ADR-094). An issue with a stored generation names the
+    `policy:` block of its manifest; one committed before 9.0.0 has none and
+    gets no line."""
+    view = getattr(run, "policy_view", None)
+    if view is None:
+        return []
+    if view.source == "generation":
+        block = run.task.get("policy")
+        if not isinstance(block, dict):
+            return []
+        ref, sha = block.get("check_set"), block.get("check_set_sha256")
+        tightened = block.get("tightened") or {}
+    else:
+        from compass_pkg import check_set, effective, tighten
+        from compass_pkg.core import CompassError
+        from compass_pkg.project_settings import find_project_root
+        ref, sha = check_set.ref(), check_set.sha256()
+        try:
+            tightened = tighten.settings_of(effective.project_doc(find_project_root(run.task_dir)))
+        except CompassError:
+            tightened = {}
+    lines = [f"Policy: {ref}" + (f" (sha256 {sha})" if sha else "")]
+    if tightened:
+        lines.append("Tightened: " + ", ".join(sorted(tightened)))
+    return lines
+
+
 def _generation_lines(run):
     """The notices that name the generation an issue was judged by, and a
-    pending `config:` change. None for an issue with no generation."""
+    `config:` the generation was not committed with. None for an issue with no
+    generation."""
     if run.view is None:
         return []
     view = run.view
     parent = view.parent_version()
     lines = ["generation %d (parent %s)" % (view.generation, parent or "unknown")]
     if view.pending_config(run.task):
-        lines.append("pending: config: is not committed yet; "
-                     "run `compass approach evaluate --write`")
-    return lines
+        lines.append("config: differs from the generation in force and is not read: "
+                     "an issue has no config layer (ADR-094)")
+    # A step-off from the four-layer acceptance strategy names its waiver (TRC-A20).
+    from compass_pkg.acceptance_strategy import waiver_lines
+    return lines + waiver_lines(run.task, view)
 
 
 def _emit_check(run, args):
@@ -468,21 +563,42 @@ def _emit_check(run, args):
     the failures, not the exit. A `compass ci` sweep passes `no_count`: it
     checks issues nobody is working on, so its failures are not
     interruptions."""
-    from compass_pkg import locks
     from compass_pkg.interruptions import record
-    from compass_pkg.layers import find_project_root
     from compass_pkg.terminal import mark_handled, resolve_mode
 
-    # Conformance is reported on every run, ahead of the other notices so the
-    # summary view, which shows only a few, always shows it. A project with no
-    # `compass.yml` adds nothing.
-    run.rows[0:0] = [("line", "  " + line) for line in locks.conformance_lines(
-        find_project_root(run.task_dir), width=10 ** 6)]
+    # The policy the issue is judged by is named on every run, ahead of the other
+    # notices so the summary view, which shows only a few, always shows it.
+    policy = _policy_lines(run)
+    run.rows[0:0] = [("line", "  " + line) for line in policy]
     # An issue with a generation says which one it was judged by, ahead of the
     # other notices, and reports a `config:` the generation does not hold yet.
     # `config:` is an input: the line is a notice and never fails the run.
     header = _generation_lines(run)
+    # A waiver nobody approved changes nothing; it is named with the command that
+    # asks for its approval (ADR-094).
+    from compass_pkg import waiver_records
+    try:
+        header += waiver_records.notices(run.task, run.task_dir)
+    except Exception as exc:                            # noqa: BLE001
+        if waiver_records.listed(run.task):
+            header.append(f"waivers not read ({exc}), so every check runs as it is")
     run.rows[0:0] = [("line", "  " + line) for line in header]
+    # The scenario freeze is a notice, not a row, so no verdict moves (ADR-095). The
+    # default view shows it only when the spec changed since the first red.
+    from compass_pkg import scenario_freeze
+    frozen = scenario_freeze.check_line(run.task, run.task_dir)
+    if frozen:
+        text, changed = frozen
+        at = len(header) + len(policy)
+        run.rows.insert(at, ("line" if changed else "note", "  " + text))
+    # An issue with a `trail.md` says whether it is out of date (#356). A line,
+    # not a row, so no verdict moves; no archived issue has the file.
+    from compass_pkg import trail
+    stale = trail.check_line(run.task, run.task_dir)
+    if stale:
+        text, out_of_date = stale
+        at = len(header) + len(policy) + (1 if frozen else 0)
+        run.rows.insert(at, ("line" if out_of_date else "note", "  " + text))
     if run.failures and not getattr(args, "no_count", False):
         compass_dir = os.path.dirname(os.path.dirname(
             os.path.normpath(run.task_dir)))
@@ -492,9 +608,11 @@ def _emit_check(run, args):
     # marker does not cover. An issue with no generation writes nothing.
     from compass_pkg import effective
     # A refused check did not run, so it has no result to record.
-    effective.record_check_results(
-        run.task_dir, _verdicts([r for r in run.results if r[1] not in run.refused]),
-        manifest=run.task)
+    # A caller that only reads the verdicts (`no_record`) leaves the file as it was.
+    if not getattr(args, "no_record", False):
+        effective.record_check_results(
+            run.task_dir, _verdicts([r for r in run.results if r[1] not in run.refused]),
+            manifest=run.task)
 
     mark_handled()
     mode = resolve_mode(args)
@@ -504,6 +622,7 @@ def _emit_check(run, args):
             "ran": run.ran, "failed": run.failures,
             "nothing_to_check": run.nothing,
             "advisory": run.advisory,
+            **({"waived": run.waived} if run.waived else {}),
             "notices": [t.strip() for kind, t in run.rows
                         if kind in ("line", "note") and t.strip()],
             **({"generation": run.view.generation,
@@ -514,6 +633,7 @@ def _emit_check(run, args):
                                    "nothing-to-check"
                                    if p is NOTHING_TO_CHECK else
                                    "advisory" if p is ADVISORY_FAILURE else
+                                   "waived" if p is WAIVED else
                                    "pass" if p else "fail"),
                         "detail": d}
                        for g, n, p, d in run.results],
@@ -559,40 +679,19 @@ def _stage_list_pass(run, view, task, task_dir):
             run.guardrail(row.label, "%s checks of %s" % (row.side, row.stage))
         passed = {"pass": True, "fail": False, "nothing-to-check": NOTHING_TO_CHECK,
                   "advisory": ADVISORY_FAILURE}[row.status]
+        passed, detail = run.waive(row.check, passed, row.detail)
         failed += passed is False
         nothing += passed is NOTHING_TO_CHECK
         advisory += passed is ADVISORY_FAILURE
-        run.result(row.check, passed, row.detail)
+        run.result(row.check, passed, detail)
     return len(rows), failed, nothing, advisory
 
 
-def _freshness_pass(run, view, task, task_dir):
-    """Add one result per tracked document, when the capability
-    `artifact-freshness` is on, and return `(ran, failed, nothing)` for them.
-    A stale document fails once the issue has reached the stage whose entry it
-    blocks; before that it passes and the detail says it is stale. A project
-    without the capability, or an issue without a configuration, adds nothing."""
-    from compass_pkg import freshness
-
-    if not freshness.enabled(view):
-        return 0, 0, 0
-    run.guardrail(freshness.GUARDRAIL, "artifact freshness")
-    try:
-        findings = freshness.evaluate(view, task, task_dir)
-    except Exception as exc:                            # noqa: BLE001
-        # A check must not crash the run.
-        run.result("freshness", False, f"evaluation errored: {exc}")
-        return 1, 1, 0
-    if not findings:
-        run.result("freshness", NOTHING_TO_CHECK,
-                   "no document records the digests of its upstream")
-        return 1, 0, 1
-    failed = 0
-    for one in findings:
-        broken = one.stale and one.blocking
-        failed += broken
-        run.result(one.artifact, not broken, one.detail)
-    return len(findings), failed, 0
+def _removed_fn(check):
+    """A stand-in for a removed check that a stored configuration still declares
+    (`check_registry.REMOVED`): it reports nothing to check and names the removal."""
+    removed = REMOVED[check]
+    return lambda task, task_dir: (NOTHING_TO_CHECK, removed.detail)
 
 
 def _outside_gate_pass(run, task, task_dir, refused, checks=None):
@@ -602,7 +701,7 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
     configuration that does not declare a check adds no row for it, so an issue
     stored before the check existed gains it at its next `compass approach
     evaluate --write`."""
-    from compass_pkg import acceptance_strategy
+    from compass_pkg import acceptance_strategy, request_link, ship_approval
 
     ran = failed = nothing = advisory = 0
     for check in outside_gate.CHECKS if checks is None else checks:
@@ -612,16 +711,24 @@ def _outside_gate_pass(run, task, task_dir, refused, checks=None):
         # it was assessed under (ADR-006).
         if check in acceptance_strategy.CHECKS and acceptance_strategy.stored(task) is None:
             if check == acceptance_strategy.CHECK:
-                run.note("  " + acceptance_strategy.notice(task_dir))
+                run.note("  " + acceptance_strategy.NOTICE)
             continue
-        verdict = outside_gate.judged(check, CHECK_FNS.get(check), task, task_dir, _judge)
+        # Only an issue whose stored `evidence_required` lists the token owes the ship
+        # approval, so an issue assessed before the token gains no row (#355).
+        if check == ship_approval.CHECK and not ship_approval.owed(task):
+            continue
+        # The same for the request link (#356).
+        if check == request_link.CHECK and not request_link.owed(task):
+            continue
+        verdict = outside_gate.judged(check, CHECK_FNS.get(check) or _removed_fn(check),
+                                      task, task_dir, _judge)
         if verdict is None:
             continue
         run.guardrail("", outside_gate.LABELS[check])
         if check in refused:
             run.refused.add(check)
             verdict = (False, refused[check])
-        passed, detail = verdict
+        passed, detail = run.waive(check, *verdict)
         run.result(check, passed, detail)
         ran += 1
         if passed is ADVISORY_FAILURE:
@@ -704,15 +811,78 @@ def _judge(passed, detail, declared, matches, readings):
     return passed, detail
 
 
+def _removed_entry(check_name, implementation):
+    """The `REMOVED` entry for a listed check, or None. A guardrails.yml
+    written before ADR-023 names a check by its retired spelling, which can be
+    the old name of a check a release removed."""
+    retired = migrate_map_section("values", {}).get("check_name", CHECK_NAME_MAP)
+    return (REMOVED.get(implementation) or REMOVED.get(check_name)
+            or REMOVED.get(retired.get(check_name, "")))
+
+
 def _with_replacements(names, impls):
     """`names` with the replacement of each removed check added after the last
     name, unless the guardrail lists it already."""
     names = list(names)
     for name in list(names):
         removed = REMOVED.get(impls.get(name, name)) or REMOVED.get(name)
-        if removed is not None and removed.replaced_by not in names:
+        if removed is not None and removed.replaced_by is not None \
+                and removed.replaced_by not in names:
             names.append(removed.replaced_by)
     return names
+
+
+def _deleted_check_items(task, task_dir):
+    """`(named, fix)` for each setting or waiver that names a deleted check
+    (`check_registry.DELETED_CHECKS`), in the order the refusal lists them: the
+    project checks and the check lists of `compass.yml`, then the issue's
+    waivers that are not withdrawn."""
+    from compass_pkg import project_settings, removed_parts, waiver_records
+    from compass_pkg.check_registry import DELETED_CHECKS
+    slug = os.path.basename(os.path.normpath(task_dir))
+    root = project_settings.find_project_root(task_dir)
+    doc = (project_settings.project_file(root) or {}) \
+        if project_settings.compass_yml_counts(root) else {}
+    out = []
+    for entry in doc.get("project_checks") or ():
+        check = entry.get("id") if isinstance(entry, dict) else None
+        if check in DELETED_CHECKS:
+            out.append((f"project check {check} in compass.yml",
+                        f"delete project check {check} from compass.yml"))
+    for catalogue, fields in removed_parts.CHECK_LIST_FIELDS.items():
+        entries = doc.get(catalogue)
+        for entry_id, entry in (entries.items() if isinstance(entries, dict) else ()):
+            if not isinstance(entry, dict):
+                continue
+            changes = entry.get("set")
+            for prefix, holder in ((f"{catalogue}.{entry_id}", entry),
+                                   (f"{catalogue}.{entry_id}.set", changes)):
+                for field in (fields if isinstance(holder, dict) else ()):
+                    for check in removed_parts._items(holder.get(field)):
+                        if check in DELETED_CHECKS:
+                            out.append((f"{check} in {prefix}.{field} of compass.yml",
+                                        f"delete {check} from {prefix}.{field} in "
+                                        f"compass.yml"))
+    for waiver in waiver_records.listed(task):
+        if waiver.get("check") in DELETED_CHECKS and not waiver.get("withdrawn_at"):
+            out.append((f"waiver {waiver.get('id')} of {waiver.get('check')}",
+                        f"run compass waiver withdraw {waiver.get('id')} --issue {slug}"))
+    return out
+
+
+def deleted_check_refusal(task, task_dir):
+    """The `names-deleted-check` refusal, or None. 9.0.0 deleted checks
+    (`check_registry.DELETED_CHECKS`); a setting or an open waiver that still
+    names one asks for a check that never runs, so `compass check` refuses
+    before it runs any row rather than show it as nothing to check (#359)."""
+    from compass_pkg import refusals
+    items = _deleted_check_items(task, task_dir)
+    if not items:
+        return None
+    return refusals.render("names-deleted-check",
+                           slug=os.path.basename(os.path.normpath(task_dir)),
+                           named=", ".join(named for named, _ in items),
+                           fix="; ".join(fix for _, fix in items))
 
 
 def cmd_check(args):
@@ -721,40 +891,36 @@ def cmd_check(args):
     mode = load_mode()
     task_dir = resolve_issue_dir(args.task)
     task, _ = load_manifest(task_dir)
+    refusal = deleted_check_refusal(task, task_dir)
+    if refusal is not None:
+        raise CompassError(refusal)
     # An unreadable strategy setting is refused before any check runs, as
     # `approach evaluate` refuses it: a typo must not change what is checked.
     from compass_pkg import acceptance_strategy
-    from compass_pkg.layers import find_project_root
+    from compass_pkg.project_settings import find_project_root
     acceptance_strategy.setting(find_project_root(task_dir))
     # A generation that is not whole is the authority being unreadable, so the
     # check refuses (ADR-036). An issue with no generation is not asked.
     from compass_pkg import effective
     effective.require_whole(task_dir)
-    # An issue with a generation is judged by it, whatever the governance files
-    # now say. Only an issue with none, in a project with no `compass.yml`,
-    # reads the governance files.
-    view = effective.view_or_legacy(task_dir)
-    if view is None:
-        gov = find_governance()
-        guardrails = load_yaml(os.path.join(gov, "guardrails.yml"))
-    else:
-        guardrails = view.guardrail_gates()
+    # An issue with a generation is judged by it; any other by the check set.
+    view = effective.effective_for(task_dir)
+    guardrails = view.guardrail_gates()
     impls = guardrails.get("impl") or {}
-    matches = view.matches if view is not None else reading_matches
+    matches = view.matches
     # A check built for another major is refused rather than run (ADR-038). A
     # resolver or schema major was refused by `require_whole` above.
     from compass_pkg import impl_versions
     refused = impl_versions.refusals(task_dir, task).checks
     readings = task.get("assessment") or {}
-    if view is not None:
-        # A `when`, `applies_when` or `blocking_when` reads one derived key
-        # beside the assessment: `ships` (ADR-037, the amendment of 2026-10-08).
-        readings = view.listing_assessment(readings, task.get("delivery_approach"))
+    # A `when`, `applies_when` or `blocking_when` reads one derived key
+    # beside the assessment: `ships` (ADR-037, the amendment of 2026-10-08).
+    readings = view.listing_assessment(readings, task.get("delivery_approach"))
 
     # A spike ships nothing, so the delivery guardrails (`G1`-`G5`) do not apply.
     # It is still controlled: it must conclude, and it must not change
     # production code. On a spike, `compass check` runs `spike_guardrails`
-    # from guardrails.yml instead.
+    # from the configuration instead.
     if task.get("delivery_approach") == APPROACH_SPIKE:
         spike_gs = list(guardrails.get("spike_guardrails", []))
         run = _CheckRun(task_dir, task, mode, view)
@@ -764,7 +930,7 @@ def cmd_check(args):
             # ran, because nothing ran.
             run.guardrail("", "spike control")
             run.result("spike-guardrails-declared", False,
-                       "no `spike_guardrails:` defined in guardrails.yml - "
+                       "no spike guardrail defined in the configuration - "
                        "a Spike is uncontrolled")
             run.ran = run.failures = 1
             _emit_check(run, args)
@@ -796,6 +962,7 @@ def cmd_check(args):
                     passed, detail,
                     (guardrails.get("checks") or {}).get(check_name) or {},
                     matches, readings)
+                passed, detail = run.waive(check_name, passed, detail)
                 if passed is ADVISORY_FAILURE:
                     run.advisory += 1
                 elif not passed:
@@ -830,7 +997,9 @@ def cmd_check(args):
             except Exception as exc:                    # noqa: BLE001
                 passed, detail = False, f"check errored: {exc}"
         run.guardrail("", "outstanding follow-ups")
+        passed, detail = run.waive("backfills-paid", passed, detail)
         run.result("backfills-paid", passed, detail)
+        run.nothing += passed is NOTHING_TO_CHECK
         if not passed:
             failures += 1
 
@@ -852,32 +1021,6 @@ def cmd_check(args):
     # Reads `delivery_approach`, the live manifest key.
     run = _CheckRun(task_dir, task, mode, view)
 
-    # Report a guardrail the project's file omits when it would apply to
-    # this issue. Only this issue's: a full list on every run would not be
-    # read, and `compass policy lint` prints the full list. A generation
-    # holds the guardrails the issue runs against, so nothing is absent from it.
-    declared_ids = {g.get("id") for g in all_guardrails}
-    try:
-        fw_guardrails = load_yaml(
-            os.path.join(FRAMEWORK_ROOT, "governance", "guardrails.yml"))
-        fw_defaults = (fw_guardrails.get("defaults") or []) if isinstance(
-            fw_guardrails, dict) else []
-    except Exception:                                   # noqa: BLE001
-        fw_defaults = []
-    if view is not None and not view.from_governance_copy():
-        fw_defaults = []
-    for fg in fw_defaults:
-        fid = fg.get("id")
-        if fid in declared_ids:
-            continue
-        applies = fg.get("applies_when")
-        if applies and not reading_matches(applies, readings):
-            continue          # absent, but would not have applied here anyway
-        run.line(f"  {fid} {fg.get('name', '')}: ABSENT from this project's "
-                 f"governance, and it applies to this assessment - the "
-                 f"framework defines it but governance/guardrails.yml does "
-                 f"not. Run `compass policy lint`.")
-
     for g in all_guardrails:
         gid = g.get("id", "?")
         applies = g.get("applies_when")
@@ -888,7 +1031,7 @@ def cmd_check(args):
         run.guardrail(gid, g.get("name", ""))
         for check_name in _with_replacements(g.get("checks", []), impls):
             implementation = impls.get(check_name, check_name)
-            removed = REMOVED.get(implementation) or REMOVED.get(check_name)
+            removed = _removed_entry(check_name, implementation)
             if removed is not None:
                 # A stored generation can still list a check a release removed.
                 # It reports nothing to check and is never judged, so an
@@ -955,6 +1098,7 @@ def cmd_check(args):
             passed, detail = _judge(passed, detail,
                                     declared_checks.get(check_name) or {},
                                     matches, readings)
+            passed, detail = run.waive(check_name, passed, detail)
 
             if passed is ADVISORY_FAILURE:
                 advisory += 1
@@ -971,11 +1115,6 @@ def cmd_check(args):
     failures += listed_failed
     nothing_to_check += listed_nothing
     advisory += listed_advisory
-    # The freshness pass runs when the capability `artifact-freshness` is on.
-    fresh_ran, fresh_failed, fresh_nothing = _freshness_pass(run, view, task, task_dir)
-    ran += fresh_ran
-    failures += fresh_failed
-    nothing_to_check += fresh_nothing
     # The checks that sit in no gate: `artifacts-approved`, which stops an unapproved
     # document from shipping, and the two section checks of the spec and the design.
     done, bad, nothing, soft = _outside_gate_pass(run, task, task_dir, refused)
@@ -997,12 +1136,14 @@ def cmd_check(args):
     else:
         try:
             # Wrap this one too: a malformed `follow_ups:` list must not crash
-            # check, receipt, rework-scan, flow --digest or ci.
+            # check, flow --digest or ci.
             passed, detail = _check_backfills_paid(task, task_dir)
         except Exception as exc:                        # noqa: BLE001
             passed, detail = False, f"check errored: {exc}"
     run.guardrail("", "outstanding follow-ups")
+    passed, detail = run.waive("backfills-paid", passed, detail)
     run.result("backfills-paid", passed, detail)
+    nothing_to_check += passed is NOTHING_TO_CHECK
     if not passed:
         failures += 1
 
@@ -1012,4 +1153,14 @@ def cmd_check(args):
     # The exit code is 0 in advisory mode whatever failed. A caller that
     # reports a summary (compass ci) reads the real count from here.
     args.failed_checks = failures
+    args.request_failures = _request_failures(run)
     return exit_for_mode(failures, mode)
+
+
+def _request_failures(run):
+    """How many of the run's failures are `request-recorded`. `compass quick-fix
+    finish` lands when they are the only ones, because the request link is not
+    a stop (#356, VD-033); `compass check` and `compass ci` still fail on it."""
+    from compass_pkg import request_link
+    return sum(1 for _, name, passed, _ in run.results
+               if name == request_link.CHECK and passed is False)

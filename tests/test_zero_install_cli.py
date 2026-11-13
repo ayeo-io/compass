@@ -9,8 +9,9 @@ before it proves anything else. If the precondition ever holds - if the
 "bare" interpreter can import yaml - every test using it fails loudly rather
 than passing on an interpreter that was never actually bare (DD-6).
 
-`TRC-A3` through `TRC-A6` exercise the four shell surfaces that embed their own
-Python reader (plus `TRC-A7` for the fifth, `scripts/multiagent.sh`) by prepending
+`TRC-A3`, `TRC-A5` and `TRC-A6` exercise the shell surfaces that embed their
+own Python reader (`TRC-A4` and `TRC-A7` ran the integrate and multiagent
+scripts until 9.0.0 removed both, ADR-090) by prepending
 the bare interpreter's `bin/` to `PATH` and running the script the way a
 person on such a machine actually would - `python3` on `PATH` resolves to the
 bare one, which is exactly how these scripts find Python in real life.
@@ -38,8 +39,6 @@ FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent
 CLI_PATH = FRAMEWORK_ROOT / "cli" / "compass"
 PRE_TOOL_HOOK = FRAMEWORK_ROOT / "hooks" / "pre-tool.sh"
 STOP_HOOK = FRAMEWORK_ROOT / "hooks" / "stop.sh"
-INTEGRATE_SH = FRAMEWORK_ROOT / "scripts" / "integrate.sh"
-SWARM_SH = FRAMEWORK_ROOT / "scripts" / "multiagent.sh"
 VALIDATE_SH = FRAMEWORK_ROOT / "scripts" / "validate.sh"
 
 # Scoped to PyYAML, the dependency this issue removes - not to jsonschema,
@@ -58,8 +57,6 @@ def _make_bare_project(tmp_path: Path) -> Path:
     gov_dst = project / "governance"
     gov_dst.mkdir(parents=True)
     gov_src = FRAMEWORK_ROOT / "governance"
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        shutil.copyfile(gov_src / name, gov_dst / name)
     for md in gov_src.glob("*.md"):
         shutil.copyfile(md, gov_dst / md.name)
     (project / ".compass" / "work").mkdir(parents=True)
@@ -209,100 +206,6 @@ def test_pre_tool_hook_enforces_acceptance_before_code_without_a_system_pyyaml(
 
 
 # ---------------------------------------------------------------------------
-# Integration records the landing rather than warning it could not (`TRC-A4`)
-# ---------------------------------------------------------------------------
-
-
-def _git(cwd, *args):
-    return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
-                          text=True, check=True)
-
-
-def test_integrate_leaves_status_untouched_ship_commit_lands_without_a_system_pyyaml(
-        bare_interpreter, tmp_path):
-    """`integrate.sh` merges a wave and leaves the issue's status alone;
-    `ship-commit` is the step that lands it and derives the living spec
-    (ADR-026, `DPR-7`). Both run on the bare interpreter, so this still
-    proves the zero-install claim for whichever step does the writing."""
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _git(repo, "init", "-q")
-    _git(repo, "config", "user.email", "t@example.com")
-    _git(repo, "config", "user.name", "t")
-    (repo / "README.md").write_text("hello\n", encoding="utf-8")
-    _git(repo, "add", "-A")
-    _git(repo, "commit", "-q", "-m", "init")
-    base_branch = subprocess.run(
-        ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=str(repo),
-        capture_output=True, text=True, check=True).stdout.strip()
-
-    slug = "swarmed-issue"
-    task_dir = repo / ".compass" / "work" / slug
-    task_dir.mkdir(parents=True)
-    with (task_dir / "manifest.yml").open("w", encoding="utf-8") as fh:
-        yaml.safe_dump({
-            "task": slug, "created": "2026-08-10", "status": "active",
-            "assessment": {"risk": "contained", "familiarity": "greenfield",
-                          "size": "small"},
-            "other_field": "must-survive-unchanged",
-        }, fh, sort_keys=False)
-    before_other_field = yaml.safe_load((task_dir / "manifest.yml").read_text())["other_field"]
-    (task_dir / "distribution-map.md").write_text(
-        "# Distribution Map\n\n## 3. mapping\n\n"
-        f"| stream-1 | U1 | TRC-A1 | compass/{slug}/stream-1 |\n", encoding="utf-8")
-
-    # integrate.sh refuses to run over a dirty working tree, so the issue
-    # directory has to be committed on the base branch first - the same as a
-    # real repository, where `.compass/work/` is an adopter's own tracked
-    # audit trail (only this framework's own copy is gitignored).
-    _git(repo, "add", "-A")
-    _git(repo, "commit", "-q", "-m", "open swarmed-issue")
-
-    branch = f"compass/{slug}/stream-1"
-    _git(repo, "checkout", "-q", "-b", branch)
-    (repo / "stream-1-file.txt").write_text("stream work\n", encoding="utf-8")
-    _git(repo, "add", "stream-1-file.txt")
-    _git(repo, "commit", "-q", "-m", "stream-1 work")
-    _git(repo, "checkout", "-q", base_branch)
-
-    env = bare_interpreter.env()
-    result = subprocess.run(
-        ["bash", str(INTEGRATE_SH), slug, "--no-clean"], cwd=str(repo),
-        capture_output=True, text=True, env=env, timeout=60)
-
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert "could not write status" not in (result.stdout + result.stderr), (
-        result.stdout + result.stderr)
-
-    after_integrate = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert after_integrate["status"] == "active", (
-        "integrate.sh must not mark the issue landed - only ship-commit does "
-        f"(ADR-026):\n{result.stdout}{result.stderr}")
-    assert not (repo / "docs" / "system-spec.md").exists(), (
-        "integrate.sh must not derive docs/system-spec.md - only "
-        f"ship-commit does (ADR-026):\n{result.stdout}{result.stderr}")
-
-    # The real workflow stages the verification report before shipping -
-    # something of the issue's own has to be staged for ship-commit to land.
-    (task_dir / "verification-report.md").write_text(
-        "# Verification\n", encoding="utf-8")
-    _git(repo, "add", "--", f".compass/work/{slug}/verification-report.md")
-
-    ship_result = _run_cli(bare_interpreter, repo, "ship-commit", "-m",
-                            "land it", "--issue", slug)
-    assert ship_result.returncode == 0, ship_result.stdout + ship_result.stderr
-    _assert_no_install_instruction(ship_result)
-
-    written = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert written["status"] == "done" and written["close_reason"] == "completed"
-    assert "land_timestamp" in written
-    assert written["other_field"] == before_other_field == "must-survive-unchanged"
-    assert (repo / "docs" / "system-spec.md").is_file(), (
-        "ship-commit must derive docs/system-spec.md once the issue lands "
-        f"(ADR-026):\n{ship_result.stdout}{ship_result.stderr}")
-
-
-# ---------------------------------------------------------------------------
 # The session-end signal scan runs rather than returning empty (`TRC-A5`)
 # ---------------------------------------------------------------------------
 
@@ -377,54 +280,6 @@ def test_validate_runs_the_policy_lint_without_a_system_pyyaml(bare_interpreter)
         f"validate.sh exited {result.returncode} on a bare interpreter:\n"
         f"{combined}"
     )
-
-
-# ---------------------------------------------------------------------------
-# Preparing a multiagent breakdown reads the cap rather than refusing (`TRC-A7`)
-# ---------------------------------------------------------------------------
-
-
-def test_swarm_reads_the_cap_without_a_system_pyyaml(bare_interpreter, tmp_path):
-    repo = tmp_path / "swarmrepo"
-    repo.mkdir()
-    _git(repo, "init", "-q")
-    _git(repo, "config", "user.email", "t@example.com")
-    _git(repo, "config", "user.name", "t")
-    (repo / "f").write_text("x\n", encoding="utf-8")
-    _git(repo, "add", "-A")
-    _git(repo, "commit", "-q", "-m", "init")
-
-    slug = "swarm-issue"
-    task_dir = repo / ".compass" / "work" / slug
-    task_dir.mkdir(parents=True)
-    (task_dir / "delivery-approach.md").write_text(
-        "# Delivery approach - swarm-issue\n\n> **Reference shape:** initiative\n",
-        encoding="utf-8")
-    with (task_dir / "manifest.yml").open("w", encoding="utf-8") as fh:
-        yaml.safe_dump({
-            "task": slug,
-            "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
-                          "size": "large"},
-            "fired_guardrails": [],
-        }, fh, sort_keys=False)
-    (task_dir / "distribution-map.md").write_text(
-        "# Distribution Map\n\n## 3. mapping\n\n"
-        f"| stream-1 | U1 | TRC-A7 | compass/{slug}/stream-1 |\n"
-        f"| stream-2 | U2 | TRC-A7 | compass/{slug}/stream-2 |\n",
-        encoding="utf-8")
-    (repo / ".compass" / "config.yml").write_text(
-        "version: 1.0.0\nmode: enforced\nswarm:\n  worktree_root: ../wt\n"
-        "  max_worktrees: 6\n", encoding="utf-8")
-
-    env = bare_interpreter.env()
-    result = subprocess.run(
-        ["bash", str(SWARM_SH), slug, "--dry-run"], cwd=str(repo),
-        capture_output=True, text=True, env=env, timeout=30)
-
-    combined = result.stdout + result.stderr
-    assert "cannot read the cap from manifest.yml" not in combined, combined
-    assert "fix manifest.yml" not in combined.lower(), combined
-    assert result.returncode == 0, combined
 
 
 # ---------------------------------------------------------------------------

@@ -77,7 +77,6 @@ def test_b4_request_refuses_like_approve(tmp_path):
     from approval_support import save_manifest
     save_manifest(root, body)
     for argv in (["--check", "made-up-check", "--scope", "x"],
-                 ["--artifact", "technical-design"],
                  ["--guardrail", "g5", "--scope", "x"]):
         code, out, err = _request(root, *argv)
         assert code != 0, (argv, out + err)
@@ -127,7 +126,7 @@ def test_e3_no_prompt_host_prints_terminal_command(tmp_path):
     assert row["claude-code"] == {"status": "full", "path": "hooks/prompt-approval.sh"}
     portability = " ".join((ROOT / "docs" / "portability.md").read_text().split())
     for needle in ("Person-only approval event", "dated measurement",
-                   "COMPASS_APPROVAL_CHANNEL=terminal", "Codex"):
+                   "COMPASS_APPROVAL_CHANNEL=terminal"):
         assert needle in portability, needle
     # No code under cli/ or hooks/ branches on an adapter's name.
     for folder in ("cli/compass_pkg", "hooks"):

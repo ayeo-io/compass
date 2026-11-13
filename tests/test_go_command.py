@@ -3,10 +3,10 @@ interruptions an issue took.
 
 A new user had to know that `/compass:assess` starts an issue and
 `/compass:quick-fix` is the light path. `/compass:go <what you want>` runs
-init, assesses, shows a three-line decision view and continues into the
-first stage. Each hook block and each failing `compass check` appends a
-line to `.compass/interruptions.log`, and `compass retro` reports the
-totals, so "fewer interruptions" can be measured, not claimed.
+init, assesses, shows a three-line decision view and follows the `next:`
+line of each verb through the four stages of the path. Each hook block and each failing `compass check` appends a
+line to `.compass/interruptions.log`, and `compass issue diagnose` reports
+them, so "fewer interruptions" can be measured, not claimed.
 """
 from __future__ import annotations
 
@@ -28,11 +28,17 @@ GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
 
 def test_go_is_a_command_that_assesses_shows_the_view_and_continues():
     text = (ROOT / "commands" / "go.md").read_text(encoding="utf-8")
-    for step in ("compass init", "compass quick-fix start",
-                 "compass approach show --issue <slug>", "/compass:assess",
-                 "--no-commit"):
+    # ADR-099: `start` makes `.compass/` itself, `finish` writes the record and
+    # commits once a person approves, so go names two commands and the one
+    # request that asks for approval before code.
+    for step in ("compass quick-fix start", "compass quick-fix finish",
+                 "compass evidence request --checkpoint", "/compass:approve",
+                 "/compass:assess", "`next:`"):
         assert step in text, step
-    assert len(text.split()) < 700, len(text.split())
+    # 350 when ADR-099 cut the command to the two commands alone. The specify
+    # rules, the baseline and the hand-off went back in 495 words; before
+    # ADR-099 the limit was 700.
+    assert len(text.split()) < 500, len(text.split())
 
 
 # --- ONE-2: the three-line decision view ----------------------------------------
@@ -65,8 +71,10 @@ def test_the_decision_view_is_three_lines(repo):
     assert view.returncode == 0, view.stderr
     lines = view.stdout.strip().splitlines()
     assert len(lines) == 3, lines
-    assert lines[0].startswith("Approach: quick fix"), lines
-    assert lines[1].startswith("Gates: ") and "verify.correctness" in lines[1], lines
+    # The four-stage path (ADR-092): the one approach and the assessment, then the
+    # evidence the change owes, in place of the 8.x approach name and gate list.
+    assert lines[0].startswith("Approach: delivery (risk trivial"), lines
+    assert lines[1].startswith("Evidence: ") and "correctness" in lines[1], lines
     assert lines[2].startswith("Writes: ") and ".compass/work/greeting/" in lines[2], lines
 
 
@@ -145,32 +153,45 @@ def test_a_ci_sweep_does_not_count(repo):
     assert _counted(repo, "greeting", "check_failures") == 0, _log(repo)
 
 
-# --- ONE-5: retro reports them ----------------------------------------------------
-
-def test_retro_reports_the_interruptions(repo):
-    _start(repo)
-    _run(repo, "check", "--issue", "greeting")
-    log = repo / ".compass" / "interruptions.log"
-    with log.open("a") as fh:
-        fh.write("not a valid line\n")
-    r = _run(repo, "retro")
-    assert r.returncode == 0, r.stderr
-    assert "interruptions" in r.stdout.lower(), r.stdout
-    assert "1 check failure" in r.stdout, r.stdout
-
-
 # --- GC-1: go does not stop at assess's confirmation (issue `go-confirms-on-the-heavier-route`) ----------------
 
 def test_gc_1_go_and_assess_agree_that_go_does_not_wait_to_confirm():
-    """`/compass:go` hands a heavier route to `/compass:assess` from step 4.
-    Assess step 7 asks for a confirmation; go says not to stop. Both texts
-    must say the same thing: under go, the summary already shown is the
-    confirmation."""
-    go = (ROOT / "commands" / "go.md").read_text(encoding="utf-8")
-    assess = (ROOT / "commands" / "assess.md").read_text(encoding="utf-8") \
-        + (ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
-    assert "steps 4 to 6" in go, "go must name the assess steps it runs"
-    assert "step 7" in go and "do not wait" in go.lower(), \
-        "go must say it does not wait at assess step 7"
-    step7 = assess[assess.index("7. **Confirm.**"):assess.index("## Voice")]
-    assert "/compass:go" in step7, "assess step 7 must say what go does"
+    """`/compass:go` runs the whole path itself (ADR-092). Since ADR-099 it
+    has no confirmation step, and stops only where a `next:` line asks for a
+    person's approval. `/compass:assess` runs the same five steps and the
+    same stop."""
+    go = _flat(ROOT / "commands" / "go.md")
+    assess = _flat(ROOT / "commands" / "assess.md")
+    assert "confirm" not in go.lower(), "go must not wait for a confirmation"
+    stop = "When its `next:` line asks for a person's approval, stop."
+    assert stop in go, "go must say the one place it stops"
+    assert stop in assess, "assess must stop in the same place as go"
+
+
+def _flat(path: Path) -> str:
+    """File text with each run of whitespace folded to one space, so a
+    phrase wrapped across two lines still matches."""
+    return " ".join(path.read_text(encoding="utf-8").split())
+
+
+def test_go_command_names_the_architect_trigger_conditions():
+    """The specify stage of commands/go.md names the three conditions that
+    call for the architect's perspective: the `public-api` label, a service in
+    architecture/relations.md, a `lens_trigger_tag` in
+    architecture/invariants.yml (`TRC-001`). Moved here from
+    `test_architect_lens.py` when `/compass:consult` was removed (ADR-093)."""
+    go = _flat(ROOT / "commands" / "go.md")
+    for term in ("public-api", "architecture/relations.md", "lens_trigger_tag"):
+        assert term in go, f"commands/go.md does not name the trigger: {term}"
+
+
+def test_go_command_takes_the_architect_perspective_before_the_scenarios():
+    """commands/go.md takes the architect's perspective first, and writes
+    architecture-notes.md, before the stage writes scenarios (`TRC-001`)."""
+    go = _flat(ROOT / "commands" / "go.md").lower()
+    first = go.find("take the architect's perspective first")
+    notes = go.find("write `architecture-notes.md`")
+    scenarios = go.find("before you write the scenarios")
+    assert first != -1, "commands/go.md does not take the architect's perspective first"
+    assert notes > first, "commands/go.md does not write architecture-notes.md after it"
+    assert scenarios > notes, "commands/go.md does not write the notes before the scenarios"

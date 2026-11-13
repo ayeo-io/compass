@@ -1,15 +1,22 @@
 """`compass next` reports the stage an issue has reached: the
-next-never-leaves-assess issue, scenarios NS-A to NS-I. The current one is in
-`docs/system-spec.md`, and the eight it supersedes are in
-`docs/system-spec-archive.md`.
+next-never-leaves-assess issue, scenarios NS-A to NS-I.
 
 The stage is derived from the records on disk. The status line and the rail
 take it from the same place, so all three must agree.
 
-Each test builds a project with `compass approach evaluate`, then adds the
-records a stage leaves, as the commands write them: documents registered as
-`draft` with a path, scenarios, a subtask, a red, scenario-bound test
-evidence, passed gates.
+Two kinds of issue are tested:
+
+- An issue assessed before the four-stage path (ADR-092). Its manifest is the
+  one 8.x wrote, built here from the 8.0.4 evaluator
+  (`compat_baseline.policy_8_0_4`), because a new assessment no longer writes
+  one. The resolver gives the legacy stage, which every reader acts on, and the
+  three show it as the path stage it maps to.
+- An issue on the path, assessed as a new issue is. Its stages are
+  Assess, Specify, Build and Ship, each done when its records are on disk.
+
+Each test then adds the records a stage leaves, as the commands write them:
+documents registered as `draft` with a path, scenarios, a subtask, a red,
+scenario-bound test evidence, passed gates.
 """
 from __future__ import annotations
 
@@ -39,6 +46,45 @@ ROUTES = {
 }
 
 
+#: The `acceptance_strategy` block 8.x wrote for each approach on the shipped
+#: default, which declares the four-layer acceptance strategy.
+ACCEPTANCE_BEFORE_THE_PATH = {
+    "quick-fix": "existing-dsl", "hotfix": "existing-dsl-isolation",
+    "regular": "on", "full": "on", "spike": "suspended"}
+
+
+def assessed_before_the_path(assessment):
+    """The keys `compass approach evaluate --write` stored for `assessment` before
+    the four-stage path (ADR-092), from the 8.0.4 evaluator. A new assessment
+    writes the path keys, so a test of how an old issue reads builds its
+    manifest from these."""
+    sys.path.insert(0, str(ROOT / "cli"))
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compass_pkg import routing
+    from compat_baseline import policy_8_0_4
+    readings = {k: v for k, v in assessment.items() if k != "role"}
+    readings["size"] = {"standard": "medium"}.get(readings["size"], readings["size"])
+    readings = {"urgency": "none", "labels": [], **readings}
+    result = routing.evaluate_route(readings, policy_8_0_4())
+    approach = result["delivery_approach"]
+    spike = approach == "spike"
+    return {
+        "evaluated_assessment": dict(assessment),
+        "delivery_approach": approach,
+        "policy_rules_fired": result["policy_rules_fired"],
+        "stages": result["stages"],
+        "checkpoints": result["checkpoints"],
+        "checkpoint_outcomes": [],
+        "acceptance_strategy": {
+            "state": "on", "routing": ACCEPTANCE_BEFORE_THE_PATH[approach],
+            "expected_acceptance": "none", "applies": not spike,
+            "why": "a spike ships nothing" if spike else "client-observable behavior"},
+        "gates": [{"id": g, "status": "pending", "evidence": []} for g in result["gates"]],
+        "evidence": [],
+        "subtask_ceiling": result["subtask_ceiling"],
+    }
+
+
 def _env(**extra):
     env = {k: v for k, v in os.environ.items()
            if k not in ("CLAUDECODE", "NO_COLOR", "COMPASS_COLOR", "COLUMNS")}
@@ -50,21 +96,17 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
            review_file=False,
            design=False,
            dist_map=False, subtask=False, red=False, green=(), narrative=(),
-           gates_pass=False, landed=False, current_phase=None, raw=None) -> Path:
+           gates_pass=False, landed=False, current_phase=None, handed_off=(),
+           raw=None) -> Path:
     """A project at `root` whose one issue carries the named records,
     registered as the commands register them: `draft`, with a path."""
     import yaml
     task = root / ".compass" / "work" / SLUG
     task.mkdir(parents=True)
     (root / ".compass" / "current-task").write_text(SLUG + "\n")
-    (task / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "issue": SLUG, "created": "2026-10-02",
-        "status": "active", "assessment": ROUTES[route]}, sort_keys=False))
-    r = subprocess.run([sys.executable, str(CLI), "approach", "evaluate", "--issue", SLUG,
-                        "--write"], cwd=root, capture_output=True, text=True, env=_env())
-    assert r.returncode == 0, r.stdout + r.stderr
+    m = {"schema_version": "3.0", "issue": SLUG, "created": "2026-10-02",
+         "assessment": ROUTES[route], **assessed_before_the_path(ROUTES[route])}
     (task / "delivery-approach.md").write_text(f"# Delivery approach - {SLUG}\n")
-    m = yaml.safe_load((task / "manifest.yml").read_text())
     if scenarios:
         m["scenarios"] = [dict({"id": s, "title": s, "intent": "INT-1", "tests": ["tests/t.py"]},
                                **({"verifiable": "narrative"} if s in narrative else {}))
@@ -74,8 +116,8 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
         arts.append({"id": "ART-AC", "kind": "acceptance-criteria", "status": criteria,
                      "path": "docs/ac.md"})
     if review_file:
-        # Written and left unregistered, as commands/refine.md says to do on
-        # a route that does not earn the review.
+        # Written and left unregistered, as the refine command said to do,
+        # before ADR-092, on a route that does not earn the review.
         docs = root / "docs" / "compass" / f"2026-10-02-{SLUG}"
         docs.mkdir(parents=True, exist_ok=True)   # the issue page render may have made it
         (docs / "requirements-review.md").write_text("# Requirements review\n")
@@ -101,6 +143,14 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
         (task / "evidence" / "red.json").write_text("{}")
     m["evidence"] = [{"id": f"EV-T-{s}", "type": "test-run", "path": f"evidence/green-{s}.json",
                       "scenario": s} for s in green]
+    for stage, outcome in handed_off:
+        # As `compass issue checkpoint add` (skipped) and `compass evidence
+        # approve --checkpoint` (waited) record a stage hand-off.
+        entry = {"stage": stage, "outcome": outcome, "by": "spec-author",
+                 "at": "2026-10-02T10:00:00Z"}
+        if outcome == "waited":
+            entry["evidence"] = f"EV-CP-{stage}"
+        m.setdefault("checkpoint_outcomes", []).append(entry)
     if gates_pass:
         for g in m["gates"]:
             g["status"] = "pass"
@@ -114,12 +164,34 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
 
 
 def _next(root: Path) -> str:
-    """The stage `compass next` names, or "done" for all phases complete."""
+    """The stage `compass next` names, or "done" for all phases complete. A
+    landed issue that owes the ship approval adds `| next: <command>` to that
+    line (ADR-095); it is still done."""
     r = subprocess.run([sys.executable, str(CLI), "next"], cwd=root,
                        capture_output=True, text=True, env=_env())
     out = r.stdout.strip()
     assert r.returncode == 0, out + r.stderr
-    return "done" if out == "all phases complete" else out.split()[0].split("[")[0]
+    done = out == "all phases complete" or out.startswith("all phases complete | next: ")
+    return "done" if done else out.split()[0].split("[")[0]
+
+
+def _resolved(root: Path) -> str:
+    """The legacy stage the resolver gives, which every reader acts on, or
+    "done". `compass next` shows it as the path stage it maps to (ADR-092)."""
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import next_cmd, status_words
+    from compass_pkg.core import load_yaml, normalize_spine
+    task_dir = root / ".compass" / "work" / SLUG
+    task = next_cmd._typed(normalize_spine(load_yaml(str(task_dir / "manifest.yml"))))
+    if status_words.is_closed(task):
+        return "done"
+    return (next_cmd._current_phase_from_task(task, str(task_dir)) or "done").capitalize()
+
+
+def _shown(stage: str) -> str:
+    """The path stage `compass next` prints for a legacy stage or a path stage."""
+    from compass_pkg.path_stages import path_stage_of
+    return stage if stage == "done" else path_stage_of(stage.lower()).capitalize()
 
 
 def _statusline(root: Path) -> str:
@@ -148,8 +220,6 @@ CASES = {
     # From 7.0.0 a feature earns a lightweight requirements review (ADR-072), so, as
     # on an initiative, only a registered one clears refine.
     "feature, criteria draft": (dict(route="feature", criteria="draft"), "Refine"),
-    "feature, review file unregistered": (dict(route="feature", criteria="draft",
-                                               review_file=True), "Refine"),
     "feature, requirements review draft": (dict(route="feature", criteria="draft",
                                                 review=True), "Plan"),
     "initiative, criteria draft": (dict(route="initiative", criteria="draft"), "Refine"),
@@ -157,10 +227,22 @@ CASES = {
                                                     criteria="draft"), "Refine"),
     "initiative, requirements review draft": (dict(route="initiative", criteria="draft",
                                                    review=True), "Plan"),
-    # An initiative earns the review, so only a registered one clears refine.
-    "initiative, review file unregistered": (dict(route="initiative", criteria="draft",
-                                                  review_file=True), "Refine"),
+    # The two "review file unregistered" cases went in 9.0.0: they read a review file
+    # beside the placeholder entry routing seeded, and routing seeds none (ADR-091).
     "quick-fix, scenarios only": (dict(route="quick-fix"), "Implement"),
+    # From 9.0.0 refine and plan write no document (ADR-091). The hand-off each
+    # records, skipped or waited, is the stage's record.
+    "feature, refine handed off": (dict(route="feature", criteria="draft",
+                                        handed_off=[("refine", "skipped")]), "Plan"),
+    "feature, refine approved": (dict(route="feature", criteria="draft",
+                                      handed_off=[("refine", "waited")]), "Plan"),
+    # Breakdown records nothing of its own (ADR-090), so plan's hand-off ends it too.
+    "feature, plan handed off": (dict(route="feature", criteria="draft",
+                                      handed_off=[("refine", "skipped"),
+                                                  ("plan", "skipped")]), "Implement"),
+    "feature, plan approved": (dict(route="feature", criteria="draft",
+                                    handed_off=[("refine", "waited"),
+                                                ("plan", "waited")]), "Implement"),
     # NS-C
     "feature, design draft": (dict(route="feature", criteria="draft", design=True), "Breakdown"),
     "feature, subtask recorded": (dict(route="feature", criteria="draft", design=True,
@@ -189,13 +271,15 @@ def test_next_reports_the_stage_the_records_show(tmp_path, case):
     """NS-A to NS-F: each set of records gives the stage the issue has reached."""
     kwargs, expected = CASES[case]
     _issue(tmp_path, **kwargs)
-    assert _next(tmp_path) == expected, case
+    assert _resolved(tmp_path) == expected, case
+    assert _next(tmp_path) == _shown(expected), case
 
 
 def test_current_phase_overrides_the_records(tmp_path):
     """NS-G: fixtures that set the key keep their meaning."""
     _issue(tmp_path, "feature", criteria="draft", green=SCENARIOS, current_phase="plan")
-    assert _next(tmp_path) == "Plan"
+    assert _resolved(tmp_path) == "Plan"
+    assert _next(tmp_path) == "Specify"
 
 
 @pytest.mark.parametrize("case", [c for c, (_, stage) in CASES.items() if stage != "done"])
@@ -203,9 +287,10 @@ def test_status_line_and_rail_name_the_same_stage(tmp_path, case):
     """NS-H: the status line and the rail name the same stage as `compass next`."""
     kwargs, expected = CASES[case]
     _issue(tmp_path, **kwargs)
-    assert _next(tmp_path) == expected
-    assert f" · {expected} · " in _statusline(tmp_path), (case, _statusline(tmp_path))
-    assert _rail_current(tmp_path) == expected, case
+    shown = _shown(expected)
+    assert _next(tmp_path) == shown
+    assert f" · {shown} · " in _statusline(tmp_path), (case, _statusline(tmp_path))
+    assert _rail_current(tmp_path) == shown, case
 
 
 def test_a_landed_issue_reads_done_on_the_status_line(tmp_path):
@@ -232,6 +317,130 @@ def test_a_malformed_manifest_still_names_a_stage(tmp_path, case):
     """NS-I: a hand-edited manifest gets a stage, not a traceback, and the
     status line keeps its line."""
     _issue(tmp_path, "feature", criteria="draft", raw=MALFORMED[case])
+    r = subprocess.run([sys.executable, str(CLI), "next"], cwd=tmp_path,
+                       capture_output=True, text=True, env=_env())
+    assert r.returncode == 0 and r.stdout.split()[0].isalpha(), (case, r.stdout, r.stderr)
+    assert "Traceback" not in r.stderr, r.stderr
+    assert f" · {_next(tmp_path)} · " in _statusline(tmp_path), case
+
+
+# --- an issue on the four-stage path (ADR-092) ------------------------------------------
+
+PATH_ASSESSMENT = {"risk": "contained", "familiarity": "brownfield-mapped",
+                   "size": "medium", "goal": "delivery", "urgency": "none", "labels": []}
+
+
+def _path_issue(root: Path, *, scenarios=True, tests=True, reds=(), green=(), narrative=(),
+                handed_off=(), gates_pass=False, landed=False, current_phase=None,
+                raw=None) -> Path:
+    """A project at `root` whose one issue is assessed on the path, then carries
+    the named records as the commands write them: scenarios with or without a
+    declared test, a signed red for each scenario in `reds`, scenario-bound test
+    evidence, checkpoint outcomes and gate passes."""
+    import yaml
+    from conftest import write_red_record
+    task = root / ".compass" / "work" / SLUG
+    task.mkdir(parents=True)
+    (root / ".compass" / "current-task").write_text(SLUG + "\n")
+    (task / "manifest.yml").write_text(yaml.safe_dump({
+        "schema_version": "3.0", "issue": SLUG, "created": "2026-11-05",
+        "assessment": PATH_ASSESSMENT,
+        "justifications": {k: f"the {k} was judged" for k in PATH_ASSESSMENT
+                           if k != "labels"}}, sort_keys=False))
+    r = subprocess.run([sys.executable, str(CLI), "approach", "evaluate", "--issue", SLUG,
+                        "--write"], cwd=root, capture_output=True, text=True, env=_env())
+    assert r.returncode == 0, r.stdout + r.stderr
+    m = yaml.safe_load((task / "manifest.yml").read_text())
+    assert m["evidence_required"] and "stages" not in m, m
+    if scenarios:
+        m["scenarios"] = [dict({"id": s, "title": s, "intent": "INT-1",
+                                "tests": ["tests/t.py"] if tests else []},
+                               **({"verifiable": "narrative"} if s in narrative else {}))
+                          for s in SCENARIOS]
+    for s in reds:
+        write_red_record(task, s)
+    m["evidence"] = [{"id": f"EV-T-{s}", "type": "test-run", "path": f"evidence/green-{s}.json",
+                      "scenario": s} for s in green]
+    for stage, outcome in handed_off:
+        entry = {"stage": stage, "outcome": outcome, "by": "spec-author",
+                 "at": "2026-11-05T10:00:00Z"}
+        if outcome == "waited":
+            entry["evidence"] = f"EV-CP-{stage}"
+        m.setdefault("checkpoint_outcomes", []).append(entry)
+    if gates_pass:
+        for g in m["gates"]:
+            g["status"] = "pass"
+    if landed:
+        m["status"] = "landed"
+    if current_phase:
+        m["current_phase"] = current_phase
+    m.update(raw or {})
+    (task / "manifest.yml").write_text(yaml.safe_dump(m, sort_keys=False))
+    return task
+
+
+# ADR-092 decisions: no Definition of Ready, no breakdown and no stage modes, so a
+# path issue has no refine, plan or breakdown record to read. Specify ends when
+# each scenario has an id, an intent and a declared test (and the `specify`
+# checkpoint has an outcome where it is listed); Build ends when each scenario
+# that needs one has a red no later than its first green, and the green.
+PATH_CASES = {
+    "assessed only": (dict(scenarios=False), "Specify"),
+    # A scenario needs no declared test: `finish` reads the tests from git (ADR-099).
+    "a scenario with no test": (dict(tests=False), "Build"),
+    "specify listed, no outcome": (dict(raw={"checkpoints": ["specify"]}), "Specify"),
+    "specify listed and approved": (dict(raw={"checkpoints": ["specify"]},
+                                         handed_off=[("specify", "waited")]), "Build"),
+    "scenarios with tests": (dict(), "Build"),
+    "one red of two": (dict(reds=["S-1"]), "Build"),
+    "every red, one green of two": (dict(reds=SCENARIOS, green=["S-1"]), "Build"),
+    # A green with no red before it does not end Build (ADR-088).
+    "every green, no red": (dict(green=SCENARIOS), "Build"),
+    "every red and green": (dict(reds=SCENARIOS, green=SCENARIOS), "Ship"),
+    "green but for a narrative": (dict(reds=["S-1"], green=["S-1"], narrative=["S-2"]),
+                                  "Ship"),
+    "gates passed": (dict(reds=SCENARIOS, green=SCENARIOS, gates_pass=True), "Ship"),
+    "landed": (dict(reds=SCENARIOS, green=SCENARIOS, gates_pass=True, landed=True), "done"),
+}
+
+
+@pytest.mark.parametrize("case", list(PATH_CASES))
+def test_on_the_path_next_reports_the_stage_the_records_show(tmp_path, case):
+    """NS-A to NS-F on the path: each set of records gives the path stage reached."""
+    kwargs, expected = PATH_CASES[case]
+    _path_issue(tmp_path, **kwargs)
+    assert _resolved(tmp_path) == expected, case
+    assert _next(tmp_path) == expected, case
+
+
+def test_on_the_path_current_phase_overrides_the_records(tmp_path):
+    """NS-G on the path."""
+    _path_issue(tmp_path, reds=SCENARIOS, green=SCENARIOS, current_phase="specify")
+    assert _resolved(tmp_path) == "Specify"
+    assert _next(tmp_path) == "Specify"
+
+
+@pytest.mark.parametrize("case", [c for c, (_, stage) in PATH_CASES.items()
+                                  if stage != "done"])
+def test_on_the_path_status_line_and_rail_name_the_same_stage(tmp_path, case):
+    """NS-H on the path."""
+    kwargs, expected = PATH_CASES[case]
+    _path_issue(tmp_path, **kwargs)
+    assert _next(tmp_path) == expected
+    assert f" · {expected} · " in _statusline(tmp_path), (case, _statusline(tmp_path))
+    assert _rail_current(tmp_path) == expected, case
+
+
+def test_on_the_path_a_landed_issue_reads_done_on_the_status_line(tmp_path):
+    _path_issue(tmp_path, reds=SCENARIOS, green=SCENARIOS, gates_pass=True, landed=True)
+    assert " · done · " in _statusline(tmp_path)
+    assert _rail_current(tmp_path) is None
+
+
+@pytest.mark.parametrize("case", list(MALFORMED))
+def test_on_the_path_a_malformed_manifest_still_names_a_stage(tmp_path, case):
+    """NS-I on the path."""
+    _path_issue(tmp_path, raw=MALFORMED[case])
     r = subprocess.run([sys.executable, str(CLI), "next"], cwd=tmp_path,
                        capture_output=True, text=True, env=_env())
     assert r.returncode == 0 and r.stdout.split()[0].isalpha(), (case, r.stdout, r.stderr)

@@ -5,21 +5,21 @@ evidence, never a claim), **blocking** (a failed guardrail stops the work),
 and **sticky** (slow to add, slower to remove). A guardrail always beats a
 strategy.
 
-This file ships with five **default guardrails** active. A project can *add*
-guardrails below them. The five are locked: `compass policy lint` refuses a
-`compass.yml` that removes or loosens one (`K-LOCK-REFUSED`). A project adds
-its own checks and gates in its `compass.yml`, which extends the shipped
-default (see `docs/configuration.md`). Only a project that copied this file
-under 5.x can omit a shipped guardrail, and `compass check` reports the
-omission. That project keeps running on its copy until `compass policy
-migrate` converts it.
+This file ships with five **default guardrails** active. Compass runs one
+fixed check set (ADR-094), so no project can remove or loosen one. A project
+can only add to the set, with the tighten-only settings of its `compass.yml`
+(see `docs/configuration.md`). A project that copied the 8.x
+`guardrails.yml` or `routing-policy.yml` under 5.x and has no `compass.yml` is
+refused by every command that reads the policy (`governance-copy-removed`,
+exit 2, ADR-098), so no copy can omit a shipped guardrail.
 
-**This document explains; `guardrails.yml` enforces.** The companion
-`governance/guardrails.yml` is the machine-readable authority for *how each
+**This document explains; the check set enforces.** The check set,
+`governance/check-set.yml`, is the machine-readable authority for *how each
 guardrail is checked* - it names the mechanical check behind every guardrail,
 and `compass check` runs those checks against an issue's `manifest.yml` and
 `evidence/`. Where this prose and that file could be read to differ on a
-mechanical detail, `guardrails.yml` wins.
+mechanical detail, the check set wins. 9.0.0 deleted the 8.x view
+`guardrails.yml` (ADR-098).
 
 ---
 
@@ -36,8 +36,19 @@ run is on record.**
 - Compass checks that both exist and line up. It does not observe the declared
   test running - see `docs/safety-contract.md` for what a test-run record does
   and does not establish.
-- Checked at Verify and again at ship time. `verification-report.md` carries
-  the recorded run.
+- Checked at Verify and again at ship time. The manifest's evidence registry
+  carries the recorded run.
+- `suite-passed` also needs a failure observed first: a red or an
+  acceptance record on an issue that declares scenarios. On an issue
+  created on or after 2026-11-03, each scenario that is not narrative needs
+  a red bound to it, of either loop, dated no later than its first green,
+  unless an acceptance declared before that green closes it. A scenario's
+  first green is the earliest green bound to it or unbound, and a green run
+  again keeps the time of its first run in `first_timestamp`.
+  The check names each scenario with no red, and each whose red is after
+  its first green. An older issue keeps the earlier rule, and the pass
+  detail gives a notice that names what it lacks under the new one
+  (ADR-088). `cli/compass_pkg/red_first.py` holds the rules.
 
 ### Acceptance defined before it is built (`G2`)
 
@@ -67,11 +78,31 @@ claim.**
   nothing.
 - This guardrail is *about* the others: it defines what "cleared" means.
 
-The check `dod-evidence-typed` applies it to the checklists of
-`verification-report.md`. An unticked box needs an `(evidence: EV-<id>)` or
-`(follow-up: FU-<id>)` tag that resolves. The check reads the Definition of
-Done and the section of every other exit list (`<Stage> exit list`), not only
-the Definition of Done.
+The check `dod-evidence-typed` applies it to the Definition of Done. On an
+issue created from 2026-11-04 each item needs a record in the manifest: evidence
+with `--meets`, a person's approval or a follow-up that defers it. On a path
+issue that follow-up must link to a GitHub issue (`--github`), and the
+check that every follow-up is resolved has nothing to check (ADR-093). On an older
+issue it reads the checklists of `verification-report.md`, where an unticked
+box needs an `(evidence: EV-<id>)` or `(follow-up: FU-<id>)` tag that resolves,
+in the Definition of Done and the section of every other exit list (`<Stage>
+exit list`). `compass ship-commit` runs this one check before it lands, and
+refuses while it fails (`definition-of-done-open`). A waiver that makes it
+advisory prints one line, and the landing goes on. A path issue (ADR-092)
+owes the Definition of Done only when its `evidence_required` lists
+`definition-of-done`, and it is judged once every gate has passed; the items
+are the build exit list (`dod_due`).
+
+The check `evidence-matches-tree` judges a landed issue by the newest test
+record's `file_sha256` and `file_modes`: the SHA-256 and the mode of each
+changed file and each declared test as the record saw it, compared with the
+same files in the land commit (`landing.land_commit`: the stored
+`land_commit`, or for a record committed with the code the commit that
+added its `land_timestamp` line) as a checkout writes them. A
+record written before that field is judged by its `changes_id`, as before.
+The CLI writes the same digests, and the digest of each record file, to
+`evidence/SHA256SUMS`, so a reader can check them with `sha256sum -c` and no
+Compass installed (ADR-089).
 
 ### A human signs off on the irreversible (`G5`)
 
@@ -92,19 +123,20 @@ Critical risk alone does not bring the sign-off (governance decision
 code that carries none of the four labels can be reverted at merge, and CI,
 review and the other guardrails gate it. `compass approach evaluate` names
 the labels when risk is critical and none is set, so an unlabelled migration
-is named at assess. A project that wants the sign-off on every critical-risk
-change sets the trigger to the four labels or `risk: critical` in
-`compass.yml`; `docs/upgrade-7-0-0.md` prints the block. The hard lock refuses
-a looser trigger but allows this stricter one.
+is named at assess. In 8.x a project that wanted the sign-off on every
+critical-risk change set the trigger in `compass.yml`
+(`docs/upgrade-7-0-0.md` prints the block). Since 9.0.0 a project adds labels
+to the trigger with the tighten-only setting `signoff_labels`, and no setting
+can loosen it (ADR-094).
 
 An issue keeps the trigger stored in its generation, so an issue assessed
 before 7.0.0 still needs the sign-off at critical risk.
 
 Its check, `human-approval-present`, reads only evidence of the type
-`human-approval`. A person's approval of a document or of a set of decisions
-(`compass evidence approve --artifact` and `--decisions`) is recorded as
-`artifact-approval`, which this check never reads, so such an approval never
-clears a sign-off.
+`human-approval`. A person's approval of a set of decisions (`compass evidence
+approve --decisions`) is recorded as `artifact-approval`, which this check never
+reads, so such an approval never clears a sign-off. A document approval an
+older release recorded has the same type.
 
 Of the `human-approval` records, the check counts only one given for
 guardrail `G5` (ADR-066). A record that holds a `check`, `waiver`,
@@ -162,8 +194,8 @@ _(none yet - the shipped default guardrails apply as-is)_
 
 ## How guardrails are enforced
 
-- **`compass check`** runs the checks each guardrail names in `guardrails.yml`
-  against the issue's `manifest.yml` and `evidence/`, and reports pass or fail
+- **`compass check`** runs the checks each guardrail names in the issue's
+  policy (the check set, or the issue's stored generation) against the issue's `manifest.yml` and `evidence/`, and reports pass or fail
   with specifics. It also fails an issue whose `assessment:` holds a key
   `schemas/manifest.schema.json` does not allow, which the release's `issue
   lint` would refuse. A check with nothing to inspect, such as a BDD check
@@ -171,107 +203,52 @@ _(none yet - the shipped default guardrails apply as-is)_
   counted apart; it does not fail the run. It also checks the entry and exit
   lists of the stages the issue has reached, under the label
   `stage:<stage>:<entry|exit>` (`docs/entry-exit-evaluation.md`). The shipped
-  Definition of Ready and Done checks run only where the capability
-  `entry-exit-evaluation` is on; a check a project adds to a list always runs.
-  With the capability `artifact-freshness` on, it also reports each tracked
-  document as fresh or stale under the label `artifact-freshness`
-  (`docs/artifact-freshness.md`). A project with none of these sees no change.
+  Definition of Done checks, the `build` exit list, run only where the
+  capability `entry-exit-evaluation` is on; a check a project adds to a list
+  always runs. The shipped default holds no Definition of Ready since 9.0.0
+  (ADR-092); a stored generation that lists one still judges it.
+  A project with neither sees no change.
 - **`land-commit-on-default-branch`** is an advisory row `compass check` adds
-  for a landed issue with a `land_commit`, in a clone that records
-  `origin/HEAD`. It reports a `land_commit` that origin's default branch does
+  for a landed issue with a land commit (`landing.land_commit`), in a clone
+  that records `origin/HEAD`. It reports a land commit that origin's default branch does
   not reach, which a squash merge causes, and names `compass issue link set
   --pr`, which moves `land_commit` to the merge commit. It is in no gate and no
-  configuration, and it never fails the run (`docs/github-labels.md`).
-- **`artifacts-approved`** is a blocking check in no gate, run by `compass
-  check` and by `compass ship-commit` before the commit. It declines until
-  every gate has passed. Then it judges a copy of the issue with the ship exit
-  applied, which is the state `ship-commit` would leave, and fails on a
-  registered document that reads `draft` or `awaiting-approval`, or that is
-  `omitted` with no reason. Each failure names the command that moves the
-  document. It is unlocked, so an issue waiver can make it advisory. An issue
-  stored on an earlier generation gains it at its next `compass approach
-  evaluate --write`. ADR-050 holds the decision.
-- **`nfr-rows-resolved` and `contracts-declared`** are two blocking checks that
-  read one named section of an issue document. Each is unlocked, has
-  `on_skipped: not-applicable`, and sits in no gate and no stage list, so no
-  locked guardrail changes and an issue waiver can make either advisory.
-  `compass check` runs them, and `artifacts-approved`, after the gate loop
-  through one helper, `outside_gate.judged`. ADR-064 holds the decision.
-  - `nfr-rows-resolved` reads the spec's Non-functional requirements table. A
-    row for each of seven concerns (performance, capacity, compatibility,
+  configuration, and it never fails the run (`docs/github-links.md`).
+- **`nfr-rows-resolved`** is a blocking check that reads the spec's
+  Non-functional requirements table. It has `on_skipped: not-applicable`
+  and sits in no gate and no stage list, so no guardrail changes and an
+  approved waiver can excuse it on one issue. `compass check`
+  runs it after the gate loop through `outside_gate.judged`. ADR-064 holds the
+  decision.
+  - A row for each of seven concerns (performance, capacity, compatibility,
     security, privacy, operability, accessibility) names scenario ids the
     manifest holds, or a reason the concern does not apply. At `thorough` depth
     each cited scenario states a number in its Then: a digit on the Then line,
     or on a Then, And or But line after it. A `{{...}}` cell counts as empty.
     The pass detail is "n of n concerns resolved".
-  - `contracts-declared` reads the technical design's Data and interfaces
-    section when a changed file is a trigger path. The section must hold a
-    field table (Name, Type, Required, Meaning, Written by, Read by) or a
-    contract table (Inputs, Outputs, Exit codes, Errors) with a data row, or an
-    `erDiagram` fence. A table or fence that holds a `{{...}}` placeholder does
-    not count.
-  - **Trigger paths** are the check's `params` in the configuration:
-    `trigger_paths` and `trigger_contents`. A pattern is an `fnmatch` glob on
-    the project-relative path, where `*` also matches `/`. A contents pattern
-    names a path glob and a text, and the file must hold the text. A project
-    cannot extend the list with `add:`, because `params` is a map and the merge
-    grammar applies `add:` only to a catalogue field. A project sets the whole
-    list, the shipped patterns and its own, in its layer. Both keys declare the
-    direction `superset`. For these keys, adding an entry needs no waiver,
-    because a trigger path makes the check run, so more entries check more
-    changes. Under the same rule, removing or replacing an entry needs a waiver,
-    because fewer entries check fewer changes. A reordered or
-    repeated entry is equal. A list that is missing or malformed cannot be
-    compared and also needs a waiver. These waiver rules apply where the check
-    is placed on a gate, a stage or an artifact, because the classifier
-    compares only a check that one of them lists. The shipped preset places
-    `contracts-declared` on none, so it asks for no waiver until a project
-    places the check.
-  - **Four conditions make either check decline**, reporting `nothing to
-    check`, before it reads a document. The first that holds decides the
-    detail:
-    1. The manifest has no `generation` key: "the issue predates the section
-       checks: its manifest names no stored configuration".
-    2. The issue is closed: "the issue is closed".
-    3. The document the check reads is not registered with a path: "no
-       acceptance-criteria is registered with a path" (or `technical-design`).
-    4. The catalogue of the issue's generation does not list the section at the
-       depth the document is registered at, and an entry with no `depth` lists
-       nothing: "the catalogue of generation N does not list ... for ... at depth
-       D".
-
-    `contracts-declared` also declines, with its own detail, when no changed
-    file matches a trigger pattern.
-  - **A spike** runs these two checks and reads `nothing to check`, because it
-    registers no spec or design. A spike does not run `artifacts-approved`.
-    `ship-commit` runs `artifacts-approved` only.
-  - An issue stored on an earlier generation gains both checks at its next
-    `compass approach evaluate --write`.
-- **`design-within-word-ceiling`** is a blocking check that fails a technical
-  design whose word count is over its `word_ceiling` at the registered depth
-  times `params.factor`, 1.5 in the shipped default: 6,000 words at thorough
-  and 1,800 at lightweight. It is unlocked, has `on_skipped:
-  not-applicable`, and sits in no gate and no stage list. `compass check` runs
-  it after the section checks, through `outside_gate.judged`. ADR-067 holds
-  the decision.
-  - Words are the whitespace tokens of the visible text: rendered block
-    interiors, marker lines and HTML comments are left out, and headings,
-    prose, tables and code fences count. `compass issue lint` counts the same
-    way for its word-limit note.
-  - The design's own count decides. Registered low-level designs never lift
-    the refusal; on the full approach the failure names each work unit with
-    none.
-  - It declines, reporting `nothing to check`, on the four conditions of the
-    section checks, with the design as the document and "has no word_ceiling
-    for technical-design at depth D" as the fourth, and on a fifth: plan exit
-    is not yet due, "plan exit is not yet due: the issue is at S".
-  - A spike runs it and reads `nothing to check`, because it registers no
-    design. An issue stored on an earlier generation gains it at its next
-    `compass approach evaluate --write`.
+  - **Four conditions make it decline**, reporting `nothing to check`, before
+    it reads the spec. The first that holds decides the detail:
+    1. The manifest has no `generation` key.
+    2. The issue is closed.
+    3. No spec is registered with a path, none is at
+       `docs/compass/<created>-<slug>/acceptance-criteria.md`, and the issue
+       was created before 2026-11-04. A spec at that fixed path is read
+       whatever the date, at the depth of the define stage. An issue created
+       on or after 2026-11-04 declines while that file is not written.
+    4. For a registered spec, the catalogue of the issue's generation does not
+       list the section at the depth the spec is registered at. A generation
+       that declares no entry for the spec, as the live default does since
+       9.0.0 (ADR-091), is read through the last shipped catalogue,
+       `governance/artifacts-8.0.4.yml`, which lists it at both depths.
+  - A spike runs it and reads `nothing to check`, because it writes no spec.
+- **Removed in 9.0.0** (ADR-091): `artifacts-approved`, `contracts-declared`,
+  `design-within-word-ceiling` and `borrowed-documents-answered` read documents
+  9.0.0 no longer keeps. A stored generation that still declares one reports it
+  as nothing to check.
 - **`acceptance-applicability-agrees`** is the advisory check of the four-layer
-  acceptance strategy (`S17`, in `strategies.md`). It is unlocked, declares
-  `severity: advisory` and `on_skipped: not-applicable`, and sits in no gate,
-  no lock and not in the spike's checks. `compass check` runs it after the
+  acceptance strategy (`S17`, in `strategies.md`). It declares
+  `severity: advisory` and `on_skipped: not-applicable`, and sits in no gate
+  and not in the spike's checks. `compass check` runs it after the
   design-size check, through `outside_gate.judged`, and labels its row "four-layer
   acceptance strategy (`S17`)". The rules it applies are in
   `cli/compass_pkg/acceptance_strategy.py`.
@@ -287,58 +264,209 @@ _(none yet - the shipped default guardrails apply as-is)_
     `--json`, the notice "four-layer acceptance strategy (`S17`): does not
     apply - this issue was assessed before the strategy shipped", so its rows
     and exit code are those of the release it was assessed under.
-  - An issue in a project whose `compass.yml` extends the shipped default at
-    major 6 or 7 also holds no block; its notice names the `extends:` value.
   - `compass check` refuses, with exit 2, a project whose
-    `acceptance_strategy` setting cannot be read, before any check runs. In
-    a project pinned at major 6 or 7 the strategy never reads the setting,
-    but `compass.yml` must still pass its schema check: `compass policy
-    lint`, `compass approach evaluate --write` and `compass check` on an
-    issue not yet assessed refuse a bad value. `compass check` on an assessed
-    issue reads the configuration stored with the issue and does not refuse
-    it.
+    `acceptance_strategy` setting cannot be read, before any check runs.
+    `compass policy lint`, `compass approach evaluate --write` and `compass
+    check` on an issue not yet assessed refuse a bad value. `compass check`
+    on an assessed issue reads the configuration stored with the issue and
+    does not refuse it.
 - **`outer-loop-recorded`** is the outer-loop check of the four-layer
-  acceptance strategy (`S17`, ADR-080). It is unlocked, declares `severity:
-  blocking` and `on_skipped: not-applicable`, and sits in no gate, no lock and
-  not in the spike's checks. `compass check` runs it after
+  acceptance strategy (`S17`, ADR-080). It declares `severity: blocking` and
+  `on_skipped: not-applicable`, and sits in no gate and not in the spike's
+  checks. `compass check` runs it after
   `acceptance-applicability-agrees` and labels its row the same way. The
   rules it applies are in `cli/compass_pkg/outer_loop.py`.
   - It reads the `loop` field that `compass tdd-red --loop outer|inner` and
     `compass tdd-green --loop outer|inner` write. The default is outer on a
     quick fix the strategy applies to, whose one declared test is its
-    acceptance test, and inner otherwise. A record with no field reads as
-    inner.
+    acceptance test, and on a path issue (ADR-092) whose routing is
+    `existing-dsl`, and inner otherwise. A record with no field reads as
+    inner. The red that ends stage 1 at refine, or at specify on a path
+    issue, counts as an outer-loop red; `acceptance_strategy.stage_one`
+    decides which red that is (ADR-081). An
+    outer-loop record is written to `red-<id>.outer.json` or
+    `green-<id>.outer.json`, so an inner-loop record bound to the same
+    scenario does not replace it (ADR-082).
   - It asks `acceptance_strategy.in_scope` whether the strategy applies, and
     declines with "not required: the strategy does not apply" when it does not.
   - On an in-scope issue it fails when no failed red record says loop outer,
-    when no registered green says loop outer, or when no outer-loop green
-    was recorded on the tree as it is now. One finding names the issue and
+    when no registered green says loop outer, when no outer-loop green
+    was recorded on the tree as it is now, or when a registered outer-loop
+    green names no `candidate` or no `client`, or a client other than api,
+    web and cli (ADR-085). One finding names the issue and
     each fault. The tree is the one `evidence-matches-tree` reads; when git
     cannot name it, or no outer-loop green names its tree, the tree is not
     compared and the detail says so.
+  - `compass tdd-green` and `compass quick-fix finish` refuse an in-scope
+    outer-loop green with no candidate or no client before it runs, and
+    `compass evidence add` refuses to register one, so the check finds only
+    a record registered another way. `cli/compass_pkg/candidate_client.py`
+    holds the rules.
   - It judges the issue, not each scenario. `suite-passed` does not change.
+- **`acceptance-support-present`** is the support-code check of the
+  four-layer acceptance strategy (`S17`). It declares `severity: advisory`
+  and `on_skipped: not-applicable`, and sits in no gate and not in the
+  spike's checks. `compass check` runs it after
+  `outer-loop-recorded` and labels its row the same way. The rules it applies
+  are in `cli/compass_pkg/support_code.py`.
+  - It asks `acceptance_strategy.in_scope` whether the strategy applies, and
+    declines with "not required: the strategy does not apply" when it does not.
+  - It declines with "not yet judged" until a green is on record: the claim
+    limit limits what a passing run lets the issue claim.
+  - On an in-scope issue it tests that each piece of support code named under
+    `project.acceptance_support` (`alias_helper`, `driver_factory`,
+    `dsl_root`, `layering_test`) exists inside the project root. It opens no
+    file.
+  - A missing piece fails it as advice. The finding names each missing piece
+    and states the claim limit. The claim limit is: while a piece is missing,
+    the issue can claim that its scenarios pass, and not that its acceptance
+    tests are isolated from each other (alias helper), run through a driver
+    chosen at start-up (driver factory), keep driver detail out of the
+    specifications (DSL root) or keep the layer rules (layering test). The
+    first issue the strategy applies to builds the missing pieces as its own
+    work.
+  - The advice never makes `compass check` exit 1.
+- **`outer-loop-attempts-recorded`** is the `attempts` check of the four-layer
+  acceptance strategy (`S17`, ADR-084). It declares `severity: blocking` and
+  `on_skipped: not-applicable`, and sits in no gate and not in the spike's
+  checks. `compass check` runs it after
+  `outer-loop-recorded` and labels its row the same way. The rules it applies
+  are in `cli/compass_pkg/outer_loop.py`.
+  - On an in-scope issue it fails each registered outer-loop green with no
+    `attempts`, or with a value that is not a whole number of 1 or more. The
+    finding names the record and the value.
+  - It declines with "not required: the strategy does not apply" when
+    `acceptance_strategy.in_scope` says so, and when no outer-loop green is
+    registered, which `outer-loop-recorded` reports.
+  - An inner-loop green needs no `attempts`. `no-trusted-rerun` does not
+    change: it still passes a record with no `attempts`.
+- **`isolation-proven`** is the isolation check of the four-layer acceptance
+  strategy (`S17`, ADR-086). It declares `severity: blocking` and
+  `on_skipped: not-applicable`, and sits in no gate and not in the spike's
+  checks. `compass check` runs it after
+  `outer-loop-attempts-recorded` and labels its row the same way. The rules
+  it applies are in `cli/compass_pkg/isolation.py`.
+  - It reads the `isolation-proof` record that `compass isolation record`
+    writes: one parallel run of the suite, then each scenario's declared
+    tests run twice. `compass evidence add` refuses the type, so a written
+    note cannot stand in for it. A record whose `record_id` is not its
+    registry entry's, or whose `content_digest` no longer matches what it
+    holds, was not written by the command and fails, as does one that names
+    no tree where git can name one.
+  - On an in-scope issue on the routing `on` or `existing-dsl-isolation` (a
+    live defect) it fails when no record is registered, when the record cannot be
+    read or lacks a result, when the parallel run failed, when a scenario did
+    not pass both runs, when a declared test is in no repeat entry, when the
+    record was made on another tree, and when its candidate is not the
+    newest outer-loop green's. The finding names the record and each fault.
+  - It declines with "not required" when the strategy does not apply and on
+    the routing `existing-dsl` (a small, contained change). The row lists a record the
+    issue holds, with its result, and the result judges nothing.
+- **`layering-test-passed`** is the layering check of the four-layer
+  acceptance strategy (`S17`, ADR-086). It declares `severity: blocking` and
+  `on_skipped: not-applicable`, and sits in no gate and not in the spike's
+  checks. `compass check` runs it after `isolation-proven`
+  and labels its row the same way. The rules it applies are in
+  `cli/compass_pkg/layering.py`.
+  - It reads the `layering` record that `compass layering record` writes from
+    one run of the project's own layering test. Compass never reads the test.
+    `compass evidence add` refuses the type, and a record its command did not
+    write fails as it does for `isolation-proven`. A skipped test does not
+    count as a test that ran.
+  - On an in-scope issue on the routing `on` it fails when no record is
+    registered, when the record cannot be read, when the test failed, when the
+    record shows that 0 tests ran, and when it was made on another tree. A
+    record with no test count (`tests_ran: null`) is not judged on it, so a
+    layering test that is a shell script passes when it exits 0.
+  - It declines with "not required" when the strategy does not apply and on
+    the routings `existing-dsl` and `existing-dsl-isolation` (a small, contained
+    change and a live defect), and lists a record the issue holds, with its result.
+  - An approved waiver can excuse it or `isolation-proven` on one issue, as
+    for any check (see "A waived check" below). On an issue assessed before
+    9.0.0, `compass check` also names each 8.x waiver of one of the
+    strategy's checks that the issue's `config:` holds, with its reason and
+    whether the issue's generation approved it.
+- **`request-recorded`** is the check of the token `request`, which every
+  delivery row owes and a spike does not (#356). It declares `severity:
+  blocking` and `on_skipped: not-applicable` and sits in no gate and not in
+  the spike's checks. `compass check` runs it first of the checks outside
+  every gate and adds no row for an issue whose stored `evidence_required`
+  does not list the token, so an issue assessed before the token gains none.
+  The rules it applies are in `cli/compass_pkg/request_link.py`.
+  - It passes when the manifest's `request` record holds a link and a
+    requester. A linked GitHub issue (`github`) gives the link when
+    `request.link` is missing. The pass names the requester as a claim the
+    session recorded: no approval rule reads it.
+  - It fails otherwise, names the missing part and the command `compass issue
+    link set --issue <slug> --request <url> --requester <name>`. `compass
+    next` asks for the request before anything else.
+  - It is not a stop. No command refuses on it: `compass quick-fix start`
+    takes the two flags and does not need them, and `compass quick-fix
+    finish` lands an issue whose only failing check is this one. `compass
+    check` and `compass ci` still fail on it.
+  - A change with no request to link is excused by a waiver of the check that
+    a person approves (see "A waived check" below).
+- **`ship-approval-present`** is the check of the token `ship-approval`, which
+  every delivery row owes and a spike does not (#355). It declares `severity:
+  blocking` and `on_skipped: not-applicable`, sits in no gate and not in the
+  spike's checks, and no waiver excuses it. `compass check` runs it last of
+  the checks outside every gate and adds no row for an issue whose stored
+  `evidence_required` does not list the token, so an issue assessed before the
+  token gains none. The rules it applies are in
+  `cli/compass_pkg/ship_approval.py`.
+  - It passes on a `pr-approval` record for the pull request the manifest
+    links, or on a `human-approval` record with `ship:` given for this issue
+    and its generation that no `approval-withdrawal` names. A sign-off of
+    guardrail `G5` does not count: it approves the irreversible change, and
+    can come before the code is reviewed. `G5` is checked at ship, before the
+    change lands; the approval before code is the `specify` checkpoint.
+    The pass names the approver, the time and the record, and says when the
+    review approved an earlier commit than the merged head. `compass issue
+    link set --pr <n>` writes the `pr-approval` records after the merge: one
+    per reviewer whose latest review before the merge approved it, from a
+    person's account other than the author's (`docs/github-links.md`). The
+    check reads the records and never calls `gh`.
+  - It fails only when the manifest records the pull request as merged
+    (`pull_request.merged_at`) and no approval is on record.
+  - Otherwise it has nothing to check and names the next command: `compass
+    issue link set --pr <n> --issue <slug>` after the merge, or `compass
+    evidence request --ship`. It never refuses a landing, because
+    `ship-commit` lands the issue before its pull request merges.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart
   and does not fail the run. `docs/generation-store.md` has the details.
-- **The pre-tool hook** enforces red-before-green in service of `G1`. It is
-  approach-aware and does not block on a spike.
-- **The `verifier` and `reviewer` agents** at Verify, for the parts that remain
-  judgement. `verification-report.md` records each with its evidence.
+- **A waived check** is a check that failed on an issue whose approved waiver
+  excuses it (`compass waiver add`, approved with a `human-approval` record
+  that names the waiver; ADR-094). It is labelled WAIVED, with the waiver, its
+  reason, the approver and the record id, is counted apart and does not fail
+  the run. A waiver nobody approved changes nothing and is named in a notice.
+  `human-approval-present`, `ship-approval-present` and the rows of guardrail
+  `G5` are never waived. `docs/waivers.md` has the details.
+- **The pre-tool hook** refuses a code edit while the issue has no scenario,
+  or while its scenarios wait for a person's approval, in service of `G2`.
+  On an issue assessed before 9.0.0 it also enforces red-before-green in
+  service of `G1`. It is approach-aware and does not block on a spike.
+- **The review at the `verify` stage**, run in the issue's own session (ADR-090), for the
+  parts that remain judgement. Each is recorded with its evidence (`compass evidence add`).
 - **`compass approach evaluate`** at Assess applies the routing rules
-  deterministically - see `routing-policy.md` and `routing-policy.yml`.
+  deterministically - see `routing-policy.md` and the `rules:` of the check
+  set.
 
 A guardrail with no way to produce evidence is not a guardrail yet - it is a
 strategy that has not been made checkable. If you cannot give it a named check
-in `guardrails.yml`, it belongs in `strategies.md`.
+in the check set, it belongs in `strategies.md`.
 
 **The integrity rule - a declared check must be implemented.**
 
-- `compass policy lint` rejects a guardrail referencing a check the CLI does
-  not implement.
+- `compass policy lint` rejects a check, in the check set with the
+  project's tighten-only settings applied, that names an implementation the
+  CLI does not hold.
 - `compass check` fails, rather than warns, if it meets one at run time.
-- Adding a project guardrail with a new check means adding that check's
-  implementation to the CLI (`CHECK_FNS`) in the same change.
+- A project adds a check of its own only as a `project_checks` setting, which
+  runs the implementation `command-passes`. A new kind of check means adding
+  its implementation to the CLI (`CHECK_FNS`) and the check to the check set
+  in the same change.
 
 Why it is enforced rather than warned about:
 `governance/strategies-rationale.md`, under "The integrity rule".
@@ -377,93 +505,100 @@ Why it is enforced rather than warned about:
   the issue's generation recorded, and `compass issue migrate --config` moves the
   generation on. `docs/generation-store.md` states both.
 
-## Locks and conformance
+## The fixed check set
 
-`cli/compass_pkg/locks.py` protects the framework's guarantees when a layer
-changes the shipped default. `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md`
-decides the rules. `compass policy lint` reports a refused change as
-`K-LOCK-REFUSED`, and `compass policy show` prints the resolved configuration.
+`governance/check-set.yml` holds every check, gate and evidence type Compass
+runs, as one file with `id: compass-checks` and a `version` (ADR-094). One
+file has one `sha256sum`, so a change can name its rules by one id, one version
+and one digest, such as `compass-checks@9.0.0`.
 
-- **A lock** is `locked: true` or `locked: hard` on an entry. The shipped
-  preset declares the framework locks, and a lower layer cannot remove one. An
-  issue's `config:` cannot lock an entry, and a `locked:` there adds no lock.
-- **The footprint** of a locked entry is what the lock protects:
-  - a check: its compared fields, and its place in each stage list and gate;
-  - a gate: its check set, its accepted evidence types and its stage;
-  - a stage: its existence, its order, and its entry and exit lists;
-  - a rule set: its kind, its hit policy, each rule in it and each rule's
-    effects;
-  - an approach: its existence and its `ships` value.
-- **Enforcement** uses the classifier's comparison, projected to the
-  footprint. A change that is equal or tighter is allowed. A change that
-  loosens the entry, or cannot be compared, is refused with the entry, the
-  lock level, the field, both values and the first assessment where it shows.
-  Removing the stage, changing `when`, detaching a gate, setting `on_skipped:
-  pass`, widening `accepts` or `reviewers`, dropping `approvers`, and changing
-  `params` or a human or judged `statement` are each refused.
-- **A change of vocabulary is a change to the lock.** If a layer drops or
-  renames a dimension value, or closes the label list, so that an assessment a
-  locked gate or check applied to can no longer be made, the lock refuses it.
-  The evaluator is run on the parent at each such assessment to find the locked
-  entries that were in force there.
-- **A rule with an effect that no obligation fact carries** (for example a
-  minimum approach) protects its `when` too, not only its effect, so a change
-  that narrows the rule is refused. A rule that adds a gate, asks for an
-  artifact, blocks a stage or asks for a skill is protected through that fact.
-- **A waiver never excuses a lock refusal.**
-- **An issue's `config:` is enforced at the issue's own assessment.** An issue
-  has one assessment in force, so the comparison runs at that single point and
-  not over the grid. A project layer is still enforced over the grid, because
-  it applies to every assessment the project will see
-  (`architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md`,
-  the amendment of 2026-10-08). Nothing is accepted or refused by the name or
-  weight of an approach: the field table decides at that point. Naming `full`
-  over `regular` is incomparable on the subtask ceiling, and a spike issue
-  that picks `full` loses `spike.conclude` and is refused by a lock. The lint
-  also runs on an unchanged configuration when the issue's stored assessment
-  changed, so an approach accepted at one assessment cannot carry onto a spike by
-  a reassess that changes nothing else.
-- **More than eight named labels is still refused, but only the labels a locked
-  entry can read are counted.** The scan keeps a label only where it can reach
-  a fact a lock protects, and drops the labels that only these read:
-  - advisory, bias and ceiling rules, which change what the evaluator reports
-    and which no footprint carries;
-  - a check that no locked stage or gate lists and that is not locked itself;
-  - a gate that is not locked, adds nothing a locked rule set adds, and holds no
-    locked check.
+- `cli/compass_pkg/check_set.py` reads the file. `load` checks its shape,
+  `sha256` gives the digest as `sha256sum` prints it, and `resolved` returns
+  the set in the shape `generations/<n>/resolved.yml` holds. The file is
+  parsed once while it is unchanged, because every resolution reads it and
+  `compass flow` resolves every issue on the board.
+- `held` finds a check set by its `<id>@<version>` and sha256: the shipped
+  file, or an earlier release's copy at
+  `governance/check-sets/<id>@<version>.yml`. The rebuild of a missing
+  generation folder reads it (`docs/generation-store.md`). No release has
+  copied an earlier set yet; the first release that changes the set keeps the
+  ones before it there.
+- The set holds no `locked:` field, because no layer sits above it.
+  `never_waived` names the three entries no waiver can excuse: the checks
+  `human-approval-present` and `ship-approval-present`, and the guardrail `G5`.
+- `optional` holds entries that run only when a project turns them on. The one
+  entry is the advisory agent review of `docs/judged-checks.md`, for the
+  setting `agent_review`.
+- `version` is the release that last changed the file. A change that makes a
+  check owe less, or removes one, raises the major; a change that adds or
+  tightens raises the minor. `tests/fixtures/check-set-digests.yml` pins the
+  digest of each version, and `tests/test_check_set.py` fails when the bytes
+  change and the pin does not. The change that edits the file pins the new
+  digest.
 
-  Labels in floors, shapes, caps, artifact rules and immovable gates always count,
-  because they decide the approach and so the gates in force. Once more than
-  eight labels a locked entry can read are named, every change to the layer is
-  refused, and the refusal reaches the layers below it. An issue's `config:` is
-  enforced at one assessment and names no labels, so this refusal does not reach it. The refusal names the labels counted. To lift it, name no more than
-  eight of them. For a `true` lock an owner-approved unlock also lifts it. For a
-  hard lock nothing else does. An entry or a path the scan does not recognise
-  keeps its labels, so a doubtful case makes the count larger and never smaller.
-  `enforce(..., scan="full")` counts every label in the layer. It is the
-  reference that `tests/test_locks_footprint_scan.py` compares the footprint scan
-  with: both give the same refusals on every lock test case and every approach
-  tried against the shipped policy.
-- **A configuration the evaluator rejects** is refused as well, because no
-  lock can be shown to hold. An unlock cannot help. The configuration needs
-  fixing, and lint reports the fault.
-- **`locked: hard`** applies to the guardrail A human signs off on the
-  irreversible (`G5`) and its check `human-approval-present`. No unlock
-  lifts `G5` and its check, and no waiver excuses them.
-- **An unlock** is `unlock: true` on an entry in `compass.yml`, with a waiver
-  that gives a reason and is approved by the project's `owner`. An issue, a
-  parent or a preset that carries `unlock:` is refused. An unlocked entry is no
-  longer enforced for the project or the issue below it.
-- **Conformance.** A project that unlocks a framework entry is non-conformant.
-  `compass check`, `compass issue receipt` and `compass approach show` print
-  `Conformance: non-conformant - this project unlocks framework entries: ...` on
-  every run. An unlock of a hard-locked entry, or of an entry the shipped
-  default does not lock, is refused, and the commands print `Unlock refused for
-  <entry>: <reason>` instead. A project with no `compass.yml`, one that is not
-  Compass's (no `schema:`), or one that unlocks nothing sees no new line. A
-  `compass.yml` that cannot be read prints `Conformance: not checked`.
+The resolver reads the set (`effective.resolve_live`), with the tighten-only
+settings of `compass.yml` applied, for every project but one with its own copy
+of the governance files and no `compass.yml`. That is every new generation and
+every issue with no `generation:` key, the framework's own repository included.
+`compass check` prints `Policy: compass-checks@9.0.0 (sha256 <hex>)` on every
+run. On a path issue with a scenario freeze it also prints `Scenarios: frozen
+at the first red (sha256 <12 characters>)`, a notice and not a row, with "the
+spec has changed since" when the spec's digest differs from the frozen one
+(`scenario_freeze.check_line`, ADR-095); the default view shows it only then.
+On an issue that has a `trail.md` it prints `Trail: up to date`, or a line that
+says the file is out of date and names `compass trail`, when the file differs
+from what `compass trail` would write (`trail.check_line`, ADR-096). It is a
+line, not a row, and the default view shows it only when the file is out of date.
+Some checks are listed under more than one guardrail, such as
+`scenario-has-id-and-intent` under `G2` and `G3`. `--verbose` prints a row under
+each, and both the default view and the `--verbose` footer count each check once,
+so the two give the same numbers. The `--json` document keeps one entry per row,
+and its `ran`, `failed` and `nothing_to_check` count rows.
+Each generation commit writes the manifest's `policy:` block
+(`docs/generation-store.md`). `tests/test_check_set_content.py` checks the
+content of the set: the catalogue names, the stage-mode ranks and the
+references.
 
-The report reads `compass.yml` and the shipped default's lock summary. The
-waiver's date and covered revision are checked by the waiver module when it
-lands, and the line for what the hook can enforce comes with the receipt
-provenance.
+`extends: compass:default@6` or `@7` is a removed setting like any other
+`extends:`. It no longer keeps `S17` off, so a project that did not run
+`compass migrate` gets `S17` at its next assess, and its lint names
+`acceptance_strategy: off` as the replacement (ADR-098 open question 6).
+
+## A deleted check
+
+`check_registry.DELETED_CHECKS` holds every check id Compass no longer has: the
+keys of `REMOVED` and the Definition of Ready checks of
+`removed_parts.READY_CHECKS`. A stored generation that lists one still reads it
+as nothing to check (`_removed_fn`). A setting or a waiver that names one is
+different: it asks for a check that never runs. So `compass check` refuses,
+with exit 2 and the code `names-deleted-check`, before it runs any row
+(`check_cmd.deleted_check_refusal`), when:
+
+- a `project_checks` entry of `compass.yml` has the id of a deleted check;
+- a list of checks in `compass.yml`, `gates.<id>.checks` or
+  `stages.<id>.entry` or `exit` (`removed_parts.CHECK_LIST_FIELDS`), names one.
+  This is the one place `compass check` reads a removed catalogue key;
+- a waiver of the issue that is not withdrawn names one.
+
+The refusal names each item with the edit that clears it, or `compass waiver
+withdraw W-<n>` for a waiver. `compass waiver add` refuses a deleted check, and
+the settings lint refuses a project check of that id (`L-SETTING-INVALID`).
+`tests/test_deleted_check_refused.py` covers each case.
+
+## No locks
+
+9.0.0 has no locks and no unlocks (ADR-094). Nothing sits above the check
+set, so nothing can change an entry a lock would protect: a setting can only
+add to the set, and a removed catalogue key in `compass.yml` is not read, except
+that a list of checks in one that names a deleted check is refused (above).
+
+- **What no waiver excuses.** `never_waived` in `governance/check-set.yml`
+  names the guardrail A human signs off on the irreversible (`G5`) and its
+  check `human-approval-present`, the two `locked: hard` entries of 8.x.
+  `compass waiver add` refuses a waiver of either (`docs/waivers.md`).
+- **Conformance.** In 8.x a project that unlocked a framework entry was
+  non-conformant, and `compass check` and `compass approach show` said so on
+  every run. Since 9.0.0 the resolver reads the check set, where no lock
+  exists, so neither command prints a conformance line.
+- **A stored generation** written by 8.x keeps the `locked:` fields and the
+  `conformance` block it stored. They are read as data and enforce nothing.

@@ -4,22 +4,21 @@ This issue has critical risk, and the one unacceptable outcome is changing
 how delivery approaches are computed. A drift detector that changes routing
 is worse than the silent drift it was built to find.
 
-The other properties here are about trust. A detector that fires on a project
-which is current, or which has never run `/compass:init`, or which is AHEAD of
-the framework, is a detector that gets switched off - and then it detects
-nothing at all.
+9.0.0 removed the drift report (ADR-098), and `TRC-F1` to `TRC-F4`, which
+said when the report fired, with it. The routing, surface and evidence-type
+invariants below do not depend on the report, so they stay.
 
-Spec: governance-drift-detection/acceptance-criteria.md (`TRC-F1`..`TRC-F6`).
+Spec: governance-drift-detection/acceptance-criteria.md (`TRC-F1`..`TRC-F7`).
 """
 from __future__ import annotations
 
 import json
 import pathlib
-import shutil
 import subprocess
 import sys
 
 import yaml
+from check_set_files import view as shipped_view  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -27,112 +26,41 @@ GOVERNANCE = ROOT / "governance"
 FIXTURES = ROOT / "tests" / "fixtures" / "routes"
 
 
-def _clean_project(tmp_path, *, local_governance=True):
-    proj = tmp_path / "proj"
-    (proj / ".compass" / "work").mkdir(parents=True)
-    (proj / ".compass" / "config.yml").write_text("version: 1.0.0\nmode: enforced\n")
-    if local_governance:
-        shutil.copytree(GOVERNANCE, proj / "governance")
-    return proj
-
-
-def _lint(proj):
-    return subprocess.run([sys.executable, str(CLI), "policy", "lint"],
-                          cwd=str(proj), capture_output=True, text=True, timeout=60)
-
-
-# ---------------------------------------------------------------------------
-# `TRC-F1` - a project with current governance sees no drift report
-# ---------------------------------------------------------------------------
-
-def test_trc_f1_a_project_with_current_governance_should_see_no_drift_report(tmp_path):
-    result = _lint(_clean_project(tmp_path))
-    assert result.returncode == 0, result.stdout
-    lowered = result.stdout.lower()
-    assert "drift" not in lowered and "missing" not in lowered, (
-        f"a project whose governance matches the framework is being told it "
-        f"has drifted:\n{result.stdout}")
-
-
-# ---------------------------------------------------------------------------
-# `TRC-F2` - a project with no local governance is not compared to itself
-# ---------------------------------------------------------------------------
-
-def test_trc_f2_a_project_with_no_local_governance_should_not_be_compared_to_itself(tmp_path):
-    # No governance/ of its own: find_governance() falls back to the framework's,
-    # so project and framework are literally the same directory.
-    result = _lint(_clean_project(tmp_path, local_governance=False))
-    assert result.returncode == 0, result.stdout
-    lowered = result.stdout.lower()
-    assert "drift" not in lowered and "missing" not in lowered, (
-        f"a project that never ran init is being told it is missing rules:\n"
-        f"{result.stdout}")
-
-
-# ---------------------------------------------------------------------------
-# `TRC-F3` - a project AHEAD of the framework is not drift
-# ---------------------------------------------------------------------------
-
-def test_trc_f3_a_project_ahead_of_the_framework_should_not_be_reported_as_drifted(tmp_path):
-    proj = _clean_project(tmp_path)
-    rp = proj / "governance" / "routing-policy.yml"
-    d = yaml.safe_load(rp.read_text())
-    d["routing_guardrails"]["floors"].append({
-        "id": "PROJ-FLOOR-001",
-        "when": {"risk": "critical"},
-        "force_minimum_route": "expedition",
-        "rationale": "a rule this project added for itself",
-    })
-    d["routing_guardrails"]["caps"].append({
-        "id": "PROJ-CAP-001", "when": {"risk": "critical"},
-        "max_worktrees": 2, "rationale": "local coordination limit",
-    })
-    rp.write_text(yaml.safe_dump(d, sort_keys=False))
-
-    result = _lint(proj)
-    assert result.returncode == 0, result.stdout
-    assert "missing" not in result.stdout.lower(), (
-        f"a project with MORE rules than the framework is reported as missing "
-        f"some:\n{result.stdout}")
-    assert "PROJ-FLOOR-001" not in result.stdout, (
-        f"the project's own rules are reported as errors:\n{result.stdout}")
-
-
-# ---------------------------------------------------------------------------
-# `TRC-F4` - an unreadable framework policy degrades gracefully
-# ---------------------------------------------------------------------------
-
-def test_trc_f4_an_unreadable_framework_policy_should_not_break_the_lint(tmp_path):
-    """The comparison must never be able to break the validation that existed
-    before it. Simulated by pointing the drift function at a broken directory,
-    since the real framework policy cannot be corrupted from a test."""
-    sys.path.insert(0, str(ROOT / "cli"))
-    import importlib.util
-    spec = importlib.util.spec_from_loader(
-        "compass_cli", importlib.machinery.SourceFileLoader("compass_cli", str(CLI)))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-
-    broken = tmp_path / "broken-framework"
-    (broken / "governance").mkdir(parents=True)
-    (broken / "governance" / "routing-policy.yml").write_text("not: [valid\n")
-    (broken / "governance" / "guardrails.yml").write_text("also: [broken\n")
-
-    proj = _clean_project(tmp_path)
-    report = mod.governance_drift(str(proj / "governance"),
-                                  str(broken / "governance"))
-    assert report.comparable is False, "a broken framework policy was compared anyway"
-    assert report.reason, "no reason recorded for an impossible comparison"
-    assert not report.drifted, "an impossible comparison reported drift"
-
-    # and the lint itself still completes on the real framework
-    assert _lint(proj).returncode == 0
-
-
 # ---------------------------------------------------------------------------
 # `TRC-F5` - no computed delivery approach changes. THE guard on this issue's
 # critical risk.
 # ---------------------------------------------------------------------------
+
+def _readings(fx):
+    """A fixture's assessment as `approach evaluate --assessment` reads it."""
+    from compass_pkg.core import ASSESSMENT_KEY_MAP
+    out = {}
+    for key, value in (fx.get("assessment") or fx.get("readings") or {}).items():
+        if value in (None, ""):
+            continue
+        key = ASSESSMENT_KEY_MAP.get(key, key)
+        out[key] = list(value) if isinstance(value, list) else _size_now(key, value)
+    return out
+
+
+def _size_now(key, value):
+    """A recorded 8.x size in the 9.0.0 word. The fixtures were written before
+    `standard` became `medium`, and 9.0.0 reads no old word typed on the
+    command line (ADR-098), so the test types the new one."""
+    import compat_baseline as cb
+    return cb.SIZE_NOW.get(value, value) if key == "size" else value
+
+
+def _cli_args(fx):
+    args = []
+    for key, value in (fx.get("assessment") or fx.get("readings") or {}).items():
+        if isinstance(value, list):
+            value = ",".join(str(v) for v in value)
+        if value in (None, ""):
+            continue
+        args += ["--assessment", f"{key}={_size_now(key, value)}"]
+    return args
+
 
 def test_trc_f5_drift_detection_should_not_change_any_computed_route():
     """Every routing fixture must evaluate identically after this change.
@@ -142,42 +70,44 @@ def test_trc_f5_drift_detection_should_not_change_any_computed_route():
     re-runs the whole fixture corpus and compares the computed delivery
     approach, gates, topology and fired guardrails against what the fixture
     declares.
+
+    The command now prints the path for a delivery assessment (ADR-092), so
+    the approach is computed by the 8.x evaluator, `routing.evaluate_route`,
+    in process. The shipped default no longer declares the 8.x approaches the
+    fixtures name (ADR-092), so it runs on the 8.0.4 governance copy, which
+    routes as the shipped policy did before 9.0.0. The twin below runs the
+    command.
     """
+    import compat_baseline as cb
+    from compass_pkg import routing
+
+    policy = cb.policy_8_0_4()
     fixtures = sorted(FIXTURES.glob("*.yml"))
     assert fixtures, "no routing fixtures found - this guard would be empty"
     total_checks = 0
 
     for path in fixtures:
         fx = yaml.safe_load(path.read_text())
-        readings = fx.get("assessment") or fx.get("readings") or {}
-        args = []
-        for key, value in readings.items():
-            if isinstance(value, list):
-                value = ",".join(str(v) for v in value)
-            if value in (None, ""):
-                continue
-            args += ["--assessment", f"{key}={value}"]
-        result = subprocess.run(
-            [sys.executable, str(CLI), "approach", "evaluate", *args, "--json"],
-            cwd=str(ROOT), capture_output=True, text=True, timeout=60,
-        )
         expect = fx.get("expected") or {}
 
         # Some fixtures are NEGATIVE: the evaluator must refuse rather than
         # silently promote (e.g. exploration intent that would touch auth).
         # Those must keep refusing, with the same message.
         if expect.get("conflict"):
-            assert result.returncode != 0, (
-                f"{path.name}: the evaluator stopped refusing a routing "
-                f"conflict - it now returns a route where it must not")
-            needle = expect.get("conflict_message_contains", "")
-            assert needle in (result.stdout + result.stderr), (
-                f"{path.name}: the conflict message changed; expected to find "
-                f"{needle!r}")
+            try:
+                routing.evaluate_route(_readings(fx), policy)
+            except routing.RoutingConflict as exc:
+                needle = expect.get("conflict_message_contains", "")
+                assert needle in str(exc), (
+                    f"{path.name}: the conflict message changed; expected to find "
+                    f"{needle!r}")
+            else:
+                raise AssertionError(
+                    f"{path.name}: the evaluator stopped refusing a routing "
+                    f"conflict - it now returns a route where it must not")
             continue
 
-        assert result.returncode == 0, f"{path.name}: {result.stderr}"
-        got = json.loads(result.stdout)
+        got = routing.evaluate_route(_readings(fx), policy)
 
         checked = 0
         if "route" in expect:
@@ -222,6 +152,45 @@ def test_trc_f5_drift_detection_should_not_change_any_computed_route():
         f"fixtures - this guard is weaker than it looks")
 
 
+def test_trc_f5_drift_detection_should_not_change_what_the_command_prints():
+    """Twin of the test above through `compass approach evaluate`, run in this
+    checkout as before: a conflict is still refused with the same message, a
+    spike prints the 8.x evaluator's approach and gates, and a delivery
+    assessment prints `delivery` and the gates its evidence derives."""
+    import compat_baseline as cb
+    from compass_pkg import evidence_required as er
+    from compass_pkg import routing
+
+    # The 8.0.4 copy says which fixture is a spike; the command reads the
+    # shipped policy, whose floors add the gates a delivery assessment owes.
+    old_policy, policy = cb.policy_8_0_4(), cb.shipped_policy()
+    for path in sorted(FIXTURES.glob("*.yml")):
+        fx = yaml.safe_load(path.read_text())
+        expect = fx.get("expected") or {}
+        result = subprocess.run(
+            [sys.executable, str(CLI), "approach", "evaluate", *_cli_args(fx), "--json"],
+            cwd=str(ROOT), capture_output=True, text=True, timeout=60,
+        )
+        if expect.get("conflict"):
+            assert result.returncode != 0, (
+                f"{path.name}: the command stopped refusing a routing conflict")
+            needle = expect.get("conflict_message_contains", "")
+            assert needle in (result.stdout + result.stderr), (
+                f"{path.name}: the conflict message changed; expected to find "
+                f"{needle!r}")
+            continue
+        assert result.returncode == 0, f"{path.name}: {result.stderr}"
+        got = json.loads(result.stdout)
+        old = routing.evaluate_route(_readings(fx), old_policy)
+        if old["delivery_approach"] == "spike":
+            assert got["delivery_approach"] == "spike", path.name
+            assert got["gates"] == old["gates"], path.name
+        else:
+            assert got["delivery_approach"] == "delivery", path.name
+            owed = er.evaluate(_readings(fx), routing.prepare_policy(policy).view)
+            assert got["gates"] == owed["gates"], path.name
+
+
 # ---------------------------------------------------------------------------
 # `TRC-F6` - grew by artifacts and checks only
 # ---------------------------------------------------------------------------
@@ -232,12 +201,11 @@ EXPECTED_GUARDRAIL_IDS = {"G1", "G2", "G3", "G4", "G5", "S1", "S2"}
 # or https URL, so a team arriving with one does not retype it - a
 # top-level group rather than a subverb, because no subverb owns it.
 EXPECTED_SUBCOMMANDS = {
-    "approach", "bdd", "check", "analyze", "retro", "ci", "tdd-red",
-    "tdd-green", "policy", "plan", "intent", "issue", "adr", "rework-scan", "flow",
+    "approach", "bdd", "check", "ci", "tdd-red",  # 9.0.0 removed `retro` and
+    "tdd-green", "policy", "issue", "adr", "flow",  # `rework-scan`, `intent` and `readiness` (ADR-093)
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
-    "profile",                    # `profile lint|add|show` - execution profiles
+    "review-rule",  # `review-rule list`; 9.0.0 removed `preset`, `spec` and `plan`
     # `init` creates `.compass/config.yml` and `.compass/work/`, and is safe
     # to run twice. It exists because no other command owns initialisation,
     # and the five entry points call it directly.
@@ -256,23 +224,37 @@ EXPECTED_SUBCOMMANDS = {
     # runs inside the existing `compass ci`.
     "decision",
     "lesson",  # project-lessons (ADR-029)
-    "run",  # headless-runner (ADR-030)
-    "record",  # delivery-record (ADR-031)
-    "board",  # compass-board (ADR-046): render|refresh - the delivery board page
-    "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
+    "record",  # delivery-record (ADR-031); `record commit` added by #356 (ADR-096)
+    # "board" (compass-board, ADR-046): ADR-093 removed the delivery board page.
+    # "readiness" (ADR-061): ADR-093 removed the readiness measure.
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
+    # #359 (ADR-098): `compass migrate` moves an 8.x project to 9.0.0; it adds
+    # no guardrail, gate or check.
+    "migrate",
+    # isolation-and-layering (#328, ADR-086): `isolation record` and `layering
+    # record`, the two strategy records only their commands write. GROUPS, so a
+    # later record verb has a home.
+    "isolation", "layering",
+    # one-check waivers (#357, ADR-094 decision 8): `waiver add` and
+    # `waiver withdraw`, the one route by which an issue owes less.
+    "waiver",
+    # the trail (#356, ADR-096 decision 19): `compass trail [--check]` writes
+    # the issue's trail.md, a file a reviewer checks with sha256sum. It adds
+    # no guardrail or gate. `compass record commit` (#356) is a sub-verb of
+    # the existing `record` group, so it adds no top-level verb.
+    "trail",
 }
 
 
 def test_trc_f6_the_framework_should_grow_by_artifacts_and_checks_only():
-    g = yaml.safe_load((GOVERNANCE / "guardrails.yml").read_text())
+    g = shipped_view("guardrails.yml")
     ids = {x["id"] for x in g["defaults"]}
     ids |= {x["id"] for x in g["spike_guardrails"]}
     ids |= {x["id"] for x in (g.get("project") or [])}
     assert ids == EXPECTED_GUARDRAIL_IDS, (
         f"the guardrail id set changed: {sorted(ids ^ EXPECTED_GUARDRAIL_IDS)}")
 
-    policy = yaml.safe_load((GOVERNANCE / "routing-policy.yml").read_text())
+    policy = shipped_view("routing-policy.yml")
     gates = set()
     for shape in policy["route_shapes"].values():
         gates.update(shape.get("gates", []))
@@ -300,18 +282,17 @@ def test_trc_f6_the_framework_should_grow_by_artifacts_and_checks_only():
 def test_trc_f7_evidence_types_agree_across_surfaces():
     """Two shipped surfaces must declare the same evidence types.
 
-    `compass analyze` writes a `consistency-check` entry, and
-    manifest.schema.json did not accept it - so an issue whose delivery
-    approach includes verify.analyze produced evidence its own `compass
-    issue lint` rejected. No issue here had hit it, because verify.analyze
-    only enters the gate set at critical risk or on irreversible surface.
+    `compass analyze` (removed in 9.0.0, ADR-091) wrote a `consistency-check`
+    entry, and manifest.schema.json did not accept it - so an issue whose
+    delivery approach included verify.analyze produced evidence its own
+    `compass issue lint` rejected. An older manifest can still hold one.
     The same defect this issue fixes: two governance surfaces disagreeing,
     with nothing checking.
     """
     declared = set(
-        (yaml.safe_load((GOVERNANCE / "guardrails.yml").read_text())
+        (shipped_view("guardrails.yml")
          .get("evidence_types") or {}))
-    assert declared, "guardrails.yml declares no evidence types"
+    assert declared, "the check set declares no evidence types"
 
     schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text())
 
@@ -330,7 +311,7 @@ def test_trc_f7_evidence_types_agree_across_surfaces():
     for accepted in found:
         assert accepted == declared, (
             "governance and the task schema disagree about evidence types.\n"
-            f"  declared in guardrails.yml but not accepted by the schema: "
+            f"  declared in the check set but not accepted by the schema: "
             f"{sorted(declared - accepted)}\n"
             f"  accepted by the schema but not declared: "
             f"{sorted(accepted - declared)}")

@@ -31,7 +31,12 @@ nothing recorded. For one of the four it refuses, writing nothing, when:
   `prompt_id`: it only ends delegations, and a person can always end one.
 
 `/compass:approve [n]` and `/compass:reject [n] <reason>` answer one pending,
-current, shown request of the session's issue. Compass shows a request at the
+current, shown request of the session's issue. `/compass:approve waiver W-<n>`
+answers the pending request for that waiver (ADR-094); the hook records it
+only while the waiver's check and reason are the ones the request showed.
+A request for the ship approval (`compass evidence request --ship`, #355) is
+answered with `/compass:approve <n>` like any other.
+Compass shows a request at the
 end of the agent's turn (the Stop hook); the hook records a request only
 while its digest equals the one shown. Each refusal names its cause, and the
 block reason reaches the person only. A recorded answer goes through
@@ -204,10 +209,20 @@ def _session(event, env, command, entrypoint):
     # which worktree (`_answer`).
     issue, args = _split_issue_flag(
         command, " ".join(str(event.get("command_args") or "").split()))
-    if command == "approve" and (args and not args.isdigit() or issue and not args):
+    if command == "approve" and (args and not args.isdigit() and not _waiver_words(args)
+                                 or issue and not args):
         raise Refused(f"Compass: {_usage(command)} Nothing was written.")
     return Session(command, args, session_id, str(event.get("prompt_id") or ""), project,
                    "", "", "", "", "", entrypoint, compass_dir=compass_dir, issue=issue)
+
+
+def _waiver_words(args):
+    """The waiver id `/compass:approve waiver W-<n>` names, or None."""
+    from compass_pkg import waiver_records
+    words = args.split()
+    if len(words) == 2 and words[0] == "waiver" and waiver_records.ID.fullmatch(words[1]):
+        return words[1]
+    return None
 
 
 def _split_issue_flag(command, text):
@@ -415,8 +430,9 @@ def _pending(session):
 def _usage(command):
     if command == "approve":
         return ("/compass:approve takes a pending request number, `/compass:approve <n>`, "
-                "or the number and the issue, `/compass:approve <n> --issue <issue>`. "
-                "With no argument it answers the one request pending in any worktree.")
+                "or the number and the issue, `/compass:approve <n> --issue <issue>`, or a "
+                "waiver, `/compass:approve waiver W-<n>`. With no argument it answers the "
+                "one request pending in any worktree.")
     return ("/compass:reject takes an optional pending request number, then your reason: "
             "`/compass:reject <n> <reason>`, or with the issue "
             "`/compass:reject <n> <reason> --issue <issue>`.")
@@ -505,7 +521,7 @@ def _form(session, number, slug):
 
 def _row_text(task_dir, slug, request, numbered):
     lead = f"  {request['number']} - " if numbered else "  "
-    scope = (f" (the agent's description: \"{request['scope']}\")"
+    scope = (f" (the agent's description: \"{approval_requests.clean(request['scope'])}\")"
              if request.get("scope") else "")
     return (f"{lead}issue {slug} ({_project_of(task_dir)}): "
             f"{approval_requests.subject_text(request)}{scope}")
@@ -559,6 +575,61 @@ def _choose_across(session, number, candidates, listing):
     return None
 
 
+def _choose_waiver(session, waiver, candidates):
+    """`(issue folder, slug, request)` for the one pending request for this
+    waiver on the candidate issues, or a refusal. A waiver is approved only
+    through a request, so the person has been shown what it excuses."""
+    hits = []
+    for task_dir, slug in candidates:
+        pending, _ = _pending_in(task_dir, slug)
+        hits += [(task_dir, slug, r) for r in pending
+                 if r.get("form") == "waiver" and r.get("value") == waiver]
+    if len(hits) == 1:
+        return hits[0]
+    if hits:
+        lines = [f"Compass: waiver {waiver} has a pending request on more than one issue; "
+                 f"nothing was written. Choose one:"]
+        lines += [_row_text(t, s, r, False) for t, s, r in hits]
+        lines.append("Type " + " or ".join(f"/compass:approve waiver {waiver} --issue {s}"
+                                           for _, s, _ in hits) + ".")
+        raise Refused("\n".join(lines))
+    where = f"issue {session.issue}" if session.issue else "the current issue of any worktree"
+    raise Refused(f"Compass: no request for waiver {waiver} is pending on {where}. A waiver "
+                  f"is approved only through a request, so you see what it excuses: the "
+                  f"agent asks with `compass evidence request --waiver {waiver}`. Nothing "
+                  f"was written.")
+
+
+def _waiver_changed(session, request):
+    """Refuse a waiver request whose waiver no longer names the check and the
+    reason the request showed: the person approved what they were shown."""
+    from compass_pkg import waiver_records
+    task, _ = load_manifest(session.task_dir)
+    held = waiver_records.find(task, request.get("value")) or {}
+    shown = request.get("waiver") or {}
+    if (held.get("check"), held.get("reason")) != (shown.get("check"), shown.get("reason")):
+        approval_requests.close(session.task_dir, request, approval_requests.STALE,
+                                reason="the waiver changed after the request was written")
+        raise Refused(f"Compass: waiver {request.get('value')} no longer names the check and "
+                      f"reason request {request['number']} showed you. Nothing was written; "
+                      f"the request is closed, and the agent must ask again with compass "
+                      f"evidence request --waiver {request.get('value')}.")
+
+
+def _spec_changed(session, request):
+    """Refuse a `specify` request whose spec no longer has the digest the request
+    showed: the person approved the scenarios they were shown (ADR-095)."""
+    from compass_pkg import scenario_freeze
+    if scenario_freeze.spec_digest(session.task_dir)[1] == request.get("spec_sha256"):
+        return
+    approval_requests.close(session.task_dir, request, approval_requests.STALE,
+                            reason="the spec changed after the request was written")
+    raise Refused(f"Compass: the spec changed after request {request['number']} showed it "
+                  f"to you. Nothing was written; the request is closed, and the agent must "
+                  f"ask again with compass evidence request --checkpoint "
+                  f"{request.get('value')}.")
+
+
 def _shown(session, request):
     """The request as Compass shows the person, with the `--issue` form when
     another worktree's current issue holds a request with the same number."""
@@ -579,14 +650,13 @@ def _current(session, request):
                       f"generation {task.get('generation')}. Nothing was written; the agent "
                       f"must ask again with compass evidence request.")
     if request.get("form") == "artifact":
-        now_digest = approval_requests.document_digest(session.task_dir, task,
-                                                       request.get("value"))
-        if now_digest != request.get("document_digest"):
-            approval_requests.close(session.task_dir, request, approval_requests.STALE,
-                                    reason="the document changed")
-            raise Refused(f"Compass: the document '{request.get('value')}' changed since "
-                          f"the request. Nothing was written; the agent must ask again "
-                          f"with compass evidence request.")
+        # A request written before 9.0.0 can ask for a document's approval. No document
+        # has a status now (ADR-091), so it closes with nothing to approve.
+        approval_requests.close(session.task_dir, request, approval_requests.STALE,
+                                reason="documents have no status since 9.0.0")
+        raise Refused(f"Compass: request {number} asks for the approval of the document "
+                      f"'{request.get('value')}', and 9.0.0 gives no document a status "
+                      f"(ADR-091). Nothing was written; the request is closed.")
     verb = f"/compass:{session.command}"
     if not request.get("shown_at"):
         shown = approval_requests.mark_shown(session.task_dir, request)
@@ -621,7 +691,10 @@ def _answer(session, env):
     _refuse_used_prompt(session)
     listing = worktree_lookup.list_worktrees(session.project)
     _refuse_replayed(session, _every_issue_dir(listing))
-    if session.command == "approve":
+    waiver = _waiver_words(session.args) if session.command == "approve" else None
+    if waiver:
+        number, reason = None, ""
+    elif session.command == "approve":
         number = int(session.args) if session.args else None
         reason = ""
     else:
@@ -629,7 +702,8 @@ def _answer(session, env):
         if number is None and reason.startswith("EV-"):
             return _overrule(session, env, listing, reason)
     candidates = _candidates(session, env, listing)
-    chosen = _choose_across(session, number, candidates, listing)
+    chosen = (_choose_waiver(session, waiver, candidates) if waiver
+              else _choose_across(session, number, candidates, listing))
     if chosen is None:
         if session.command == "approve" and not session.issue:
             return _review(session, env, listing)
@@ -742,6 +816,10 @@ def _overrule(session, env, listing, text):
 
 def _approve(session, request, where=""):
     _current(session, request)
+    if request.get("form") == "waiver":
+        _waiver_changed(session, request)
+    if request.get("form") == "checkpoint" and "spec_sha256" in request:
+        _spec_changed(session, request)
     answer = approvals.Answer(request["form"], request.get("value"),
                               approval_records.APPROVED, session.approver, session.role,
                               request.get("scope") or "", provenance(session, request))
@@ -777,8 +855,6 @@ def _reject(session, request, reason, where=""):
                                   dict(provenance(session, request),
                                        **({"reason": reason} if reason else {})))
         ids = approvals.record(session.task_dir, answer).evidence_ids
-    elif form == "artifact":
-        _send_back(session, value, reason)
     elif form == "guardrail":
         task, _ = load_manifest(session.task_dir)
         earlier = [e.get("id") for e in task.get("evidence") or []
@@ -799,20 +875,6 @@ def _reject(session, request, reason, where=""):
         f"issue {session.slug}{where}){said}.{recorded}{note}",
         f"The person rejected request {request['number']} ({subject}){said}. Do not go on "
         f"with the work that waited for it; ask the person what should change.")
-
-
-def _send_back(session, kind, reason):
-    """Return a document to draft, holding the digest it was rejected at, so a
-    later stage record leaves it in draft until the file changes."""
-    from compass_pkg import artifact_status
-    task, path = load_manifest(session.task_dir)
-    entry = next(a for a in task.get("artifacts") or []
-                 if isinstance(a, dict) and a.get("kind") == kind)
-    entry["rejected_digest"] = approval_requests.document_digest(session.task_dir, task, kind)
-    artifact_status.clear_approver(entry)
-    entry.update(status=artifact_status.DRAFT, rejected_by=session.approver,
-                 rejected_at=approvals._stamp(), rejected_reason=reason)
-    save_manifest(task, path)
 
 
 def load_event(text):

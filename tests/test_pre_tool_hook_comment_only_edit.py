@@ -456,7 +456,10 @@ def test_damaged_manifest_lets_nothing_through_except_comment_edits(tmp_path):
         "key: [unclosed\n  - : :\n")
     text = "def route(issue):\n    return issue.slug\n"
 
-    _refused(_edit(root, PY, "return issue.slug", "return issue.name", text=text))
+    # A manifest that does not parse records no delivery approach, so the code
+    # edit is refused before the red is looked for.
+    _refused(_edit(root, PY, "return issue.slug", "return issue.name", text=text),
+             "no-delivery-approach")
     # A comment edit needs no issue at all, so a damaged manifest does not
     # matter to it either.
     _allowed(_edit(root, PY, "def route", "# a note\ndef route", text=text))

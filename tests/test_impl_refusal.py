@@ -95,7 +95,7 @@ def test_ir_2_the_refusal_names_both_versions_and_the_fix(committed):
     _, checks, _ = check_json(root)
     detail = checks["suite-passed"]["detail"]
     assert "suite-passed" in detail
-    assert "0.9.0" in detail and "1.0.0" in detail
+    assert "0.9.0" in detail and "1.1.0" in detail
     assert f"compass issue migrate --config --issue {SLUG}" in detail
     code, out, err = _run(root, "check", "--issue", SLUG)
     assert "suite-passed" in out and "migrate --config" in out, out
@@ -149,14 +149,12 @@ def test_ir_5_the_json_row_of_a_refused_check_is_the_documented_example(committe
 # --- IR-13: every command that reads the issue refuses -------------------------------------
 
 #: Commands that refuse an issue whose generation was built by another resolver or schema
-#: major: the stage view, the rendered documents (read through a reader that falls back
-#: on any fault), the lint, the receipt, the reassess, and the red and green records.
+#: major: the stage view, the lint, the reassess, and the red and green records. Before
+#: 9.0.0 the render of the documents refused too (ADR-091 removed it).
 #: `compass check` refuses in the same way, and IR-4 tests it.
 READERS = (
     ("next", "--issue", SLUG),
-    ("issue", "render", "--issue", SLUG),
     ("issue", "lint", "--issue", SLUG),
-    ("issue", "receipt", "--issue", SLUG),
     ("approach", "evaluate", "--issue", SLUG, "--write"),
     ("tdd-red", "--issue", SLUG, "--", "false"),
     ("tdd-green", "--issue", SLUG, "--", "true"),
@@ -227,8 +225,8 @@ def test_ir_13_flow_and_ci_go_on_to_a_healthy_issue(tmp_path):
 
 def _two_issues(root, shipped=False):
     """Two issues with stored generations under `root`: `feature`, recorded at
-    resolver 2.0.0, and `other`, healthy. Shipped ones hold an approval, so
-    `retro --impact` reads their configuration."""
+    resolver 2.0.0, and `other`, healthy. Shipped ones are closed and hold an
+    approval."""
     for slug in ("feature", "other"):
         folder = root / ".compass" / "work" / slug
         folder.mkdir(parents=True)
@@ -246,39 +244,6 @@ def _two_issues(root, shipped=False):
                                        "decision": "approved", "path": "evidence/x"}])
             path.write_text(yaml.safe_dump(manifest, sort_keys=False))
     record_versions(root / ".compass" / "work" / "feature", resolver="2.0.0")
-
-
-@pytest.mark.parametrize("dry", [False, True])
-def test_ir_13_render_all_refuses_that_issue_and_renders_the_rest(tmp_path, dry):
-    _two_issues(tmp_path)
-    code, out, err = _run(tmp_path, "issue", "render", "--all", *(["--dry-run"] if dry else []))
-    assert code == 1, out + err
-    assert "1 failed" in out and "feature:" in out and "resolver 2.0.0" in out, out
-    assert ("1 issue(s) to render" if dry else "1 issue(s) rendered") in out, out
-
-
-def test_ir_13_retro_impact_reads_a_shipped_issue_across_a_major(tmp_path):
-    # A shipped issue keeps the generation it closed under, so the retro reads it and
-    # reports every issue.
-    _two_issues(tmp_path, shipped=True)
-    code, out, err = _run(tmp_path, "retro", "--impact")
-    assert code == 0, out + err
-    assert "a different major" not in out + err, out + err
-
-
-def test_ir_13_diagnose_refuses_an_open_issue_that_holds_an_approval(tmp_path):
-    # The band count reads the configuration only for an issue that holds an approval. A
-    # refusal there must reach the person, and must not read as "not counted".
-    _two_issues(tmp_path)
-    path = tmp_path / ".compass" / "work" / "feature" / "manifest.yml"
-    manifest = yaml.safe_load(path.read_text())
-    manifest["evidence"] = [{"id": "EV-1", "type": "human-approval", "check": "x",
-                             "decision": "approved", "path": "evidence/x"}]
-    path.write_text(yaml.safe_dump(manifest, sort_keys=False))
-    code, out, err = _run(tmp_path, "issue", "diagnose", "--issue", "feature")
-    assert code == 2, out + err
-    assert "migrate --config --issue feature" in err, out + err
-    assert "not counted" not in out + err, out + err
 
 
 def test_ir_13_a_version_that_is_not_one_is_named_unreadable(committed):
@@ -309,7 +274,7 @@ def test_ir_13_a_versions_file_that_is_not_a_mapping_is_broken(committed):
 
 def test_ir_13_every_write_command_names_how_its_issue_is_found():
     from compass_pkg import record_triggers
-    assert set(record_triggers.ISSUE_FROM) == set(record_triggers.RENDER_TRIGGERS)
+    assert set(record_triggers.ISSUE_FROM) == set(record_triggers.RECORD_TRIGGERS)
     assert record_triggers.ISSUE_FROM["cmd_quick_fix_start"] == "slug"
     assert record_triggers.ISSUE_FROM["cmd_scenario_add"] == "task"
 
@@ -363,14 +328,16 @@ def test_ir_14_migrate_config_repairs_the_issue(committed, change):
     stored = yaml.safe_load((task_dir / "generations" / "2" / "versions.yml").read_text("utf-8"))
     assert stored["resolver"] == generation.RESOLVER_VERSION, stored
     assert stored["schema"] == generation.SCHEMA, stored
-    for argv in (("check", "--issue", SLUG, "--json"), ("issue", "render", "--issue", SLUG)):
+    for argv in (("check", "--issue", SLUG, "--json"), ("issue", "lint", "--issue", SLUG)):
         code, out, err = _run(root, *argv)
         assert "migrate --config" not in err, (argv, err)
         assert code in (0, 1), (argv, out + err)
 
 
-@pytest.mark.parametrize("argv", [("--version",), ("--help",), ("readiness",),
-                                  ("policy", "update")])
+# `readiness` was one of these until 9.0.0 removed it (ADR-093); `policy lint`
+# reads the project's configuration with no issue in the same way.
+# `policy update` was one too until 9.0.0 removed it (ADR-094).
+@pytest.mark.parametrize("argv", [("--version",), ("--help",), ("policy", "lint")])
 def test_ir_14_the_commands_that_need_no_issue_still_run(committed, argv):
     root, task_dir = committed
     (root / ".compass" / "current-task").write_text(SLUG + "\n", encoding="utf-8")
@@ -441,7 +408,7 @@ def test_ir_14_a_closed_issue_is_read_across_a_major_by_render_lint_and_flow(com
     root, task_dir = committed
     record_versions(task_dir, resolver="2.0.0")
     _close(task_dir)
-    for argv in (("issue", "render", "--issue", SLUG), ("issue", "lint", "--issue", SLUG)):
+    for argv in (("issue", "lint", "--issue", SLUG),):
         code, out, err = _run(root, *argv)
         assert code == 0, (argv, out + err)
         assert "a different major" not in out + err, (argv, out + err)
@@ -459,17 +426,6 @@ def test_ir_14_the_work_root_migrate_says_nothing_of_a_closed_issue(committed):
     code, out, err = _run(root, "issue", "migrate")
     assert code == 0, out + err
     assert "another resolver or schema major" not in out + err, out + err
-
-
-def test_ir_13_a_linked_issue_that_is_refused_is_reported_after_a_write(tmp_path):
-    # `depends add` changes `other` and renders the issues linked to it. `feature` is
-    # refused for its generation: the write has happened, so the render is reported
-    # and the command does not fail.
-    _two_issues(tmp_path)
-    code, out, err = _run(tmp_path, "issue", "depends", "add", "feature",
-                          "--reason", "x", "--issue", "other")
-    assert code == 0, out + err
-    assert "1 of 2 renders failed" in out + err, out + err
 
 
 def test_ir_13_a_programming_error_in_the_early_refusal_is_not_swallowed(committed, monkeypatch):

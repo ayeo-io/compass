@@ -62,7 +62,9 @@ def test_wa_1_the_strategy_advises_and_cites_adr_003():
 
 
 def test_wa_1_the_planning_texts_point_to_it():
-    for rel in ("agents/architect.md", "skills/plan-authoring/SKILL.md",
-                "templates/technical-design.md"):
+    # The plan-authoring skill went with the plan stage (ADR-092); its
+    # design rules moved to governance-check, "Writing the design down".
+    for rel in ("skills/governance-check/SKILL.md",
+                "skills/governance-check/writing-the-design.md"):
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert "S15" in text, rel

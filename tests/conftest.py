@@ -16,10 +16,6 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-# The after-command render costs time on every record-changing command and most tests
-# do not read its output. Subprocesses inherit this; a test of the render sets it to "1".
-os.environ["COMPASS_RENDER_AFTER"] = "0"
-
 # --- locate the CLI and the framework root ----------------------------------
 # tests/ lives at the framework root, so the CLI is next to it.
 FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent
@@ -57,18 +53,13 @@ def framework_root() -> Path:
 
 # --- the temp project layout -----------------------------------------------
 
-DEFAULT_GOVERNANCE_FILES = ("routing-policy.yml", "guardrails.yml")
-
-
 def _copy_governance(src_root: Path, dest: Path) -> None:
-    """Copy the shipped governance/ files into a temp project so the test can
-    mutate them without touching the real repo."""
+    """Copy the shipped governance prose into a temp project. 9.0.0 reads no
+    copy of the policy (ADR-098): a project with `routing-policy.yml` or
+    `guardrails.yml` and no `compass.yml` is refused, so neither is copied."""
     src = src_root / "governance"
     dst = dest / "governance"
     dst.mkdir(parents=True, exist_ok=True)
-    for name in DEFAULT_GOVERNANCE_FILES:
-        shutil.copyfile(src / name, dst / name)
-    # also copy the .md files (lint doesn't need them, but it's hygienic)
     for md in src.glob("*.md"):
         shutil.copyfile(md, dst / md.name)
 
@@ -79,7 +70,7 @@ def project(tmp_path: Path) -> Path:
 
     Layout:
         <tmp>/
-          governance/routing-policy.yml + guardrails.yml   (copies of shipped)
+          governance/*.md                                  (copies of shipped prose)
           .compass/config.yml                              (mode: enforced)
           .compass/work/                                   (empty)
     """
@@ -243,33 +234,6 @@ def run_cli(cli_path: Path, project: Path):
     return _run
 
 
-# --- governance editing helpers --------------------------------------------
-
-
-@pytest.fixture
-def edit_governance(project: Path):
-    """Load + save a governance YAML file in the temp project.
-
-    Usage:
-        with edit_governance("guardrails.yml") as g:
-            g["defaults"].append({...})
-    """
-
-    class _Editor:
-        def __init__(self, name: str):
-            self.path = project / "governance" / name
-            self.data: Dict[str, Any] = yaml.safe_load(self.path.read_text())
-
-        def __enter__(self):
-            return self.data
-
-        def __exit__(self, *_):
-            with self.path.open("w", encoding="utf-8") as fh:
-                yaml.safe_dump(self.data, fh, sort_keys=False)
-
-    return _Editor
-
-
 # --- fixture file loader (used by test_route_selection) ---------------------
 
 
@@ -385,8 +349,8 @@ def load_route_fixtures() -> List[Dict[str, Any]]:
 
 @pytest.fixture(autouse=True)
 def _no_session_issue(monkeypatch):
-    """`compass run` sets COMPASS_ISSUE for the sessions it starts, and those
-    sessions run this suite. The tests build their own projects, whose
+    """A session can set COMPASS_ISSUE for itself, and such a session can run
+    this suite. The tests build their own projects, whose
     issues the session's never is, so the variable must not reach them. A
     test about the variable sets it itself."""
     monkeypatch.delenv("COMPASS_ISSUE", raising=False)
@@ -430,13 +394,13 @@ def _justified_argv(argv, cwd):
     if str(CLI_PATH) not in words:          # another version's CLI does not know --justify
         return argv
     for at in range(len(words) - 1):
-        if words[at:at + 2] in (["approach", "evaluate"], ["issue", "configure"]):
+        if words[at:at + 2] == ["approach", "evaluate"]:
             break
     else:
         return argv
     rest = words[at + 2:]
-    # `approach evaluate --write` and `issue configure --commit` both run the evaluation.
-    if not ({"--write", "--commit"} & set(rest)) or any(w.startswith("--justify") for w in rest):
+    # `approach evaluate --write` runs the evaluation.
+    if "--write" not in rest or any(w.startswith("--justify") for w in rest):
         return argv
     slug = None
     for i, w in enumerate(rest):

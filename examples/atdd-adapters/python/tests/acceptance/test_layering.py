@@ -19,7 +19,11 @@ example's root. One test per rule:
   lines) to any other. Within a phase, lines and calls are matched by
   count, so a missing call and a surplus call in one phase cancel out.
   The rule reads module-level `test_*` functions and the `test_*` methods
-  of `Test*` classes.
+  of `Test*` classes;
+- a DSL method name uses no banned term: the words of each DSL method name
+  must not hold a term of the `banned` list in the project's
+  `governance/terminology.yml`, the first one found in the example's root or
+  a folder above it. Without that file the rule skips and says why.
 
 To adopt it, set the paths and the identifier patterns below for your suite.
 """
@@ -28,6 +32,9 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
+
+import pytest
+import yaml
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -42,6 +49,13 @@ IDENTIFIER_PATTERNS = {
 RULE_NO_CHECK = "the DSL makes no check"
 RULE_ALIAS = "every identifier goes through an alias"
 RULE_ONE_CALL = "one DSL call per Given, When or Then line"
+RULE_BANNED = "a DSL method name uses no banned term"
+
+#: The project's vocabulary file, whose `banned` list the DSL's method names
+#: must avoid: the first one in the example's root or a folder above it.
+TERMINOLOGY_FILE = next((folder / "governance" / "terminology.yml"
+                         for folder in (ROOT, *ROOT.parents)
+                         if (folder / "governance" / "terminology.yml").is_file()), None)
 
 STEP = re.compile(r"^\s*(Given|When|Then|And)\b\s*(.*?)\s*$")
 PHASE_OF_KEYWORD = {"Given": "Given", "When": "When", "Then": "Then"}
@@ -279,4 +293,44 @@ def test_one_dsl_call_per_line():
                 for text, line in lines[len(made):]:
                     breaches.append(f"{rel}:{line}: {RULE_ONE_CALL}: the line {text!r} "
                                     "makes no DSL call")
+    assert not breaches, _report(breaches)
+
+
+def _words(text):
+    """The lower-case words of a name or a term: `routeTodo` and `route_todo`
+    give ['route', 'todo']."""
+    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
+    return [word.lower() for word in re.findall(r"[A-Za-z0-9]+", spaced)]
+
+
+def _banned_terms():
+    """[(term, its words)] for each term of the `banned` list. An entry that
+    names several terms with a slash between them gives each one."""
+    entries = yaml.safe_load(TERMINOLOGY_FILE.read_text(encoding="utf-8")).get("banned") or []
+    terms = []
+    for entry in entries:
+        for term in str(entry.get("term", "")).split("/"):
+            if _words(term):
+                terms.append((term.strip(), _words(term)))
+    return terms
+
+
+def _holds(words, term_words):
+    size = len(term_words)
+    return any(words[i:i + size] == term_words for i in range(len(words) - size + 1))
+
+
+def test_no_dsl_method_name_uses_a_banned_term():
+    if TERMINOLOGY_FILE is None:
+        pytest.skip("no governance/terminology.yml in the example's root or a folder above "
+                    "it, so there is no banned list to check the DSL's method names against")
+    terms = _banned_terms()
+    breaches = []
+    for cls, method in _dsl_methods(_dsl_tree()):
+        words = _words(method.name)
+        for term, term_words in terms:
+            if _holds(words, term_words):
+                breaches.append(f"{_rel(DSL_FILE)}:{method.lineno}: {RULE_BANNED}: the method "
+                                f"{cls.name}.{method.name} uses the banned term {term!r} of "
+                                "governance/terminology.yml")
     assert not breaches, _report(breaches)

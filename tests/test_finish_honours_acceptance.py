@@ -98,5 +98,6 @@ def test_fa_1_finish_refuses_to_swap_a_declared_validator(repo):
     finish = _run(repo, "quick-fix", "finish", "--issue", SLUG,
                   "-m", "Swap", "--no-commit", *TEST)
     assert finish.returncode != 0
-    assert "declared" in finish.stderr, finish.stderr
+    # ADR-099: a refusal of `finish` prints on stdout.
+    assert "declared" in finish.stdout, finish.stdout
     assert set(_gate_statuses(repo, SLUG).values()) == {"pending"}

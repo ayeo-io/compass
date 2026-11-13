@@ -23,7 +23,7 @@ CLI_DIR = HERE.parent / "cli"
 sys.path.insert(0, str(CLI_DIR))
 import compass_pkg  # noqa: E402,F401  (puts the bundled PyYAML first)
 import yaml  # noqa: E402
-from compass_pkg import atomic_io, core, manifest_store, session_record  # noqa: E402
+from compass_pkg import atomic_io, core, manifest_store  # noqa: E402
 
 MANIFEST = """\
 schema_version: '3.0'
@@ -97,9 +97,9 @@ def test_trc_a1_two_writers_keep_both_changes(task_dir):
     assert body["follow_ups"] == [{"id": "FU-1", "summary": "set by the second writer"}]
 
 
-def test_trc_a2_hook_session_kept(task_dir):
+def test_trc_a2_another_writers_change_kept(task_dir):
     task, path = core.load_manifest(task_dir)
-    session_record.record(task_dir, "session-from-the-hook", via="env")
+    other_writer(task_dir, lambda t: t.update(usage={"sessions": ["session-from-the-hook"]}))
     assert on_disk(task_dir)["usage"]["sessions"] == ["session-from-the-hook"]
     task["release_note"] = "Set by the command."
     core.save_manifest(task, path)
@@ -163,11 +163,11 @@ def test_trc_b1_reader_sees_whole_manifest(task_dir, monkeypatch):
     path = os.path.join(task_dir, "manifest.yml")
     size = os.path.getsize(path)
     seen = []
-    real_dump = yaml.safe_dump
+    real_dump = manifest_store.dump
 
     def dump_with_a_reader(*args, **kwargs):
-        # Every manifest save calls safe_dump. A second process reads the
-        # file at that moment, while the save is under way.
+        # Every manifest save calls `manifest_store.dump`. A second process
+        # reads the file at that moment, while the save is under way.
         done = subprocess.run([sys.executable, "-c", READER, path, str(CLI_DIR)],
                               capture_output=True, text=True, timeout=60)
         seen.append(done.stdout.strip() or done.stderr)
@@ -175,7 +175,7 @@ def test_trc_b1_reader_sees_whole_manifest(task_dir, monkeypatch):
 
     task, _ = core.load_manifest(task_dir)
     task["release_note"] = "A new line."
-    monkeypatch.setattr(yaml, "safe_dump", dump_with_a_reader)
+    monkeypatch.setattr(manifest_store, "dump", dump_with_a_reader)
     core.save_manifest(task, path)
     monkeypatch.undo()
     assert seen, "the save did not dump the manifest"
@@ -250,11 +250,11 @@ def test_trc_a6_a_position_both_changed_without_an_id_is_refused(task_dir):
 
 def test_trc_a7_saves_after_a_merged_save_keep_this_writers_changes(task_dir):
     task, path = core.load_manifest(task_dir)
-    session_record.record(task_dir, "session-from-the-hook", via="env")
+    other_writer(task_dir, lambda t: t.update(usage={"sessions": ["session-from-the-hook"]}))
     task["gates"][0]["status"] = "pass"
     task["release_note"] = "draft"
     task["evidence"].append({"id": "EV-2", "type": "test-run", "path": "a"})
-    core.save_manifest(task, path)                      # merges the hook's write
+    core.save_manifest(task, path)                      # merges the other writer's save
     task["gates"][0]["status"] = "fail"
     del task["release_note"]
     task["evidence"][1]["path"] = "b"
@@ -272,28 +272,13 @@ MANIFEST_EV1 = {"id": "EV-1", "type": "test-run", "path": "evidence/one.txt"}
 def test_trc_a8_a_copy_of_a_loaded_manifest_merges(task_dir):
     import copy
     task, path = core.load_manifest(task_dir)
-    session_record.record(task_dir, "session-from-the-hook", via="env")
+    other_writer(task_dir, lambda t: t.update(usage={"sessions": ["session-from-the-hook"]}))
     task = copy.deepcopy(task)
     task["release_note"] = "Set on a copy."
     core.save_manifest(task, path)
     body = on_disk(task_dir)
     assert body["usage"]["sessions"] == ["session-from-the-hook"]
     assert body["release_note"] == "Set on a copy."
-
-
-def test_trc_a8_analyze_keeps_a_change_saved_while_it_runs(task_dir, monkeypatch):
-    from compass_pkg import analyze
-
-    def save_after_the_hook(task, path):
-        session_record.record(task_dir, "session-from-the-hook", via="env")
-        core.save_manifest(task, path)
-
-    monkeypatch.setattr(analyze, "save_manifest", save_after_the_hook)
-    analyze._upsert_analyze_evidence_registry(task_dir, "EV-AN", "consistency-check",
-                                              "evidence/an.json")
-    body = on_disk(task_dir)
-    assert body["usage"]["sessions"] == ["session-from-the-hook"]
-    assert [e["id"] for e in body["evidence"]] == ["EV-1", "EV-AN"]
 
 
 def test_trc_a9_every_save_gets_a_manifest_a_load_returned():

@@ -147,11 +147,22 @@ def hint_for(argv, table=None):
         command, flag, _ = _split_flag(row["old"])
         if flag is not None:
             if _starts_with(argv, command) and _flag_at(argv[len(command):], flag) is not None:
-                return f"'{' '.join(row['old'])}' is now '{' '.join(row['new'])}'."
+                return _hint_line(row)
             continue
         if _starts_with(argv, row["old"]) and not _starts_with(argv, row["new"]):
-            return f"'{' '.join(row['old'])}' is now '{' '.join(row['new'])}'."
+            return _hint_line(row)
     return None
+
+
+def _hint_line(row):
+    """`'old' is now 'new'.`, and when a later release removed the new spelling too,
+    the release and the decision record that removed it."""
+    line = f"'{' '.join(row['old'])}' is now '{' '.join(row['new'])}'."
+    from compass_pkg.removed_parts import removal_of
+    gone = removal_of(row["new"])
+    if gone:
+        line = line[:-1] + f", which was removed in {gone[0]} ({gone[1]})."
+    return line
 
 
 def _version_tuple(version):
@@ -191,7 +202,8 @@ def parse_with_aliases(build_parser, raw, parse):
         return parse(build_parser(), argv)
     except SystemExit as exc:
         if exc.code == 2:
-            line = hint_for(argv)
+            from compass_pkg.removed_parts import line_for
+            line = hint_for(argv) or line_for(argv)
             if line:
                 sys.stderr.write(line + "\n")
         raise

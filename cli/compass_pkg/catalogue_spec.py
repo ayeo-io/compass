@@ -1,24 +1,17 @@
 # compass_pkg.catalogue_spec - the configuration catalogues' field table
-"""What each configuration catalogue holds, as data.
+"""The shapes a resolved configuration holds, and the keys `compass.yml` can hold.
 
-The configuration foundation makes delivery approaches, stages, checks,
-gates, artifacts, dimensions, rules and display names into catalogues a
-project extends (ADR-035). The merge, the classifier (ADR-037), locks
-(ADR-039) and lint all read one table so they cannot disagree about a
-field. This module is that table and nothing else: no I/O, no logic.
+A resolved configuration (the check set or a stored generation) holds the
+catalogues in `CATALOGUES`. `FIELDS` names the fields of each, which the
+retired-word tables (`word_map`) read. The settings keys, the tighten-only keys and the descriptions the
+settings schema carries (`settings_lint.schema`) are here too, and `at_least`,
+which compares by the shipped orders. No I/O.
 
-Each field records:
-
-- `type`: the YAML shape it takes;
-- `merge`: how a child layer changes it - `scalar` replaces, `list` takes
-  `add:`/`remove:` or a whole list, `map` takes `set:`/`remove:` or a whole
-  map, `whole` replaces as one value;
-- `compare`: how the classifier compares a parent and a child value -
-  `ordered` by declared order, `obligation-set` (more is stricter),
-  `way-set` (more is looser), `ceiling` (as the registry declares),
-  `identity` (any change cannot be compared), `predicate` (evaluated at each
-  assessment), `descriptive` (not compared), `activation` (turns a check on
-  or off), `never` (not read by the classifier at all).
+Each field records its YAML `type`, whether an entry must hold it
+(`required`), and two columns the 8.x configuration layers read: `merge`
+(how a child layer changed it) and `compare` (how the classifier compared
+it). Since 9.0.0 nothing merges and nothing is classified (ADR-094); the
+legacy copy reader still refuses an operation on a `list` or `map` field.
 """
 # DEPENDENCY: compass_pkg.stable_ids (constants only).
 from __future__ import annotations
@@ -28,19 +21,18 @@ from compass_pkg import stable_ids
 CATALOGUES = ("dimensions", "stages", "approaches", "rules", "checks", "gates",
               "artifacts", "readiness", "vocabulary")
 
-MERGE_KINDS = ("scalar", "list", "map", "whole")
-COMPARE_KINDS = ("ordered", "obligation-set", "way-set", "ceiling", "identity",
-                 "predicate", "descriptive", "activation", "never")
 
 # A catalogue id: stable, and never a display name (those live in
 # `vocabulary`).
 ID_PATTERN = r"^[A-Za-z][A-Za-z0-9._-]*$"
 
+SEVERITIES = ("advisory", "blocking")            # ascending strictness
+ON_SKIPPED = ("pass", "not-applicable", "fail")  # ascending strictness
+# The closed sets of the other enumerated fields. The reader of a governance copy
+# refuses a value outside them (`effective._legacy_value_problems`).
 DIMENSION_TYPES = ("ordered-enum", "enum", "set")
 TIGHTER = ("higher", "lower")
 CHECK_KINDS = ("deterministic", "evidence", "judged", "human")
-SEVERITIES = ("advisory", "blocking")            # ascending strictness
-ON_SKIPPED = ("pass", "not-applicable", "fail")  # ascending strictness
 GATE_KINDS = ("review", "guardrail")
 LOCKS = (True, "hard")
 
@@ -50,6 +42,19 @@ SHIPPED_ORDERS = {
     "risk": ("trivial", "contained", "cross-cutting", "critical"),
     "size": ("atomic", "small", "medium", "large", "product"),
 }
+
+
+def at_least(dimension, threshold, value, orders=None):
+    """Does `value` reach `threshold` on an ordered dimension? The order is
+    `orders[dimension]` when given, else the shipped order of risk and size
+    (ADR-035). A value or threshold outside the order never matches.
+    `core.reading_matches` reads it for a `when:` that uses `at_least:`."""
+    if orders is not None and dimension in orders:
+        order = list(orders[dimension] or ())
+    else:
+        order = list(SHIPPED_ORDERS.get(dimension) or ())
+    return (threshold in order and value in order
+            and order.index(value) >= order.index(threshold))
 
 # Where a retired word can sit in a configuration layer, one row per field:
 # `(catalogue, entry id or "*", field, shape, domain)`. `domain` names the
@@ -167,153 +172,16 @@ FIELDS = {
     },
 }
 
-# Keys any catalogue entry may also carry: how a layer changes it.
-ENTRY_OPERATIONS = ("set", "replace", "remove", "locked", "unlock", "waiver")
 
-# Which of those each layer may use. Only the project lifts a lock (ADR-039);
-# an issue changes fields and asks for waivers but never replaces, removes
-# or locks an entry (ADR-035, floors win over the issue layer).
-LAYER_OPERATIONS = {
-    "project": ENTRY_OPERATIONS,
-    "parent": ("set", "replace", "remove", "locked", "waiver"),
-    "issue": ("set", "waiver"),
-}
-
-# The obligation facts two configurations are compared on and a lock
-# protects (ADR-037, ADR-039): one table, so the two cannot disagree. A
-# key names a fact of the resolved configuration: a catalogue field
-# (`checks.kind`), a part of one (`approaches.artifacts.depth`), or an
-# output of the evaluator at an assessment (`evaluation.*`). A fact
-# missing here compares as equivalent, so the test pins the whole table.
-OBLIGATION_FIELDS = {
-    "approaches.stages": "ordered",              # the mode chosen per stage
-    "approaches.gates": "obligation-set",
-    "approaches.artifacts": "obligation-set",    # which artifacts are owed
-    "approaches.artifacts.depth": "ordered",     # light below full
-    "approaches.checkpoints": "obligation-set",
-    "approaches.subtask_ceiling": "ceiling",
-    "approaches.ships": "identity",              # a lock's footprint (ADR-039)
-    "approaches.release_line": "ordered",        # `true` is stricter (ADR-065)
-    "artifacts.depends_on": "obligation-set",    # what an owed artifact builds on
-    "artifacts.required_when": "identity",       # when an owed artifact is owed
-    "artifacts.word_ceiling": "identity",        # the word limit a check judges
-    "artifacts.checks": "obligation-set",        # the checks an owed artifact carries
-    "stages.mode": "ordered",                    # an issue's own choice
-    "stages.order": "identity",                  # a lock's footprint
-    "stages.entry": "obligation-set",
-    "stages.exit": "obligation-set",
-    "gates.stage": "identity",                   # a lock's footprint
-    "gates.checks": "obligation-set",
-    "gates.accepts": "way-set",
-    "checks.kind": "identity",
-    "checks.impl": "identity",
-    "checks.params": "ceiling",
-    "checks.accepts": "way-set",
-    "checks.reviewers": "way-set",
-    "checks.approvers": "way-set",
-    "checks.inputs": "obligation-set",
-    "checks.severity": "ordered",
-    "checks.on_skipped": "ordered",
-    "checks.statement": "identity",   # compared for human and judged checks only
-    "rules.ceilings": "ceiling",                 # each loop ceiling
-    "readiness.impl": "identity",
-    "readiness.params": "ceiling",
-    "readiness.required_for_autonomous": "ordered",   # `true` is stricter
-    "evaluation.max_worktrees": "ceiling",
-    "evaluation.required_skills": "obligation-set",
-    "evaluation.blocked_stages": "obligation-set",
-    "evaluation.required_artifacts": "obligation-set",
-}
-
-# The hit policies a rule set can name for an effect (ADR-035). `first` stops
-# at the first matching rule, `max` and `min` take the highest or lowest
-# value, and `collect` gathers every match. Lint refuses a policy the effect
-# does not allow, and a rule set that uses an effect without naming one. An
-# effect is a key a rule's `then:` can hold; the other keys there (a ceiling
-# name, an end date) qualify an effect and take no policy.
-EFFECT_POLICIES = {
-    "lean_toward": ("first",),
-    "force_minimum_approach": ("max",),
-    "max_worktrees": ("min",),
-    "limit": ("min",),
-    "never_skip": ("collect",),
-    "require_phase": ("collect",),
-    "require_skill": ("collect",),
-    "add_gate": ("collect",),
-    "add_artifact": ("collect",),
-    "gate": ("collect",),
-    "require_artifact": ("collect",),
-    "block_phase": ("collect",),
-    "strategy": ("collect",),
-    "suggest_artifact": ("collect",),
-    "tier": ("max",),
-    "effort": ("max",),
-}
-
-# The catalogue each effect's value names: a value is an id of that catalogue
-# (one id, or a list of them). Lint refuses an id the catalogue lacks. An
-# effect that is not here names no catalogue entry (a skill, a number).
-EFFECT_TARGETS = {
-    "lean_toward": "approaches",
-    "force_minimum_approach": "approaches",
-    "never_skip": "stages",
-    "require_phase": "stages",
-    "block_phase": "stages",
-    "add_gate": "gates",
-    "gate": "gates",
-    "add_artifact": "artifacts",
-    "require_artifact": "artifacts",
-    "suggest_artifact": "artifacts",
-}
-
-# The other keys a rule's `then:` may hold. They qualify an effect and take no
-# hit policy. Any key in neither this tuple nor `EFFECT_POLICIES` is refused,
-# so a misspelt effect fails lint and is not silently ignored.
-EFFECT_QUALIFIERS = ("ceiling", "until", "seat")
-
-# Which way is stricter for each ceiling the classifier compares and a lock
-# protects (ADR-037, ADR-039). A key is a ceiling field of the table above,
-# or `rules.ceilings.<name>` for a loop ceiling. `lower` means a smaller
-# number is stricter, and no ceiling at all is the loosest. `none` makes any
-# change incomparable: the four correction loops, where an earlier stop also
-# removes a chance to fix a defect. A ceiling not listed here is `none`. Only
-# the framework declares a direction, so a loader must never fill this from
-# project data.
-CEILING_DIRECTIONS = {
-    "approaches.subtask_ceiling": "lower",
-    "evaluation.max_worktrees": "lower",
-    "rules.ceilings.run_cost_usd": "lower",
-    "rules.ceilings.run_minutes": "lower",
-    "rules.ceilings.run_cycles": "lower",
-    "rules.ceilings.builder_attempts": "none",
-    "rules.ceilings.review_rounds": "none",
-    "rules.ceilings.replans": "none",
-    "rules.ceilings.repeated_error": "none",
-}
-
-ARTIFACT_DEPTHS = stable_ids.ARTIFACT_DEPTHS     # ascending strictness
-
-#: The condition keys an artifact's `required_when` may hold. Each names a fact
-#: about the issue that `{min: N}` is compared with. A later condition is one
-#: more name here and one more reader.
-REQUIRED_WHEN_CONDITIONS = ("subtasks",)
 AUTONOMY = ("controlled", "balanced", "autonomous")
 ADOPTION = ("advisory", "enforced")
-# `governance_drift`: any value other than `strict` reads as `advisory`.
-GOVERNANCE_DRIFT = ("advisory", "strict")
-# `living_spec`: when the living spec is re-derived. `land` (the default) re-derives
-# and commits it at every landing; `refresh` leaves it to `compass spec sync`.
-LIVING_SPEC = ("land", "refresh")
 # The approver lists a layer names (ADR-039); an unlock is the owner's.
-APPROVER_KINDS = ("issue-waiver", "project-waiver")
+APPROVER_KINDS = ("waiver", "issue-waiver", "project-waiver")
 
-# The classifier compares at most this many named set values (ADR-037).
-LABEL_CAP = 8
-#: The most document kinds the classifier crosses; the shipped default names two
-#: (ADR-070). Each doubles the grid, as a label does, so it has a cap of its own.
-DOCUMENT_CAP = 4
 
 # Named switches for new blocking behaviour, off in the shipped default.
+# `artifact-freshness` was removed in 9.0.0 (ADR-091) and is not read; it stays
+# valid because stored 8.x generations declare it.
 CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 
 # Top-level keys of a layer file (ADR-043).
@@ -321,10 +189,18 @@ LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATAL
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
                  "record", "project", "prices", "models", "multiagent", "governance_drift",
                  "preset_index", "github_labels", "language", "acceptance_strategy",
-                 "living_spec")
-#: The three switches inside `github_labels`, all off by default.
-GITHUB_LABEL_SWITCHES = ("domain", "status", "page")
-RESERVED_KEYS = ("preset",)
+                 "living_spec", "signoff_labels", "require_evidence", "agent_review",
+                 "project_checks")
+#: The tighten-only settings of `compass.yml` (ADR-094): each can only add to what
+#: the check set owes. `capabilities` is one of them, and stays a layer key above
+#: so the 8.x merge still reads it. `compass_pkg.tighten` applies them and
+#: `compass_pkg.settings_lint` refuses a value that is not one of these shapes.
+TIGHTEN_KEYS = ("signoff_labels", "require_evidence", "agent_review", "project_checks",
+                "capabilities")
+#: The stages a project check (`project_checks`) may run at.
+PROJECT_CHECK_STAGES = (stable_ids.STAGE_BUILD, stable_ids.STAGE_SHIP)
+#: The pieces of acceptance support code a project names under `project.acceptance_support`.
+ACCEPTANCE_SUPPORT = ("alias_helper", "driver_factory", "dsl_root", "layering_test")
 
 # What an issue's own layer (the manifest's `config:`) may hold.
 ISSUE_KEYS = ("stages", "checks", "gates", "rules", "autonomy", "ceilings", "approach")
@@ -337,242 +213,26 @@ ISSUE_KEYS = ("stages", "checks", "gates", "rules", "autonomy", "ceilings", "app
 # field is, its allowed values or units, and its shipped default where the
 # shipped preset sets one.
 
-CATALOGUE_DESCRIPTIONS = {
-    "dimensions": "The facts an assessment records about a piece of work, such as risk and size. "
-                  "Each key is a dimension id.",
-    "stages": "The eight stages of delivery, from assess to ship. Each key is a stage id.",
-    "approaches": "The delivery approaches: which mode each stage runs in, which gates and "
-                  "artifacts are owed, and how far work may be split. Each key is an approach id.",
-    "rules": "The rule sets the evaluator reads to choose an approach and to raise its minimum. "
-             "Each key is a rule set id.",
-    "checks": "The checks a gate is made of. Each key is a check id.",
-    "gates": "The gates: groups of checks cleared at a stage. Each key is a gate id.",
-    "artifacts": "The documents an issue can owe, such as the acceptance criteria. Each key is an "
-                 "artifact id.",
-    "readiness": "The readiness signals: binary facts about a repository that show whether it "
-                 "is fit for unattended agent work. Each key is a readiness signal id.",
-    "vocabulary": "The display names and aliases of catalog entries. Each key is "
-                  "`<catalog>.<id>`, for example `approaches.quick-fix`.",
-}
-
-ENTRY_DESCRIPTIONS = {
-    "dimensions": "One dimension: how its value is chosen and which values it allows.",
-    "stages": "One stage: its place in the order and the modes it can run in.",
-    "approaches": "One delivery approach: its weight, the mode of each stage, and what it owes.",
-    "rules": "One rule set: what kind it is, how matching rules combine and the rules it holds.",
-    "checks": "One check: what it asserts, how it is decided and how strictly it applies.",
-    "gates": "One gate: the checks it groups, the stage it is cleared at and where it applies.",
-    "artifacts": "One artifact: the file that holds it, who reads it and who writes it, its "
-                 "headings per depth and what it builds on.",
-    "readiness": "One readiness signal: what it asserts, the implementation that decides it and "
-                 "whether the readiness floor needs it.",
-    "vocabulary": "The display name of one catalog entry, and the other names a person may type "
-                  "for it.",
-}
-
-OPERATION_DESCRIPTIONS = {
-    "set": "Changes only the fields named here and leaves every other field of the inherited "
-           "entry as it is.",
-    "replace": "When `true`, the entry in this layer replaces the inherited entry as a whole.",
-    "remove": "When `true`, removes the inherited entry. This fails while another entry still "
-              "refers to it.",
-    "locked": "Protects the entry from a change in a later layer that loosens it: `true` lets a "
-              "project unlock it, `hard` lets no one.",
-    "unlock": "When `true`, lifts a lock the shipped default placed on the entry. Only the "
-              "project file may write it, and only with a waiver its owner approves.",
-    "waiver": "An approved departure from the layer above, written in the entry it excuses. "
-              "It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
-}
-
-LIST_DESCRIPTIONS = {
-    "whole": "The whole list, written out in full.",
-    "changes": "The inherited list changed by adding and removing items.",
-    "add": "Items to add to the inherited list.",
-    "remove": "Items to remove from the inherited list.",
-}
-
-FIELD_DESCRIPTIONS = {
-    "dimensions": {
-        "type": "How a value of the dimension is chosen: `ordered-enum` is one value from an "
-                "ordered list, `enum` is one value from an unordered list and `set` is any "
-                "number of values.",
-        "values": "The values the dimension allows. For an `ordered-enum` the list is in order, "
-                  "and `tighter` says which end is stricter.",
-        "tighter": "Which end of `values` is stricter for an `ordered-enum`: `higher` means the "
-                   "later values and `lower` the earlier ones. The shipped `risk` and `size` use "
-                   "`higher`.",
-        "open": "Whether a `set` accepts a value beyond those listed in `common`. "
-                "The shipped `labels` set is open.",
-        "common": "Values of a `set` that people use often, shown as suggestions. "
-                  "The classifier does not compare them.",
-        "required": "Whether an assessment must give the dimension a value. "
-                    "The shipped `risk`, `familiarity` and `size` are required.",
-    },
-    "stages": {
-        "order": "The stage's place in the sequence, as a whole number from 1. "
-                 "The shipped stages run from assess (1) to ship (8).",
-        "modes": "The modes the stage can run in, keyed by mode name. Each mode may set a `rank`, "
-                 "a whole number where a higher rank means more process.",
-        "entry": "The ids of the checks that must hold before the stage starts. "
-                 "They run only when the `entry-exit-evaluation` capability is on.",
-        "exit": "The ids of the checks that must hold before the stage is finished. "
-                "They run only when the `entry-exit-evaluation` capability is on.",
-        "mode": "The mode an issue chooses for the stage. Only an issue's own layer sets it.",
-    },
-    "approaches": {
-        "weight": "A whole number that orders approaches from lightest to heaviest, distinct for "
-                  "each approach. A floor compares approaches by it, and the shipped weights "
-                  "run from 0 (spike) to 4 (full).",
-        "ships": "Whether the approach delivers work. It is `true` unless the approach delivers "
-                 "nothing, as the shipped spike does.",
-        "release_line": "Whether an issue on the approach owes a release line, which a landing "
-                        "then needs in the manifest's `release_note`. `true` is stricter, and "
-                        "the shipped default sets it on every approach except the spike.",
-        "extends": "The id of another approach this one builds on, so that it states only what "
-                   "differs.",
-        "stages": "The mode the approach runs each stage in, keyed by stage id.",
-        "gates": "The ids of the gates the approach must clear.",
-        "artifacts": "The artifacts the approach owes, keyed by artifact id. Each value is a "
-                     "depth, `lightweight` or `thorough`.",
-        "subtask_ceiling": "The largest number of subtasks the approach allows, or `null` for no "
-                           "limit, where a lower number is stricter. The shipped default is 1 or 2 "
-                           "for every approach except full, which has no limit.",
-        "checkpoints": "For each autonomy value (`controlled`, `balanced`, `autonomous`), the "
-                       "stages at which a session waits for a person.",
-        "acceptance_strategy": "What the four-layer acceptance strategy (`S17`) asks on the "
-                               "approach: `on`,`existing-dsl`, `existing-dsl-isolation` or "
-                               "`suspended`. Unset, it is `on` for an approach that ships and "
-                               "`suspended` for one that does not.",
-    },
-    "rules": {
-        "kind": "What the rule set does: the shipped kinds are `shapes`, `floors`, `caps`, "
-                "`ceilings`, `immovable-gates`, `artifact-rules`, `advisory`, `biases`, "
-                "`model-tiers` (the default model tier of each seat) and `model-floors` "
-                "(rules that raise a seat's tier). A stored 6.x generation can also hold "
-                "`role-rules`.",
-        "hit": "How matching rules combine, per effect: `first` stops at the first match, `max` "
-               "and `min` take the highest or lowest value, and `collect` gathers every match. "
-               "Each effect allows only some of these.",
-        "rules": "The rules of the set, keyed by rule id. A rule has an `order`, a `when` "
-                 "condition, a `then` effect and a `rationale`.",
-    },
-    "checks": {
-        "statement": "What the check asserts, in plain words. A person reads it to judge a "
-                     "`human` or `judged` check.",
-        "kind": "How the check reaches its verdict: `deterministic`, `evidence`, `judged` or "
-                "`human`.",
-        "impl": "The id of the built-in implementation that runs the check. Each implementation "
-                "carries a version.",
-        "params": "Named values the implementation reads. A ceiling in `params` is compared as "
-                  "a number.",
-        "accepts": "The evidence types the check accepts. Accepting more types is looser.",
-        "reviewers": "Who may review the check. Allowing more reviewers is looser.",
-        "approvers": "Who may approve the check. Allowing more approvers is looser.",
-        "inputs": "What the check reads. Reading more is stricter.",
-        "when": "A condition on the assessment, such as `risk: [critical]`, under which the "
-                "check applies.",
-        "blocking_when": "A condition on the assessment under which the check blocks.",
-        "severity": "Whether a failure blocks (`blocking`) or is only reported (`advisory`). "
-                    "`blocking` is stricter.",
-        "on_skipped": "The verdict when the check has nothing to check: `pass`, "
-                      "`not-applicable` or `fail`, in ascending strictness.",
-        "requires": "The capabilities that must be on for the check to run.",
-        "locked": "Protects the check from a change that loosens it: `true` lets the project "
-                  "owner unlock it and `hard` lets no one.",
-    },
-    "gates": {
-        "kind": "The kind of gate: `guardrail` or `review`.",
-        "stage": "The id of the stage at which the gate is cleared.",
-        "checks": "The ids of the checks that make up the gate.",
-        "accepts": "The evidence types the gate accepts. A gate that lists none accepts any "
-                   "type.",
-        "when": "A condition on the assessment under which the gate applies.",
-        "applies_to": "Which approaches the gate applies to, for example `ships: true` for every "
-                      "approach that delivers work.",
-        "name": "The gate's display name.",
-        "statement": "What the gate demands, in plain words.",
-        "locked": "Protects the gate from a change that loosens it: `true` lets the project "
-                  "owner unlock it and `hard` lets no one.",
-    },
-    "artifacts": {
-        "file": "The file name of the artifact in the issue's folder, for example "
-                "`acceptance-criteria.md`. `<n>` stands for a round, as in `review-<n>.md`, "
-                "and `<unit>` for a work unit, which alone allows one folder, as in "
-                "`low-level-design/<unit>.md`.",
-        "depends_on": "The ids of the artifacts this one builds on. A cycle, a bookkeeping "
-                      "artifact and a directory are each an error.",
-        "checks": "The ids of the checks the artifact carries.",
-        "bookkeeping": "Whether the artifact is a record the framework keeps about the work, "
-                       "such as the dashboard, the receipt or the verification report. Such "
-                       "an artifact is never an input to another.",
-        "stage": "The id of the stage that owns the artifact, for example `plan` for the "
-                 "technical design.",
-        "owner": "The role that writes the document: an agent id or a value of the `role` "
-                 "dimension, for example `planner`. A layer's own top-level `owner` is a "
-                 "different thing: the person who approves that layer's waivers.",
-        "audience": "One line saying who reads the document and what the reader decides from "
-                    "it. The skeleton and the glossary print it.",
-        "stands_for": "The name the industry uses for this kind of document, for example `hld` "
-                      "for the technical design. The glossary prints it.",
-        "sections": "The headings of the document, in order, for each depth it can be written "
-                    "at (`lightweight`, `thorough`). A list may be empty only for a document "
-                    "that is one rendered block.",
-        "required_when": "A condition that must hold for the document to be owed, for example "
-                         "`{subtasks: {min: 2}}`. The document is owed whenever it is absent.",
-        "word_ceiling": "The most words the document should hold at each depth it can be "
-                        "written at, each a whole number of at least 1, for example "
-                        "`{thorough: 4000, lightweight: 1200}`. Rendered blocks and HTML "
-                        "comments are not counted.",
-        "every_approach": "Whether every delivery approach owes the document, at the depth of "
-                          "its own stage, unless the approach lists it already.",
-    },
-    "readiness": {
-        "statement": "What the readiness signal asserts, in plain words.",
-        "impl": "The id of the built-in implementation that decides the signal. Each "
-                "implementation carries a version, and the readiness record keeps it.",
-        "weight": "A whole number that orders the signals in the fix list, higher first. "
-                  "It never changes the score, which counts signals.",
-        "params": "Named values the implementation reads, such as the project setting it "
-                  "checks. Lint refuses a name or value the implementation does not allow.",
-        "required_for_autonomous": "Whether the readiness floor needs the signal to be present "
-                                   "before the project can run `autonomy: autonomous`; `true` is "
-                                   "stricter, and the default is `false`. Setting it to `false` on "
-                                   "a shipped signal needs the owner's waiver.",
-    },
-    "vocabulary": {
-        "name": "The display name of the entry, shown to people in place of its id.",
-        "aliases": "Other names a person may type for the entry. A name or alias may belong "
-                   "to only one entry of a catalog.",
-    },
-}
 
 # The top-level keys of compass.yml and the keys inside them.
 TOP_DESCRIPTIONS = {
-    "": "A project's one configuration file: its overlay on the shipped default and its "
-        "settings. Generated from `cli/compass_pkg/catalogue_spec.py`; do not edit by hand.",
+    "": "A project's settings file: settings that do not touch the check set, and settings "
+        "that only add to it (ADR-094). Generated by `settings_lint.schema()`; do not edit by hand.",
     "schema": "The version of the file format. Its presence also marks `compass.yml` as "
               "Compass's file.",
-    "extends": "The parent configuration this file builds on.",
-    "extends.name": "A parent named by reference, for example `compass:default@<major>`. A git "
-                    "parent ends in `#<sha>`, which pins its commit.",
-    "extends.object": "A parent with the approval that goes with it.",
-    "extends.from": "The parent reference, in the same form as a plain `extends`.",
-    "extends.approved_by": "The name of the person who approved the parent.",
-    "extends.approved_on": "The date of that approval.",
     "owner": "The name of the person who owns the project's configuration. The owner approves "
-             "waivers and unlocks unless a list of approvers says otherwise.",
+             "waivers unless a list of approvers says otherwise.",
     "approvers": "Lists of the people who may approve a waiver, by kind.",
-    "approvers.issue-waiver": "The names that may approve a waiver in an issue. When absent, "
-                              "the owner approves.",
-    "approvers.project-waiver": "The names that may approve a waiver in the project file. A "
-                                "parent writes the list; when it is absent, the owner approves.",
+    "approvers.waiver": "The names that may approve a waiver of one check on one issue "
+                        "(ADR-094). When absent, issue-waiver is read; when both are "
+                        "absent, the owner approves.",
+    "approvers.issue-waiver": "The names that may approve a waiver in an issue, read as "
+                              "`waiver` from 9.0.0 when that list is absent. When both are "
+                              "absent, the owner approves.",
     "capabilities": "Named switches for new blocking behavior. Each is off in the shipped "
                     "default.",
     "capabilities.entry-exit-evaluation": "Whether the entry and exit checks of each stage are "
                                           "evaluated. Off in the shipped default.",
-    "capabilities.artifact-freshness": "Whether a change to an artifact marks the artifacts and "
-                                       "check results that depend on it as stale. Off in the "
-                                       "shipped default.",
     "autonomy": "How often a session stops for a person at a stage hand-off: `controlled` at "
                 "every listed hand-off, `balanced` at fewer, `autonomous` never. "
                 "The shipped default is `balanced`.",
@@ -583,59 +243,84 @@ TOP_DESCRIPTIONS = {
     "adoption": "Whether a failed check blocks: `enforced` makes `compass check` and "
                 "`compass ci` exit non-zero, and `advisory` reports the failure and exits 0. "
                 "The shipped default is `enforced`.",
-    "governance_drift": "Whether drift from the shipped governance fails: `strict` fails "
-                        "`compass policy lint` and `advisory` only reports it. "
-                        "The default is `advisory`.",
-    "living_spec": "When a landing re-derives the living spec, `docs/system-spec.md`: `land` "
-                   "re-derives it and commits it alone after each landing, and `refresh` "
-                   "leaves it as it is, for a person to re-derive with `compass spec sync`. "
-                   "The default is `land`.",
     "allow_project_commands": "Whether `compass check` may run commands that a project "
                               "guardrail declares, read from the project's own file only. "
                               "The default is `false`.",
     "enforcement": "Extra paths the pre-tool hook guards. Holds `code_globs`, a list of path "
                    "patterns the hook treats as code.",
-    "record": "Where the delivery record is kept, with `remote`, `paths` and `names_key`. "
-              "Without it no record is kept.",
+    "record": "Where the delivery record is kept, with `remote`, `paths` and `names_key`, "
+              "and whether each issue's record is committed with its code (`commit`). "
+              "Without `remote` no record repository is kept.",
+    "record.commit": "`true` commits each issue's record with its code and `false` keeps it "
+                     "out of the project's git history. Unset, the record is committed unless "
+                     "`remote` is set.",
     "project": "The project's name, its commands (`test_command`, `test_micro_command`, "
-               "`bdd_run_command`, `lint_command`, `format_check_command`, `build_command` and "
-               "`typecheck_command`) and two declarations (`secret_scan` and "
-               "`structured_logging`). Declare the check form of a formatter, and note that "
-               "`compass readiness` runs every command in a clean checkout of HEAD.",
-    "prices": "Dollars per million tokens for each model name, used to price the usage of a "
-              "quick fix. Without it no cost is recorded.",
-    "models": "The model and effort of each tier `strong`, `standard` and `fast`, which "
-              "`compass approach show --model <seat>` and `--effort <seat>` print for a stage "
-              "command to pass to its agent. A tier is a model name, or `{model, effort}`; the "
-              "shipped mapping is `strong` inherit (the session's model) at high, `standard` "
-              "sonnet at medium and `fast` haiku at low.",
-    "models.strong": "The strong tier, for judgment seats: a model name, or `{model, effort}`. "
-                     "The default is `inherit`, the session's model, at effort `high`.",
-    "models.standard": "The standard tier, for the builder: a model name, or `{model, effort}`. "
-                       "The default is `sonnet` at effort `medium`.",
-    "models.fast": "The fast tier, for mechanical seats: a model name, or `{model, effort}`. The "
-                   "default is `haiku` at effort `low`.",
-    "multiagent": "Where multiagent worktrees go and how many are allowed. Holds `worktree_root`"
-                  " (default `../.compass-worktrees`) and `max_worktrees` (default 6).",
-    "preset_index": "Reserved for published presets. It has no behavior yet.",
-    "github_labels": "Whether Compass writes an issue's labels and page to its linked GitHub "
-                     "issue, through the switches `domain`, `status` and `page`. All three are "
-                     "off by default, and with all three off no command calls GitHub.",
-    "github_labels.domain": "Whether Compass writes the issue's declared domain labels to its "
-                            "GitHub issue. The default is `false`.",
-    "github_labels.status": "Whether Compass writes `status:<state>` to the GitHub issue, and on "
-                            "a closed issue `status:done` and `close:<reason>`. The default is "
-                            "`false`.",
-    "github_labels.page": "Whether Compass keeps one comment on the GitHub issue equal to the "
-                          "issue's README, and writes the ask into an empty issue body once. "
-                          "The default is `false`, because it widens who reads the issue's "
-                          "documents to the GitHub issue's readers.",
-    "preset": "Reserved key for a published preset's own data. It is not part of a layer's "
-              "digest.",
+               "`bdd_run_command` and `layering_command`, which `compass layering record` "
+               "runs when given no command), the paths of its acceptance support code "
+               "(`acceptance_support`) and the untracked paths the base copy links "
+               "(`base_copy_links`). Since 9.0.0 (ADR-093) nothing reads `lint_command`, "
+               "`format_check_command`, `build_command`, `typecheck_command`, `secret_scan` "
+               "or `structured_logging`, which stay valid and which `compass policy lint` "
+               "names.",
+    "project.base_copy_links": "More paths that `compass quick-fix finish` links into the copy "
+                               "of the base commit it proves the red on, each relative to the "
+                               "project root, such as build output the tests need. "
+                               "`node_modules`, `.venv` and `venv` are linked without it; the "
+                               "default is none.",
+    "project.acceptance_support": "The paths of the support code of the four-layer acceptance "
+                                  "strategy (`S17`), each relative to the project root. "
+                                  "`acceptance-support-present` reports a piece with no path, or "
+                                  "a path that does not exist, as missing; it opens no file and "
+                                  "blocks nothing.",
+    "project.acceptance_support.alias_helper": "The path of the alias helper, which makes each "
+                                               "identifier a scenario uses unique to the run.",
+    "project.acceptance_support.driver_factory": "The path of the driver factory, which picks "
+                                                 "the protocol driver at start-up.",
+    "project.acceptance_support.dsl_root": "The path of the root of the domain-specific "
+                                           "language the specifications call.",
+    "project.acceptance_support.layering_test": "The path of the layering test, which checks "
+                                                "that each test layer calls only the layer "
+                                                "below it.",
     "acceptance_strategy": "Whether the four-layer acceptance strategy (`S17`) is on for the "
                            "project: `state` is `on` or `off`, and `off` needs a `reason`, which "
                            "assess records. Unset means on; only the project's own file can hold "
                            "it.",
     "acceptance_strategy.state": "`on` or `off`.",
+    "signoff_labels": "More labels that owe what the four shipped `G5` labels owe: a person's "
+                      "sign-off (`human-approval`) and approved scenarios (`scenario-approval`). "
+                      "It only adds to `auth`, `payments`, `personal-data` and `migrations`.",
+    "signoff_labels.item": "One label name, as an assessment writes it.",
+    "require_evidence": "More evidence a delivery issue owes when its assessment matches. "
+                        "Each entry adds tokens and never removes one.",
+    "require_evidence.item": "One rule: the assessment it applies to (`when`) and the tokens it "
+                             "adds (`add`).",
+    "require_evidence.when": "A condition on the assessment, such as `risk: [critical]` or "
+                             "`labels_any: [billing]`. Absent or empty, the rule applies to "
+                             "every delivery issue.",
+    "require_evidence.add": "The evidence tokens the rule adds, from the closed set the "
+                            "evidence rows use.",
+    "require_evidence.token": "One token: `request`, `scenarios`, `red-before-green`, "
+                              "`suite-green`, "
+                              "`correctness`, `governance`, `traceability`, `regression`, "
+                              "`security`, `clarity`, `architecture`, `outer-loop`, `isolation`, "
+                              "`layering`, `definition-of-done`, `reproduce-first`, "
+                              "`scenario-approval`, `human-approval` or `ship-approval`.",
+    "agent_review": "Turns on the advisory judged check `agent-review` at the `ship` stage "
+                    "(ADR-090 decision 7). `on` or `true` turns it on, and `off` or `false` "
+                    "leaves the default, which is off.",
+    "agent_review.switch": "`true` turns the check on and `false` leaves it off.",
+    "agent_review.word": "`on` turns the check on and `off` leaves it off.",
+    "project_checks": "The project's own checks, each a command that must exit 0. "
+                      "`compass check` runs one only when `allow_project_commands` is `true`.",
+    "project_checks.item": "One project check: its `id`, `name`, `command`, `stage` and an "
+                           "optional `when`.",
+    "project_checks.id": "The check's id, which must not be the id of a shipped check or "
+                         "gate, or of a check Compass deleted.",
+    "project_checks.name": "The check's display name.",
+    "project_checks.command": "The command `compass check` runs from the project root; exit "
+                              "0 passes.",
+    "project_checks.stage": "The stage the check is cleared at: `build` or `ship`.",
+    "project_checks.when": "A condition on the assessment under which the check applies. "
+                           "Absent, it applies to every issue that ships.",
     "acceptance_strategy.reason": "Why the project turned the strategy off. Required with `off`.",
 }

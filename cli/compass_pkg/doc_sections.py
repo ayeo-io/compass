@@ -1,9 +1,9 @@
 # compass_pkg.doc_sections - read the checklist sections of an issue's documents
 """One reader for the sections that hold a stage list's checklist.
 
-Three readers use it, so a heading and a section mean one thing: the renderer
-of the document templates (`template_lists`), the tick of a `human` check
-(`stage_lists`) and the typed tag rule of `dod-evidence-typed` (`checks`).
+Two readers use it, so a heading and a section mean one thing: the tick of a
+`human` check (`stage_lists`) and the typed tag rule of `dod-evidence-typed`
+(`checks`).
 
 A section starts at a heading and ends at the next heading or at a line that
 starts `Next stage:`. The text of an HTML comment is not part of any section: the templates quote

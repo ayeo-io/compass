@@ -2,8 +2,7 @@
 project-lessons issue, GitHub issue #257.
 
 `compass lesson` keeps `lessons.yml` in the project's `.compass` folder; the session-start hook injects
-its `always` lessons under a 150-word cap; `compass retro --lessons` proposes
-recurring friction for acceptance. The CLI records who added a lesson from
+its `always` lessons under a 150-word cap. The CLI records who added a lesson from
 git config and cannot tell who typed it, so a model's proposal waits in a
 pending list until someone accepts it.
 """
@@ -201,31 +200,6 @@ def test_the_block_is_capped_at_150_words_with_a_frame_line(project):
 
 # --- PL-G ----------------------------------------------------------------------
 
-def _issue_with_friction(root: Path, slug: str, observation: str) -> None:
-    d = root / ".compass" / "work" / slug
-    d.mkdir(parents=True)
-    (d / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "issue": slug, "created": "2026-10-01", "status": "landed",
-        "friction": [{"phase": "build", "category": "tooling", "observation": observation}],
-    }), encoding="utf-8")
-
-
-def test_retro_proposes_friction_seen_in_three_issues(project):
-    for n, text in enumerate(["The fixture DB was not seeded.", "the fixture db  was not seeded.",
-                              "The fixture DB was not seeded."]):
-        _issue_with_friction(project, f"issue-{n}", text)
-    _issue_with_friction(project, "issue-x", "Only twice seen.")
-    _issue_with_friction(project, "issue-y", "Only twice seen.")
-    r = _compass(project, "retro", "--lessons")
-    assert r.returncode == 0, r.stdout + r.stderr
-    [p] = _pending(project)
-    assert p["source"] == "friction"
-    assert p["rule"].lower().startswith("the fixture db was not seeded")
-    assert _lessons(project) == []
-    _compass(project, "retro", "--lessons")
-    assert len(_pending(project)) == 1, "a second run does not propose it again"
-
-
 # --- PL-H ----------------------------------------------------------------------
 
 def test_a_lesson_does_not_change_compass_check(project):
@@ -255,7 +229,9 @@ def test_the_verb_is_on_the_public_surface():
 
 def test_the_model_is_told_to_propose(project):
     """The model's route is propose, stated where the model reads it."""
-    for rel in ("skills/compass-runtime/SKILL.md", "commands/ship.md"):
+    # ADR-099 cut the lesson offer out of `commands/ship.md`; the runtime
+    # skill is the one text that still tells the model its route.
+    for rel in ("skills/compass-runtime/SKILL.md",):
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert "compass lesson propose" in text, rel
         assert "never `compass lesson add`" in text, rel
@@ -281,25 +257,12 @@ def test_a_broken_lessons_file_keeps_the_contract(project):
     assert "[Project lessons]" not in ctx
 
 
-def test_retro_counts_issues_not_rows(project):
-    d = project / ".compass" / "work" / "one-issue"
-    d.mkdir(parents=True)
-    (d / "manifest.yml").write_text(yaml.safe_dump({
-        "schema_version": "2.0", "issue": "one-issue", "created": "2026-10-01", "status": "landed",
-        "friction": [{"observation": "The same row."}] * 3}), encoding="utf-8")
-    _compass(project, "retro", "--lessons")
-    assert _pending(project) == []
-
-
 def test_a_project_guardrail_id_is_refused(project):
-    gov = project / "governance"
-    gov.mkdir()
-    for name in ("routing-policy.yml", "guardrails.yml"):
-        (gov / name).write_text((ROOT / "governance" / name).read_text(encoding="utf-8"),
-                                encoding="utf-8")
-    data = yaml.safe_load((gov / "guardrails.yml").read_text(encoding="utf-8"))
-    data["project"] = [{"id": "G77", "name": "Our own rule", "statement": "x"}]
-    (gov / "guardrails.yml").write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    # A project check adds a guardrail gate under its own id (ADR-094).
+    (project / "compass.yml").write_text(yaml.safe_dump({
+        "schema": 1, "project_checks": [{"id": "G77", "name": "Our own rule",
+                                         "command": "true", "stage": "ship"}]}),
+        encoding="utf-8")
     assert _add(project, "A docs change may skip G77.").returncode != 0
     assert _add(project, "A docs change may skip G78.").returncode == 0
 
@@ -332,32 +295,9 @@ def test_a_hand_written_file_without_last_id_reuses_no_id(project):
 
 # --- declining a proposal (#280) ------------------------------------------------
 
-def _three_issues(project, text):
-    for n in range(3):
-        _issue_with_friction(project, f"issue-{n}", text)
-
-
 def test_decline_removes_a_proposal(project):
     _compass(project, "lesson", "propose", "Seed the fixtures first.")
     r = _compass(project, "lesson", "decline", "LP-001")
     assert r.returncode == 0, r.stdout + r.stderr
     assert _pending(project) == [] and _lessons(project) == []
     assert _compass(project, "lesson", "decline", "LP-001").returncode != 0
-
-
-def test_retro_does_not_propose_a_declined_text_again(project):
-    _three_issues(project, "The fixture DB was not seeded.")
-    _compass(project, "retro", "--lessons")
-    [p] = _pending(project)
-    _compass(project, "lesson", "decline", p["id"])
-    _compass(project, "retro", "--lessons")
-    assert _pending(project) == []
-
-
-def test_retro_does_not_propose_a_removed_lesson_again(project):
-    _three_issues(project, "The fixture DB was not seeded.")
-    _compass(project, "retro", "--lessons")
-    _compass(project, "lesson", "accept", _pending(project)[0]["id"])
-    _compass(project, "lesson", "remove", _lessons(project)[0]["id"])
-    _compass(project, "retro", "--lessons")
-    assert _pending(project) == []

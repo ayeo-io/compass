@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from compass_pkg import catalogue_check  # noqa: E402
+from compass_pkg import settings_lint  # noqa: E402
 from test_schema_descriptions import SCHEMA_FILE, undescribed  # noqa: E402
 
 
@@ -27,7 +27,7 @@ def test_trc_068():
     for fact in ("BCP 47", "a language, an optional script and an optional region",
                  "`en-US`", "Unset: no instruction", "only the project's own `compass.yml`"):
         assert fact in text, (fact, text)
-    assert schema == catalogue_check.schema()
+    assert schema == settings_lint.schema()
     assert undescribed(schema) == []
     # A language node with no text is reported by its path.
     bare = copy.deepcopy(schema)

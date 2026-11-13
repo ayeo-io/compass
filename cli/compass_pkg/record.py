@@ -13,10 +13,16 @@
 # The clone of the record repository lives in the user's cache folder, never
 # inside the project, so the project can never commit it by mistake.
 #
+# `compass record commit` serves the other mode, where the record is
+# committed with the code (#356): it commits the record alone, after
+# `compass issue link set --pr` wrote the merge fields.
+#
 # DEPENDENCY: standard library (hashlib, os, shutil, subprocess) and
-# compass_pkg (core, effective, redact, rival_names).
+# compass_pkg (core, effective, redact, rival_names; committed_landing,
+# record_mode and terminal for `record commit`).
 # =============================================================================
-"""`compass record sync|restore`: the delivery record in its own repository."""
+"""`compass record sync|restore|commit`: the delivery record in its own repository,
+and the follow-up commit of a record committed with the code."""
 from __future__ import annotations
 
 import hashlib
@@ -42,7 +48,9 @@ _NO_LFS = (("filter.lfs.process", ""), ("filter.lfs.smudge", "cat"),
 
 def settings(project_root):
     """`(remote, paths)` from the project's settings, or None when the
-    project names no record."""
+    project names no record repository. A `record:` that holds only
+    `commit` (the record mode, `record_mode`) names none: a project can
+    write `record: {commit: false}` with no remote."""
     try:
         config = project_settings.settings(project_root)
     except Exception as exc:                            # noqa: BLE001
@@ -50,6 +58,9 @@ def settings(project_root):
                            f"be read: {exc}")
     record = config.get("record")
     if not record:
+        return None
+    if isinstance(record, dict) and "remote" not in record \
+            and "paths" not in record:
         return None
     remote = record.get("remote") if isinstance(record, dict) else None
     paths = record.get("paths") if isinstance(record, dict) else None
@@ -603,6 +614,90 @@ def _project_root():
     return os.path.dirname(find_compass_dir())
 
 
+# --- `compass record commit`: the follow-up commit of a committed record -------------
+
+COMMIT_VERB = "compass record commit"
+#: The message of the record commit when `-m` is not given.
+COMMIT_MESSAGE = "Record the merge of {slug}"
+#: The staged paths outside the record a refusal names before it says "and N more".
+_SHOWN_OUTSIDE = 5
+
+
+def _record_paths(rec):
+    """`(folders, files)`: the record's paths relative to the repository root,
+    each folder ending in `/`, so `fix-a/` never matches `fix-ab/`."""
+    top = rec._top()
+    folders, files = [], set()
+    for path in rec.folders():
+        rel = os.path.relpath(path, top).replace(os.sep, "/")
+        if os.path.isdir(path):
+            folders.append(rel + "/")
+        else:
+            files.add(rel)
+    return tuple(folders), files
+
+
+def _outside(staged, paths):
+    folders, files = paths
+    return sorted(p for p in staged if p not in files and not p.startswith(folders))
+
+
+def commit_record(task_dir, message=None):
+    """Commit the issue record of `task_dir`, and nothing else; return
+    `(commit, files)`, the new commit's id and the record files it holds.
+
+    The merge fields `compass issue link set --pr` writes (the pull request's
+    merge time and commit, and the `pr-approval` records) come after the
+    commit that holds the record, so a committed record needs this second
+    commit (#356, ADR-096, plan section 3.5). It writes `trail.md`, stages the
+    issue folder, its documents folder and both ignore files (git skips the
+    files they name), and commits them with git's own
+    hooks. Compass runs no check of its own and calls no network.
+
+    Raises CompassError, having committed nothing, when the record is kept
+    out, when a path outside the record is staged, or when the record has no
+    change. Nothing is written or staged on the first two."""
+    from compass_pkg import committed_landing, record_mode
+    from compass_pkg.core import find_upwards
+    task_dir = os.path.realpath(str(task_dir))
+    slug = os.path.basename(task_dir)
+    root = find_upwards(task_dir, ".compass")
+    if not root:
+        raise CompassError(f"{COMMIT_VERB}: {task_dir} is not inside a Compass project.")
+    found = record_mode.mode(root, task_dir)
+    if found.mode != record_mode.COMMITTED:
+        raise CompassError(
+            f"{COMMIT_VERB}: the record of {slug} is kept out of the project's commits "
+            f"({found.reason}). `compass record sync` copies it to the record "
+            f"repository instead. Nothing was committed.")
+    rec = committed_landing.Record(root, task_dir)
+    paths = _record_paths(rec)
+    outside = _outside(rec._staged(), paths)
+    if outside:
+        shown = ", ".join(outside[:_SHOWN_OUTSIDE])
+        more = len(outside) - _SHOWN_OUTSIDE
+        raise CompassError(
+            f"{COMMIT_VERB}: {len(outside)} staged path(s) are not part of the record of "
+            f"{slug}: {shown}{f', and {more} more' if more > 0 else ''}. This command "
+            f"commits the record only. Commit those first, or unstage them with "
+            f"`git restore --staged -- <path>`. Nothing was written.")
+    committed_landing.write_trail(task_dir)
+    rec.stage()
+    staged = sorted(rec._staged())
+    if not staged:
+        raise CompassError(f"{COMMIT_VERB}: the record of {slug} has no change to commit. "
+                           f"Nothing was committed.")
+    text = message or COMMIT_MESSAGE.format(slug=slug)
+    # record._git: git reads the person's configuration and hooks from the
+    # environment, as `compass record sync` does.
+    done = _git(["commit", "-q", "-m", text], root)
+    if done.returncode != 0:
+        said = " ".join((done.stderr or done.stdout or "no message").split())[:300]
+        raise CompassError(f"{COMMIT_VERB}: git commit failed: {said}. The record of "
+                           f"{slug} stays staged.")
+    return _git(["rev-parse", "HEAD"], root).stdout.strip(), staged
+
+
 def cmd_record_sync(args):
     said = sync(_project_root(), prune=args.prune, apply=args.apply,
                 redact_existing=args.redact_existing)
@@ -615,13 +710,27 @@ def cmd_record_restore(args):
     return 0
 
 
+def cmd_record_commit(args):
+    from compass_pkg.core import resolve_issue_dir
+    from compass_pkg.terminal import say
+    task_dir = resolve_issue_dir(args.task)
+    slug = os.path.basename(os.path.normpath(task_dir))
+    commit, files = commit_record(task_dir, args.message)
+    return say(args, f"{COMMIT_VERB}: committed the record of {slug} as {commit[:12]}.",
+               detail=[f"files    : {len(files)} record file(s), no code",
+                       "push     : push the commit, in a pull request or not"],
+               issue=slug, commit=commit, files=files)
+
+
 def register(sub):
     """Add `compass record sync|restore` to the top-level parser."""
     p = sub.add_parser(
-        "record", help="keep the delivery record in a second repository",
+        "record", help="keep the delivery record in a second repository, or "
+                       "commit a committed record",
         description="The paths the `record:` setting names, kept "
                     "in the repository it names (ADR-031). ship-commit runs "
-                    "`sync` after every landing.")
+                    "`sync` after every landing. `commit` commits a record "
+                    "that ships with the code, after the merge (#356).")
     subs = p.add_subparsers(dest="record_cmd", required=True)
     s = subs.add_parser(
         "sync", help="copy the record's paths, redacted, commit and push",
@@ -652,3 +761,16 @@ def register(sub):
     r.add_argument("--force", action="store_true",
                    help="overwrite files here that differ from the record")
     r.set_defaults(func=cmd_record_restore, output_kind="hand-off")
+    from compass_pkg.core import issue_arg
+    c = subs.add_parser(
+        "commit", help="commit the issue record alone, after the merge fields are written",
+        description="In committed mode, commit only the issue's record: its folder "
+                    "under .compass/work/, its documents folder and "
+                    ".compass/work/.gitignore. Run it after `compass issue link set "
+                    "--pr <n>` records the merge. It writes trail.md first, and "
+                    "refuses when the record is kept out, when anything else is "
+                    "staged, or when the record has no change. It never commits code.")
+    issue_arg(c)
+    c.add_argument("-m", "--message", metavar="TEXT",
+                   help="the commit message (default: 'Record the merge of <slug>')")
+    c.set_defaults(func=cmd_record_commit, output_kind="hand-off")

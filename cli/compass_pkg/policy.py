@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass_pkg.policy - `compass issue lint` and `compass plan lint`
+# compass_pkg.policy - `compass issue lint`
 # =============================================================================
 #
 # DEPENDENCY: PyYAML, bundled at cli/vendor/yaml/ and pinned in
@@ -33,23 +33,25 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg import status_words
-from compass_pkg.check_cmd import CHECK_FNS
-from compass_pkg.check_registry import REGISTRY, REMOVED
 from compass_pkg.stable_ids import (
-    APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE, STAGE_PLAN)
-from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
+    APPROACH_DELIVERY, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR,
+    APPROACH_SPIKE)
+from compass_pkg.core import (AUTONOMY_VALUES, LEGACY_ROUTE_NAMES, ROUTE_NAMES, assessment_key_errors, CompassError, canonical_shape, FRAMEWORK_ROOT,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
+# The routing gives an issue assessed before 9.0.0 the legacy hand-off stages only,
+# so its checkpoints stay as they were. A configuration's `autonomy_checkpoints`
+# table may also name the path stages (ADR-092): `TABLE_CHECKPOINT_STAGES`.
+from compass_pkg.path_readers import CHECKPOINT_STAGES as TABLE_CHECKPOINT_STAGES
+from compass_pkg.path_readers import LEGACY_CHECKPOINT_STAGES as CHECKPOINT_STAGES
 from compass_pkg.manifest_store import load_manifest_mapping
 
 
 
 # --- commands: policy lint / issue lint --------------------------------------
 
-# The built-in `_lint_errors_*` functions below are the no-dependency floor:
-# they always run, and they do the one thing JSON Schema cannot - cross-check
-# that every declared guardrail check is actually implemented in CHECK_FNS.
-# `_jsonschema_errors` adds fuller structural validation against the real JSON
+# The built-in lint functions below are the no-dependency floor: they always
+# run. `_jsonschema_errors` adds fuller structural validation against the JSON
 # Schema files in schemas/, but only when the optional `jsonschema` library is
 # installed. PyYAML stays the CLI's only *hard* dependency.
 
@@ -78,15 +80,18 @@ def _jsonschema_errors(instance, schema_name):
 # Current route names. A retired name (`express`, `standard`, `expedition`,
 # or `feature` and `initiative` before 5 October 2026) is read as its
 # current one, so an older project policy keeps working.
-CHECKPOINT_ROUTES = (APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_SPIKE)
+# `delivery` is the shipped default's own (ADR-092); the other five are the 8.x
+# approaches, which a stored generation still names.
+CHECKPOINT_ROUTES = (APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_SPIKE,
+                     APPROACH_DELIVERY)
 
 
 def checkpoint_table_errors(p):
     """Problems with the policy's `autonomy_checkpoints:` table. Checked by
     `compass policy lint` and by the evaluator, so a bad table is refused
-    whether or not `jsonschema` is installed. Only the four checkpoint
-    stages can be named: an entry naming a gate or another stage would let
-    the setting reach something it must never change."""
+    whether or not `jsonschema` is installed. Only a checkpoint stage, a path
+    stage or a legacy one, can be named: an entry naming a gate or another
+    stage would let the setting reach something it must never change."""
     table = p.get("autonomy_checkpoints")
     if table is None:
         return []
@@ -117,11 +122,11 @@ def checkpoint_table_errors(p):
                 errs.append(f"`autonomy_checkpoints.{value}.{route}` must be a list")
                 continue
             for stage in stages:
-                if stage not in CHECKPOINT_STAGES:
+                if stage not in TABLE_CHECKPOINT_STAGES:
                     errs.append(
                         f"`autonomy_checkpoints.{value}.{route}` names '{stage}', "
                         f"which is not a checkpoint; a checkpoint is one of "
-                        f"{', '.join(CHECKPOINT_STAGES)}")
+                        f"{', '.join(TABLE_CHECKPOINT_STAGES)}")
     return errs
 
 
@@ -178,170 +183,6 @@ def architecture_sources_lint_errors(gov):
     return errs
 
 
-def _lint_errors_routing_policy(p):
-    errs = list(checkpoint_table_errors(p))
-    for top in ("routing_strategies", "routing_guardrails", "route_shapes",
-                "assessment_vocabulary"):
-        if top not in p:
-            errs.append(f"missing top-level key: {top}")
-    rg = p.get("routing_guardrails", {})
-    # Waivers are checked here as well as in the JSON schema, because the schema
-    # can only say `waived/0` - it does not know rule ids. A reader fixing a bad
-    # waiver needs to be told which rule it was for.
-    for i, w in enumerate(rg.get("waived", []) or []):
-        if not isinstance(w, dict) or not w.get("id"):
-            errs.append(f"`waived:` entry {i} has no `id` - a waiver names the "
-                        f"framework rule it waives")
-            continue
-        if not str(w.get("reason", "")).strip():
-            errs.append(f"waiver for {w['id']} has no `reason` - a waiver "
-                        f"records a decision, so it requires one")
-    for fl in rg.get("floors", []):
-        if "id" not in fl:
-            errs.append(f"a floor has no id: {fl}")
-        if "when" not in fl:
-            errs.append(f"floor {fl.get('id', '?')} has no `when`")
-        if "rationale" not in fl:
-            errs.append(f"floor {fl.get('id', '?')} has no `rationale`")
-    for ig in rg.get("immovable_gates", []):
-        if "gate" not in ig:
-            errs.append(f"an immovable_gate has no `gate`: {ig}")
-    # A policy copied before the routes were renamed still keys them by the
-    # old names; read them as the new ones, as the evaluator does.
-    shapes = {canonical_shape(k): v for k, v in (p.get("route_shapes") or {}).items()}
-    for name in ROUTE_NAMES:
-        if name not in shapes:
-            errs.append(f"route_shapes is missing the shape named by default_shapes: {name}")
-        elif "weight" not in shapes[name]:
-            errs.append(f"route_shape '{name}' has no `weight`")
-    return errs
-
-
-def _check_declaration_errors(gid, name, decl):
-    """Problems in one `checks:` entry. `impl:` names a built-in
-    implementation; until stored generations decide who may choose one, the
-    runtime ignores it, so lint only refuses a name the registry lacks."""
-    if decl is None:
-        return []
-    if not isinstance(decl, dict):
-        return [f"guardrail {gid} references check '{name}', which is declared "
-                f"as a {type(decl).__name__} under `checks:`; it must be a "
-                f"mapping"]
-    impl = decl.get("impl")
-    if impl is not None and impl not in REGISTRY:
-        return [f"guardrail {gid} references check '{name}', which names impl "
-                f"'{impl}'; that is not in the check registry"]
-    return []
-
-
-def _lint_errors_guardrails(p):
-    errs = []
-    if "defaults" not in p:
-        errs.append("missing top-level key: defaults")
-    known_checks = set((p.get("checks") or {}).keys())
-    # Check all guardrails (defaults + project) for structural integrity.
-    # command-passes `params` validation ONLY applies to project guardrails -
-    # the framework's own guardrails (`G4`, evidence not assertion) legitimately
-    # register command-passes without per-guardrail params (it's a
-    # cross-cutting check that reads params from the project: guardrails it
-    # finds at run time).
-    for g in list(p.get("defaults", [])) + list(p.get("project", [])):
-        if "id" not in g:
-            errs.append(f"a guardrail has no id: {g}")
-        if not g.get("checks"):
-            errs.append(f"guardrail {g.get('id', '?')} has no `checks` - a "
-                        f"guardrail with no mechanical check is a strategy")
-        for c in g.get("checks", []):
-            if c not in known_checks:
-                errs.append(f"guardrail {g.get('id', '?')} references check "
-                            f"'{c}' not declared under `checks:`")
-                continue
-            errs.extend(_check_declaration_errors(
-                g.get("id", "?"), c, (p.get("checks") or {}).get(c)))
-            if c in REMOVED:
-                # A governance copy written before the check was removed still
-                # lists it. `compass check` reports it as nothing to check and runs
-                # its replacement, so the copy is not wrong, only old.
-                continue
-            if c not in CHECK_FNS:
-                # The integrity rule: a declared guardrail check the CLI does
-                # not implement would silently become advisory. Lint catches it
-                # here, before an issue relies on it; `compass check` also fails
-                # on it at run time. Both, because this is the line that keeps
-                # "guardrail" meaning hard-and-blocking.
-                errs.append(f"guardrail {g.get('id', '?')} references check "
-                            f"'{c}' which the CLI does not implement (not in "
-                            f"CHECK_FNS) - implement it, or move the guardrail "
-                            f"to strategies.md")
-
-    # command-passes params validation - only for project guardrails.
-    # Framework defaults (`G4`) can reference command-passes without params;
-    # the params come from the project guardrails that declare the actual
-    # commands to run.
-    for g in list(p.get("project", [])):
-        if "command-passes" not in (g.get("checks") or []):
-            continue
-        params = g.get("params") or {}
-        command = params.get("command")
-        script = params.get("script")
-        gid = g.get("id", "?")
-        # Two declaration forms, and exactly one of them per guardrail.
-        # `script:` names a file run with no shell; `command:` is a shell
-        # string. Allowing both would need a precedence rule, and a precedence
-        # rule is a quiet way to reach the shell from a declaration that looks
-        # like the safe form.
-        if script is not None and command is not None:
-            errs.append(
-                f"project guardrail {gid} declares both `params.script` and "
-                f"`params.command` - declare one. `script:` runs a file "
-                f"without a shell; `command:` runs a shell string"
-            )
-        elif script is not None:
-            if not isinstance(script, str):
-                errs.append(
-                    f"project guardrail {gid} uses check 'command-passes' but "
-                    f"`params.script` is not a string "
-                    f"(got {type(script).__name__!r}) - it must be a path "
-                    f"relative to the project root"
-                )
-            elif not script.strip():
-                errs.append(
-                    f"project guardrail {gid} uses check 'command-passes' but "
-                    f"`params.script` is an empty string - name a script path"
-                )
-            args = params.get("args")
-            if args is not None and (
-                    not isinstance(args, list)
-                    or not all(isinstance(a, str) for a in args)):
-                errs.append(
-                    f"project guardrail {gid}: `params.args` must be a list of "
-                    f"strings - they are passed to the script as separate "
-                    f"arguments, never joined into a command line"
-                )
-        elif command is None:
-            errs.append(
-                f"project guardrail {gid} uses check "
-                f"'command-passes' but both `params.command` and "
-                f"`params.script` are missing - add a `script:` path to run a "
-                f"file without a shell (preferred), or a `command:` shell "
-                f"string"
-            )
-        elif not isinstance(command, str):
-            errs.append(
-                f"project guardrail {gid} uses check "
-                f"'command-passes' but `params.command` is not a string "
-                f"(got {type(command).__name__!r}) - the command must be "
-                f"a shell-invocable string"
-            )
-        elif not command.strip():
-            errs.append(
-                f"project guardrail {gid} uses check "
-                f"'command-passes' but `params.command` is an empty "
-                f"string - provide a non-empty shell command"
-            )
-    return errs
-
-
 def _schema_note(ran):
     return ("" if ran else
             "  (jsonschema not installed - built-in linter only; "
@@ -390,153 +231,28 @@ def _lint_errors_quarantine(gov_dir):
     return errs
 
 
-# --- command: plan lint ------------------------------------------------------
-# Scans a technical-design.md for the phrases that mean the plan is not
-# actually finished. ADVISORY BY DESIGN: it always exits 0 on findings. A hit
-# is a note for the planner to judge, never a gate. The CLI can read a prose
-# document to advise; it must not make the document's structure a condition
-# of passing.
-
-PLAN_PLACEHOLDER_PHRASES = (
-    "TBD",
-    "TODO",
-    "implement later",
-    "add appropriate error handling",
-)
-
-# A work unit that promises tests. It is only a finding when nothing test-shaped
-# follows it - the promise with nothing behind it is the defect, not the phrase.
-PLAN_TEST_PROMISE = "write tests for the above"
-
-
-def _plan_lint_scannable(text):
-    """Yield (lineno, line) with fenced blocks and blockquotes blanked out.
-
-    Blanked rather than dropped, so reported line numbers still match the file
-    the author is looking at. Quoted text is skipped because every document that
-    explains this check has to quote the phrases it looks for - the skill that
-    documents it, the writing guide, and the plan that specified it. A check
-    that fires on its own documentation gets switched off.
-    """
-    in_fence = False
-    for lineno, line in enumerate(text.splitlines(), 1):
-        stripped = line.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_fence = not in_fence
-            yield lineno, ""
-            continue
-        if in_fence or stripped.startswith(">"):
-            yield lineno, ""
-            continue
-        yield lineno, line
-
-
-def _plan_lint_findings(text):
-    """Return [(lineno, phrase)] for every placeholder in a plan's prose."""
-    lines = list(_plan_lint_scannable(text))
-    findings = []
-
-    for lineno, line in lines:
-        low = line.lower()
-        for phrase in PLAN_PLACEHOLDER_PHRASES:
-            if phrase.lower() in low:
-                findings.append((lineno, phrase))
-
-        if PLAN_TEST_PROMISE in low:
-            # Kept only if nothing test-shaped follows within a short window.
-            import re as _re
-            following = " ".join(l for n, l in lines if n > lineno)[:600].lower()
-            if not _re.search(r"test_\w+|::|\.py\b|\bit\(|\bdescribe\(", following):
-                findings.append((lineno, PLAN_TEST_PROMISE))
-
-    return sorted(set(findings))
-
-
-def _plan_stage_weight(task_slug):
-    """What this issue's approach says the plan stage weighs, or None.
-
-    Read so the lint can check its own explanation for a missing design
-    against the record, instead of offering a reason that may not apply.
-    Returns None when the manifest cannot be read - an unreadable record is not
-    evidence that the stage collapsed.
-    """
-    try:
-        task, _path = load_manifest(resolve_issue_dir(task_slug))
-    except CompassError:
-        return None
-    stages = task.get("stages") or {}
-    if not isinstance(stages, dict):
-        return None
-    weight = stages.get(STAGE_PLAN)
-    return str(weight).strip().lower() if weight else None
-
-
-def cmd_plan_lint(args):
-    from compass_pkg.terminal import relative_to_project
-    # The default path goes through `artifact_path`, which knows both the name
-    # this framework writes today and the one a landed issue still holds. This
-    # function joined the filename itself, and got it wrong twice: first left
-    # at `plan.md` after the artifact became `design.md`, then moved to
-    # `technical-design.md` with no fallback, which broke it on every issue
-    # that landed holding `design.md`. Every other artifact reader in the CLI
-    # goes through the resolver; this one now does too.
-    if args.file:
-        path = args.file
-    else:
-        task_dir = resolve_issue_dir(args.task)
-        path = artifact_path(task_dir, "technical-design.md")
-
-    if not os.path.isfile(path):
-        print(f"compass plan lint: ERROR - no such file: {relative_to_project(path)}")
-        # Say why it might legitimately be absent AND check that reason against
-        # the record, rather than explaining away an absence the approach says
-        # should not happen.
-        weight = _plan_stage_weight(getattr(args, "task", None))
-        if weight in ("collapsed", "skipped"):
-            print("  This issue's approach records the plan stage as %s, so it "
-                  "has no technical-design.md to lint." % weight)
-        elif weight:
-            print("  This issue's approach records the plan stage as %s, so a "
-                  "technical-design.md is expected and is missing." % weight)
-        else:
-            print("  The plan stage collapses on quick-fix, hotfix and spike "
-                  "approaches, so an issue on one of those has no "
-                  "technical-design.md to lint.")
-        return 2
-
-    with open(path, encoding="utf-8") as fh:
-        findings = _plan_lint_findings(fh.read())
-
-    if not findings:
-        print(f"compass plan lint: PASS - no placeholders found in {relative_to_project(path)}")
-        return 0
-
-    noun = "placeholder" if len(findings) == 1 else "placeholders"
-    print(f"compass plan lint: {len(findings)} possible {noun} in {relative_to_project(path)} [advisory]")
-    for lineno, phrase in findings:
-        print(f"  line {lineno}: {phrase}")
-    print("\n  Advisory, not a gate - this exits 0. Assess these as judgment in "
-          "the strategies\n  walk of the governance check, and either fill them in "
-          "or record why they stand.")
-    return 0
-
-
 def delivery_approach_errors(task):
     """An unknown `delivery_approach`, reported by the built-in lint so the
     check does not depend on the optional `jsonschema` package. An old route
-    name is accepted: it is read as its current one (ADR-006)."""
+    name is accepted: it is read as its current one (ADR-006). A manifest on the
+    four-stage path records `delivery` (ADR-092), which is no approach of the
+    policy, so it is accepted there only."""
     from compass_pkg.core import SHAPE_VALUE_MAP
+    from compass_pkg.path_stages import is_path_issue
+    from compass_pkg.stable_ids import APPROACH_DELIVERY
     value = task.get("delivery_approach")
-    if value is None or value in ROUTE_NAMES or value in SHAPE_VALUE_MAP:
+    if value is None or value in LEGACY_ROUTE_NAMES or value in SHAPE_VALUE_MAP:
+        return []
+    if value == APPROACH_DELIVERY and is_path_issue(task):
         return []
     return [f"`delivery_approach: {value}` is not a delivery approach; the "
-            f"approaches are {', '.join(ROUTE_NAMES)}"]
+            f"approaches are {', '.join(LEGACY_ROUTE_NAMES)}"]
 
 
 def raised_by_errors(task):
     """A malformed `raised_by`, reported by the built-in lint for the same
     reason as `delivery_approach_errors`: jsonschema is optional."""
-    from compass_pkg.lineage import FOUND_AT
+    from compass_pkg.lineage import FOUND_AT, places_text
     raised = task.get("raised_by")
     if raised is None:
         return []
@@ -544,7 +260,7 @@ def raised_by_errors(task):
         return ["`raised_by` must name the parent issue: {issue: <slug>, found_at: <where>}"]
     if raised.get("found_at") not in FOUND_AT:
         return [f"`raised_by.found_at: {raised.get('found_at')}` is not a place an "
-                f"issue is found; use one of {', '.join(FOUND_AT)}"]
+                f"issue is found; use one of {places_text()}"]
     return []
 
 
@@ -555,12 +271,33 @@ def _unmatched_document_notes(task_dir):
     from compass_pkg import artifact_kinds, effective
 
     try:
-        view = effective.view_or_legacy(task_dir)
+        view = effective.effective_for(task_dir)
         names = artifact_kinds.unmatched_documents(view, task_dir)
     except Exception:  # noqa: BLE001 - a report must not fail the lint
         return []
     return ["%s: a file in the documents folder whose name matches no kind. Rename it to "
             "a kind's filename, or leave it: nothing owes it." % name for name in names]
+
+
+def _unread_config_notes(task, task_dir):
+    """A warning for a `config:` that nothing reads. 9.0.0 has no issue layer
+    (ADR-094): an 8.x issue keeps the `config:` its stored generation was
+    committed with, and any other `config:` changes nothing. A warning, not an
+    error: the key stays valid in the schema."""
+    if task.get("config") is None:
+        return []
+    from compass_pkg import effective
+    try:
+        held = effective.generation_number(task)
+        view = effective.effective_for(task_dir, task) if held else None
+        unread = view is None or view.pending_config(task)
+    except Exception:  # noqa: BLE001 - a report must not fail the lint
+        unread = True
+    if not unread:
+        return []
+    return ["warning: config: is not read. An issue has no config layer in 9.0.0 "
+            "(ADR-094); delete the key, or record a waiver for one check with "
+            "compass waiver add."]
 
 
 def cmd_task_lint(args):
@@ -650,18 +387,11 @@ def cmd_task_lint(args):
         errs += assessment_key_errors(task.get("assessment"))
     if je:
         errs += je
-    # Labels and the page on GitHub: a report beside the result. It never changes the exit
-    # code, so an unreachable GitHub cannot fail `compass ci`.
-    notes = []
+    # Notes beside the result. They never change the exit code.
+    notes = _unread_config_notes(task, os.path.dirname(os.path.abspath(path)))
     if not args.file:
-        from compass_pkg import github_labels, github_page
         task_dir = os.path.dirname(os.path.abspath(path))
-        notes = github_labels.lint_notes(task, task_dir) + github_page.lint_notes(task, task_dir)
         notes += _unmatched_document_notes(task_dir)
-        from compass_pkg import decision_scope, design_size, verification_plan
-        notes += verification_plan.lint_notes(task, task_dir)
-        notes += design_size.lint_notes(task, task_dir)
-        notes += decision_scope.lint_notes(task, task_dir)
     if errs:
         print(f"compass issue lint: FAIL - {relative_to_project(path)}")
         for e in errs:

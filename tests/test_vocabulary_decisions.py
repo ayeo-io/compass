@@ -652,7 +652,9 @@ def test_vr_g12_stable_ids_holds_each_depth_word_once():
     assert stable_ids.MODE_THOROUGH_WITH_FOLLOW_UP == "thorough-with-follow-up"
     assert stable_ids.DEPTH_THOROUGH == "thorough"
     assert stable_ids.DEPTH_LIGHTWEIGHT == "lightweight"
-    ranks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "stages.yml")
+    # The frozen `default@7` declares each word; the shipped default's path stages
+    # declare only the modes its two approaches name since 9.0.0 (ADR-092).
+    ranks = yaml.safe_load((ROOT / "tests" / "fixtures" / "presets" / "default@7" / "stages.yml")
                            .read_text(encoding="utf-8"))["stages"]
     declared = {mode for body in ranks.values() for mode in body["modes"]}
     assert {stable_ids.MODE_THOROUGH, stable_ids.MODE_LIGHTWEIGHT,
@@ -699,16 +701,14 @@ HOOK_OLD_WORD_RE = re.compile(
 RETIRED_NAME_WORDS = ("build", "phase")
 
 RETIRED_NAME_ALLOW = (
-    ("analyze.py", '"build": STAGE_IMPLEMENT',
-     "the table that reads a run stage written before the rename"),
     ("core.py", '"build": "implement"',
      "the table of retired stage names that the loader reads through"),
     ("core.py", 'for key in ("phase", "stage"):',
      "the loader reads a friction record's retired key beside the new one"),
     ("migrate.py", '"build": "implement",',
      "the archive migration's table of retired stage names"),
-    ("obligations.py", 'renames.get(b["phase"], b["phase"])',
-     "a blocked-phase record has a phase field that is not a friction key"),
+    ("core.py", 'v1=key == "phase"',
+     "a friction record under the retired key is a v1 record, so its stage is renamed"),
     ("pytest_report.py", '"__pycache__", "build", "dist"',
      "build is a directory name to skip, not a stage"),
     ("routing.py", '{"phase": rr["block_phase"]',
@@ -806,7 +806,7 @@ def test_the_shipped_example_manifests_are_written_in_the_current_words():
     from compass_pkg import core, word_map            # core binds the table reader
     assert core
     manifests = sorted((ROOT / "examples").rglob("manifest.yml"))
-    assert len(manifests) >= 9, manifests
+    assert len(manifests) >= 6, manifests
     old = {str(p.relative_to(ROOT)): word_map.old_words(
                yaml.safe_load(p.read_text(encoding="utf-8")))
            for p in manifests}

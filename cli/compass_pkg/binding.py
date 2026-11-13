@@ -15,33 +15,41 @@
 # edit makes the record stale. It is built from a copy of the real index, so
 # git re-hashes only the files that changed.
 #
-# `changes_id` is a tree of the issue's own files: its `changed_files` and the
-# test files its scenarios declare, which a record marks with
-# `changes_scope`. A landed issue is judged by it: the commit that landed the
-# issue also carries its artifacts, and HEAD moves on afterwards, but the
-# issue's own files in that commit must be the files that were tested. A
-# declared test counts even when `changed_files` does not list it, because
-# the green stood on it. Re-running the suite on any checkout where
-# they are the same clears a mismatch.
+# `file_sha256` maps each of the issue's own files - its `changed_files` and
+# the test files its scenarios declare, which a record marks with
+# `changes_scope` - to the SHA-256 of its bytes, as `sha256sum` prints it
+# (ADR-089). `test_files` lists the declared tests among them. A landed issue
+# is judged by them: the commit that landed the issue also carries its
+# artifacts, and HEAD moves on afterwards, but the issue's own files in that
+# commit must be the files that were tested. A declared test counts even when
+# `changed_files` does not list it, because the green stood on it.
+# Re-running the suite on any checkout where they are the same clears a
+# mismatch.
+#
+# A record written before ADR-089 carries `changes_id` instead: a tree of the
+# same files that no commit reaches. It is still read, by building the same
+# tree from the landed commit and comparing the two ids.
 #
 # WHAT IT DOES NOT PROVE. The ids are written by the process that ran the test
 # and are covered by the record's digest. They show which tree a record
 # claims; they do not prove a trusted runner made the claim.
 #
-# DEPENDENCY: standard library (os, re, shutil, subprocess, tempfile) and
-# compass_pkg.core, check_results and red_first. tdd.py imports from here, so
+# DEPENDENCY: standard library (hashlib, os, re, shutil, stat, subprocess, tempfile) and
+# compass_pkg.core, check_results, gate_status and red_first. tdd.py imports from here, so
 # this module must not import tdd.py.
 # =============================================================================
 """Which tree a test record ran on, and whether that is still the tree."""
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shutil
+import stat
 import subprocess
 import tempfile
 
-from compass_pkg import status_words
+from compass_pkg import gate_status, landing, status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import CompassError, find_upwards, load_manifest
 from compass_pkg.red_first import load_record
@@ -52,13 +60,14 @@ _OUTSIDE_THE_TREE = (".compass", "docs/compass")
 _COMMIT_ID = re.compile(r"^[0-9a-f]{40}([0-9a-f]{24})?$")
 
 
-def _git(args, cwd, env=None):
+def _git(args, cwd, env=None, text=True):
     # Claimed paths are file names, never pathspec magic: `:x.py` means a
-    # file called `:x.py`.
+    # file called `:x.py`. `text=False` gives the output as bytes, for a file
+    # that is hashed.
     env = dict(env or os.environ, GIT_LITERAL_PATHSPECS="1")
     try:
         return subprocess.run(["git", *args], cwd=cwd, capture_output=True,
-                              text=True, timeout=60, env=env)
+                              text=text, timeout=60, env=env)
     except (OSError, subprocess.SubprocessError):
         return None
 
@@ -135,26 +144,147 @@ def work_tree_id(project_root, claimed=()):
     return _in_temp_index(top, steps, seed)
 
 
-def changes_id(project_root, claimed=()):
-    """`changes_id`: a tree of the claimed files alone, as they are on disk."""
+def _counted(top, project_root, claimed):
+    """`(project-relative path, path from the repository top)` for each
+    claimed file a record covers: a regular file inside the repository that
+    git tracks, or would add because it is not ignored. A file git already
+    tracks counts even when it matches `.gitignore` (it was added with `-f`),
+    as the commit side counts it."""
+    pairs = []
+    for rel in claimed:
+        found = _relative(top, project_root, [rel])
+        if found:
+            pairs.append((rel, found[0]))
+    if not pairs:
+        return []
+    tops = [t for _, t in pairs]
+    listed = _git(["ls-files", "-z", "--", *tops], top)
+    tracked = (set(listed.stdout.split("\0")) if _ok(listed) else set())
+    ignored = _git(["check-ignore", "-z", "--no-index", "--", *tops], top)
+    skipped = set(ignored.stdout.split("\0")) if ignored is not None else set()
+    return [(rel, t) for rel, t in pairs if t in tracked or t not in skipped]
+
+
+def _file_mode_trusted(top):
+    """Does git read the executable bit from the disk here? `core.fileMode`
+    false says it does not, as on most Windows checkouts."""
+    found = _git(["config", "--type=bool", "core.fileMode"], top)
+    return not (_ok(found) and found.stdout.strip() == "false")
+
+
+def file_digests(project_root, claimed=()):
+    """`(file_sha256, file_modes)` for the claimed files as they are on disk,
+    keyed by the path relative to the project root (ADR-089), or None outside
+    a git repository.
+
+    `file_sha256` holds the SHA-256 of each file's bytes, in the lowercase
+    hexadecimal `sha256sum` prints. `file_modes` holds the mode git would
+    record, `100755` or `100644`, so a change to the executable bit alone
+    shows, as it did in the tree ids before ADR-089. Where `core.fileMode` is
+    false, git keeps a tracked file's mode from its index entry, so this does
+    too."""
     top = _toplevel(project_root)
     if top is None:
         return None
-    rels = _relative(top, project_root, claimed)
-    # A file git already tracks is counted even when it matches
-    # `.gitignore` (it was added with `-f`), as the commit side counts it.
-    # An untracked ignored file stays out: git will not commit it.
-    listed = _git(["ls-files", "-z", "--", *rels], top) if rels else None
-    tracked = (set(listed.stdout.split("\0"))
-               if listed is not None and _ok(listed) else set())
-    steps = [(["read-tree", "--empty"], True)]
-    steps += [((["add", "-f", "--", rel] if rel in tracked
-                else ["add", "--", rel]), False) for rel in rels]
-    return _in_temp_index(top, steps)
+    counted = _counted(top, project_root, claimed)
+    index_modes = {}
+    if counted and not _file_mode_trusted(top):
+        staged = _git(["ls-files", "-s", "-z", "--", *[t for _, t in counted]], top)
+        for line in (staged.stdout.split("\0") if _ok(staged) else []):
+            meta, _, name = line.partition("\t")
+            if meta:
+                index_modes[name] = meta.split()[0]
+    digests, modes = {}, {}
+    for rel, path in counted:
+        full = os.path.join(top, path)
+        try:
+            with open(full, "rb") as fh:
+                digests[rel] = hashlib.sha256(fh.read()).hexdigest()
+            executable = os.stat(full).st_mode & stat.S_IXUSR
+        except OSError:
+            digests.pop(rel, None)
+            continue
+        modes[rel] = index_modes.get(path) or ("100755" if executable else "100644")
+    return digests, modes
+
+
+def file_digests_at(project_root, commit, claimed):
+    """`{path: (sha256, mode)}` for each claimed file as `commit` (a commit or
+    a tree) holds it, or None for a path it does not hold as a regular file.
+    The bytes are read through git's checkout conversion (`cat-file
+    --filters`): line endings set by `.gitattributes` or `core.autocrlf`, and
+    smudge filters, give the bytes a checkout writes, which are the bytes the
+    record hashed on disk. Returns None when git cannot read a file."""
+    top = _toplevel(project_root)
+    if top is None:
+        return None
+    root = os.path.realpath(project_root)
+    out = {}
+    for rel in claimed:
+        path = os.path.relpath(os.path.join(root, rel), top)
+        out[rel] = None
+        entry = _git(["ls-tree", "-z", commit, "--", path], top)
+        line = entry.stdout.split("\0", 1)[0] if _ok(entry) else ""
+        if not line:
+            continue
+        meta, _, name = line.partition("\t")
+        mode, kind, _ = meta.split()
+        # A symlink is left out, as the record's own digests leave it out.
+        if kind != "blob" or mode == "120000":
+            continue
+        raw = _git(["cat-file", "--filters", "%s:%s" % (commit, name)], top, text=False)
+        if not _ok(raw):
+            return None
+        out[rel] = (hashlib.sha256(raw.stdout).hexdigest(), mode)
+    return out
+
+
+def files_that_differ(project_root, record, task, commit):
+    """The issue's files that `commit` holds differently from `record`, as
+    `(path, what)` in path order, where `what` is `content` or `mode`, or
+    None when git cannot read them. A path the record or the commit lacks
+    differs in content. The mode is compared only when the record holds
+    `file_modes`."""
+    held = record.get("file_sha256") or {}
+    modes = record.get("file_modes")
+    paths = list(dict.fromkeys(list(held) + changes_paths(task, record)))
+    landed = file_digests_at(project_root, commit, paths)
+    if landed is None:
+        return None
+    out = []
+    for path in sorted(paths):
+        now = landed.get(path)
+        if (now[0] if now else None) != held.get(path):
+            out.append((path, "content"))
+        elif now and isinstance(modes, dict) and modes.get(path) != now[1]:
+            out.append((path, "mode"))
+    return out
+
+
+def describe(differ):
+    """`a.py, b.py (mode)` for the failure messages."""
+    return ", ".join(p if what == "content" else "%s (mode)" % p for p, what in differ)
+
+
+def files_key(digests, modes=None):
+    """One string for a `file_sha256` map and its `file_modes`, to compare
+    two runs by."""
+    modes = modes or {}
+    text = "\n".join("%s %s  %s" % (digests[p], modes.get(p, ""), p)
+                     for p in sorted(digests))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def has_file_digests(record):
+    """Does the record carry the digests ADR-089 added? The fields pick the
+    format: a record without them was written with `changes_id`."""
+    return isinstance(record.get("file_sha256"), dict)
 
 
 def _changes_id_at(project_root, commit, claimed):
-    """The same tree, built from the claimed files as `commit` holds them."""
+    """The tree a record written before ADR-089 named in `changes_id`, built
+    from the claimed files as `commit` holds them. Only those records are read
+    with it; no record is written with it now."""
     top = _toplevel(project_root)
     if top is None:
         return None
@@ -183,8 +313,9 @@ def claimed_paths(task):
             if isinstance(e, dict) and isinstance(e.get("path"), str)]
 
 
-#: The `changes_scope` of a record whose `changes_id` covers the declared
-#: tests too. A record without it was built from `changed_files` alone.
+#: The `changes_scope` of a record whose `file_sha256` (or, before ADR-089,
+#: `changes_id`) covers the declared tests too. A record without it was built
+#: from `changed_files` alone.
 CHANGES_SCOPE = "changed-files-and-declared-tests"
 
 
@@ -209,7 +340,7 @@ def declared_test_paths(task):
 
 
 def changes_paths(task, record=None):
-    """The files `changes_id` covers: `changed_files` and the declared tests,
+    """The files a record's digests cover: `changed_files` and the declared tests,
     or, for a record built without `changes_scope`, `changed_files` alone."""
     claimed = claimed_paths(task)
     if record is not None and record.get("changes_scope") != CHANGES_SCOPE:
@@ -224,8 +355,9 @@ def changes_paths(task, record=None):
 
 
 def ids_for(task_dir):
-    """The two ids a record written for this issue now should carry, as a
-    dict with only the ids git could name."""
+    """The ids a record written for this issue now should carry: `tree_id`,
+    `file_sha256`, `file_modes` and `test_files`, with only what git could
+    name."""
     root = find_upwards(task_dir, ".compass")
     if not root:
         return {}
@@ -234,17 +366,25 @@ def ids_for(task_dir):
     except (CompassError, OSError, ValueError):
         task = {}
     task = task if isinstance(task, dict) else {}
-    ids = {"tree_id": work_tree_id(root, claimed_paths(task)),
-           "changes_id": changes_id(root, changes_paths(task))}
-    ids = {k: v for k, v in ids.items() if v}
-    if "changes_id" in ids:
-        ids["changes_scope"] = CHANGES_SCOPE
+    ids = {}
+    tree = work_tree_id(root, claimed_paths(task))
+    if tree:
+        ids["tree_id"] = tree
+    found = file_digests(root, changes_paths(task))
+    if found is not None:
+        digests, modes = found
+        tests = set(declared_test_paths(task))
+        ids.update(file_sha256=digests, file_modes=modes,
+                   test_files=sorted(p for p in digests if p in tests),
+                   changes_scope=CHANGES_SCOPE)
     return ids
 
 
 def _newest_bound_record(task, task_dir):
     """The newest test-run record that carries a tree id, as (path, record).
-    Only the newest is judged: it is the run the issue ships on."""
+    Only the newest is judged: it is the run the issue ships on. Timestamps
+    are whole seconds, and records are listed in the order they were written,
+    so of two records from the same second the one listed later wins."""
     root = os.path.realpath(task_dir)
     newest = None
     for entry in task.get("evidence") or []:
@@ -256,13 +396,13 @@ def _newest_bound_record(task, task_dir):
         record = load_record(full)
         if not record.get("tree_id") or not isinstance(record.get("timestamp"), str):
             continue
-        if newest is None or record["timestamp"] > newest[1]["timestamp"]:
+        if newest is None or record["timestamp"] >= newest[1]["timestamp"]:
             newest = (entry.get("path"), record)
     return newest
 
 
-def _check_landed(task, root, path, record):
-    land = task.get("land_commit")
+def _check_landed(task, task_dir, root, path, record):
+    land = landing.land_commit(task, task_dir)
     if not land:
         return NOTHING_TO_CHECK, ("landed with no land_commit recorded, so "
                                   "there is no landed tree to compare")
@@ -277,6 +417,18 @@ def _check_landed(task, root, path, record):
         return NOTHING_TO_CHECK, ("land_commit %s is not in this clone - a "
                                   "squash merge or a shallow clone - so the "
                                   "landed files cannot be compared" % land[:12])
+    if has_file_digests(record):
+        differ = files_that_differ(root, record, task, land)
+        if differ is None:
+            return False, ("the files this issue changed could not be read from "
+                           "land_commit %s" % land[:12])
+        if differ:
+            return False, ("%s tested this issue's files, but in the commit that "
+                           "landed them (%s) these files are not the tested files "
+                           "- their SHA-256 or their mode differs: %s"
+                           % (path, land[:12], describe(differ)))
+        return True, ("%s tested the files the landing commit %s holds"
+                      % (path, land[:12]))
     if not record.get("changes_id"):
         return NOTHING_TO_CHECK, ("%s carries no changes_id, so the issue's "
                                   "own files cannot be compared" % path)
@@ -325,10 +477,10 @@ def _check_evidence_matches_tree(task, task_dir):
     path, record = newest
     root = find_upwards(task_dir, ".compass") or task_dir
     if status_words.is_completed(task):
-        return _check_landed(task, root, path, record)
+        return _check_landed(task, task_dir, root, path, record)
 
-    gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
-    ready = bool(gates) and all(g.get("status") == "pass" for g in gates)
+    # A removed gate left pending does not hold the check back (`gate_status`).
+    ready = gate_status.all_gates_passed(task)
     state = evidence_state(task, task_dir)
     if state == "unknown":
         why = "git cannot name the tree now, so %s cannot be compared" % path

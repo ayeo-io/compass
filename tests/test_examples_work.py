@@ -48,7 +48,7 @@ def _sandbox(name):
 
 def test_there_are_route_examples_to_check():
     """Guards the guard: a parametrised test over an empty list passes silently."""
-    assert len(ROUTE_EXAMPLES) >= 4, (
+    assert len(ROUTE_EXAMPLES) >= 2, (
         f"expected the shipped route walkthroughs, found {ROUTE_EXAMPLES}")
 
 

@@ -1,8 +1,11 @@
 # Compass - Runtime-Neutral Agent Instructions
 
 This file is the portable expression of Compass. `CLAUDE.md` is the Claude
-Code adapter; this file is the same intent without runtime-specific syntax,
-for any other agent runtime (Codex, Amp, Cursor, OpenCode, a custom harness).
+Code adapter; this file is the same intent without runtime-specific syntax.
+
+Compass 9.0.0 supports Claude Code only. The Codex adapter stays on 8.x, and
+9.0.0 ships no adapter for another runtime. This file is the contract that a
+port to another agent runtime must satisfy.
 
 It speaks the frozen v2 vocabulary (`governance/terminology.yml`). Commands,
 filenames and machine keys use their v2 names; a name that reads oddly
@@ -40,8 +43,8 @@ mechanism, not judgment: a portable runtime must shell out to
 `compass approach evaluate` (the kit-layer CLI) rather than reimplement the
 composition, so that the same assessment plus the same policy yield the same
 approach on every runtime. The runtime records the assessment in the manifest
-(`manifest.yml`), runs the evaluator, and writes the human-readable approach
-record (`delivery-approach.md`). The approach is computed from context, not
+(`manifest.yml`) and runs the evaluator, which writes the approach to the
+manifest; `compass approach show` prints it. The approach is computed from context, not
 chosen from a menu. Genuinely exploratory work is not exempt from
 assessment - it composes a **spike**.
 
@@ -55,20 +58,21 @@ intent-recognition is an adapter responsibility (it is *when* to trigger
 assessment, not what assessment does); methodology describes the stage,
 this rule describes the trigger.
 
-**2. Walk the eight-stage pipeline:**
+**2. Walk the four-stage path (ADR-092):**
 
-1. assess
-2. define acceptance criteria
-3. requirements review
-4. plan
-5. break down the work
-6. implement
-7. test & review
-8. ship
+1. assess - rate the change; the CLI computes the evidence it owes
+2. specify - write the scenarios and declare their tests
+3. build - write the tests and the code; the tests fail without the change and pass with it
+4. ship - the gates with their evidence, the approval and the commit
 
-The delivery approach says which stages are full-weight, which collapse, and
-which are skipped - and why. Each stage emits its artifact (templates in
-`templates/`) to the issue's working directory.
+Every delivery change runs the same four stages; the assessment adds only a
+person's approval (scenarios, sign-off), not which stages run. A spike explores and
+concludes, and ships nothing. Each `compass` verb that writes a record of the
+issue prints a `next:` line with the command to run next, and `compass next`
+prints it at any time, so a runtime follows those lines rather than
+re-deriving the order. The one document Compass needs and checks is
+`acceptance-criteria.md` (ADR-091); every other stage leaves records in the
+manifest, and a team can keep its own notes.
 
 **3. Enforce the guardrails - few, hard, never crossed:**
    - **Tested before it ships:** no code reaches `main` without a passing
@@ -77,82 +81,79 @@ which are skipped - and why. Each stage emits its artifact (templates in
      checkable acceptance criterion.
    - **Traceability:** code → criterion → intent, and claim → criterion.
    - **Evidence, not assertion:** guardrails clear with command output, not
-     claims. The Definition of Done is itself a typed gate - every unchecked
-     item must reference typed inline evidence as `(evidence: EV-<id>)` or a
-     filed follow-up as `(follow-up: FU-<id>)`, or be ticked `[x]` if a human
-     has actually done the work. Bare unchecked items fail `compass check`'s
-     `dod-evidence-typed` rule. An adapter that emits Definition of Done
-     output must emit it in this form.
+     claims. Where a project needs the Definition of Done, it is a typed gate -
+     each item is met by a record in the manifest: typed evidence (`--meets <item>`), a
+     person's approval, or a follow-up that defers the item and links to the
+     GitHub issue that tracks the work (`compass follow-up add FU-<id>
+     --defers <item> --github owner/repo#N`). An item with no record fails
+     `compass check`'s `dod-evidence-typed` rule, and a tick written on a
+     page counts for nothing.
    - **Human sign-off on the irreversible:** data, money, auth, privacy get a
      human checkpoint.
 
    **BDD and TDD are default *strategies*, not guardrails** - the strong,
    shipped-on way to satisfy the first two guardrails. A runtime enforces
    the red-before-green strategy *mechanically* when its own mechanism
-   allows it (Claude Code uses a pre-tool hook that is aware of the
-   delivery approach and does not block on a spike); otherwise it enforces
-   it procedurally. But what a runtime must always enforce is the
+   allows it (Claude Code: `compass quick-fix finish` proves the tests fail
+   on a copy of the base commit; the pre-tool hook refuses a code edit only
+   on an issue that needs a person's scenario approval first);
+   otherwise it enforces it procedurally. But what a runtime must always enforce is the
    guardrail *outcome* (tested before it ships), not the ritual.
 
    The guardrail *checks* are mechanism, not judgment - so a portable
    runtime must run them via the kit-layer CLI rather than reimplement
-   them: `compass check` runs the `governance/guardrails.yml` checks against
-   the issue's manifest and `evidence/`, and `compass tdd-red` /
-   `compass tdd-green` run a test, assert fail/pass, and write the evidence
-   records the checks read. Gate evidence in the manifest is **typed** - a
-   `{type, path}` record, not a bare path - and `guardrails.yml` declares
+   them: `compass check` runs the checks of the fixed check set
+   (`governance/check-set.yml`) against
+   the issue's manifest and `evidence/`, and `compass quick-fix
+   finish` runs the tests, asserts fail on the base copy and pass in the
+   working tree, and writes the evidence records the checks read. Gate evidence in the manifest is **typed** - a
+   `{type, path}` record, not a bare path - and the check set declares
    which evidence types each gate accepts, so a mechanical gate cannot be
    cleared with a written note; `compass check` enforces that. The runtime's
    job is to *call* these at the right stages, not to re-derive what they do.
-   The shipped guardrails and strategies apply with no setup; a project adds
-   its own governance later.
+   The shipped guardrails and strategies apply with no setup; a project can
+   later add to them with the tighten-only settings of `compass.yml`.
 
    **Artifacts are written for a cold reader.** Every artifact a runtime
    emits is read later by someone who was not in the conversation, so it
    states its context before its detail, resolves its own references rather
    than pointing at a discussion, and stops when it has said the thing.
    Commit messages and pull-request bodies the runtime generates carry no
-   agent co-author trailer and no "Generated with" footer; `devlog.md` and
-   the manifest already record provenance in a form the framework can read.
+   agent co-author trailer and no "Generated with" footer; the manifest and
+   the evidence records already record provenance in a form the framework can read.
    Like every strategy this is assessed at review, never gating.
 
-**4. Support five roles, each with its own entry point.** Engineer, product
-owner/manager, product marketer, designer, QA. Each has an entry point and
-artifacts that plug into the same pipeline. The acceptance-criteria file is
-the one file all five roles read - do not reduce it to an engineering-only
-artifact.
+**4. Keep the acceptance criteria readable by everyone.** A product owner, a
+designer, a marketer or QA reads `acceptance-criteria.md` as well as the
+engineer, so do not reduce it to an engineering-only artifact. A brief from
+any of them opens the Summary and Intent of the acceptance criteria. 9.0.0
+has no role entry points (ADR-093); the session itself takes a role's
+perspective when the work needs it.
 
-**5. Support solo / pair / multiagent orchestrations.** On larger delivery
-approaches, the plan stage produces a distribution map and the breakdown
-stage parallelizes across isolated workspaces (git worktrees in the
-reference implementation), one agent per subtask, with a coordinating
-orchestrator that owns integration at ship time. A runtime without
-worktrees must give equivalent isolation or cap itself at solo/pair.
+**5. Support solo delivery.** On a larger change, the session builds the
+work units one after another in one session. Compass 9.0.0 starts no agent and no worktree per
+subtask (ADR-090), so a runtime needs no isolated workspaces.
 
-**6. Shell out for CI and the feedback loop too.** Two cross-issue kit
-commands complete the contract, and a portable runtime must call them
-rather than reinvent them. `compass ci` runs the full mechanical gate suite
-(`policy lint` + `issue lint` + `check` for every issue) and aggregates exit
-codes - the CI integration is "run `compass ci`, honor the exit code" (see
-`ci/README.md`). `compass retro` aggregates the `reassessments` log across
-issues and reports whether assessment is systematically over- or under-sizing
-the process - the framework's own retrospective signal. The adapter wires
-these into the runtime's CI and reporting surfaces; it does not re-derive
-them.
+**6. Shell out for CI too.** One cross-issue kit command completes the
+contract, and a portable runtime must call it rather than reinvent it.
+`compass ci` runs the full mechanical gate suite (`policy lint` + `issue
+lint` + `check` for every issue) and aggregates exit codes - the CI
+integration is "run `compass ci`, honor the exit code" (see
+`ci/README.md`). The adapter wires it into the runtime's CI; it does not
+re-derive it.
 
 ## What a runtime adapter must give
 
 | Methodology concept | Adapter must map it to… |
 |---|---|
-| The eight stages | Invocable commands or equivalent |
+| The four stages | One command that runs them, following each `next:` line, `compass quick-fix start` and `compass quick-fix finish` as the two commands of a change |
 | Assess | A routine that produces the assessment, then *calls the kit* (`compass approach evaluate`) to compose the delivery approach |
-| The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check`, `compass tdd-red/green`, and `compass analyze` (cross-artifact consistency check) for the deterministic parts |
-| CI and the feedback loop | A shell-out to `compass ci` (honor the exit code), `compass retro` (the retrospective signal), `compass rework-scan` (cross-issue rework signal), and `compass flow` (cross-issue view; `--digest` writes a dated digest combining rework-scan and the retrospective signal) |
-| Subagents (`router`, `spec-author`, `planner`, `orchestrator`, `builder`, `verifier`, `reviewer`, `product-owner`, `product-marketer`, `architect`) | Distinct agent contexts or personas. The 10th - `architect` - applies the architect perspective (not an entry-point role): reads the project's `architecture/` artifacts (system-context, relations, ownership, decision records) at the assess stage and annotates the technical design via `architecture-notes.md`. Consulted by `spec-author` and `planner`; never writes feature code |
+| The kit-layer CLI | A shell-out, not a reimplementation - the adapter runs `compass approach evaluate`, `compass check` and `compass quick-fix start/finish` for the deterministic parts |
+| CI and the cross-issue view | A shell-out to `compass ci` (honor the exit code) and `compass flow` (cross-issue view; `--digest` writes a dated digest of the backlog) |
+| Role perspectives (product owner, product marketer, architect) | Taken by the session itself; 9.0.0 ships no subagents (ADR-090) and no role entry points (ADR-093). The architect perspective reads the project's `architecture/` artifacts and annotates the design via `architecture-notes.md`; it never writes feature code |
 | Skills | Loadable procedural-knowledge modules |
-| Guardrail enforcement | `compass check` for the mechanical checks; hooks if available for red-before-green, procedural checks otherwise |
-| Role entry points | Distinct session-start modes |
-| Per-issue next-step + follow-up management | The adapter wires `compass next` (surface the next action on the current issue) and `compass follow-up resolve` (mark an owed follow-up as settled) into its issue-resumption and shipping flows |
+| Guardrail enforcement | `compass check` for the mechanical checks; `compass quick-fix finish` for red-before-green; a hook, if available, for the scenario approval before code |
+| Per-issue next-step + follow-up management | The adapter wires `compass next` (surface the next action on the current issue) and `compass follow-up add --github` (link an owed follow-up to the GitHub issue that tracks it) into its issue-resumption and shipping flows; `compass follow-up resolve` settles a follow-up of an issue assessed before 9.0.0 |
 | Decision-record creation | `compass adr new` (creates a numbered decision record under `architecture/decisions/`) - the adapter exposes this in whatever shape its agents use for recording architectural decisions |
 
 The kit layer (`cli/compass`, `governance/*.yml`, `schemas/`, `manifest.yml`) is
@@ -168,7 +169,7 @@ narrates the pipeline instead of communicating a decision teaches nothing.
 `skills/compass-runtime/writing-voice.md` states the rule in one line,
 carries real before/after pairs harvested from this project's own archive,
 and names the tells that mark the narrating kind. A runtime's session-facing
-output - devlog entries, requirements reviews, replies to the person driving
+output - review hand-offs, replies to the person driving
 it - must read the way that reference asks: what happened, what is
 needed, never which stage is running.
 
@@ -252,23 +253,23 @@ such as D272.
 All issue state is files, not conversation:
 
 - `compass.yml` at the project root - the one file a person edits: the
-  project's settings and its changes to the shipped default, which stays in
-  force beneath it (`docs/configuration.md`). `compass policy show` prints the
-  configuration in force. A project from 5.x may still hold a
+  project's settings, which can only add to the fixed check set
+  (`docs/configuration.md`). `compass policy show` prints the check set, its
+  digest and the settings applied. A project from 5.x may still hold a
   `.compass/config.yml` or a copied `governance/` directory; it keeps running
-  on them until `compass policy migrate` (`docs/upgrade-6-0-0.md`);
+  on them until `compass policy migrate` on 8.x (`docs/upgrade-6-0-0.md`);
 - each issue's documents in `docs/compass/<created>-<issue-slug>/`;
 - each issue's machine state in `.compass/work/<issue-slug>/`: `manifest.yml`
-  (the manifest), `evidence/` (the CLI's test and gate records), the markers
-  and `devlog.md`;
+  (the manifest), `evidence/` (the CLI's test and gate records) and the
+  markers; an issue assessed before the path also keeps its `devlog.md`;
 - when the project ships an `architecture/` directory, two derived files the
   assess stage writes when present: `architecture-loaded.yml` (the per-issue
   snapshot of which cross-issue architectural state was loaded) and
   `architecture-notes.md` (annotations the architect perspective writes on
-  the technical design, *not* a parallel spec);
+  the change, *not* a parallel spec);
 - a `.compass/current-task` pointer so the CLI and any hooks resolve the
   current issue unambiguously.
 
 A different session, agent, or runtime must be able to resume an issue by
-reading the approach record (`delivery-approach.md`), the manifest, and the
-artifacts - nothing essential lives only in context.
+reading the manifest, the evidence and `acceptance-criteria.md` - nothing
+essential lives only in context.

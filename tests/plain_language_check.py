@@ -87,28 +87,16 @@ class Hit:
 PRESET_DIR = REPO_ROOT / "governance" / "presets" / "default"
 
 
-def _guardrail_meanings(preset: Path = PRESET_DIR,
-                        guardrails: Path | None = None) -> dict[str, set[str]]:
-    """Each default guardrail's words, from the preset's gates.
-
-    The preset is the source of the shipped defaults and guardrails.yml is a
-    view generated from it, so the preset is read first. The view is read
-    only when the preset's gates file is absent.
-    """
-    gates_file = preset / "gates.yml"
-    if gates_file.is_file():
-        doc = yaml.safe_load(gates_file.read_text(encoding="utf-8")) or {}
-        return {gid: _words(f"{g.get('name','')} {g.get('statement','')}")
-                for gid, g in (doc.get("gates") or {}).items()
-                if g.get("kind") == "guardrail" and (g.get("applies_to") or {}).get("ships")}
-    path = guardrails or REPO_ROOT / "governance" / "guardrails.yml"
-    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    out = {}
-    for g in doc.get("defaults") or []:
-        gid = g.get("id")
-        if gid:
-            out[gid] = _words(f"{g.get('name','')} {g.get('statement','')}")
-    return out
+def _guardrail_meanings() -> dict[str, set[str]]:
+    """Each default guardrail's words, from the gates of the check set
+    (`governance/check-set.yml`, ADR-094): every guardrail gate of an approach
+    that ships."""
+    doc = yaml.safe_load((REPO_ROOT / "governance" / "check-set.yml")
+                         .read_text(encoding="utf-8")) or {}
+    return {gid: _words(f"{g.get('name','')} {g.get('statement','')}")
+            for gid, g in (doc.get("gates") or {}).items()
+            if isinstance(g, dict) and g.get("kind") == "guardrail"
+            and (g.get("applies_to") or {}).get("ships", True) is not False}
 
 
 def _strategy_meanings() -> dict[str, set[str]]:
@@ -135,7 +123,7 @@ def gloss_registry(guardrails=None, strategies=None, codes=None) -> dict[str, se
     """What plain words count as explaining each code, read from governance.
 
     Every source is checked for emptiness by name. "a source was empty" is not
-    actionable; "guardrails.yml returned nothing" is.
+    actionable; "check-set.yml returned nothing" is.
     """
     g = _guardrail_meanings() if guardrails is None else guardrails
     s = _strategy_meanings() if strategies is None else strategies
@@ -145,8 +133,8 @@ def gloss_registry(guardrails=None, strategies=None, codes=None) -> dict[str, se
     if empty:
         raise EmptyRegistry(
             f"the gloss registry is empty from: {', '.join(empty)}. "
-            f"Derived from the default preset's gates (guardrails.yml, "
-            f"generated from them, when the preset is absent), the strategy headings in "
+            f"Derived from the guardrail gates of the check set (check-set.yml), "
+            f"the strategy headings in "
             f"strategies.md, and terminology.yml's codes: block. With no "
             f"meanings on record every code looks unexplainable, so this "
             f"refuses to report a count of zero - a zero here would be "

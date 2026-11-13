@@ -114,57 +114,6 @@ def test_trc_b1_the_write_date_is_not_used(tmp_path):
         "directory from something that moves")
 
 
-def test_trc_b1_a_registered_document_is_found_where_it_was_written(tmp_path):
-    """The end-to-end claim: write it there, register it, a reader finds it.
-
-    Registering goes through the CLI rather than a hand edit, for the same
-    reason a gate does: a path typed into YAML by an agent is a claim, and one
-    the CLI wrote is a record.
-    """
-    sys.path.insert(0, str(ROOT / "cli"))
-    from compass_pkg import core
-
-    task_dir = _project(tmp_path)
-    rel = os.path.join(core.docs_dir(str(task_dir)), "acceptance-criteria.md")
-    doc = tmp_path / rel
-    doc.parent.mkdir(parents=True, exist_ok=True)
-    doc.write_text("# Acceptance criteria\n", encoding="utf-8")
-
-    r = _cli(tmp_path, "issue", "artifact", "set", "acceptance-criteria",
-             "--status", "draft", "--path", rel)
-    assert r.returncode == 0, r.stdout + r.stderr
-
-    entry = next(a for a in yaml.safe_load(
-        (task_dir / "manifest.yml").read_text())["artifacts"]
-        if a["kind"] == "acceptance-criteria")
-    assert entry.get("path") == rel, (
-        f"the registry records {entry.get('path')!r}, not the path the "
-        f"document was written to")
-
-    state, found, _reason = core.resolve_artifact(
-        str(task_dir), "acceptance-criteria")
-    assert state == core.FOUND and os.path.samefile(found, doc), (
-        f"the resolver answered {state} for a document that is on disk at the "
-        f"registered path")
-
-
-def test_trc_b1_a_path_outside_the_project_is_refused_at_write_time(tmp_path):
-    """The registry is a file a contributor can edit, so the CLI is the place
-    to say no. Refusing only at read time means the bad entry is already
-    recorded and the refusal is a surprise later."""
-    task_dir = _project(tmp_path)
-    r = _cli(tmp_path, "issue", "artifact", "set", "acceptance-criteria",
-             "--status", "draft", "--path", "../../outside.md")
-    assert r.returncode != 0, (
-        "the CLI recorded a registry path that climbs out of the project:\n"
-        + r.stdout + r.stderr)
-    entry = next(a for a in yaml.safe_load(
-        (task_dir / "manifest.yml").read_text())["artifacts"]
-        if a["kind"] == "acceptance-criteria")
-    assert "path" not in entry, (
-        "the refusal still wrote the path, so the check ran after the damage")
-
-
 # --- `TRC-B2` -----------------------------------------------------------------
 
 def test_trc_b2_machine_state_is_named_as_staying(tmp_path):
@@ -192,8 +141,10 @@ def test_trc_b2_no_human_document_still_claims_the_work_directory():
     """
     import yaml
 
-    kinds = set(yaml.safe_load((ROOT / "governance" / "presets" / "default" /
-                                "artifacts.yml").read_text(encoding="utf-8"))["artifacts"])
+    # The live default declares no kind since 9.0.0 (ADR-091); the templates are the
+    # kinds of the last shipped catalogue, the one 8.0.4 shipped.
+    kinds = set(yaml.safe_load((ROOT / "governance" / "artifacts-8.0.4.yml")
+                               .read_text(encoding="utf-8"))["artifacts"])
     stale = []
     for name in sorted(_human_documents()):
         head = (ROOT / "templates" / name).read_text(encoding="utf-8")[:400]
@@ -261,8 +212,10 @@ def test_trc_b3_creating_the_docs_directory_is_reported():
     or committed by accident. The command that writes the first document has
     to say it made the place to put it."""
     missing, checked = [], []
-    for name in ("assess.md", "define.md", "plan.md", "verify.md",
-                 "intent.md", "refine.md", "quick-fix.md"):
+    # The `define`, `plan`, `refine` and `verify` commands went with the four-stage
+    # path (ADR-092); go and ship run those stages now. The `intent` command went
+    # with the role entry points (ADR-093).
+    for name in ("assess.md", "go.md", "ship.md", "quick-fix.md"):
         text = (ROOT / "commands" / name).read_text(encoding="utf-8")
         if "docs/compass/" not in text:
             continue
@@ -293,7 +246,7 @@ def test_trc_b3_creating_the_docs_directory_is_reported():
 
 # --- `TRC-B4` -----------------------------------------------------------------
 
-@pytest.mark.parametrize("verb", ["check", "next", "analyze"])
+@pytest.mark.parametrize("verb", ["check", "next"])
 def test_trc_b4_a_reading_command_creates_nothing(tmp_path, verb):
     """Reading is read-only, and the docs directory is the new thing a reader
     could be tempted to create on the way to looking in it."""

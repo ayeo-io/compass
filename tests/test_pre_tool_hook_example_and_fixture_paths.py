@@ -1,6 +1,6 @@
 """Eval fixture code is not production code, and nearby code still is.
 
-`evals/<group>/<name>/seed/` holds input that the eval harness copies into a
+`evals/<group>/<name>/seed/` holds input that an evaluation harness copies into a
 sandbox and never runs in place, so an edit of it needs no failing test.
 `examples/`, `cli/vendor/`, `.github/scripts/`, `evals/` outside `seed/`,
 `src/examples/` and `db/seed/` stay guarded: `enforcement.code_globs` only

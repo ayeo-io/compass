@@ -11,6 +11,22 @@ One collection error is the most ordinary first red there is: a test that
 imports a module of the project not written yet. That is an import red. A
 missing module outside the project, or any other collection error, says the
 test could not run, not that the behaviour is missing, so it is refused.
+
+The outer loop, the acceptance suite, has one more first red. Its
+driver-factory fixture imports the driver, which stage 1 has not written, so
+pytest reports a setup error that names the missing module. For the outer loop
+that is an import red too, under the same rule; for the inner loop it stays
+refused. A `conftest.py` that imports the driver at module level makes pytest
+exit 4 with no report, and the refusal names the fix (ADR-081).
+
+A runner that is not pytest is read the same way, from its own JUnit report
+(ADR-087). Compass names the report's path in COMPASS_JUNIT_REPORT, and the
+project's runner adapter writes the report there. node:test's JUnit report is
+the one read beside pytest's: a scenario whose `beforeEach` hook failed
+(`failure type="hookFailed"`) is a setup error, and a missing file the hook
+imports is the missing module, named by its path in the project. A test file
+that did not load is a collection error, and a test its describe block
+cancelled did not fail.
 """
 # DEPENDENCY: standard library only, plus compass_pkg itself.
 from __future__ import annotations
@@ -27,9 +43,26 @@ DID_NOT_RUN = "DID NOT RUN"
 NO_TEST_FAILED = "NO TEST FAILED"
 
 _REPORT_FLAGS = ("--junitxml", "--junit-xml")
+#: The variable that names the report's path to a runner adapter that is not
+#: pytest (ADR-087). pytest itself gets `--junitxml` in PYTEST_ADDOPTS.
+REPORT_VARIABLE = "COMPASS_JUNIT_REPORT"
 _MISSING = (re.compile(r"^E\s+ModuleNotFoundError: No module named '([^']+)'", re.M),
             re.compile(r"^E\s+ImportError: cannot import name '[^']+' from '([^']+)'",
-                       re.M))
+                       re.M),
+            # Node: a file the code imports, by its path, or a package by its name.
+            re.compile(r"Error \[ERR_MODULE_NOT_FOUND\]: Cannot find (?:module|package) "
+                       r"'([^']+)' imported from"))
+#: node:test's JUnit `failure` type for a scenario whose hook failed: its setup.
+_HOOK_FAILED = "hookFailed"
+#: node:test's type for a test its describe block cancelled, when the block's own
+#: `before` hook failed: the test did not run, so it did not fail.
+_CANCELLED = "cancelledByParent"
+#: node:test reports a test file that could not load (a syntax error, a missing
+#: package imported at the top) as one failed test named after the file, whose
+#: error holds only the exit code of the file's process.
+_FILE_DID_NOT_LOAD = re.compile(r"\bexitCode: \d+")
+#: A test path that node:test runs: its report names it by file and test name.
+_NODE_TEST_FILE = re.compile(r"\.[cm]?[jt]sx?$")
 # Folders that hold other people's packages, so a name found there is not a
 # module of this project.
 _NOT_THE_PROJECT = frozenset({"node_modules", "site-packages", "venv", "env",
@@ -45,7 +78,8 @@ def with_report(command):
     already set, pointing at a temporary file. pytest reads that variable
     wherever it starts - called directly, as `py.test`, or inside a
     `bash -c` string or a `make` target - so a wrapper still writes the
-    report. A runner that is not pytest ignores it.
+    report. A runner that is not pytest ignores it; its runner adapter
+    writes the report to the path in COMPASS_JUNIT_REPORT instead (ADR-087).
     """
     words = [str(c) for c in command]
     for i, word in enumerate(words):
@@ -62,7 +96,7 @@ def with_report(command):
     os.remove(path)   # pytest writes it; its absence afterwards means it did not
     addopts = os.environ.get("PYTEST_ADDOPTS", "").strip()
     flag = "--junitxml=" + shlex.quote(path)
-    return ({"PYTEST_ADDOPTS": (addopts + " " + flag).strip()},
+    return ({"PYTEST_ADDOPTS": (addopts + " " + flag).strip(), REPORT_VARIABLE: path},
             path, True, None)
 
 
@@ -97,8 +131,34 @@ def _is_package(path):
                             for n in names)
 
 
+def _project_file(path, project_root):
+    """The path of a missing file relative to the project root, when it would be
+    a file of the project: inside the root, in a folder that exists, and
+    outside folders of installed packages. None otherwise."""
+    root = os.path.realpath(project_root)
+    folder = os.path.realpath(os.path.dirname(path))
+    if folder != root and not folder.startswith(root + os.sep):
+        return None
+    rel = os.path.relpath(os.path.join(folder, os.path.basename(path)), root)
+    parts = rel.split(os.sep)[:-1]
+    if any(p in _NOT_THE_PROJECT or p.startswith(".") for p in parts):
+        return None
+    return rel.replace(os.sep, "/") if os.path.isdir(folder) else None
+
+
+def _named(module, project_root):
+    """How a refusal or a record names a missing module: a file by its path in
+    the project, anything else as reported."""
+    if os.path.isabs(module):
+        return _project_file(module, project_root) or module
+    return module
+
+
 def in_project(module, project_root):
     """Is this module's top-level package a Python package of the project?
+
+    A module named by an absolute path, as Node names a missing file, is the
+    project's when that file would be one of the project's (`_project_file`).
 
     A module not yet written cannot be told from a missing third-party
     package by its name, so the test is where its top-level package lives:
@@ -107,6 +167,8 @@ def in_project(module, project_root):
     that are not Python, does not count. Compass's own tests import `compass_pkg`
     from `cli/`, which is why the search goes below the root.
     """
+    if os.path.isabs(module):
+        return _project_file(module, project_root) is not None
     top = module.split(".")[0]
     if not top.isidentifier():
         return False
@@ -122,32 +184,140 @@ def in_project(module, project_root):
     return False
 
 
+def _missing(text):
+    found = [m.group(1) for p in _MISSING for m in p.finditer(strip_ansi(text))]
+    return found[-1] if found else None
+
+
 def _read(report_path):
-    """(failed, collection errors as [(where, missing module or None)]), or None."""
+    """(failed, collection errors, setup errors, ids of tests that failed or
+    errored), or None. Each error is (where, missing module or None); a setup
+    error is listed only when it names a missing module."""
     if not report_path:
         return None
     try:
         root = ET.parse(report_path).getroot()
     except (OSError, ET.ParseError):
         return None
-    failed, collection = 0, []
+    failed, collection, setup, broken = 0, [], [], set()
     for case in root.iter("testcase"):
+        name = case.get("name") or "?"
         for outcome in case:
+            message = outcome.get("message") or ""
+            if outcome.tag in ("failure", "error"):
+                broken.add(".".join(p for p in (case.get("classname"), name) if p))
             if outcome.tag == "failure":
-                failed += 1
-            elif outcome.tag == "error" and \
-                    (outcome.get("message") or "") == "collection failure":
-                text = strip_ansi(outcome.text)
-                found = [m.group(1) for p in _MISSING for m in p.finditer(text)]
-                collection.append((case.get("name") or "?",
-                                   found[-1] if found else None))
-    return failed, collection
+                kind = outcome.get("type")
+                if kind == _HOOK_FAILED:
+                    # node:test: the scenario's hook, its setup, failed. It is not
+                    # a failed test, as pytest's setup error is not.
+                    if _missing(outcome.text):
+                        setup.append((name, _missing(outcome.text)))
+                elif kind == _CANCELLED:
+                    pass
+                elif _NODE_TEST_FILE.search(name) \
+                        and _FILE_DID_NOT_LOAD.search(outcome.text or ""):
+                    # node:test: the file did not load, so none of its tests
+                    # ran; pytest calls that a collection error.
+                    collection.append((name, None))
+                else:
+                    failed += 1
+            elif outcome.tag == "error" and message == "collection failure":
+                collection.append((name, _missing(outcome.text)))
+            elif outcome.tag == "error" and message.startswith("failed on setup") \
+                    and _missing(outcome.text):
+                setup.append((name, _missing(outcome.text)))
+    return failed, collection, setup, broken
 
 
-def judge(report_path, code, project_root, no_run_reasons):
+def tests_ran(report_path):
+    """How many tests the report says ran, or None when there is no report or it
+    cannot be read. A skipped test did not run, so a run whose every test is
+    skipped ran none. `compass layering record` reads it, so its own module
+    holds no parser (ADR-086)."""
+    if not report_path:
+        return None
+    try:
+        root = ET.parse(report_path).getroot()
+    except (OSError, ET.ParseError):
+        return None
+    return sum(1 for case in root.iter("testcase")
+               if not any(child.tag == "skipped" for child in case))
+
+
+def failed_tests(report_path):
+    """The dotted ids, `classname.name`, of the tests the report shows failed or
+    errored, a collection error included; None when there is no report."""
+    read = _read(report_path)
+    return None if read is None else read[3]
+
+
+def covers(broken, test):
+    """Did a test declared as `path::name` fail or error, by the ids
+    `failed_tests` gives? A collection error of its file counts. The match is
+    on a suffix, so a run whose root is below the project root still counts.
+
+    A test in a JavaScript or TypeScript file is matched by its file and its
+    name: the runner adapter writes the file as the testcase's classname, so
+    its id is `<file>.<name>` (ADR-087)."""
+    path, _, name = test.partition("::")
+    if name and _NODE_TEST_FILE.search(path):
+        wanted = path.replace("\\", "/").removeprefix("./") + "." + name
+        return any(c == wanted or c.endswith("/" + wanted) for c in broken)
+    module = path[:-3] if path.endswith(".py") else path
+    module = module.replace("\\", "/").strip("/").replace("/", ".")
+    wanted = ".".join(p for p in [module] + name.split("::") if p)
+
+    def ends(case, tail):
+        return case == tail or case.endswith("." + tail)
+    for case in broken:
+        case = re.sub(r"\[.*\]$", "", case)
+        if ends(case, wanted) or ends(case, module) \
+                or (not name and ("." + module + ".") in ("." + case)):
+            return True
+    return False
+
+
+def missing_modules(report_path, project_root=None):
+    """The missing modules a report's collection and setup errors name; a
+    missing file of the project by its path relative to `project_root`."""
+    read = _read(report_path)
+    if read is None:
+        return []
+    return sorted({_named(m, project_root) if project_root else m
+                   for _w, m in read[1] + read[2] if m})
+
+
+def exit_4_reason(stderr, project_root):
+    """Why an outer-loop exit 4 is not a red, quoting pytest's first error line.
+
+    The text only words the refusal; exit 4 is never a red. When the first
+    line says `conftest.py` failed to load and the error is a missing module of
+    the project, the driver is imported at module level, and the reason names
+    the fix.
+    """
+    lines = [x.strip() for x in strip_ansi(stderr or "").splitlines() if x.strip()]
+    if not lines:
+        return ("pytest exited 4, a setup error, not a red. pytest printed nothing "
+                "on stderr, so there is no error line to quote")
+    missing = _missing(stderr)
+    if lines[0].startswith("ImportError while loading conftest") and missing \
+            and in_project(missing, project_root):
+        return ("conftest.py imports the module '%s', which is not written yet, at "
+                "module level, so pytest stops before any test runs (exit 4) and "
+                "writes no report. That is a setup error, not a red. To record the "
+                "stage 1 red, import the driver inside the driver-factory fixture: "
+                "pytest then reports a setup error that names the module" % missing)
+    return ("pytest exited 4, a setup error, not a red. pytest's first error line: "
+            "\"%s\"" % lines[0])
+
+
+def judge(report_path, code, project_root, no_run_reasons, loop="inner"):
     """(red kind, None, None) for a red, or (None, heading, why) for a refusal.
 
     `no_run_reasons` maps the exit codes that mean no test ran to a reason.
+    For the outer loop, a setup error for a missing module is read as a
+    collection error is.
     """
     read = _read(report_path)
     if read is None:
@@ -155,7 +325,19 @@ def judge(report_path, code, project_root, no_run_reasons):
             "pytest exited %d and wrote no JUnit XML report. Compass adds "
             "--junitxml to see which tests failed, so a command that turns "
             "off pytest's junitxml plugin cannot record a red" % code)
-    failed, collection = read
+    failed, collection, setup, _broken = read
+    if loop == "outer" and setup:
+        outside = sorted({_named(m, project_root) for _w, m in setup
+                          if not in_project(m, project_root)})
+        if outside:
+            named = ", ".join("'%s'" % m for m in outside)
+            return None, NO_TEST_FAILED, (
+                "a fixture could not set up: %s %s not a module of this project. "
+                "A setup error for a missing package says it is not installed, "
+                "not that the behavior is missing"
+                % (named, "is" if len(outside) == 1 else "are"))
+        if not collection:
+            return "import", None, None
     if collection:
         outside = [(where, missing) for where, missing in collection
                    if not (missing and in_project(missing, project_root))]

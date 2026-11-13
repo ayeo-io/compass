@@ -188,7 +188,7 @@ def test_trc_b3_loading_the_cli_by_file_path_should_still_work():
         importlib.machinery.SourceFileLoader("compass_cli_probe", str(CLI)))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    for name in ("governance_drift", "reading_matches", "CHECK_FNS"):
+    for name in ("reading_matches", "CHECK_FNS"):
         assert hasattr(mod, name), (
             f"{name} is no longer reachable from a path-loaded cli/compass; "
             f"the entry point must re-export what it moved")
@@ -255,6 +255,48 @@ def test_trc_f2_no_function_should_be_renamed_merged_or_split_by_this_task():
         # renderer, so keeping it meant keeping dead code that disagreed with
         # the code that replaced it.
         "_print_check_result",
+        # 9.0.0 removes `compass analyze` (ADR-091) and its module, analyze.py.
+        # These were its command, its readers of an issue's documents and the
+        # writer of its consistency-check evidence; nothing else called them.
+        "cmd_analyze", "_analyze_task", "_write_analyze_evidence",
+        "_upsert_analyze_evidence_registry", "_parse_intent_ids_from_brief",
+        "_parse_scenario_intents_from_spec", "_parse_claim_ids_from_positioning",
+        "_parse_claimed_scenario_ids_from_spec", "_parse_phase_weights_from_route_md",
+        "_parse_route_from_route_md",
+        # The check `consistency-check-passes` went with it, to check_registry.REMOVED.
+        "_check_coherence_check_passes",
+        # 9.0.0 removes `compass issue receipt` (ADR-091) and its modules, receipt.py
+        # and receipt_provenance.py. These were its command and its renderer;
+        # `compass adr new` moved to adr_cmd.py unchanged.
+        "cmd_task_receipt", "_receipt_resolve_task_dir", "_receipt_gate_requirements",
+        "_receipt_parse_route_md_readings", "_receipt_render", "_receipt_truncate",
+        # 9.0.0 removes the living spec (ADR-091): `compass _derive-system-spec` and
+        # the derivation in flow.py that it and ship-commit ran.
+        "cmd_derive_system_spec", "derive_system_spec",
+        # 9.0.0 removes `compass plan lint` (ADR-091): it scanned the technical design,
+        # which no stage writes now.
+        "_plan_lint_findings", "_plan_lint_scannable", "_plan_stage_weight", "cmd_plan_lint",
+        # `compass next` has read the stage from the records since d342005b, which
+        # left this reader of the stage weights with no caller; #351 removed it.
+        "_next_active_phase",
+        # 9.0.0 removes `compass retro`, `compass rework-scan` and friction capture
+        # (ADR-093), with their modules calibration.py and rework.py. These were
+        # their commands, their readers of signals.yml and the friction they
+        # derived; `compass follow-up resolve` moved to follow_up_cmd.py unchanged.
+        "cmd_calibration", "_cmd_calibration_friction", "_aggregate_friction",
+        "_find_reframe_debt", "_load_friction_threshold", "_load_scope_bloat_phrases",
+        "cmd_friction_capture", "derive_friction",
+        "cmd_rework_scan", "_find_signals_yml", "_load_signals", "_read_tasks_from_root",
+        "_parse_created_date", "_is_drop_migration", "_matches_migration_glob",
+        "_emit_markdown_report",
+        # 9.0.0 removes the drift report (ADR-098): the comparison of a governance
+        # copy with the framework's, its printer, its two helpers and the reader
+        # of `governance_drift`. The structural lint of a copy stays.
+        "governance_drift", "_print_drift", "_drift_is_strict", "_dig", "_rule_ids",
+        # 9.0.0 reads no copy of the governance files (ADR-098): the lookup of a
+        # governance folder and the structural lint of its two policy files went
+        # with the generated views they read.
+        "find_governance", "_lint_errors_guardrails", "_lint_errors_routing_policy",
     }
     before -= DELIBERATELY_REMOVED
 

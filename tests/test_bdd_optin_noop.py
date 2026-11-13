@@ -21,6 +21,7 @@ import sys
 import tempfile
 
 import yaml
+from check_set_files import view as shipped_view  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -109,8 +110,8 @@ EXPECTED_READING_KEYS = {
 
 
 def test_trc_f6_no_new_guardrail_gate_or_dimension():
-    guardrails = yaml.safe_load((GOVERNANCE / "guardrails.yml").read_text())
-    policy = yaml.safe_load((GOVERNANCE / "routing-policy.yml").read_text())
+    guardrails = shipped_view("guardrails.yml")
+    policy = shipped_view("routing-policy.yml")
 
     # The guardrail id set is unchanged. Ids live under `defaults` (`G1`-`G5`) and
     # `spike_guardrails` (`S1`-`S2`); `checks` is a dict of named check functions,

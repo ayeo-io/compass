@@ -8,7 +8,7 @@ derivation does not use.
 
 This is a small, explicit registry, not a document compiler. Each entry names
 a document, the sentence that makes a claim, and the live fact it claims. The
-fact is computed from `governance/routing-policy.yml` through the same
+fact is computed from the check set (`governance/check-set.yml`) through the same
 evaluator `compass approach evaluate` runs, or from the CLI's own code. A claim
 that is reworded so its pattern no longer matches fails too, so the registry
 moves with the prose.
@@ -30,12 +30,11 @@ ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg.flow import _DERIVED_HEADER  # noqa: E402
 from compass_pkg.issue_layout import docs_dir_for  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 
 DEEP_DIVE = ROOT / "docs" / "routing-deep-dive.md"
-POLICY = yaml.safe_load((ROOT / "governance" / "routing-policy.yml")
-                        .read_text(encoding="utf-8"))["routing_guardrails"]
+POLICY = shipped_view("routing-policy.yml")["routing_guardrails"]
 
 WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
          "seven": 7, "eight": 8, "nine": 9}
@@ -77,13 +76,14 @@ def _one(pattern, text, where):
 BASE = {"familiarity": "brownfield-mapped", "goal": "delivery",
         "role": "engineer"}
 
-#: (case heading, claim pattern, assessment the case scores)
+#: (case heading, claim pattern, assessment the case scores). From 9.0.0 every
+#: gate is passed at ship (ADR-092), so each delivery case states its count there.
 GATE_CLAIMS = [
-    ("## Case 1 - A typo fix", r"(\w+) (?:light )?gates? at verify",
-     dict(BASE, risk="trivial", size="atomic", labels="[]")),
-    ("## Case 2 - A normal-sized new feature", r"(\w+) gates? at verify",
-     dict(BASE, risk="contained", size="standard", labels="[]")),
-    ("## Case 5 - A production hotfix", r"runs (\w+) gates, not the base",
+    ("## Case 1 - A typo fix", r"(\w+) gates, all passed at ship",
+     dict(BASE, risk="trivial", size="atomic", labels="[auth]")),
+    ("## Case 2 - A normal-sized new feature", r"(\w+) gates, all passed at ship",
+     dict(BASE, risk="contained", size="medium", labels="[]")),
+    ("## Case 5 - A production hotfix", r"passes (\w+) gates with typed evidence",
      dict(BASE, risk="cross-cutting", size="small", urgency="live-defect",
           labels="[]")),
     ("## Case 6", r"The (\w+) gate is",
@@ -109,8 +109,17 @@ def test_fdg_2_the_immovable_list_and_never_skip_match_the_policy():
     claimed = re.findall(r"`([\w.]+)`", listed)
     policy = [g["gate"] for g in POLICY["immovable_gates"]]
     assert claimed == policy
+    # No shipped floor sets `never_skip` since 9.0.0 (ADR-092). The deep dive's
+    # cases still walk the 8.x routing, so a `never_skip` it quotes is held to
+    # the 8.0.4 governance copy, which keeps that floor.
+    import tarfile
+    sys.path.insert(0, str(ROOT / "tests"))
+    from compat_baseline import GOVERNANCE_8_0_4
+    with tarfile.open(GOVERNANCE_8_0_4) as tar:
+        v8 = yaml.safe_load(tar.extractfile("governance/routing-policy.yml").read())
+    assert not [f for f in POLICY["floors"] if f.get("never_skip")]
     for match in re.findall(r"never_skip: \[([^\]]*)\]", text):
-        floor = next(f for f in POLICY["floors"] if f.get("never_skip"))
+        floor = next(f for f in v8["routing_guardrails"]["floors"] if f.get("never_skip"))
         assert [s.strip() for s in match.split(",")] == floor["never_skip"]
 
 
@@ -148,15 +157,14 @@ def _shipped_markdown():
     files = subprocess.run(["git", "ls-files", "*.md"], cwd=ROOT,
                            capture_output=True, text=True, check=True).stdout
     return [f for f in files.split()
-            if not re.match(r"docs/compass/[^/]+/", f)
-            and f not in ("docs/system-spec.md", "docs/system-spec-archive.md")]
+            if not re.match(r"docs/compass/[^/]+/", f)]
 
 
 def test_fdg_2_no_document_calls_verify_claims_immovable():
     """`verify.claims` is role-scoped, not immovable. The claim stood in the
     deep dive and, after that was fixed, in six more files, because this
     check named four documents. It now reads every tracked Markdown file
-    outside the issue records and the derived spec."""
+    outside the issue records."""
     assert "verify.claims" not in [g["gate"] for g in POLICY["immovable_gates"]]
     hits = []
     for rel in _shipped_markdown():
@@ -179,15 +187,6 @@ def test_fdg_3_the_contract_names_the_clis_document_home():
                     .split())
     home = docs_dir_for("<created>", "<slug>").replace("\\", "/") + "/"
     _one(re.escape(home), text, "compass-contract.md")
-
-
-def test_fdg_4_the_derived_header_names_the_real_command_and_input():
-    header = _DERIVED_HEADER
-    assert "compass _derive-system-spec" in header, header
-    assert "manifest.yml" in header and "scenarios" in header, header
-    # The scenario's prose lives in acceptance-criteria.md, so the header may
-    # name it as a file to edit; it must not name the retired `<task>` path.
-    assert "<task>" not in header and ".compass/work/<" not in header
 
 
 def test_fdg_5_every_registered_claim_is_found_exactly_once():

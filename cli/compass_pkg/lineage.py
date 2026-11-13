@@ -1,30 +1,39 @@
-# compass_pkg.lineage - where each issue was raised from, and what that adds up to
+# compass_pkg.lineage - where each issue was raised from
 """An issue raised from another issue records its parent and where it was
 found, in the manifest's `raised_by` key. Most of Compass's defects
 are found while landing or reviewing other work; recorded at the moment it
-is known, the link lets `compass retro --lineage` say how much the `verify`
-stage catches before the parent lands. File overlap cannot stand in: it flagged
-114 of 128 landed issues.
+is known, the link names the chain an issue belongs to. File overlap cannot
+stand in: it flagged 114 of 128 landed issues.
 
 Advisory only: nothing here gates.
 """
-# DEPENDENCY: standard library (collections, os); compass_pkg.core, compass_pkg.stable_ids.
+# DEPENDENCY: standard library (os); compass_pkg.core, compass_pkg.stable_ids.
 from __future__ import annotations
 
-import collections
 import os
 
-from compass_pkg.stable_ids import STAGE_DEFINE, STAGE_IMPLEMENT, STAGE_PLAN, STAGE_VERIFY
+from compass_pkg.stable_ids import (STAGE_BUILD, STAGE_DEFINE,
+                                   STAGE_IMPLEMENT, STAGE_PLAN, STAGE_SHIP,
+                                   STAGE_SPECIFY, STAGE_VERIFY)
 from compass_pkg.core import (CompassError, _one_segment, find_compass_dir,
                               load_manifest,
                               load_yaml, manifest_path, resolve_issue_dir,
                               save_manifest)
 
-# Every place a defect can be found. All but `after-landing` are before the
-# parent landed, which is the share the report exists to show.
-FOUND_AT = (STAGE_DEFINE, STAGE_PLAN, STAGE_IMPLEMENT, STAGE_VERIFY, "review", "ci",
-            "after-landing")
-AFTER = "after-landing"
+# Every place a defect can be found, as a person gives it now: a path stage
+# that does work on the parent, review, ci or after landing. `assess` is not
+# one, as it was not before 9.0.0: it writes no part of the parent's change.
+PLACES = (STAGE_SPECIFY, STAGE_BUILD, STAGE_SHIP, "review", "ci", "after-landing")
+# The 8.x stage names a manifest or a script written before 9.0.0 gives. They
+# stay valid.
+LEGACY_PLACES = (STAGE_DEFINE, STAGE_PLAN, STAGE_IMPLEMENT, STAGE_VERIFY)
+FOUND_AT = PLACES + LEGACY_PLACES
+
+
+def places_text():
+    """The places a refusal names. The legacy names are accepted but not
+    offered, so a person learns the path stages."""
+    return ", ".join(PLACES[:-1]) + " or " + PLACES[-1]
 
 
 def _work(compass_dir):
@@ -45,7 +54,7 @@ def check(compass_dir, parent, found_at, named="--raised-by"):
     if found_at not in FOUND_AT:
         raise CompassError(
             f"--found-at '{found_at}' is not a place an issue is found; use "
-            f"one of {', '.join(FOUND_AT)}.")
+            f"one of {places_text()}.")
     _one_segment(parent, named)
     if not os.path.isfile(manifest_path(os.path.join(_work(compass_dir), parent))):
         raise CompassError(
@@ -111,42 +120,6 @@ def hint(compass_dir, slug):
     # The point goes first: the terminal cuts a long line at its width.
     return (f"Third issue from '{line[0]}': correct every place at once "
             f"(`S14`, governance/strategies.md): {' -> '.join(line)}")
-
-
-def report(compass_dir):
-    """The lines `compass retro --lineage` prints."""
-    parents = _parents(compass_dir)
-    if not parents:
-        return ["compass retro --lineage: no issue records where it was raised "
-                "(`quick-fix start --raised-by` or `compass issue raised-by`)."]
-    places = collections.Counter(r.get("found_at") for r in parents.values())
-    after = places.get(AFTER, 0)
-    # Only a known place counts either way; lint reports the others.
-    before = sum(n for p, n in places.items() if p in FOUND_AT and p != AFTER)
-    unknown = sum(n for p, n in places.items() if p not in FOUND_AT)
-    children = collections.Counter(r["issue"] for r in parents.values())
-    lines = [f"compass retro --lineage: {len(parents)} issue(s) raised from another issue",
-             f"  found before the parent landed: {before}",
-             f"  found after the parent landed: {after}",
-             ] + ([f"  where found not recognized: {unknown} (see `compass issue lint`)"]
-                  if unknown else []) + [
-             "  by where found: " + ", ".join(
-                 f"{p} {places[p]}" for p in FOUND_AT if places.get(p))]
-    leaves = [s for s in parents if s not in children]
-    chains = sorted((chain(parents, s) for s in leaves), key=len, reverse=True)
-    chains = [c for c in chains if len(c) >= 3]
-    if chains:
-        lines.append("  chains of three or more:")
-        lines += [f"    {' -> '.join(c)}" for c in chains[:5]]
-    lines.append("  most children: " + ", ".join(
-        f"{p} ({n})" for p, n in children.most_common(3)))
-    return lines
-
-
-def cmd_retro_lineage(args):
-    for line in report(find_compass_dir()):
-        print(line)
-    return 0
 
 
 def cmd_issue_raised_by(args):

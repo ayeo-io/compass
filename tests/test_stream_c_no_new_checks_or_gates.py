@@ -1,4 +1,4 @@
-"""guardrails.yml gains no undeclared check, gate or evidence type.
+"""The check set gains no undeclared check or gate.
 
 Adding a check or a gate is adding mechanism, and the framework grows by
 checks and strategies deliberately, never by accident (ADR-002). These tests
@@ -8,15 +8,19 @@ This is a negative assertion test: a check or gate name declared in
 `BASELINE_CHECKS` or `BASELINE_GATES` passes; anything else is a new,
 undeclared addition.
 
-It also checks that the empty `project:` list carries a comment saying the
-emptiness is deliberate.
+9.0.0 deleted the generated view `guardrails.yml` (ADR-098), so
+these tests read the check set in that view's shape. The comparison of the
+view with main, and the comment on its empty `project:` list, went with the
+file: the check set's bytes are pinned per version
+(`tests/fixtures/check-set-digests.yml`), so no change to it goes unseen.
 """
 from __future__ import annotations
 import subprocess
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
-GUARDRAILS_YML = "governance/guardrails.yml"
+GUARDRAILS_YML = "guardrails.yml"
 
 # The known-legitimate check names.
 # The invariant is that guardrails.yml gains no new check names. The
@@ -28,20 +32,45 @@ REMOVED_CHECKS = {
     # documents-carry-judgement: replaced by `rendered-blocks-current`, which checks
     # every block Compass writes in an issue's documents and not only the README.
     "dashboard-current",
+    # ayeo-io/compass-delivery#353: 9.0.0 renders no block, issue page or project
+    # index (ADR-091). A stored generation that lists it reports it as nothing to check.
+    "rendered-blocks-current",
+    # ayeo-io/compass-delivery#352: 9.0.0 runs each issue in one session, so no
+    # run splits into subtasks to record (ADR-090). A stored generation that
+    # lists it reports it as nothing to check.
+    "multiagent-run-recorded",
+    # ayeo-io/compass-delivery#353: 9.0.0 removes `compass analyze`, so no
+    # consistency report is written to check (ADR-091). A stored generation that
+    # lists it reports it as nothing to check.
+    "consistency-check-passes",
+    # ayeo-io/compass-delivery#353: 9.0.0 keeps one issue document (ADR-091), so the
+    # checks that read the others go. A stored generation that lists one reports it as
+    # nothing to check.
+    "artifacts-approved",
+    "contracts-declared",
+    "design-within-word-ceiling",
+    "borrowed-documents-answered",
 }
 
+# Gates a release removed on purpose, each with the change that removed it. A
+# gate here may leave `gate_evidence_requirements`; any other change still fails.
+REMOVED_GATES = {
+    # ayeo-io/compass-delivery#353: `verify.analyze` accepted only the evidence
+    # `compass analyze` wrote, and 9.0.0 removes that command (ADR-091).
+    "verify.analyze",
+}
+
+# Guardrails a release moved to another stage on purpose, each with its new
+# `checked_at` list, read on the four-stage path (ADR-092). `G1` is judged at
+# build, where the red and green records are made, and was judged at `verify`,
+# which the path shows as ship (ayeo-io/compass-delivery#351, plan section 2.3).
+MOVED_STAGES = {"G1": ["build", "ship"]}
+
 BASELINE_CHECKS = {
-    # Added by the borrowed document shapes. A threat model that lists
-    # threats and mitigates none is the Threat Modeling Manifesto's named
-    # anti-pattern, and a rollback plan nobody has rehearsed is a guess.
-    # One check reads both, under `G4` rather than as a sixth guardrail
-    # (ADR-002).
-    "borrowed-documents-answered",
-    # Added by documents-carry-judgement, replacing the per-issue review
-    # dashboard check: a block Compass writes into an issue's documents must
-    # not disagree with the manifest and the evidence it was rendered from.
-    # Joins `G4` rather than becoming a sixth guardrail (ADR-002).
-    "rendered-blocks-current",
+    # #355 added the ship approval and #356 the request link, after the view
+    # `guardrails.yml` froze; the check set holds both.
+    "ship-approval-present",
+    "request-recorded",
     "scenarios-have-tests",
     "suite-passed",
     "changed-code-traces-to-scenario",
@@ -83,26 +112,9 @@ BASELINE_CHECKS = {
     # and no-ops entirely for a project that has set no project.bdd_runner,
     # which is nearly all of them.
     "scenarios-are-executable",
-    # Added by dispatch-protocol. A multiagent issue's manifest must show the
-    # run that built it completed - every subtask done, with a last review
-    # round that passed. Joins the evidence-not-assertion guardrail (`G4`)
-    # rather than becoming a sixth guardrail: ADR-002 caps guardrails at
-    # five and grows the framework through new checks instead.
-    "multiagent-run-recorded",
-    # Added by artifact-status-written-by-stages (ADR-050). A document that
-    # reads draft or awaiting-approval, or is omitted with no reason, has not
-    # been accepted, so ship refuses it. It sits in no guardrail: a check in
-    # `G4` would be locked, and an issue waiver must be able to excuse it.
-    "artifacts-approved",
     # Added by document-set-sections (ADR-064). The spec's Non-functional
-    # requirements rows and the design's declared contracts. Both sit in no
-    # guardrail, as `artifacts-approved` does: `G2` and `G4` are locked.
+    # requirements rows. It sits in no guardrail: `G2` and `G4` are locked.
     "nfr-rows-resolved",
-    "contracts-declared",
-    # Added by word-ceilings-and-lld (ADR-067). A technical design far over its
-    # word limit once plan exit is due. It sits in no guardrail for the same
-    # reason as the two section checks.
-    "design-within-word-ceiling",
     # Added by acceptance-strategy-core (strategy `S17`). The advisory check that the
     # stored applicability of the four-layer acceptance strategy agrees with the
     # records. It sits in no guardrail, so `G1` and `G4` keep their checks.
@@ -111,6 +123,19 @@ BASELINE_CHECKS = {
     # four-layer acceptance strategy has an outer-loop red and an outer-loop green on the
     # current tree. It sits in no guardrail, so `G1` and `G4` keep their checks.
     "outer-loop-recorded",
+    # Added by support-code-readiness. The advisory check that the project names its
+    # acceptance support code and each named path exists; it states the claim limit.
+    # It sits in no guardrail, so `G1` and `G4` keep their checks.
+    "acceptance-support-present",
+    # Added by `attempts-required` (ADR-084). The blocking check that each outer-loop
+    # green of an in-scope issue records `attempts`. It sits in no guardrail, so `G4`
+    # and its locked no-trusted-rerun keep their rules.
+    "outer-loop-attempts-recorded",
+    # Added by `isolation-and-layering` (ADR-086). The blocking checks that an in-scope
+    # issue holds a passing isolation proof and layering record, written only by their
+    # commands. They sit in no guardrail, so `G1` and `G4` keep their checks.
+    "isolation-proven",
+    "layering-test-passed",
 }
 
 # The evidence types a branch may add to guardrails.yml, each named for the
@@ -131,6 +156,12 @@ BASELINE_EVIDENCE_TYPES = {
     # only by `/compass:reject <record id>`. No gate accepts it; it only stops
     # the withdrawn record counting for `human-approval-present` in flight.
     "approval-withdrawal",
+    # Added by isolation-and-layering (ADR-086). The records of the four-layer
+    # acceptance strategy, each written only by its command (`compass isolation
+    # record`, `compass layering record`); `compass evidence add` refuses both.
+    # No gate accepts them; only isolation-proven and layering-test-passed read them.
+    "isolation-proof",
+    "layering",
 }
 
 # The legitimate set of gate names in gate_evidence_requirements after landing.
@@ -194,14 +225,18 @@ def _check_renames() -> dict:
 
 
 def _current_stages(names):
-    """Stage names as the current spelling. A stage renamed since main is the
-    same stage, so a spelling change alone is not a change of when a guardrail
-    is checked."""
+    """Stage names as the current spelling, each shown as the path stage it maps
+    to (ADR-092). A stage renamed since main is the same stage, so a spelling
+    change alone is not a change of when a guardrail is checked. `specify` and
+    `build` are v1 names too, so only a v1 list is renamed."""
     import yaml
 
+    sys.path.insert(0, str(REPO_ROOT / "cli"))
+    from compass_pkg.path_stages import path_stage_of, rename_v1_stage_keys
     path = REPO_ROOT / "cli" / "migrate-map.yml"
     renames = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("stage_keys") or {}
-    return [renames.get(n, n) for n in names]
+    shown = [path_stage_of(n) or n for n in rename_v1_stage_keys(list(names), renames)]
+    return sorted(set(shown))
 
 
 def _in_current_stages(value):
@@ -292,11 +327,9 @@ def _mechanism(data: dict) -> dict:
 
 
 def test_no_new_check_names_added():
-    """No new check name has appeared in the checks: block in guardrails.yml."""
-    import yaml
-
-    guardrails_path = REPO_ROOT / GUARDRAILS_YML
-    current_content = yaml.safe_load(guardrails_path.read_text(encoding="utf-8"))
+    """No new check name has appeared in the checks of the check set."""
+    from check_set_files import view as shipped_view
+    current_content = shipped_view("guardrails.yml")
     current_checks = set(current_content.get("checks", {}).keys())
 
     new_checks = current_checks - _rename_checks(BASELINE_CHECKS)
@@ -307,111 +340,13 @@ def test_no_new_check_names_added():
 
 
 def test_no_new_gate_names_added():
-    """No new gate name has appeared in gate_evidence_requirements."""
-    import yaml
-
-    guardrails_path = REPO_ROOT / GUARDRAILS_YML
-    current_content = yaml.safe_load(guardrails_path.read_text(encoding="utf-8"))
+    """No new gate name has appeared in the gates that accept evidence."""
+    from check_set_files import view as shipped_view
+    current_content = shipped_view("guardrails.yml")
     current_gates = set(current_content.get("gate_evidence_requirements", {}).keys())
 
     new_gates = current_gates - _rename_gates(BASELINE_GATES)
     assert not new_gates, (
         f"guardrails.yml gained new gates: {new_gates}. A new gate is new\n"
         "mechanism: add it here deliberately, with the change that introduces it."
-    )
-
-
-def test_guardrails_gains_no_mechanism_on_this_branch():
-    """A branch may not add mechanism to guardrails.yml *undeclared*.
-
-    Compares the parsed structure with main. Prose can change; mechanism
-    must not grow unless declared. A check declared in BASELINE_CHECKS
-    passes, because the decision record that caps guardrails at five and
-    permits new checks under an existing guardrail (ADR-002) allows it.
-    Gates, evidence types and rules must match main.
-    """
-    import yaml
-
-    baseline = _guardrails_on_main()
-    if baseline is None:
-        return  # main not reachable (shallow clone); nothing to compare against
-
-    current = yaml.safe_load((REPO_ROOT / GUARDRAILS_YML).read_text(encoding="utf-8"))
-    before, after = _mechanism(baseline), _mechanism(current)
-
-    # Checks declared in BASELINE_CHECKS are a sanctioned, reviewed addition;
-    # everything else in the mechanism must match main exactly.
-    for field in sorted(before):
-        b, a = before[field], after[field]
-        if field == "check_names":
-            added = set(a) - set(b)
-            assert added <= _rename_checks(BASELINE_CHECKS), (
-                f"guardrails.yml gained undeclared check(s): "
-                f"{sorted(added - BASELINE_CHECKS)}.\n"
-                "A new check is new mechanism (ADR-002). Declare it in "
-                "BASELINE_CHECKS above, with a comment naming the change that "
-                "introduces it, so the addition is visible in review."
-            )
-            assert _rename_checks(set(b)) - set(a) <= REMOVED_CHECKS, (
-                f"guardrails.yml removed check(s): "
-                f"{sorted(_rename_checks(set(b)) - set(a))}. "
-                "Removing a check silently weakens every adopting project."
-            )
-            continue
-        if field == "evidence_types":
-            assert set(a) - set(b) <= BASELINE_EVIDENCE_TYPES, (
-                f"guardrails.yml gained undeclared evidence type(s): "
-                f"{sorted(set(a) - set(b) - BASELINE_EVIDENCE_TYPES)}. Declare it in "
-                "BASELINE_EVIDENCE_TYPES above, with a comment naming the change.")
-            assert set(b) - set(a) == set(), (
-                f"guardrails.yml removed evidence type(s): {sorted(set(b) - set(a))}.")
-            continue
-        if field == "defaults":
-            # A guardrail may gain a declared check; it may not gain or lose a
-            # guardrail, nor change when it is checked.
-            assert sorted(b) == sorted(a), (
-                f"guardrails.yml changed the guardrail set: {sorted(b)} -> "
-                f"{sorted(a)}. The count is capped at five (ADR-002).")
-            for gid in b:
-                assert (_current_stages(b[gid]["checked_at"])
-                        == _current_stages(a[gid]["checked_at"])), (
-                    f"{gid} changed when it is checked: "
-                    f"{b[gid]['checked_at']} -> {a[gid]['checked_at']}")
-                gained = set(a[gid]["checks"]) - _rename_checks(set(b[gid]["checks"]))
-                assert gained <= BASELINE_CHECKS, (
-                    f"{gid} gained undeclared check(s): "
-                    f"{sorted(gained - BASELINE_CHECKS)}")
-                lost = _rename_checks(set(b[gid]["checks"])) - set(a[gid]["checks"])
-                assert lost <= REMOVED_CHECKS, (
-                    f"{gid} lost check(s): {sorted(lost - REMOVED_CHECKS)}")
-            continue
-        assert _in_current_stages(b) == _in_current_stages(a), (
-            f"guardrails.yml changed mechanism in {field!r} relative to main.\n"
-            f"  on main: {b!r}\n"
-            f"  now:     {a!r}\n"
-            "Guardrails are capped at five and grow by checks and strategies, "
-            "not by new rules (ADR-002). Rewording prose is fine; adding a "
-            "gate, evidence type, or rule is not."
-        )
-
-
-def test_empty_project_guardrails_are_explained():
-    """The empty `project:` list says why it is empty.
-
-    An empty list looks identical whether it is deliberate or an oversight, and
-    the difference matters: it is what makes an adopting repo see no
-    project-level check until it declares one. A reader should not have to
-    guess which it is.
-
-    The no-growth guarantee is checked by
-    `test_guardrails_gains_no_mechanism_on_this_branch` above and by
-    `test_no_project_guardrails_declared_in_framework_repo`.
-    """
-    text = (REPO_ROOT / GUARDRAILS_YML).read_text(encoding="utf-8")
-    idx = text.find("project: []")
-    assert idx != -1, "guardrails.yml must ship with an empty project: [] list"
-    trailing = text[idx:].splitlines()[1:3]
-    assert any(l.lstrip().startswith("#") and l.strip() != "#" for l in trailing), (
-        "The empty `project: []` list must be followed by a comment explaining "
-        "that it is deliberate, so a reader can tell it apart from an oversight."
     )

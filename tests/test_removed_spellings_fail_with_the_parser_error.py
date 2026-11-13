@@ -1,7 +1,7 @@
 """A removed spelling is refused by the parser (release-7-0-0-prep, group A).
 
-Each of the 7 alias spellings that 7.0.0 removed exits 2 and prints no alias
-notice. Each of the 9 spellings no release held (10 command lines, the last the equals
+Each of the 6 alias spellings that 7.0.0 removed, and that no later release
+reused, exits 2 and prints no alias notice. Each of the 9 spellings no release held (10 command lines, the last the equals
 form of `--phase`) prints no `is now '` hint.
 """
 from __future__ import annotations
@@ -38,7 +38,9 @@ REMOVED = [
     ["issue", "set-status", "active", "--issue", "sample"],
     ["policy", "review-rules", "--changed-files", "cli/compass"],
     ["issue", "artifact", "intent", "--status", "draft"],
-    ["migrate"],
+    # The 6.x spelling `compass migrate` left this list in 9.0.0: #359 reused
+    # the name on purpose for the 8.x-to-9.0.0 move (ADR-098 open question 18),
+    # so it is a real verb again; `tests/test_migrate_issue.py` covers it.
     ["issue", "subtask", "update", "s1", "--status", "done"],
     ["run", "multi", "--stage", "build", "--stop-file", "S"],
 ]

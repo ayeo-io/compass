@@ -16,7 +16,6 @@ bash-follows-worktree-cwd/acceptance-criteria.md.
 from __future__ import annotations
 
 import json
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -118,11 +117,14 @@ def _table(compass_dir, session, slug):
         "root": str(compass_dir.resolve())}}), encoding="utf-8")
 
 
-def test_trc_003_the_session_is_recorded_on_the_worktree_issue(tmp_path):
+def test_trc_003_a_bash_write_in_the_worktree_is_judged_there_and_writes_no_manifest(
+        tmp_path):
     """Scenario id: `TRC-003`
 
     Each session table says this session last worked on another issue, so a
-    lease check in either tree would refuse with pointer-moved.
+    lease check in either tree would refuse with pointer-moved. Before 9.0.0
+    the hook also recorded the session on the worktree's issue; it now writes
+    no manifest (ADR-093).
     """
     main, wt = _main_and_worktree(tmp_path, main_red=True, wt_red=True)
     _issue(main, "other", red=True)
@@ -131,13 +133,13 @@ def test_trc_003_the_session_is_recorded_on_the_worktree_issue(tmp_path):
     _table(wt / ".compass", "S1", "other")
     before = {p: p.read_bytes() for p in (main / ".compass" / "sessions.json",
                                           wt / ".compass" / "sessions.json")}
+    manifests = sorted([*(main / ".compass" / "work").glob("*/manifest.yml"),
+                        *(wt / ".compass" / "work").glob("*/manifest.yml")])
+    written = {p: p.read_bytes() for p in manifests}
     r = _bash(main, "echo x > src/app.py", cwd=wt, session="S1")
     assert r.returncode == 0, r.stderr
     assert "pointer-moved" not in r.stderr
-    beta = (wt / ".compass" / "work" / "beta" / "manifest.yml").read_text()
-    alpha = (main / ".compass" / "work" / "alpha" / "manifest.yml").read_text()
-    assert re.search(r"-\s+['\"]?S1['\"]?\s*$", beta, re.M), beta
-    assert "S1" not in alpha, alpha
+    assert {p: p.read_bytes() for p in manifests} == written
     for table, data in before.items():
         assert table.read_bytes() == data, table
 

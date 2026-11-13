@@ -38,13 +38,21 @@ def _descoped(root: Path) -> list:
     return m.get("failure_modes_descoped") or []
 
 
-@pytest.mark.parametrize("rel", ["commands/define.md", "skills/bdd-specification/SKILL.md"])
-def test_define_asks_the_author_with_two_worked_examples(rel):
-    """FM-A."""
-    text = (ROOT / rel).read_text(encoding="utf-8")
+def test_specify_asks_the_author_with_two_worked_examples():
+    """FM-A. The skill holds the two worked examples."""
+    text = (ROOT / "skills" / "atdd" / "SKILL.md").read_text(encoding="utf-8")
     assert "input classes and failure modes" in text
     assert "compass scenario descope" in text
-    assert len(re.findall(r"^\s*-?\s*\*\*Worked example", text, re.M)) >= 2, rel
+    assert len(re.findall(r"^\s*-?\s*\*\*Worked example", text, re.M)) >= 2
+
+
+def test_the_path_command_asks_the_question_at_specify():
+    """FM-A. The define command went with the four-stage path (ADR-092); the
+    specify stage of `/compass:go` asks the same question and names the
+    command that records a de-scoped mode."""
+    text = " ".join((ROOT / "commands" / "go.md").read_text(encoding="utf-8").split())
+    assert "input classes and failure modes" in text
+    assert "compass scenario descope" in text
 
 
 def test_descope_records_mode_reason_and_date(issue):
@@ -89,10 +97,12 @@ def test_the_schema_accepts_the_key_and_refuses_a_bad_entry():
 
 def test_verify_lists_each_descoped_mode():
     """FM-C."""
-    verifier = (ROOT / "agents" / "verifier.md").read_text(encoding="utf-8")
+    # `commands/ship.md` carries the step the verifier agent had until 9.0.0
+    # (ADR-090, ADR-092).
+    verifier = (ROOT / "commands" / "ship.md").read_text(encoding="utf-8")
     assert "failure_modes_descoped" in verifier
-    report = (ROOT / "templates" / "verification-report.md").read_text(encoding="utf-8")
-    assert "Failure modes de-scoped at define" in report
+    # 9.0.0 writes no verification report (ADR-091): the stage's hand-off names each mode.
+    assert "a mode named at specify must not disappear before ship" in " ".join(verifier.split())
 
 
 def test_the_subcommand_is_on_the_public_surface():
@@ -142,15 +152,8 @@ def test_list_manifest_refused_with_a_clear_error(issue, body):
 
 # Verbs that read one issue's manifest without going through manifest_store.read.
 _LIST_MANIFEST_VERBS = [
-    ("analyze", "--issue", "demo"),
-    ("issue", "artifact-path", "acceptance-criteria", "--issue", "demo"),
-    ("issue", "artifact", "set", "acceptance-criteria", "--status", "draft",
-     "--issue", "demo"),
     ("issue", "diagnose", "--issue", "demo"),
-    ("issue", "template", "show", "technical-design", "--issue", "demo"),
     ("bdd", "verify", "--issue", "demo", "--", "true"),
-    ("issue", "configure", "--discard", "--issue", "demo"),
-    ("issue", "receipt", "--issue", "demo"),
     ("check", "--issue", "demo"),
 ]
 

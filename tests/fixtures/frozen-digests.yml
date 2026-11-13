@@ -3,16 +3,20 @@
 # sha256 over the file's bytes. For contract-4-commands.yml the one stdout pin
 # of `compass init` is removed first, because the CLI message pass changes
 # it. Taken before the word pass, except contract-4-commands.yml, recorded again
-# when the 8.0.0 preset moved its two live-major entries (jed72, 2026-10-30). The test is
+# when the 8.0.0 preset moved its two live-major entries (jed72, 2026-10-30), and again
+# when 9.0.0 compared policy diff against default@8 (jed72, 2026-11-05). The 8.0.4
+# governance copy was pinned when 9.0.0 compared contracts 1 and 2 with it (jed72,
+# 2026-11-06). The test is
 # tests/test_frozen_files_unchanged.py.
 files:
   governance/shipped-releases.tar.xz: sha256:ffd65957e458fdf1b5f3d8134e563c8a6659e463f99eeb004f2319288afd2319
   tests/fixtures/compat/contract-1-routing.jsonl.gz: sha256:fc75851a1e27fca04edd4bcb94cc1e59f4823000918cd952b93b45d2466aa794
   tests/fixtures/compat/contract-2-owed.yml: sha256:1b4d8ddb34f9086291c6e6bed0b8e3826b6a53f11df9282d6502210fe1d55fb5
   tests/fixtures/compat/contract-3-check-verdicts.json: sha256:09b587f9f348aea828fc427e98e58dbf17940e76acd1c7d814d0e46189381e6e
-  tests/fixtures/compat/contract-4-commands.yml: sha256:d5cd651e35c35d463830fb36861624d462a3d8b410cc0b77adda1356af4f1a8e
+  tests/fixtures/compat/contract-4-commands.yml: sha256:b1a6b6abd9816ab6ca3001c9791516c7a0c9805854e4870c360762423033827f
   tests/fixtures/compat/contract-5-hook.yml: sha256:0861de564372d23646929b25005eec41f1f8f43c8cfef564b8ff2cc4f4aceca7
   tests/fixtures/compat/v5.6.0-governance.tgz: sha256:db79327a29786d66faf84aa5c49f2579d006d7f556daf13b2740c8aa50b05691
+  tests/fixtures/compat/v8.0.4-governance.tgz: sha256:47e8ffc1f1e7198333c62a249e32116d1f2d1b2d85c179c7a76aaa6d8a36a6b1
   cli/vendor/LICENSE-PyYAML: sha256:8d3928f9dc4490fd635707cb88eb26bd764102a7282954307d3e5167a577e8a4
   cli/vendor/README.md: sha256:a83e226377c471cb4e29d9d03530e74c3007328fc84af9a5bb04e8febf35cb28
   cli/vendor/yaml/__init__.py: sha256:377e52d351cc7ac1537b469144c5a43e3d0f6bc2046c7a44f452bb72be4176dc

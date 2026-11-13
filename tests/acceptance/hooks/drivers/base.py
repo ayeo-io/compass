@@ -1,4 +1,4 @@
-"""What both hook drivers share: building the install, the project and the
+"""What every hook driver shares: building the install, the project and the
 machine, and checking what the hook did.
 
 Everything that knows how Compass is laid out, how a fault is planted and
@@ -14,6 +14,8 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import yaml
 from tests.path_folder import link_programs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -36,7 +38,7 @@ HOOK_PARTS = tuple(name for name in INSTALL_PARTS if name.startswith("pre-tool-"
 #: and the words its refusal names it by.
 CHECKS = {
     "code globs": ("fnmatch.fnmatch(path, g)", "enforcement.code_globs reader"),
-    "delivery approach": ("resolve_artifact(sys.argv[1]", "delivery-approach reader"),
+    "delivery approach": ("decided = isinstance(task, dict)", "delivery-approach reader"),
     "acceptance criteria": ('weight = stages.get("define"', "acceptance-criteria reader"),
     "red record": ("verdict_line(sys.argv[1]", "red-record reader"),
 }
@@ -48,6 +50,7 @@ MANIFEST = """schema_version: '2.0'
 issue: {issue}
 created: '2026-09-24'
 status: active
+delivery_approach: standard
 stages: {{assess: full, define: full, implement: full}}
 scenarios:
 - id: M-1
@@ -82,7 +85,7 @@ class HookDriverBase:
 
     def hasCompleteInstall(self):
         if not self.install.exists():
-            for part in ("hooks", "scripts", "cli", "adapters"):
+            for part in ("hooks", "scripts", "cli"):
                 shutil.copytree(ROOT / part, self.install / part,
                                 ignore=shutil.ignore_patterns("__pycache__"))
             (self.install / "compass-contract.md").write_text(
@@ -112,7 +115,6 @@ class HookDriverBase:
         (compass / "config.yml").write_text(
             f"version: 1.0.0\nmode: enforced\nenforcement:\n  code_globs: [{globs}]\n")
         (task / "manifest.yml").write_text(MANIFEST.format(issue=issue))
-        (task / "delivery-approach.md").write_text("# Approach\n")
         (task / "evidence" / "red.json").write_text(json.dumps(_red_record()))
         (task / ".red").write_text("")
 
@@ -134,7 +136,26 @@ class HookDriverBase:
         (self.project / ".compass" / "config.yml").chmod(0)
 
     def hasIssueWithNoApproachRecord(self, issue):
-        (self.project / ".compass" / "work" / issue / "delivery-approach.md").unlink()
+        # 9.0.0 reads the approach from the manifest (ADR-091), so the record is missing
+        # when the manifest names none.
+        folder = self.project / ".compass" / "work" / issue
+        (folder / "delivery-approach.md").unlink(missing_ok=True)
+        manifest = folder / "manifest.yml"
+        body = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+        body.pop("delivery_approach", None)
+        manifest.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+
+    def hasPathIssue(self, issue, scenarios):
+        # A path issue (ADR-092) records `evidence_required` and no `stages:` map,
+        # so the old `define: thorough` rule cannot see it.
+        manifest = self.project / ".compass" / "work" / issue / "manifest.yml"
+        body = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+        body.pop("stages", None)
+        body.update(delivery_approach="delivery",
+                    evidence_required=["scenarios", "red-before-green", "suite-green"],
+                    scenarios=[{"id": f"TRC-00{n}", "intent": "INT-1", "tests": ["t"]}
+                               for n in range(1, scenarios + 1)])
+        manifest.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
 
     # --- the machine --------------------------------------------------------------------
 

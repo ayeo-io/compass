@@ -419,8 +419,7 @@ MERGED = "cd" * 20
 def _mgrun(run_id=900, created="2026-11-01T10:00:00Z", head=MERGED,
            event="merge_group", status="in_progress"):
     """A merge-group run. Its status does not count: a job self-check does
-    not need, such as harness-root, may still be running when the queue
-    merges."""
+    not need may still be running when the queue merges."""
     return {"id": run_id, "status": status, "conclusion": None,
             "created_at": created, "head_sha": head, "event": event,
             "pull_requests": []}

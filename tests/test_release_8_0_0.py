@@ -3,9 +3,11 @@
 8.0.0 was the version at which Compass promised to stop reading old words,
 old approach names, copied 5.x governance, the generated governance views and
 `.compass/config.yml`. The owner moved that end to 9.0.0 on 25 October 2026.
-Two places act on the date in code: `waivers.py` turns a LEGACY waiver into an
-error from it, and `old_names.removal_problems()` reports each row as overdue.
-A version bump without the date move would do both.
+Two places acted on the date in code: `waivers.py` turned a LEGACY waiver into
+an error from it, and `old_names.removal_problems()` reports each row as
+overdue. A version bump without the date move would do both. 9.0.0 removed the
+8.x waiver of a configuration layer with the layers (ADR-094), so only the
+second remains.
 
 The scenarios, `TRC-001` to `TRC-005`, are in
 release-8-0-0/acceptance-criteria.md.
@@ -22,8 +24,7 @@ sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 import test_version_consistency as versions  # noqa: E402
-import waiver_fixtures as fx  # noqa: E402
-from compass_pkg import old_names, waivers  # noqa: E402
+from compass_pkg import old_names  # noqa: E402
 
 RELEASE = "8.0.0"
 
@@ -55,14 +56,13 @@ def stale_lines(text: str) -> list[str]:
 def test_trc_001_every_version_location_says_8_0_0():
     """Scenario `TRC-001`: every place that states the version says 8.0.0.
 
-    8.0.0 shipped with every location at 8.0.0. A patch release of the 8.x
-    line moves them all together, so the check is that every location agrees
-    on one version and that the version is still in the 8.x line, at or
-    after 8.0.0. A bump to 9.0.0 fails here on purpose: the date logic the
-    other scenarios check belongs to 8.x."""
+    8.0.0 shipped with every location at 8.0.0. A later release moves them
+    all together, so the check is that every location agrees on one version
+    at or after 8.0.0. The other scenarios pass 8.0.0 to the date logic
+    themselves, so they do not depend on the current version."""
     current = versions.EXPECTED_VERSION
     major, minor, patch = (int(part) for part in current.split("."))
-    assert major == 8 and (minor, patch) >= (0, 0), current
+    assert (major, minor, patch) >= (8, 0, 0), current
     assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == current
     assert versions._read_compass_version_constant() == current
     assert versions._read_core_version_constant() == current
@@ -73,17 +73,16 @@ def test_trc_001_every_version_location_says_8_0_0():
         assert found and set(found) == {current}, (rel, found)
 
 
-def test_trc_002_every_legacy_reader_still_reads_at_8_0_0(monkeypatch):
-    """Scenario `TRC-002`: at 8.0.0 no old-name row is overdue, and a LEGACY
-    waiver gives the warning W-LEGACY, not an error."""
+def test_trc_002_every_legacy_reader_still_reads_at_8_0_0():
+    """Scenario `TRC-002`: at 8.0.0 no old-name row is overdue. The LEGACY
+    waiver of a configuration layer went with the layers in 9.0.0 (ADR-094)."""
     assert old_names.removal_problems(RELEASE) == []
-    assert all(r["removed_in"] == "9.0.0" for r in old_names.rows())
-    monkeypatch.setattr(waivers, "COMPASS_VERSION", RELEASE)
-    found, faults = waivers.find(fx.severity_layer(
-        fx.project_waiver(approved_by="LEGACY", approved_on=None)), "project")
-    assert not faults, faults
-    [finding] = waivers.check_shape(found[0], fx.TODAY)
-    assert (finding.code, finding.level) == ("W-LEGACY", "warning"), finding
+    # 9.0.0 keeps the rows a stored file needs through 9.x (VD-043), so every
+    # row, `bdd-specification` (merged into `atdd`, #360) with them, ends at
+    # 10.0.0.
+    merged = {("skill", "bdd-specification")}
+    assert {r["removed_in"] for r in old_names.rows()} == {"10.0.0"}
+    assert {(r["kind"], r["old"]) for r in old_names.rows()} >= merged
 
 
 def test_trc_003_no_current_text_ends_an_old_form_at_8_0_0():

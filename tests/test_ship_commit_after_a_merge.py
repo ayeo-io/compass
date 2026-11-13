@@ -4,8 +4,9 @@ or a commit that only re-derives the living spec.
 With nothing staged, `ship-commit` lands at HEAD after judging what HEAD
 added against the issue's declared scope. It compared HEAD with its first
 parent only, so a tip that merged another branch listed everything that
-branch brought, and a tip that only re-derived `docs/system-spec.md` listed
-the living spec, which `ship-commit` writes itself. Both were refused.
+branch brought, and a tip that only re-derived the living spec listed it, which `ship-commit` wrote itself before 9.0.0. Both were
+refused. 9.0.0 derives no living spec (ADR-091), but a branch made before
+then can still hold such a commit at its tip.
 
 The check now judges the issue's own commits along the first parent: a
 living-spec-only commit is passed over, a merge whose merged-in commits
@@ -20,8 +21,13 @@ still judged), `TRC-002` (an integration merge is judged in full),
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "cli"))
+from compass_pkg import landing  # noqa: E402
 from test_ship_commit_refuses_a_stale_green import (  # noqa: F401
     SLUG, _cli, _git, _green, repo)
 
@@ -29,6 +35,12 @@ from test_ship_commit_refuses_a_stale_green import (  # noqa: F401
 def _manifest(root):
     path = root / ".compass" / "work" / SLUG / "manifest.yml"
     return yaml.safe_load(path.read_text())
+
+
+def _land_commit(root):
+    """The commit the issue landed in: stored, or read from git when the
+    record was committed with the code (#356). None when it has not landed."""
+    return landing.land_commit(_manifest(root), str(root / ".compass" / "work" / SLUG))
 
 
 def _issue_commit(root, extra=None):
@@ -66,7 +78,8 @@ def _side_branch(root, files, on_base=True):
 
 
 def test_trc001_a_living_spec_commit_at_the_tip_lands(repo):
-    """The tip re-derives docs/system-spec.md only: it lands at HEAD."""
+    """The tip re-derives the living spec only, as a branch made before
+    9.0.0 can hold: it lands at HEAD."""
     _issue_commit(repo)
     (repo / "docs").mkdir()
     (repo / "docs" / "system-spec.md").write_text("# System spec\n")
@@ -76,7 +89,7 @@ def test_trc001_a_living_spec_commit_at_the_tip_lands(repo):
     result = _ship(repo)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert _manifest(repo).get("land_commit")
+    assert _land_commit(repo)
 
 
 def test_trc001_a_merge_of_another_branch_at_the_tip_lands(repo):
@@ -89,7 +102,7 @@ def test_trc001_a_merge_of_another_branch_at_the_tip_lands(repo):
     result = _ship(repo)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert _manifest(repo).get("land_commit")
+    assert _land_commit(repo)
 
 
 def test_trc001_a_merge_with_a_resolved_conflict_lands(repo):
@@ -111,7 +124,7 @@ def test_trc001_a_merge_with_a_resolved_conflict_lands(repo):
     result = _ship(repo)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert _manifest(repo).get("land_commit")
+    assert _land_commit(repo)
 
 
 def test_trc001_an_integration_merge_of_the_issue_lands(repo):
@@ -151,7 +164,7 @@ def test_trc002_an_integration_merge_with_a_stray_file_is_refused(repo):
     combined = result.stdout + result.stderr
     assert result.returncode != 0, combined
     assert "src/app.py" in combined, combined
-    assert not _manifest(repo).get("land_commit")
+    assert not _land_commit(repo)
 
 
 def test_trc001_an_untraced_file_below_a_merge_is_still_refused(repo):
@@ -167,7 +180,7 @@ def test_trc001_an_untraced_file_below_a_merge_is_still_refused(repo):
     assert result.returncode != 0, combined
     assert "src/app.py" in combined, combined
     assert "lib/other.py" not in combined, combined
-    assert not _manifest(repo).get("land_commit")
+    assert not _land_commit(repo)
 
 
 def test_trc001_an_untraced_file_below_a_spec_commit_is_still_refused(repo):
@@ -184,7 +197,7 @@ def test_trc001_an_untraced_file_below_a_spec_commit_is_still_refused(repo):
     combined = result.stdout + result.stderr
     assert result.returncode != 0, combined
     assert "src/app.py" in combined, combined
-    assert not _manifest(repo).get("land_commit")
+    assert not _land_commit(repo)
 
 
 def test_trc003_a_branch_off_the_base_from_an_older_commit_is_refused(repo):
@@ -200,7 +213,7 @@ def test_trc003_a_branch_off_the_base_from_an_older_commit_is_refused(repo):
     combined = result.stdout + result.stderr
     assert result.returncode != 0, combined
     assert "lib/stray.py" in combined, combined
-    assert not _manifest(repo).get("land_commit")
+    assert not _land_commit(repo)
 
 
 def test_trc003_with_no_base_a_merge_is_judged_in_full_and_says_why(repo):
@@ -217,4 +230,4 @@ def test_trc003_with_no_base_a_merge_is_judged_in_full_and_says_why(repo):
     assert result.returncode != 0, combined
     assert "lib/stray.py" in combined, combined
     assert "base" in combined and "origin/main" in combined, combined
-    assert not _manifest(repo).get("land_commit")
+    assert not _land_commit(repo)

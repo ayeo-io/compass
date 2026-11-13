@@ -73,7 +73,7 @@ def setup(tmp_path):
 # --- the loader cannot read compass.yml, or owner is not text ---------------------------------
 
 @pytest.mark.parametrize("content, reason", [
-    ("owner: jed72\nnot_a_key: 1\n", "not_a_key: not a key a project layer can hold"),
+    ("owner: jed72\nnot_a_key: 1\n", "not_a_key: not a setting compass.yml can hold"),
     ("owner: jed72\n\tenforcement: x\n", "invalid YAML"),
     ("owner: a\nowner: b\n", "duplicate key 'owner'"),
     ("- a\n- b\n", "expected a mapping, found list"),

@@ -10,7 +10,7 @@ grounds. It serves the review gate, which is the centre of the pipeline. And
 the labels are ordinary English - issue, suggestion, nitpick, question,
 praise - so an adopting team inherits no jargon with them.
 
-Scenario ids: see docs/system-spec.md.
+Scenario ids: see the issue's acceptance criteria.
 """
 from __future__ import annotations
 
@@ -24,10 +24,12 @@ STRATEGIES = ROOT / "governance" / "strategies.md"
 # author guessing at the rest.
 LABELS = ("issue", "suggestion", "nitpick", "question", "praise")
 
-# Where a session needs the pointer: the agent that writes review comments,
-# and the skill for the person answering them.
+# Where a session needs the pointer: the file whose review method writes the
+# comments (the reviewer agent until 9.0.0, ADR-090; commands/ship.md until
+# ADR-099), and the skill for the person answering them.
 POINTER_SURFACES = (
-    ("agents/reviewer.md", ROOT / "agents" / "reviewer.md"),
+    ("skills/evidence-gates/review-dimensions.md",
+     ROOT / "skills" / "evidence-gates" / "review-dimensions.md"),
     ("skills/receiving-code-review/SKILL.md",
      ROOT / "skills" / "receiving-code-review" / "SKILL.md"),
 )

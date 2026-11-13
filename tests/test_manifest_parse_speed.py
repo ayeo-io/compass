@@ -256,8 +256,7 @@ def test_trc_a13_not_utf8_named_by_manifest_readers(tmp_path):
         _assert_names_file_not_utf8(caught, path)
 
 
-@pytest.mark.parametrize("entry_point", ["write_proposal", "commit"])
-def test_trc_a14_locked_reread_refuses_change(tmp_path, entry_point):
+def test_trc_a14_locked_reread_refuses_change(tmp_path):
     task_dir = tmp_path / ".compass" / "work" / "probe"
     task_dir.mkdir(parents=True)
     path = task_dir / "manifest.yml"
@@ -272,10 +271,7 @@ def test_trc_a14_locked_reread_refuses_change(tmp_path, entry_point):
     assert (after.st_size, after.st_mtime_ns) == (before.st_size, before.st_mtime_ns)
     written = path.read_bytes()
     with pytest.raises(CompassError) as caught:
-        if entry_point == "write_proposal":
-            generation.write_proposal(str(task_dir), manifest, {"checks": {}})
-        else:
-            generation.commit(str(task_dir), None, manifest)
+        generation.commit(str(task_dir), None, manifest)
     assert "changed since it was read" in str(caught.value)
     assert path.read_bytes() == written
 
@@ -743,7 +739,9 @@ def test_trc_b3_cold_flow_within_ten_percent_of_before(tmp_path, state):
 # --- group F: no command's output changes ------------------------------------
 
 def _read_only_commands(slugs):
-    commands = [["flow"], ["flow", "--json"], ["flow", "--digest"], ["retro"]]
+    # 9.0.0 removed `compass retro` and the digest's rework and retro sections
+    # (ADR-093), so `flow --digest` is compared with the base's digest up to them.
+    commands = [["flow"], ["flow", "--json"], ["flow", "--digest"]]
     for slug in slugs:
         commands += [["next", "--issue", slug], ["check", "--issue", slug],
                      ["issue", "lint", "--issue", slug]]
@@ -768,11 +766,21 @@ def test_trc_f1_read_only_output_unchanged(tmp_path):
             # The same flow commands again, now that the first run stored its parses.
             results["warm"] = [support.run_compass(cli, args, project, tmp_path,
                                                    clock=support.FIXED_AT)
-                               for args in commands[:4]]
-    assert all(code == 0 and out for code, out, _err in results["base"][:4])
+                               for args in commands[:3]]
+    assert all(code == 0 and out for code, out, _err in results["base"][:3])
     for index, args in enumerate(commands):
-        assert results["current"][index] == results["base"][index], " ".join(args)
-    assert results["warm"] == results["base"][:4]
+        assert _same(results["current"][index], results["base"][index], args), " ".join(args)
+    assert all(_same(warm, base, args) for warm, base, args
+               in zip(results["warm"], results["base"], commands))
+
+
+def _same(current, base, args):
+    """The current result is the base's, except that the current digest ends where
+    the base's rework section began."""
+    if args != ["flow", "--digest"]:
+        return current == base
+    (code, out, err), (base_code, base_out, base_err) = current, base
+    return (code, err) == (base_code, base_err) and base_out.startswith(out.rstrip("\n"))
 
 
 SAVING_PROBE = (b"parity_labels: &parity_a\n- x\nparity_alias: *parity_a\n"

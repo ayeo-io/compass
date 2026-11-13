@@ -1,0 +1,2 @@
+verdict: pass
+input: an in-scope issue whose layering record has `exit_code` 0 and `tests_ran` 3

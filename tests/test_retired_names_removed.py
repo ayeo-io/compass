@@ -7,7 +7,7 @@ What goes: the three slash-command stubs, the `design`-for-`plan` verb alias,
 and the `terminology.yml` entries that exist only to describe them.
 
 What stays, and why it is not an oversight: the read-side rename tables in
-`cli/compass_pkg/core.py` and `analyze.py`. They let an archived manifest and
+`cli/compass_pkg/core.py`. They let an archived manifest and
 an old prose record load, which ADR-020 needs - the archive is migrated,
 not frozen. They are kept for the archive's sake, not for an adopter's, and
 `TRC-D3` holds the decision record to saying so.
@@ -135,7 +135,7 @@ def test_read_side_migration_survives_for_the_archive_s_reason():
     # Loaded, not grepped. A name check passes on a renamed symbol -
     # `SPINE_KEY_MAP_X` contains `SPINE_KEY_MAP` - so it survives exactly the
     # deletion it exists to catch.
-    core, analyze = _load_cli_modules()
+    core = _load_cli_modules()
 
     for name in ("SPINE_KEY_MAP", "ASSESSMENT_KEY_MAP"):
         table = getattr(core, name, None)
@@ -147,12 +147,6 @@ def test_read_side_migration_survives_for_the_archive_s_reason():
     assert core.SPINE_KEY_MAP.get("topology") == "orchestration", (
         "SPINE_KEY_MAP no longer maps `topology` forward, so a manifest "
         "written under the older vocabulary loses the key")
-
-    phases = analyze._PHASE_NAME_MAP
-    assert phases.get("triage") == "assess", (
-        "the phase-name map lost its retired spellings. It normalises prose "
-        "records already on disk - a delivery-approach record written months "
-        "ago still says the retired word")
 
     # An archived manifest still loads. `compass issue migrate` is the verb that
     # reads them, so its presence is the observable half.
@@ -221,7 +215,7 @@ def _assert_hidden_guard_rejects_a_verb_that_does_not_parse():
 
 
 def _load_cli_modules():
-    """Import `core` and `analyze` from the CLI package.
+    """Import `core` from the CLI package.
 
     `cli/compass_pkg` is not on the path for a test run, and importing it
     the way the CLI does (via `cli/compass`) would also run the entry
@@ -234,11 +228,10 @@ def _load_cli_modules():
         sys.path.insert(0, cli_dir)
     try:
         core = importlib.import_module("compass_pkg.core")
-        analyze = importlib.import_module("compass_pkg.analyze")
     finally:
         if added:
             sys.path.remove(cli_dir)
-    return core, analyze
+    return core
 
 
 # Exemptions that exclude nothing TODAY, with the reason each is kept.

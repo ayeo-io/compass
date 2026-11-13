@@ -1,10 +1,11 @@
-"""`/compass:init` writes a minimal `compass.yml` and migrates an older project.
+"""`/compass:init` writes a minimal `compass.yml` and stops on an older project.
 
 `compass init` (the verb every entry point runs) writes the state file in
 `.compass/` and no settings file. `/compass:init` is the step that writes
-`compass.yml`, and it runs `compass policy migrate` instead when the project
-already has a `.compass/config.yml` or copied governance, so a project never
-holds both settings files (ADR-043).
+`compass.yml`. When the project already has a `.compass/config.yml` or copied
+governance it stops instead, so a project never holds both settings files
+(ADR-043): 9.0.0 removed `compass policy migrate` (ADR-094), so such a project
+runs it on 8.x first.
 
 Scenario ids: IDR-1 to IDR-4, in the acceptance criteria of the issue
 `init-docs-release`.
@@ -43,8 +44,9 @@ def test_idr_1_init_writes_a_minimal_compass_yml_that_lints(tmp_path):
     blocks = [b for b in _yaml_blocks(_init_text()) if "schema:" in b]
     assert blocks, "commands/init.md shows no minimal compass.yml"
     doc = yaml.safe_load(blocks[0])
-    assert set(doc) >= {"schema", "extends", "owner"}, doc
-    assert doc["extends"].startswith("compass:default@"), doc
+    assert set(doc) >= {"schema", "owner"}, doc
+    # `extends:` is a removed setting since 9.0.0 (ADR-094): one check set ships.
+    assert "extends" not in doc, doc
 
     project = tmp_path / "fresh"
     project.mkdir()
@@ -52,6 +54,7 @@ def test_idr_1_init_writes_a_minimal_compass_yml_that_lints(tmp_path):
     (project / "compass.yml").write_text(blocks[0], encoding="utf-8")
     run = _compass(project, "policy", "lint")
     assert run.returncode == 0, run.stdout + run.stderr
+    assert "L-SETTING-REMOVED" not in run.stdout + run.stderr, run.stdout
 
 
 def _step(text, number):
@@ -74,15 +77,14 @@ def _migrate_step_problems(text):
     if not re.search(r"schema:.*(?:not|no).*overwrite|no `schema:`.*(?:migrate|refus|do not)",
                      one, flags=re.S | re.I):
         problems.append("step 1 does not refuse a compass.yml with no schema key")
-    dry = two.find("compass policy migrate`")
-    apply_ = two.find("compass policy migrate --apply")
-    ask = re.search(r"Apply this migration\?|go-ahead|says yes", two)
-    if dry < 0 or apply_ < 0 or dry > apply_:
-        problems.append("step 2 does not run the dry run before --apply")
-    if not re.search(r"dry run", two, flags=re.I):
-        problems.append("step 2 does not call the first run a dry run")
-    if not ask or ask.start() > apply_:
-        problems.append("step 2 does not ask for approval before --apply")
+    # 9.0.0 removed `compass policy migrate` (ADR-094): step 2 stops, names the
+    # 8.x command and the upgrade guide, and changes nothing.
+    if "`compass policy migrate` on Compass 8.x" not in two:
+        problems.append("step 2 does not send the project to compass policy migrate on 8.x")
+    if "upgrade guide" not in two:
+        problems.append("step 2 does not name the upgrade guide")
+    if "Change nothing" not in two:
+        problems.append("step 2 does not say to change nothing")
     if not re.search(r"Never write a fresh `compass.yml` beside", two):
         problems.append("step 2 does not forbid writing beside an older file")
     return problems
@@ -100,22 +102,16 @@ def test_idr_2_the_check_fails_on_a_step_2_that_applies_straight_away():
         "straight away.\n\n"))
     assert planted != text
     problems = _migrate_step_problems(planted)
-    assert any("dry run" in p for p in problems), problems
-    assert any("approval" in p for p in problems), problems
+    assert any("8.x" in p for p in problems), problems
+    assert any("change nothing" in p for p in problems), problems
     assert any("beside" in p for p in problems), problems
-
-
-def test_idr_2_step_2_asks_for_an_owner_after_migrating():
-    two = _step(_init_text(), 2)
-    assert re.search(r"owner", two), (
-        "a migrated project has no owner, and a waiver needs one")
 
 
 def test_idr_3_init_copies_no_governance_into_a_new_project():
     text = _init_text()
     assert "Copy `governance/` into the project" not in text
     assert "strategies-rationale.md" not in text, (
-        "copying governance is what policy migrate converts, not what init does")
+        "copying governance is what policy migrate converted on 8.x, not what init does")
     assert "Copies nothing" in text or "copies nothing" in text
 
 
@@ -220,21 +216,13 @@ def test_trc_028_a_bad_answer_is_linted_and_asked_again():
     assert re.search(r"no\s+tag\s+that\s+lint\s+has\s+not\s+passed", step), step
 
 
-def test_init_names_the_shipped_default_preset():
-    """Issue 244: a new project extends the default that ships now, and the
-    major comes from the shipped preset folder, not from a pinned number."""
-    preset = yaml.safe_load(
-        (ROOT / "governance" / "presets" / "default" / "preset.yml")
-        .read_text(encoding="utf-8"))
-    major = str(preset["version"]).split(".")[0]
-    names = re.findall(r"extends: (compass:default@\d+)", _init_text())
-    assert names == [f"compass:default@{major}"] * 2, names
+def test_init_names_no_shipped_preset():
+    """Issue 244 had a new project extend the default that shipped then. 9.0.0
+    ships one check set and no preset (ADR-094), so `extends:` is a removed
+    setting and init writes none."""
+    assert not re.findall(r"extends:|compass:default@\d+", _init_text())
 
 
-def test_trc_029_the_question_leaves_the_extends_line_alone():
-    text = _init_text()
-    _, question = _question(text)
+def test_trc_029_the_question_adds_no_extends_line():
+    _, question = _question(_init_text())
     assert "extends:" not in question, question
-    lines = re.findall(r"extends: (compass:default@\d+)", text)
-    assert len(lines) == 2 and lines[0] == lines[1], (
-        "both extends lines in init.md must name the same preset", lines)

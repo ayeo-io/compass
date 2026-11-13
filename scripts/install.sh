@@ -2,7 +2,7 @@
 # =============================================================================
 # Compass script: install.sh  -  WIRE COMPASS INTO CLAUDE CODE
 # =============================================================================
-# Installs the Claude Code adapter layer (commands/, agents/, skills/, hooks/)
+# Installs the Claude Code adapter layer (commands/, skills/, hooks/)
 # into the right Claude Code locations and registers the hooks in settings.
 #
 # The methodology layer (docs/, governance/, approaches/, templates/) is NOT
@@ -17,8 +17,8 @@
 #   scripts/install.sh --uninstall     # remove what a previous run installed
 #
 # DESTINATIONS
-#   --global  : ~/.claude/{commands,agents,skills}/  + ~/.claude/settings.json
-#   project   : <project>/.claude/{commands,agents,skills}/
+#   --global  : ~/.claude/{commands,skills}/  + ~/.claude/settings.json
+#   project   : <project>/.claude/{commands,skills}/
 #                                     + <project>/.claude/settings.json
 #   hooks are referenced in place from this repo (COMPASS_HOME/hooks/), so the
 #   settings.json entries point at absolute paths under this repo.
@@ -96,16 +96,16 @@ fi
 echo ""
 
 # --- helper: link or copy one component directory ---------------------------
-# Each of commands/agents/skills is installed as a subdirectory named
+# Each of commands/skills is installed as a subdirectory named
 # "compass" so it cannot collide with anything else the user has - the
 # resolved Claude Code path is ~/.claude/<name>/compass/<file>. The "compass"
 # destination dir is also what gives the slash-command namespace, so the
 # repo's flat commands/*.md resolve as /compass:assess (not /compass:compass:…).
-# The repo layout is uniform: commands/*.md, agents/*.md, skills/*/SKILL.md -
+# The repo layout is uniform: commands/*.md, skills/*/SKILL.md -
 # all installed the same way. (The plugin path uses the plugin name for the
 # same namespace; see .claude-plugin/plugin.json.)
 install_component() {
-  local name="$1"                      # commands | agents | skills
+  local name="$1"                      # commands | agents | skills (agents: uninstall only)
   local src="$COMPASS_HOME/$name"
   local dest_parent="$CLAUDE_ROOT/$name"
   local dest="$dest_parent/compass"
@@ -315,7 +315,8 @@ fi
 
 echo "Installing adapter layer..."
 install_component commands
-install_component agents
+# 9.0.0 ships no agents (ADR-090); the uninstall steps still remove an older
+# install's agents link.
 install_component skills
 register_hooks
 

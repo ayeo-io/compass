@@ -1,2 +1,2 @@
 verdict: pass
-input: an in-scope issue with an outer-loop red and an outer-loop green
+input: an in-scope issue with an outer-loop red and an outer-loop green that names its candidate and client

@@ -8,8 +8,8 @@ team can step off one with a recorded reason. A guardrail always beats a
 strategy.
 
 **A strategy can carry blocking checks that a recorded step-off makes
-advisory.** Most strategies carry none: each is assessed by the `reviewer`
-agent at `verify` under the review dimension tagged beneath its heading, and a
+advisory.** Most strategies carry none: each is assessed in the review at
+`ship` under the review dimension tagged beneath its heading, and a
 strategy not followed is a note and a conversation. A strategy that does carry
 checks keeps them outside every guardrail and every lock, so the guardrails
 keep their own checks. A project turns such a strategy off with its setting,
@@ -37,12 +37,11 @@ first two, and a project can refine any of them.
 ### BDD: behaviour as Given/When/Then (`S1`)
 
 **Acceptance criteria are Given/When/Then scenarios, and those same scenarios
-are the acceptance check at Verify.**
+are the acceptance check at ship.**
 
 - This is the shipped-on way to satisfy "acceptance defined before it is
   built" (`G2`).
-- The scenario file is the shared artifact every role reads - see
-  `docs/roles-guide.md`.
+- The scenario file is the shared artifact every role reads.
 - **`G2` does not need a Gherkin scenario.** It needs acceptance stated
   and checkable.
 
@@ -51,8 +50,11 @@ are the acceptance check at Verify.**
 **Write the failing test first, watch it fail for the right reason, write the
 minimal code to pass, then refactor.**
 
-- This is the shipped-on way to satisfy "tested before it lands" (`G1`). The
-  pre-tool hook enforces red-before-green by default.
+- This is the shipped-on way to satisfy "tested before it lands" (`G1`).
+  `compass quick-fix finish` shows that the tests fail without the change, on
+  a copy of the base commit (`docs/base-copy.md`). It does not show the order
+  of the work: a red recorded with `compass tdd-red` does. The pre-tool hook
+  needs a red before a code edit only on an issue assessed before 9.0.0.
 - TDD serves two purposes:
   - Governance: red-before-green makes "tested before it lands" checkable -
     there is a test, and it was there first.
@@ -112,7 +114,7 @@ it after.**
 - The designated suite is a project setting -
   `project.regression_baseline_suite` in `compass.yml` (or `.compass/config.yml` without one), falling back to
   `project.test_command`.
-- The implement stage prompts for the baseline up front, not as an afterthought.
+- The build stage (`commands/go.md`) prompts for the baseline up front, not as an afterthought.
   `compass approach evaluate` surfaces it under `applicable_strategies` when
   the assessment matches (`RP-ADV-001`).
 - It adds no guardrail and no new gate, and does not block shipping when
@@ -131,36 +133,62 @@ candidate (the outer-loop green). Compass reads the records the project's own
 commands write; it never reads project code.
 
 - **Applicability.** Assess records whether the strategy applies, and why,
-  in the delivery-approach record: `compass approach evaluate --write
-  --expected-acceptance none|validation|refactor`. `compass check` decides
+  in the manifest's `acceptance_strategy` block: `compass approach evaluate
+  --write --expected-acceptance none|validation|refactor`. `compass check` decides
   from the records: the strategy applies unless the issue holds an acceptance
   of kind `validation` or `refactor` and no red record. A record line that
   disagrees with the records is advice from the check
   `acceptance-applicability-agrees`, which names the re-assess command.
-- **Routing per delivery approach.** On for regular and full. Existing DSL
-  only on quick-fix (no layering record, no stage review). Existing DSL only
-  on hotfix, which still needs the isolation proof. Suspended on a spike, as
-  strategy `S2` is. The preset holds the routing as
-  `approaches.<id>.acceptance_strategy`.
+- **Routing.** By default the routing of a delivery issue is `guidance`
+  (ADR-099): the `atdd` skill is advice, no record of the strategy is owed
+  and no check of it runs. A project adds the strategy's tokens with
+  `require_evidence`, and the tokens set the routing: `layering` gives on,
+  `isolation` gives existing DSL only with the isolation proof, and
+  `outer-loop` alone gives existing DSL only (no isolation proof, no
+  layering record). Suspended on a spike, as strategy `S2` is
+  (`cli/compass_pkg/evidence_required.py`).
+  An issue assessed before 9.0.0 keeps the routing of its approach.
 - **Project opt-out.** A project turns the strategy off with the setting
   `acceptance_strategy`, written `acceptance_strategy: {state: "off", reason:
   "<why>"}` in `compass.yml`, or `.compass/config.yml` without one. Assess records the opt-out and its reason,
-  the project keeps every check it has today, and `compass retro --acceptance`
-  reports it. The setting takes effect for an issue at its next assess.
+  and the project keeps every check it has today. The setting takes effect for an issue at its next assess.
 - **Issue waiver.** One issue steps off through an issue waiver of the
   strategy's checks, with a reason, approved by the project's owner
-  (ADR-039). Its findings then report as advice, and the retrospective
-  reports the issue apart.
-- **Older issues and pinned projects.** An issue assessed before the
-  strategy shipped has no stored applicability, so the strategy never applies
-  to it (ADR-006). Nor does it apply in a project whose `compass.yml` extends
-  the shipped default at major 6 or 7: the strategy ships from major 8.
+  (ADR-039). Its findings then report as advice.
+- **Older issues.** An issue assessed before the strategy shipped has no
+  stored applicability, so the strategy never applies to it (ADR-006). An
+  `extends:` pin at major 6 or 7 no longer keeps a project out: 9.0.0 does not
+  read it, and `compass migrate` writes `acceptance_strategy: off` in its
+  place.
 - **The loop.** `compass tdd-red` and `compass tdd-green` record the loop
-  with `--loop outer|inner`: default outer on an in-scope quick fix, and
-  inner otherwise. `compass quick-fix finish` takes the same flag. On an
+  with `--loop outer|inner`. The `next:` line names the loop each step needs:
+  the outer loop first on an in-scope issue. `compass quick-fix finish` takes the same flag. On an
   in-scope issue the check
   `outer-loop-recorded` needs an outer-loop red and an outer-loop green on
-  the tree as it is now (ADR-080).
+  the tree as it is now (ADR-080), and `outer-loop-attempts-recorded` needs
+  `attempts` on each outer-loop green, counted for the outer loop alone
+  (ADR-084). An in-scope outer-loop green names its candidate, a build id
+  or `local` for the working tree, and its client, api, web or cli; one
+  without them is refused (ADR-085).
+- **Isolation and layering.** Records the project's own commands write
+  prove both; a written note does not (ADR-086). `compass isolation record`
+  runs the suite in parallel once and each scenario's declared tests twice,
+  and the check `isolation-proven` needs every run to pass on the outer-loop
+  green's candidate and the tree as it is now. `compass layering record` runs
+  the project's own layering test, and `layering-test-passed` needs it to
+  pass. The routing on needs both; existing DSL only with the isolation
+  proof needs the isolation proof; existing DSL only needs neither.
+- **Support code.** The project names the paths of its alias helper,
+  driver factory, DSL root and layering test under
+  `project.acceptance_support`. A missing piece blocks nothing. The first
+  in-scope issue builds the missing
+  pieces as its own work. Until then the advisory check
+  `acceptance-support-present` states the claim limit: the issue can claim
+  that its scenarios pass, but not what a missing piece gives.
+- **The stage reviews.** On `controlled`, an in-scope issue waits at the
+  `build` checkpoint for the stage 2 review and at the `ship` checkpoint for
+  the stage 3 review, and the request lists the `atdd` skill's review
+  questions.
 - **Only the setting turns it off.** An approach that ships cannot set the
   strategy to `suspended`; `compass policy lint` refuses it.
 - Its checks are unlocked and sit outside every gate, as
@@ -184,7 +212,7 @@ govern the quality of what the guardrails act on.
 **Assume the reader has zero prior context.**
 
 Governs, each written to stand on its own: artifacts (intake, acceptance
-criteria, delivery-approach record, design, devlog, verification report), code
+criteria, design notes, an archived devlog or verification report), code
 comments, commit messages, pull-request bodies and review comments.
 
 - **Context before detail.** Say what the thing is and why it matters before
@@ -220,7 +248,7 @@ against the calibration sample before it ships.**
 
 - The sample is `skills/compass-runtime/writing-voice-worked-example.md`,
   paired with the "Never stash across a worktree hop" section of
-  `skills/worktree-multiagent/SKILL.md`.
+  `skills/compass-runtime/SKILL.md`.
 - The audition does not lapse. It applies to any future slice that writes
   prose.
 - The test: read it aloud - would you say this sentence to a colleague at your
@@ -256,7 +284,7 @@ change. Agent identity is not a property a check can inspect, and a check that
 tried would trust the same self-report this exists to distrust.
 
 *Cross-reference: `S8` - both are about who judges. Pointer at the point of use
-in `commands/verify.md`.*
+in `commands/ship.md`.*
 
 ### Mutation proof: a guard is accepted on a failure, not on a pass (`S10`)
 
@@ -292,7 +320,7 @@ would accept a pasted table as readily as a real one, trusting the self-report
 the practice exists to replace.
 
 *Cross-reference: `S9` answers who establishes a thing is true, this answers
-how. Pointer at the point of use in `commands/verify.md`.*
+how. Pointer at the point of use in `commands/ship.md`.*
 
 ### Measure before arguing: settle a disagreement with the number (`S11`)
 
@@ -314,7 +342,7 @@ would tax the ordinary case where somebody simply knows the answer.
 
 *Cross-reference: `S10` - both replace a confident assertion with an
 observation. Pointer at the point of use in `CLAUDE.md` and
-`commands/verify.md`.*
+`commands/ship.md`.*
 
 ### Conventional comments: label a review comment before you write it (`S12`)
 
@@ -329,14 +357,14 @@ observation. Pointer at the point of use in `CLAUDE.md` and
 The label goes first, so a reader can tell a blocking comment from a
 non-blocking one without reading to the end of the thread. It is not a
 substitute for the comment: **issue** still has to say what breaks. The
-`reviewer` agent applies it; the author answering the review assesses it.
+reviewer applies it; the author answering the review assesses it.
 
 *Why a strategy and not a guardrail:* nothing mechanical can judge whether a
 comment was labelled correctly. A blocking defect filed as a nitpick passes any
 check that looks for a word at the front, and it fails worse than no label.
 
 *Cross-reference: `S7` - both are about the reader's cost. Pointer at the point
-of use in `agents/reviewer.md` and `skills/receiving-code-review/SKILL.md`.*
+of use in `skills/receiving-code-review/SKILL.md`.*
 
 ### A title is a summary, not a headline (`S13`)
 
@@ -395,7 +423,7 @@ not a count. Any count a tool produces is a number that moves.*
 
 ### Well-architected alignment: name the pillars a design touches (`S15`)
 
-*Assessed under the `architecture` dimension, on the regular and full approaches.*
+*Assessed under the `architecture` dimension, where the change owes the `architecture` evidence.*
 
 **A technical design names the well-architected pillars the change touches,
 and says in a sentence or two what it does about each.**
@@ -418,7 +446,7 @@ and says in a sentence or two what it does about each.**
 
 ### Named patterns: prefer a well-understood pattern, and say why (`S16`)
 
-*Assessed under the `clarity` dimension, on the regular and full approaches.*
+*Assessed under the `clarity` dimension, where the change owes the `clarity` evidence.*
 
 **A technical design names the well-understood design patterns it uses, and
 where a real choice existed, the one it rejected and why.**
@@ -481,7 +509,7 @@ conventions this repository holds itself to.
 
 The first two are checked by `tests/test_house_style.py`, and all three are
 strategies rather than guardrails. What separates them is what the check
-protects: the checks in `guardrails.yml` run against an adopting project's
+protects: the checks of the check set run against an adopting project's
 `manifest.yml` and `evidence/` and can block a ship, while
 `tests/test_house_style.py` is one of this repository's own source invariants.
 It never runs in an adopting project and never touches a gate.
@@ -496,12 +524,14 @@ message must *say*; how you format the subject line is yours.
 
 ## How strategies are used
 
-- **`compass approach evaluate`** applies the routing strategies
-  (`routing-policy.md`) to compute a default delivery approach.
-- **The `reviewer` agent** assesses, at `verify`, whether the work followed the
+- **`compass approach evaluate`** lists the advisory routing strategies
+  (`routing-policy.md`) that match the assessment, under
+  `applicable_strategies`.
+- **The review at `ship`** assesses whether the work followed the
   applicable strategies, and reports that as judgement, distinct from the
   evidence-backed guardrail checks.
-- **`/compass:consult`** is where strategy-versus-strategy tensions get resolved.
+- **A person** resolves a strategy-versus-strategy tension the delivery
+  approach does not settle.
 
 A strategy that has hardened into a real must-never - checkable, blocking - has
 outgrown this file. Promote it to `guardrails.md`. That should be rare.

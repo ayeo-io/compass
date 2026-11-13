@@ -129,7 +129,7 @@ def test_cl_c_quick_fix_start_records_the_new_issue_for_its_session(project):
 
 
 def test_cl_c_the_assess_and_resume_instructions_set_the_pointer_by_issue_use():
-    for rel in ("approaches/assess-procedure.md", "commands/resume.md", "agents/router.md"):
+    for rel in ("approaches/assess-procedure.md", "commands/resume.md"):
         text = (ROOT / rel).read_text()
         assert "compass issue use" in text, rel
 
@@ -269,20 +269,6 @@ def test_a_record_from_the_same_folder_still_refuses(project):
     assert _table(compass_dir)["S1"]["issue"] == "alpha"
 
 
-def test_the_recorder_ignores_a_record_copied_from_another_folder(project):
-    """Decision Q10 of worktree-issue-from-edited-path: `session_record` reads
-    the table with the same root test as `session_lease.check`."""
-    from compass_pkg import session_record
-    compass_dir = project / ".compass"
-    task_dir = compass_dir / "work" / "why"
-    _write_table(compass_dir, {"issue": "ex", "at": _now(),
-                               "root": str(project / "elsewhere" / ".compass")})
-    assert session_record._moved(str(task_dir), "S1") is False
-    _write_table(compass_dir, {"issue": "ex", "at": _now(),
-                               "root": os.path.realpath(compass_dir)})
-    assert session_record._moved(str(task_dir), "S1") is True
-
-
 def test_the_root_is_the_real_path_of_the_compass_folder(project, tmp_path):
     """Scenario id: `TRC-015` in worktree-issue-from-edited-path/acceptance-criteria.md"""
     from compass_pkg import session_lease
@@ -292,11 +278,3 @@ def test_the_root_is_the_real_path_of_the_compass_folder(project, tmp_path):
     session_lease.record(str(link), "S1", "alpha")
     assert _table(folder)["S1"]["root"] == os.path.realpath(folder)
     assert session_lease.check(str(folder), "S1", "beta") == "moved:alpha"
-
-
-def test_the_recorder_names_all_three_ways_the_issue_is_resolved():
-    """`via=tree` is what the hook passes for an edit in another tree; the
-    recorder's documentation names it beside `env` and `pointer`."""
-    from compass_pkg import session_record
-    doc = session_record.record.__doc__
-    assert all(f"`{via}`" in doc for via in ("env", "pointer", "tree"))

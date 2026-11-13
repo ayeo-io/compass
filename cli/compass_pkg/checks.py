@@ -32,8 +32,10 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.stable_ids import GATE_VERIFY_ANALYZE, GATE_VERIFY_CORRECTNESS
-from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
+from compass_pkg.stable_ids import GATE_VERIFY_CORRECTNESS
+from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, load_yaml, manifest_path, normalize_spine
+from compass_pkg.spec_location import spec_path
+from compass_pkg.path_stages import is_path_issue
 from compass_pkg import approval_records, status_words
 from compass_pkg.tdd import _read_config, settings_hint
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
@@ -141,7 +143,7 @@ def _check_scenarios_have_tests(task, task_dir):
     scns = task.get("scenarios") or []
     if not scns:
         return False, "no scenarios in manifest.yml"
-    spec_path = artifact_path(task_dir, "acceptance-criteria.md")
+    spec_file = spec_path(task_dir)
     missing_test, undocumented, documented_narr = [], [], 0
     for s in scns:
         sid = s.get("id", "?")
@@ -149,7 +151,7 @@ def _check_scenarios_have_tests(task, task_dir):
         # test - so an incidental command does not buy a pass, and a documented
         # playbook does not need a fabricated one.
         if s.get("verifiable") == "narrative":
-            if _scenario_documented_in_spec(spec_path, sid):
+            if _scenario_documented_in_spec(spec_file, sid):
                 documented_narr += 1
             else:
                 undocumented.append(sid)
@@ -181,7 +183,7 @@ def _spec_sha256(task_dir):
     matters most.
     """
     from compass_pkg import rendered_blocks
-    path = artifact_path(task_dir, "acceptance-criteria.md")
+    path = spec_path(task_dir)
     found = rendered_blocks.masked_digest(path)
     # The same bytes as before for a spec with no block; with blocks, the
     # lines inside them are left out, so a re-render does not read as an edit.
@@ -255,7 +257,7 @@ def _check_scenarios_are_executable(task, task_dir):
 
 
 from compass_pkg.test_ids import _test_id_resolves, _test_is_skipped
-from compass_pkg.red_first import missing_first_failure
+from compass_pkg.red_first import missing_first_failure, scenario_notice
 
 
 
@@ -303,7 +305,7 @@ def _check_suite_passed(task, task_dir):
     # exactly that reading. Per-scenario coverage needs the runner's own
     # result output parsed.
     return True, (f"{len(green)} test-run(s) on record, all green. This does "
-                  f"not record which scenarios the run exercised")
+                  f"not record which scenarios the run exercised" + scenario_notice(task, task_dir))
 
 
 def _git_out(args, cwd):
@@ -469,16 +471,7 @@ def _check_gate_evidence(task, task_dir):
     # Load the evidence typing rules. The one extra yaml load per `check` run is
     # negligible, and it keeps the check signature simple.
     from compass_pkg import effective
-    view = effective.view_or_legacy(task_dir)
-    if view is not None:
-        requirements, known_types = view.gate_requirements()
-    else:
-        try:
-            gpolicy = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
-        except CompassError:
-            gpolicy = {}
-        known_types = set((gpolicy.get("evidence_types") or {}).keys())
-        requirements = gpolicy.get("gate_evidence_requirements") or {}
+    requirements, known_types = effective.effective_for(task_dir).gate_requirements()
 
     problems = []
     for g in gates:
@@ -635,33 +628,63 @@ def dod_tag_problems(rest, ev_registry, backfills):
     return problems
 
 
+#: The first `created` date of an issue judged with no verification report (ADR-091).
+DOD_WITHOUT_REPORT_FROM = "2026-11-04"
+
+
 def _check_dod_evidence_typed(task, task_dir):
     """Every item of the issue's Definition of Done is met by a record in the
     manifest (implementation 2.0.0, ADR-051).
 
-    The items are the issue's configured `verify` exit list. One of these records
+    The items are the issue's configured Definition of Done: the build exit list,
+    or the `verify` exit list of a legacy configuration. One of these records
     meets an item (`item_records`):
 
     - an evidence entry of an accepted type with `meets: [item]`
       (`compass gate pass --meets`, `compass evidence add --meets`);
     - a person's approval for the item (`compass evidence approve --check`);
-    - a follow-up that defers it (`compass follow-up add --defers`), which holds
-      while it is outstanding and the item reads met once it is resolved;
+    - a follow-up that defers it (`--defers`): on a path issue only one linked to a
+      GitHub issue (2.2.0, ADR-093); on an older one it holds until it is resolved;
     - a tick `compass issue migrate` carried from an archived page.
 
     An item with none of these is open and fails the check: evidence, not
     assertion (`G4`). The page is never read - an agent can write a tick on a
     page, but it cannot write a record that the command refused.
 
-    Cross-issue half: scan sibling manifest.yml files for follow-ups with
-    target_task equal to this issue's slug and status: outstanding - any such
-    entry blocks shipping this issue.
+    Cross-issue half: an outstanding follow-up of a sibling issue whose target_task is this
+    issue blocks shipping it (an archive record; nothing writes target_task since 9.0.0).
+
+    A path issue (ADR-092) is judged by `dod_due.path_verdict`. An issue assessed
+    before 9.0.0 keeps the rules below.
     """
+    from compass_pkg import dod_due
     report = artifact_path(task_dir, "verification-report.md")
     # The directory name is the true slug; the manifest passed in may hold a template placeholder.
     this_slug = os.path.basename(task_dir) or task.get("task") or ""
     inbound = _check_inbound_backfills(task_dir, this_slug)
-    if not os.path.isfile(report):
+    no_report = not os.path.isfile(report)
+    if is_path_issue(task):
+        due = dod_due.path_verdict(task, inbound)
+        if due:
+            return due
+        no_report = True        # a path issue's items are judged on the records only
+    elif no_report and str(task.get("created") or "") >= DOD_WITHOUT_REPORT_FROM:
+        # 9.0.0 writes no report (ADR-091): the Definition of Done is due once every gate has
+        # passed, which is when the verify stage's exit is reached. It belongs to the
+        # approaches that wrote a report before 9.0.0: those whose verify stage is thorough.
+        from compass_pkg import gate_status
+        from compass_pkg.stable_ids import DEPTH_THOROUGH, STAGE_VERIFY
+        stages = task.get("stages") if isinstance(task.get("stages"), dict) else {}
+        if stages.get(STAGE_VERIFY) != DEPTH_THOROUGH:
+            if inbound:
+                return False, "; ".join(inbound)
+            return NOTHING_TO_CHECK, ("the verify stage is %s on this approach, so it holds no "
+                                      "Definition of Done" % (stages.get(STAGE_VERIFY) or "unset"))
+        gates = gate_status.live_gates(task)
+        waits = dod_due.waits_for_gates(task, inbound)
+        if waits:
+            return waits
+    elif no_report:
         # A quick fix writes no report, but another issue's outstanding follow-up that targets
         # it still blocks it.
         if inbound:
@@ -671,14 +694,13 @@ def _check_dod_evidence_typed(task, task_dir):
                                   % artifact_location(task_dir, "verification-report.md"))
     from compass_pkg import effective, item_records
     try:
-        view = effective.view_or_legacy(task_dir)
+        view = effective.effective_for(task_dir)
     except Exception as exc:                            # noqa: BLE001
         return False, "cannot read the issue's configuration to find its Definition of Done: %s" % exc
-    # An issue read without a configuration is judged by the shipped default's list.
     rows = item_records.items(task, task_dir, view, "dod")
-    problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check))
+    problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check, task))
                 for row in rows if row.state == item_records.OPEN]
-    if _closed_without_a_list(task, report):
+    if not no_report and _closed_without_a_list(task, report):
         # An archived issue whose page never held a Definition of Done has no record to
         # carry. Only a closed issue is excused: one still in flight is judged, so deleting
         # the section does not clear the check (jed72, 2026-10-11).
@@ -691,7 +713,8 @@ def _check_dod_evidence_typed(task, task_dir):
     problems.extend(inbound)
     if problems:
         return False, "; ".join(problems)
-    where = artifact_location(task_dir, "verification-report.md")
+    where = ("the manifest's records" if no_report
+             else artifact_location(task_dir, "verification-report.md"))
     if not rows:
         return True, ("the issue's Definition of Done lists no item - nothing to evidence "
                       "(read %s)" % where)
@@ -780,9 +803,18 @@ def _check_human_approval(task, task_dir):
                  and e.get("type") == "human-approval"]
     approved = [a for a in approvals if a.get("decision") == "approved"]
     standing, note = approval_records.not_withdrawn(approved, registry)
+    # 1.3.0: a sign-off covers the change the person saw (ADR-099 decision 6).
+    # One given for an earlier state does not count, in flight or landed.
+    earlier = [a for a in standing if approval_records.gives_g5(a)
+               and approval_records.for_earlier_state(task, a)]
+    if earlier:
+        standing = [a for a in standing if a not in earlier]
+        if not any(approval_records.gives_g5(a) for a in standing):
+            return False, approval_records.earlier_state_detail(task, earlier)
     ok, detail = _judge_g5_approval(task, standing)
     detail = f"{note}; {detail}" if note and not ok else detail
-    if ok or status_words.is_in_flight(task) or not _earlier_rule_passes(approved):
+    if ok or status_words.is_in_flight(task) or not _earlier_rule_passes(
+            [a for a in approved if a not in earlier]):
         return ok, detail
     return True, (f"{detail} - the issue has landed and the earlier rule passes it (the "
                   f"first approved human-approval record holds all four fields), so this "
@@ -830,6 +862,9 @@ def _judge_g5_approval(task, approved):
 
 
 def _check_backfills_paid(task, task_dir):
+    # 1.1.0: a path issue's follow-ups link to GitHub issues, which track the work (ADR-093).
+    if is_path_issue(task):
+        return NOTHING_TO_CHECK, "a path issue's follow-ups link to the GitHub issues that track them"
     bfs = task.get("follow_ups") or []
     unpaid = [b.get("id", "?") for b in bfs if b.get("status") != "resolved"]
     if unpaid:
@@ -875,6 +910,19 @@ def _check_spike_no_production_changes(task, task_dir):
     return True, "no production changed_files (correct - a Spike ships nothing)"
 
 
+def _quarantine_dir(task_dir):
+    """The folder whose `quarantine.yml` the check reads: the project's own
+    `governance/` when it holds one, else the framework's. It is found by path,
+    not by the two governance files 9.0.0 no longer reads (ADR-098)."""
+    from compass_pkg.core import FRAMEWORK_ROOT
+    from compass_pkg.project_settings import find_project_root
+    for root in (find_project_root(task_dir), FRAMEWORK_ROOT):
+        folder = os.path.join(root, "governance")
+        if os.path.isfile(os.path.join(folder, "quarantine.yml")):
+            return folder
+    return None
+
+
 def _load_quarantine_registry(gov_dir):
     """Load governance/quarantine.yml and return a dict of test id -> entry.
 
@@ -918,10 +966,7 @@ def _check_no_trusted_rerun(task, task_dir):
         return True, "no test-run evidence to evaluate"
 
     # Load quarantine registry once
-    try:
-        gov = find_governance()
-    except CompassError:
-        gov = None
+    gov = _quarantine_dir(task_dir)
     quarantine = _load_quarantine_registry(gov) if gov else {}
 
     problems = []
@@ -993,42 +1038,6 @@ def _check_no_trusted_rerun(task, task_dir):
     return True, f"no trusted-rerun violations{note_str}"
 
 
-def _check_coherence_check_passes(task, task_dir):
-    """`G4` extension (ADR-007): verify.analyze needs a consistency-check
-    evidence entry with zero findings. Only runs when verify.analyze is in the
-    issue's gate set. If the gate is absent, this check trivially passes (the
-    issue is not subject to the consistency-check requirement)."""
-    gates = task.get("gates") or []
-    gate_ids = [g.get("id") for g in gates if isinstance(g, dict)]
-    if GATE_VERIFY_ANALYZE not in gate_ids:
-        return True, "verify.analyze not in gate set - consistency check not required"
-    # Gate is present: look for a consistency-check typed evidence entry
-    registry = {e.get("id"): e for e in (task.get("evidence") or [])
-                if isinstance(e, dict) and e.get("id")}
-    coherence_entries = [e for e in registry.values()
-                         if e.get("type") == "consistency-check"]
-    if not coherence_entries:
-        return False, ("no consistency-check evidence on record - run "
-                       "`compass analyze` to produce the required "
-                       "consistency-check evidence for verify.analyze")
-    # Check that the most recent entry records zero findings
-    entry = coherence_entries[-1]
-    path = entry.get("path")
-    if path:
-        full = path if os.path.isabs(path) else os.path.join(task_dir, path)
-        if os.path.isfile(full):
-            try:
-                data = json.load(open(full, encoding="utf-8"))
-                n = data.get("finding_count", None)
-                if n is not None and n != 0:
-                    return False, (f"consistency-check evidence records "
-                                   f"{n} finding(s) - resolve them before "
-                                   f"clearing verify.analyze")
-            except (OSError, json.JSONDecodeError):
-                pass  # readable but corrupt - gate-evidence-present catches it
-    return True, "consistency-check evidence on record - verify.analyze gate cleared"
-
-
 def _check_command_passes(task, task_dir):
     """ADR-009: run each project guardrail's declared `command:`
     and report pass/fail.
@@ -1052,16 +1061,7 @@ def _check_command_passes(task, task_dir):
 
     # Load the guardrails to find project guardrails with check: command-passes
     from compass_pkg import effective
-    view = effective.view_or_legacy(task_dir)
-    if view is not None:
-        project_guardrails = view.command_checks()
-    else:
-        try:
-            gov = find_governance()
-            gpolicy = load_yaml(os.path.join(gov, "guardrails.yml"))
-        except CompassError:
-            gpolicy = {}
-        project_guardrails = gpolicy.get("project") or []
+    project_guardrails = effective.effective_for(task_dir).command_checks()
     cp_guardrails = [
         g for g in project_guardrails
         if isinstance(g, dict) and "command-passes" in (g.get("checks") or [])
@@ -1073,8 +1073,8 @@ def _check_command_passes(task, task_dir):
     # reports about where the contribution came from. See
     # cli/compass_pkg/trust.py.
     #
-    # `command_permission` holds that order for this check and for
-    # `compass readiness`: trust first (UNKNOWN on CI is refused, because
+    # `command_permission` holds that order for this check: trust first
+    # (UNKNOWN on CI is refused, because
     # Compass cannot tell whose work it is), then the opt-in. It looks the
     # opt-in up from the issue folder, as this check always has.
     permission = None

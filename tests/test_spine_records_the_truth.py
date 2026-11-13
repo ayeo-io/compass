@@ -74,20 +74,35 @@ def _seeded(tmp_path, **readings):
         "risk": "contained", "familiarity": "greenfield",
         "size": "standard", "intent": "delivery", "urgency": "none",
         "role": "engineer", "labels": [], **readings}))
+    # The project's `compass.yml` replaces the legacy `.compass/config.yml`.
+    (root / ".compass" / "config.yml").unlink()
+    (root / "compass.yml").write_text("schema: 1\n" + ARCHITECTURE_ON_CROSS_CUTTING)
     _run(root, "approach", "evaluate", "--issue", "t", "--write")
     return root
 
+
+#: The project asks for the architecture review on cross-cutting risk. Risk adds
+#: no review by default (ADR-099 decision 4), so a re-assessment moves the gate
+#: set only where a `require_evidence` rule says so.
+ARCHITECTURE_ON_CROSS_CUTTING = (
+    "require_evidence:\n  - when: {risk: [cross-cutting, critical]}\n"
+    "    add: [architecture]\n")
+
+
+# The four-stage path (ADR-092): each re-assessment here is written by the path
+# writer, so the approach name is `delivery` before and after.
 
 def test_scn_a1_content_change_is_logged(tmp_path):
     """Same delivery-approach name, materially different delivery approach."""
     root = _seeded(tmp_path)
     before = _task(root)
-    assert before["delivery_approach"] == "regular", before["delivery_approach"]
+    assert before["delivery_approach"] == "delivery", before["delivery_approach"]
+    assert "architecture" not in before["evidence_required"]
 
-    # cross-cutting keeps the delivery-approach name `standard` and takes the
-    # gate set from 6 to 7 (RP-REQUIRE-003 adds verify.fitness). `critical`
-    # would also change the approach name, so it would not test a
-    # content-only change.
+    # cross-cutting keeps the approach name `delivery` and takes the gate set
+    # from 3 to 4 (the project's rule adds the `architecture` evidence and its
+    # gate `verify.architecture`). On the path every delivery issue has the one
+    # name, so any re-assessment that moves the evidence is a content-only change.
     before["assessment"]["risk"] = "cross-cutting"
     (root / ".compass" / "work" / "t" / "manifest.yml").write_text(
         yaml.safe_dump(before, sort_keys=False))
@@ -96,6 +111,9 @@ def test_scn_a1_content_change_is_logged(tmp_path):
     after = _task(root)
     assert after["reassessments"], (
         f"a re-frame that changed the gate set was not logged:\n{r.stdout}")
+    entry = after["reassessments"][-1]
+    assert (entry["from_route"], entry["to_route"]) == ("delivery", "delivery"), entry
+    assert "architecture" in after["evidence_required"]
 
 
 def test_scn_a2_no_material_change_is_not_logged(tmp_path):
@@ -143,26 +161,6 @@ def test_scn_a4_entry_carries_a_kind(tmp_path):
         yaml.safe_dump(t2, sort_keys=False))
     _run(root, "approach", "evaluate", "--issue", "t", "--write", "--reason", "bigger")
     assert _task(root)["reassessments"][-1].get("kind") == "judgment", _task(root)["reassessments"]
-
-
-def test_scn_a5_calibration_counts_only_judgement(tmp_path):
-    """A policy-correction reassessment would otherwise read as assessment
-    under-sizing the work, which skews the retro signal."""
-    reframes = [
-        {"from_route": "standard", "to_route": "expedition", "kind": "judgement",
-         "reason": "magnitude under-read", "date": "2026-08-01"},
-        {"from_route": "standard", "to_route": "expedition",
-         "kind": "policy-correction", "reason": "adopted newer policy",
-         "date": "2026-08-02"},
-    ]
-    root = _project(tmp_path, _base(route="expedition", reassessments=reframes))
-    r = _run(root, "retro")
-    out = r.stdout + r.stderr
-    assert "policy-correction" in out or "1" in out, out
-    # The judgement re-assessment counts as one up; the policy correction
-    # must not count as a second.
-    assert "(1 up / 0 down)" in out, (
-        f"a policy-correction was counted in the re-sizing signal:\n{out}")
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +218,7 @@ def test_scn_c1_superseded_by_validates(tmp_path):
     root = _project(tmp_path, _base(scenarios=scenarios))
     r = _run(root, "issue", "lint", "--issue", "t")
     assert r.returncode == 0, (
-        f"the schema still forbids what behavior-mapping requires:\n"
+        f"the schema still forbids what behavior mapping requires:\n"
         f"{r.stdout}{r.stderr}")
 
 
@@ -249,4 +247,3 @@ def test_scn_f1_existing_task_files_unchanged(tmp_path):
          "reason": "magnitude under-read", "date": "2026-07-01"}])
     root = _project(tmp_path, old)
     assert _run(root, "issue", "lint", "--issue", "t").returncode == 0
-    assert _run(root, "retro").returncode == 0

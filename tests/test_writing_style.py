@@ -57,32 +57,11 @@ TERMINOLOGY_PATH = REPO_ROOT / "governance" / "terminology.yml"
 from scripts.prose_keys import PROSE_KEYS  # noqa: E402
 
 # Files this issue does not touch, matched by exact path or by directory
-# prefix (a trailing slash). `docs/system-spec.md` is derived and regenerated
-# by `compass ship`; the two `cli/vendor/` paths are upstream code copied
-# unmodified (DD-7 keeps `cli/vendor/README.md` out of this set, because
-# Compass wrote it); `LICENSE` and `assets/` are out of scope.
-#
-# `docs/system-spec-archive.md` holds the spec's archived sections since the
-# split, on the same ground.
-# `docs/system-spec.md` is derived rather than excluded on some ground the
-# sweeps could not state - it hides real findings, and the reason it is
-# still right to exclude it is recorded here (finding 7,
-# `review-dimensions.md`). Every sweep run directly over the file, bypassing
-# this set, reports five kinds and no others: retired words (`PBW-A1`), bare
-# codes (`PBW-A7`), word-table hits (`PBW-A2`), spellings (`PBW-A3`) and
-# idioms (`PBW-A5`). The counts rise as issues land, because each one appends
-# its scenario titles, so the kinds are what is pinned and the totals are
-# not. At the time this was written they were 181, 53, 30, 12 and 10. They are overwhelmingly archived scenario titles -
-# `task`, `task-architectural`, `lens`, `Land`, `Frame` and the rest - each  # vocabulary-scan: allow - naming the retired v1 words the excluded findings are made of, not using them
-# on a line already ending `_(archived)_` - the same ground
-# `governance/terminology.yml`'s `scan.exempt` already gives
-# `architecture/decisions/`: a landed scenario's title is a historical
-# record of what it was called when it ran, not a live claim a reader acts
-# on today. `PBW-D8` proves the branch changes none of the excluded paths,
-# which is the check this exclusion needs, not the ground for it.
+# prefix (a trailing slash). The two `cli/vendor/` paths are upstream code
+# copied unmodified (DD-7 keeps `cli/vendor/README.md` out of this set,
+# because Compass wrote it); `LICENSE` and `assets/` are out of scope.
+# `PBW-D8` proves no sweep reads the excluded paths.
 EXCLUDED_PATHS: frozenset[str] = frozenset({
-    "docs/system-spec.md",
-    "docs/system-spec-archive.md",
     "cli/vendor/yaml/",
     "cli/vendor/LICENSE-PyYAML",
     "LICENSE",
@@ -388,19 +367,6 @@ _FIXTURE_PREFIX = "tests/fixtures/writing-style/"
 _OLDER_ISSUE_RESOLVED = ("tests/acceptance/atdd_strategy/fixtures/assessed-by-8.0.4/"
                          ".compass/work/older/generations/1/resolved.yml")
 
-# Other frameworks' own records. An eval scenario lays a `seed_R1/`
-# or `seed_R3/` overlay over its seed for a session under that
-# framework, in the words that framework writes. Compass's writing rules must
-# not rewrite them, and an allow marker would appear in the text the session
-# reads, so every file in such an overlay is left out.
-_OTHER_FRAMEWORKS_OVERLAYS = ("/seed_R1/", "/seed_R3/")
-
-
-def _is_other_frameworks_record(rel: str) -> bool:
-    return rel.startswith("evals/scenarios/") and any(
-        part in rel for part in _OTHER_FRAMEWORKS_OVERLAYS)
-
-
 def scanned_paths() -> list[Path]:
     """Every tracked path, minus `EXCLUDED_PATHS`, minus this mechanism's own
     planted-breach fixtures. The fixtures are not on `EXCLUDED_PATHS` - that
@@ -409,8 +375,7 @@ def scanned_paths() -> list[Path]:
     a real, unfixed finding."""
     return [REPO_ROOT / rel for rel in _git_ls_files()
             if not _is_excluded(rel)
-            and not rel.startswith(_FIXTURE_PREFIX)
-            and not _is_other_frameworks_record(rel)]
+            and not rel.startswith(_FIXTURE_PREFIX)]
 
 
 # ---------------------------------------------------------------------------
@@ -642,12 +607,6 @@ _register(Rule(
             "the real slug of a past, archived issue - the same protected "
             "citation as the cross-task-architectural-integrity exemption "
             "above."),
-        Exemption(
-            "tests/test_swarm_script_parser.py",
-            "Spec: swarm-script-strips-markdown/acceptance-criteria.md",
-            "the real slug of a past, archived issue - the same protected "
-            "citation as the cross-task-architectural-integrity exemption "
-            "above."),
         # The word is now also a defined issue type, so the derived glossary
         # names it as a term: its heading and the Related list of the
         # issue-type entry. The retired sense is the issue meaning only.
@@ -660,12 +619,6 @@ _register(Rule(
                    "`bug`, `task`, `assess`",
                    "the derived Related list of the issue-type entry, "
                    "which links to the defined term `task`."),
-        Exemption(
-            "cli/compass_pkg/analyze.py",
-            'records write "full, streams unbounded by policy"',
-            "quotes what an archived 1.x record literally says, already "
-            "marked '# vocabulary-scan: allow', which this sweep does not "
-            "read."),
         Exemption(
             "cli/compass_pkg/core.py",
             "retired `task` key still load through this row",
@@ -691,17 +644,6 @@ _register(Rule(
             "holds",
             "documents the retired word this map reads for back-compat."),
         Exemption(
-            "cli/compass_pkg/analyze.py",
-            "Extract the reference route name from delivery-approach.md",
-            "the function reads the literal 1.x field `**Reference "
-            "route:**`, which route.md wrote before the v2 rename; the "
-            "docstring names the field it searches for."),
-        Exemption(
-            "cli/compass_pkg/analyze.py",
-            "Looks for: **Reference route:** Express",
-            "quotes the literal 1.x field and a real 1.x route name, the "
-            "text the regex searches an old document for."),
-        Exemption(
             "cli/compass_pkg/test_ids.py",
             "governance/strategies.md carries S7",
             "a worked example of a sentence that merely mentions a file, "
@@ -724,27 +666,9 @@ _register(Rule(
             "cli/compass_pkg/landed_by.py",
             "and `backfills-paid` still apply",
             "backfills-paid is the real check id in "
-            "the `checks` block of governance/guardrails.yml, an identifier - the audit notes "
+            "the `checks` block of governance/check-set.yml, an identifier - the audit notes "
             "the `backfills:` key is an identifier and stays; this is the "
             "same class of identifier."),
-        Exemption(
-            "cli/compass_pkg/receipt.py",
-            'Records written before ADR-023 say "Topology"',
-            "documents the retired label a pre-ADR-023 record literally "
-            "carries, so this reader can still parse it - the same "
-            "back-compat reading the stream-N exemptions above cover."),
-        Exemption(
-            "cli/compass_pkg/receipt.py",
-            '"Topology" (ADR-006)',
-            "documents the retired label a pre-ADR-023 record literally "
-            "carries, so this reader can still parse it."),
-        Exemption(
-            "tests/test_process_impact.py",
-            "tasks: list of (slug, created, landed, route, n_gates, "
-            "repairs|None).",
-            "documents the function's real parameter name `tasks` (an "
-            "identifier, section 4), not a v1-vocabulary use of the word - "
-            "the parameter and every call site in this file use that name."),
         Exemption(
             "tests/test_no_deprecation_stubs.py",
             "`--task` and `--reading` were tolerated alongside `--issue` and",
@@ -762,20 +686,6 @@ _register(Rule(
             "codes. An unexplained term is a defect whether it is `G5` or `vacuity`, and",  # plain-words: allow - the exemption quotes the offending sentence verbatim, which is how a substring sweep tells it from an ordinary use
             "the same naming-the-banned-word exception as the docstring "
             "line above."),
-        Exemption(
-            "tests/test_rework_scan.py",
-            "`TRC-D2`: file added by task-a and deleted by task-b is reported.",
-            "task-a and task-b are the real fixture directory names "
-            "write_task_yml() writes (section 4, identifiers), not a "
-            "v1-vocabulary use of the word."),
-        Exemption(
-            "tests/test_rework_scan.py",
-            "`TRC-D4`: migration added in task-a and a drop migration added in task-b is reported.",
-            "the same fixture directory names as the exemption above."),
-        Exemption(
-            "tests/test_rework_scan.py",
-            "task-b is 10 days later - outside the window",
-            "the same fixture directory name as the exemptions above."),
         Exemption(
             "tests/test_printed_output_vocabulary.py",
             "only layer 2 catches, and `Land` capitalised is a prose form that only",
@@ -799,12 +709,6 @@ _register(Rule(
             "quotes the specific proposed-but-never-built skill name "
             "`intent-elicitation`, not a live use of the retired word "
             "\"elicitation\"."),
-        Exemption(
-            "tests/test_record_keeping_integrity.py",
-            "The defect: `task['friction'] = entries` discarded the first note.",
-            "a verbatim quote of the real defective line "
-            "(cli/compass_pkg/calibration.py:411, a local variable named "
-            "`task`), not a v1-vocabulary use of the word."),
         Exemption(
             "tests/test_governance_drift_noop.py",
             "approach, gates, topology and fired guardrails against what the fixture",
@@ -834,40 +738,6 @@ _register(Rule(
             "asserts a teaching artifact must not use - an identifier "
             "(section 4), not a v1-vocabulary use of the word."),
         Exemption(
-            "tests/analyze/test_analyze_core.py",
-            "'Clarify: full' but manifest.yml says",
-            "quotes the literal v1-shaped fixture content _write_route_md "
-            "writes and the fixture's own dict keys assert on - an "
-            "identifier of the test data (section 4), not prose use of "
-            "the word."),
-        Exemption(
-            "tests/analyze/test_analyze_core.py",
-            "delivery-approach.md says Clarify: full (disagrees with",
-            "the same literal fixture-content quote as the entry above, "
-            "in the comment right before the phases dict it describes."),
-        Exemption(
-            "tests/fixtures/rework-scan/add-then-delete-pair/"
-            "task-adds-handler/task.yml", "Fixture: task-adds-handler",
-            "the real, on-disk directory name of this fixture pair "
-            "(section 4), not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/fixtures/rework-scan/add-then-delete-pair/"
-            "task-adds-handler/task.yml",
-            "task-removes-handler/task.yml",
-            "the real, on-disk path of the sibling fixture (section 4), "
-            "not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/fixtures/rework-scan/add-then-delete-pair/"
-            "task-removes-handler/task.yml", "Fixture: task-removes-handler",
-            "the real, on-disk directory name of this fixture pair "
-            "(section 4), not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/fixtures/rework-scan/add-then-delete-pair/"
-            "task-removes-handler/task.yml",
-            "task-adds-handler/task.yml",
-            "the real, on-disk path of the sibling fixture (section 4), "
-            "not a v1-vocabulary use of the word."),
-        Exemption(
             "tests/fixtures/self-architecture/hypothetical-framework-task/"
             "route.md", "hypothetical-framework-task (fixture)",
             "the real, on-disk directory name of this fixture (section 4), "
@@ -894,17 +764,6 @@ _register(Rule(
             "names the real parameter `tasks` this helper takes (section 4), "
             "not a v1-vocabulary use of the word."),
         Exemption(
-            "tests/test_swarm_cap.py", "note quoting `blast_radius: critical`",
-            "quotes the literal fixture string `_PROSE` verbatim, a "
-            "regression fixture for an old-format audit note (section 4), "
-            "not a v1-vocabulary use of the word."),
-        Exemption(
-            "tests/test_swarm_script_parser.py",
-            "Match the \"stream-1: WOULD create worktree",
-            "quotes the literal regex pattern on the next line verbatim - "
-            "an identifier (section 4), not a v1-vocabulary use of the "
-            "word."),
-        Exemption(
             "tests/test_tdd_red_integrity.py", "not a red (TRC-G1)",
             "the scenario id TRC-G1 contains G1 as a substring by "
             "coincidence - an identifier (section 4), not a reference to "
@@ -919,13 +778,6 @@ _register(Rule(
             "the scenario id TRC-G3 contains G3 as a substring by "
             "coincidence - an identifier (section 4), not a reference to "
             "the guardrail."),
-        Exemption(
-            "tests/analyze/test_analyze_core.py",
-            "the slug `unframed-task` contains it",
-            "the literal, hyphenated slug this test's fixture uses - an "
-            "identifier (section 4), not a v1-vocabulary use of the word; "
-            "the sentence's own point is that the retired-looking substring "
-            "is coincidental."),
     ),
     # Finding 11, `review-dimensions.md`: this rule's own two file-level
     # skips, mirrored from `_find_retired_word` - a file inside either is
@@ -986,6 +838,12 @@ def _word_table_exempt(text: str, match: re.Match) -> bool:
     start, end = match.span()
     if start > 0 and text[start - 1] in "`/:":
         return True
+    # A word inside a backticked hyphenated id (`outer-loop-attempts-recorded`)
+    # is part of the identifier: walk back over the id to its opening backtick.
+    if start > 0 and text[start - 1] == "-":
+        head = re.search(r"[\w.-]*$", text[:start])
+        if head.start() > 0 and text[head.start() - 1] == "`":
+            return True
     if text[end:end + 1] == ".":
         return True
     if re.match(r"\s+stage\b", text[end:end + 8], re.IGNORECASE):
@@ -1057,32 +915,6 @@ _register(Rule(
         Exemption("skills/compass-runtime/writing-voice.md", '**"utilize"** - **findable**',
                   _UTILIZE_TELL_REASON),
         Exemption(
-            "cli/compass_pkg/parent_states.py",
-            "- `locally modified`: the cached `compass.yml` no longer",
-            "\"locally modified\" is the name of one of the four parent states, "
-            "shown to people by `compass policy lint` - an identifier "
-            "(section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/git-parents.md", "| `locally modified` | The cached",
-            "\"locally modified\" is the name of one of the four parent states, "
-            "and `S-PARENT-MODIFIED` its finding code - identifiers "
-            "(section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/policy-lint.md", "| `S-PARENT-MODIFIED` | error",
-            "`S-PARENT-MODIFIED` is the finding code of the \"locally "
-            "modified\" parent state - an identifier (section 4), not the "
-            "verb the word table retires"),
-        Exemption(
-            "tests/test_parent_states.py", "| locally modified | the cached",
-            "\"locally modified\" is the name of one of the four parent states "
-            "- an identifier (section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/five-minutes.md", "## 5. Verify and ship",
-            "\"Verify\" here is the stage name, in the same heading form "
-            "as \"1. Assess the work\", \"2. Define acceptance\" and "
-            "\"4. Implement with evidence\" above it - an identifier "
-            "(section 4), not the verb the word table retires"),
-        Exemption(
             "docs/releasing.md", "## Supply-chain stance",
             "\"supply chain\" is the standard security term for this "
             "section's subject, not the verb \"supply\" the word table "
@@ -1104,72 +936,6 @@ _register(Rule(
             "the same standard security term as the docs/security.md "
             "exemption above."),
         Exemption(
-            "compass-contract.md", "7. verify",
-            "\"verify\" here is the stage name, one word per line in the "
-            "stage list, in the same form as \"1. assess\" and \"6. "
-            "implement\" beside it - an identifier (section 4), not the "
-            "verb the word table retires"),
-        Exemption(
-            "docs/methodology.md", "| `/compass:verify` | Verify |",
-            "\"Verify\" is the stage name in the stage-mapping table's own "
-            "column, beside \"Assess\", \"Define\" and \"Plan\" - an "
-            "identifier (section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/quickstart.md", "### Verify",
-            "\"Verify\" here is the stage name, in the same heading form as "
-            "the \"### Assess\", \"### Define\" and \"### Implement\" "
-            "headings in the same walkthrough - an identifier (section 4), "
-            "not the verb the word table retires"),
-        Exemption(
-            "docs/quickstart.md", "verify, ship -",
-            "\"verify\" here is one stage name in a list of stage names "
-            "(implement, verify, ship) - an identifier (section 4), not "
-            "the verb the word table retires"),
-        Exemption(
-            "tests/test_command_renames.py",
-            "implement, verify, ship; the designer entry point is design;",
-            "\"verify\" is one stage name in the list of eight pipeline "
-            "commands, the same shape as the docs/quickstart.md exemption "
-            "above; found while fixing batch 7, not by the audit."),
-        Exemption(
-            "tests/test_command_renames.py",
-            "point. It inlines assess, define, implement, verify and ship for a small,",
-            "\"verify\" is one stage name in a list of stage names, the "
-            "same shape as the docs/quickstart.md exemption above; found "
-            "while fixing batch 7, not by the audit."),
-        Exemption(
-            "docs/routing-deep-dive.md", "but verify also runs the",
-            "\"verify\" is the stage name here, matching \"feature\" and "
-            "the other lowercase reference-shape names beside it - an "
-            "identifier (section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/routing-deep-dive.md", "[refine, verify, ship]",
-            "the literal `never_skip` policy value quoted from "
-            "the `RP-FLOOR-001` floor in governance/routing-policy.yml - an identifier (section "
-            "4), not the verb the word table retires"),
-        Exemption(
-            "docs/routing-deep-dive.md", "not skipped; verify and ship",
-            "\"verify\" is the stage name in a list of stage names, "
-            "matching \"ship\" beside it - an identifier (section 4), "
-            "not the verb the word table retires"),
-        Exemption(
-            "docs/routing-deep-dive.md", "*before* verify and never verify",
-            "\"verify\" is the stage name, twice - an identifier "
-            "(section 4), not the verb the word table retires"),
-        Exemption(
-            "docs/routing-deep-dive.md",
-            "**Verify** runs **at full weight",
-            "\"Verify\" is the stage name, bold as one item in the "
-            "stage-by-stage list beside \"Plan\", \"Breakdown\", "
-            "\"Implement\" and \"Ship\" - an identifier (section 4), "
-            "not the verb the word table retires"),
-        Exemption(
-            "skills/adaptive-routing/composition.md", "**Verify** - which "
-            "review dimensions",
-            "one label in a parallel bulleted list of pipeline-stage names "
-            "(Define, Refine, Plan, Breakdown, Implement, Verify, Ship) - "
-            "the stage name, not the verb."),
-        Exemption(
             "skills/evidence-gates/review-dimensions.md",
             'as "verified"',
             "the word being quoted is the point of the sentence: it names "
@@ -1184,45 +950,6 @@ _register(Rule(
             "(PRINCIPLE), and the audit's own per-file entry for this file "
             "lists it under \"Pinned\", to keep as it stands."),
         Exemption(
-            "skills/evidence-gates/architecture-checks.md", "RP-REQUIRE-003",
-            "a real routing-policy rule id (governance/routing-policy.yml, "
-            "`RP-REQUIRE-003`) - the match lands mid-identifier on the "
-            "\"REQUIRE\" substring, not the standalone verb the word table "
-            "means to catch."),
-        Exemption(
-            "tests/analyze/test_analyze_core.py", "RP-REQUIRE-001",
-            "the same rule-id false match as RP-REQUIRE-003 above, for the "
-            "auth floor this test's fixture triggers."),
-        Exemption(
-            "tests/test_spine_records_the_truth.py", "RP-REQUIRE-003 adds",
-            "the same rule-id false match as RP-REQUIRE-003 above, for the "
-            "fitness-check floor this test's fixture triggers."),
-        Exemption(
-            "skills/evidence-gates/architecture-checks.md", "RP-REQUIRE-004",
-            "the same rule-id false match as RP-REQUIRE-003 above, for the "
-            "sibling rule."),
-        Exemption(
-            "templates/rollback-plan.md", "RP-REQUIRE-006",
-            "the same rule-id false match as RP-REQUIRE-003 above, for the "
-            "migrations floor."),
-        Exemption(
-            "templates/threat-model.md", "RP-REQUIRE-005",
-            "the same rule-id false match as RP-REQUIRE-003 above, for the "
-            "auth/payments/personal-data floor."),
-        Exemption(
-            "templates/technical-design.md", "RP-REQUIRE-005",
-            "the same rule-id false match as RP-REQUIRE-003 above, for the "
-            "auth/payments/personal-data floor."),
-        Exemption(
-            "templates/technical-design.md", "RP-REQUIRE-006",
-            "the same rule-id false match as RP-REQUIRE-003 above, for the "
-            "migrations floor."),
-        Exemption(
-            "schemas/routing-policy.schema.json", "RP-REQUIRE-003",
-            "the same rule-id false match as the skills/evidence-gates "
-            "exemption above, quoted here as the schema's own example "
-            "waiver id."),
-        Exemption(
             "cli/compass_pkg/routing.py",
             "calling it a floor is the same conflation the RP-REQUIRE ids "
             "were",
@@ -1236,14 +963,11 @@ _register(Rule(
             "RP-REQUIRE-003 is a real rule id, quoted as the literal "
             "printed text this comment explains."),
         Exemption(
-            "commands/quick-fix.md", "--verified-by",
+            "tests/test_acceptance_verb.py", "--verified-by",
             "a real CLI flag (`cli/compass:246,258`, `dest=\"verified_by\"`) "
             "- the match lands mid-flag-name on the \"verified\" substring, "
-            "not the standalone verb the word table means to catch."),
-        Exemption(
-            "tests/test_acceptance_verb.py", "--verified-by",
-            "the same real CLI flag false match as commands/quick-fix.md "
-            "above; found while fixing batch 7, not by the audit."),
+            "not the standalone verb the word table means to catch; found "
+            "while fixing batch 7, not by the audit."),
         Exemption(
             "skills/tdd-discipline/no-natural-red.md", "terraform validate",
             "a third-party command's real name (Terraform's own CLI verb), "
@@ -1258,62 +982,10 @@ _register(Rule(
             "cli/compass_pkg/tdd.py", "terraform validate`, a schema parse",
             "a third-party command's real name (Terraform's own CLI verb), "
             "not the English verb the word table means to catch."),
-        Exemption("approaches/README.md", "but verify adds the security",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/composition-reference.md",
-                   "**Verify** - which review dimensions",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/composition-reference.md",
-                   "Regular, but Verify also runs",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/regular.md",
-                   "| Verify | **Two review points**",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/hotfix.md",
-                   "All Verify gates, no exceptions",
-                   "names the Verify stage and the Verify gate, not the verb."),
-        Exemption("approaches/hotfix.md",
-                   "Thorough Verify gate. Review dimensions",
-                   "names the Verify gate, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "`RP-REQUIRE-001` to `RP-REQUIRE-006` each add",
-                   "names the rule ids RP-REQUIRE-001 to RP-REQUIRE-006, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "the gates `verify.analyze` (`RP-REQUIRE-001` and",
-                   "names a rule id, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "`RP-REQUIRE-002`) and `verify.architecture`",
-                   "names a rule id, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "`RP-REQUIRE-004`), the `threat-model`",
-                   "names a rule id, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "(`RP-REQUIRE-005`) and the `rollback-plan`",
-                   "names a rule id, not the verb."),
-        Exemption("docs/routing-deep-dive.md", "(`RP-REQUIRE-006`).",
-                   "names a rule id, not the verb."),
-        Exemption("approaches/hotfix.md", "never Verify itself",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/hotfix.md",
-                   "Compress the Verify gate. The stages before Verify are "
-                   "compressed; Verify is",
-                   "names the Verify gate and stage, not the verb."),
-        Exemption("approaches/full.md",
-                   "| Verify | **All gates, all dimensions.**",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/quick-fix.md", "| Verify | Lightweight gate",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/quick-fix.md",
-                   "One review point, at Verify, clearing three gates",
-                   "names the Verify stage, not the verb."),
-        Exemption("approaches/spike.md", "| Verify | **= Conclude.**",
-                   "names the Verify stage, not the verb."),
-        Exemption("architecture/ownership.md", "(verify → ship gate)",
-                   "names the Verify stage, not the verb."),
-        Exemption("architecture/system-context.md",
-                   "implement → verify → ship",
-                   "names the Verify stage, not the verb."),
         Exemption("ci/README.md", "verify time - it does not",
                    "names the Verify stage, not the verb."),
         Exemption("examples/README.md", "Verify is a short note",
                    "names the Verify stage, not the verb."),
-        Exemption("examples/README.md", "uncompressed* Verify gate",
-                   "names the Verify gate, not the verb."),
         Exemption(
             "examples/bdd-adapters/behave/docs/compass/"
             "2026-08-03-reset-password/acceptance-criteria.md",
@@ -1335,82 +1007,6 @@ _register(Rule(
             "2026-08-03-reset-password/acceptance-criteria.md",
             "Passes as acceptance (verify)",
             "the same coverage-ledger column header as the behave copy."),
-        Exemption(
-            "examples/feature-api-change/.compass/work/"
-            "rate-limit-search-endpoint/devlog.md",
-            "13:10 - Verify",
-            "a devlog entry heading naming the Verify stage, not the verb."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/acceptance-criteria.md",
-            "Passes as acceptance (verify)",
-            "the same coverage-ledger column header as the bdd-adapters "
-            "exemption above."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/delivery-approach.md",
-            "| Verify | Full - one gate",
-            "names the Verify stage in the per-stage weight table, not the "
-            "verb."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/delivery-approach.md",
-            "gate at Verify (the feature's",
-            "names the Verify stage, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/.compass/work/"
-            "search-crash-on-empty-filter/devlog.md",
-            "10:40 - Verify",
-            "a devlog entry heading naming the Verify stage, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/.compass/work/"
-            "search-crash-on-empty-filter/devlog.md",
-            "Full Verify - not compressed",
-            "names the Verify stage, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/acceptance-criteria.md",
-            "Passes as acceptance (verify)",
-            "the same coverage-ledger column header as the bdd-adapters "
-            "exemption above."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "reviewed the Verify gate",
-            "names the Verify gate, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "permitted Verify deferral",
-            "names the Verify stage, not the verb."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "| Verify | Full |",
-            "names the Verify stage in the per-stage weight table, not the "
-            "verb."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "full Verify gate - five review",
-            "names the Verify gate, not the verb."),
-        Exemption(
-            "examples/initiative-new-subsystem/.compass/work/"
-            "notifications-subsystem/devlog.md",
-            "14:50 - Verify",
-            "a devlog entry heading naming the Verify stage, not the verb."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/acceptance-criteria.md",
-            "Passes as acceptance (verify)",
-            "the same coverage-ledger column header as the bdd-adapters "
-            "exemption above."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/delivery-approach.md",
-            "| Verify | All gates, all dimensions",
-            "names the Verify stage in the per-stage weight table, not the "
-            "verb."),
         Exemption(
             "examples/quick-fix-typo/.compass/work/"
             "fix-timeout-error-message/devlog.md",
@@ -1450,45 +1046,13 @@ _register(Rule(
             "names the Verify stage in the per-stage weight table, not the "
             "verb."),
         Exemption(
-            "schemas/signals.schema.json",
-            "reviewer agent at verify - judgment",
-            "the JSON mirror of the already-exempted governance/signals.yml "
-            "line above - names the Verify stage, not the verb."),
-        Exemption(
             "templates/devlog.md",
             "Implement | Verify}}",
             "names the Verify stage in a placeholder list of stage names, "
             "not the verb."),
-        Exemption(
-            "templates/launch-readiness.md",
-            "passed at Verify?",
-            "names the Verify stage, not the verb."),
-        Exemption(
-            "templates/launch-readiness.md",
-            "failed at Verify}}",
-            "names the Verify stage, not the verb."),
-        Exemption(
-            "templates/verification-report.md",
-            "the Verify output",
-            "names the Verify stage, not the verb."),
         Exemption("governance/guardrails.md",
                    "Checked at Verify and again at ship time",
                    "names the Verify stage, not the verb."),
-        Exemption("governance/guardrails.md",
-                   "`verifier` and `reviewer` agents** at Verify",
-                   "names the Verify stage, not the verb."),
-        Exemption("governance/signals.yml",
-                   "reviewer agent at Verify - judgement",
-                   "names the Verify stage, not the verb."),
-        Exemption("governance/guardrails.yml", "compass bdd verify",
-                   "compass bdd verify is a CLI verb, not the plain verb."),
-        Exemption(
-            "tests/fixtures/receipt-fixture-project/governance/guardrails.yml",
-            "compass bdd verify",
-            "a verbatim copy of governance/guardrails.yml, restored after an "
-            "earlier commit wrongly trimmed it to dodge this sweep - same "
-            "text, same reason as the governance/guardrails.yml exemption "
-            "above: compass bdd verify is a CLI verb, not the plain verb."),
         Exemption("cli/compass_pkg/bdd.py", "and `compass bdd verify`",
                    "compass bdd verify is a CLI verb, not the plain verb."),
         Exemption("cli/compass_pkg/bdd.py", "compass bdd verify -- <run",
@@ -1505,58 +1069,48 @@ _register(Rule(
                    "the same supply-chain stance",
                    "\"supply chain\" is the established compound noun, not "
                    "the verb \"supply\" the word table retires."),
-        Exemption("governance/guardrails.yml", "checked_at: [verify]",
-                   "an example YAML value inside a comment, not the verb."),
-        Exemption("governance/guardrails.yml", "attempts: <int>",
-                   "attempts: <int> names the evidence field, not the verb "
-                   "\"attempt\"."),
-        Exemption("governance/presets/default/checks.yml", "compass bdd verify",
+        # The fixed check set (ADR-094) was built from the 8.x live preset, which
+        # copied the check and type text from the 8.x guardrails.yml, so it
+        # carries the same text and the same reasons.
+        Exemption("governance/check-set.yml", "compass bdd verify",
                    "compass bdd verify is a CLI verb, not the plain verb; the "
-                   "preset copies the check text from governance/guardrails.yml."),
-        Exemption("governance/presets/default/checks.yml", "attempts: <int>",
+                   "check set copies the check text from the preset."),
+        Exemption("governance/check-set.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
-                   "\"attempt\"; the preset copies the check text from "
-                   "governance/guardrails.yml."),
-        Exemption("governance/presets/default/evidence-types.yml", "attempts: <int>",
-                   "attempts: <int> names the evidence field, not the verb "
-                   "\"attempt\"; the preset copies the type text from "
-                   "governance/guardrails.yml."),
-        Exemption("governance/presets/default/vocabulary.yml", "verify",
-                   "the display name of the verify stage, not the verb; the "
-                   "file holds display names only."),
-        # The kept default@6 folder is a byte-identical copy of the live
-        # default at the v6.1.0 tag, so it carries the same four lines and
+                   "\"attempt\"; the check set copies the text from the preset."),
+        # The test fixture default@6 is a byte-identical copy of the live
+        # default at the v6.1.0 tag (VD-055), so it carries the same four lines and
         # the same reasons. The copy must not change, so each line is
         # exempted here, not edited.
-        Exemption("governance/presets/default@6/checks.yml", "compass bdd verify",
+        Exemption("tests/fixtures/presets/default@6/checks.yml", "compass bdd verify",
                    "compass bdd verify is a CLI verb, not the plain verb; the "
                    "folder is a frozen copy of the v6.1.0 default preset."),
-        Exemption("governance/presets/default@6/checks.yml", "attempts: <int>",
+        Exemption("tests/fixtures/presets/default@6/checks.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the folder is a frozen copy of the v6.1.0 "
                    "default preset."),
-        Exemption("governance/presets/default@6/evidence-types.yml", "attempts: <int>",
+        Exemption("tests/fixtures/presets/default@6/evidence-types.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the folder is a frozen copy of the v6.1.0 "
                    "default preset."),
-        Exemption("governance/presets/default@6/vocabulary.yml", "verify",
+        Exemption("tests/fixtures/presets/default@6/vocabulary.yml", "verify",
                    "the display name of the verify stage, not the verb; the "
                    "folder is a frozen copy of the v6.1.0 default preset."),
-        # The kept default@7 folder is a byte-identical copy of the live default
-        # at the v8.0.4 tag, the last release of major 7: the same four lines,
+        # The test fixture default@7 is a byte-identical copy of the live default
+        # at the v8.0.4 tag (VD-055), the last release of major 7: the same four lines,
         # the same reasons, and the copy must not change.
-        Exemption("governance/presets/default@7/checks.yml", "compass bdd verify",
+        Exemption("tests/fixtures/presets/default@7/checks.yml", "compass bdd verify",
                    "compass bdd verify is a CLI verb, not the plain verb; the "
                    "folder is a frozen copy of the v8.0.4 default preset."),
-        Exemption("governance/presets/default@7/checks.yml", "attempts: <int>",
+        Exemption("tests/fixtures/presets/default@7/checks.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the folder is a frozen copy of the v8.0.4 "
                    "default preset."),
-        Exemption("governance/presets/default@7/evidence-types.yml", "attempts: <int>",
+        Exemption("tests/fixtures/presets/default@7/evidence-types.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"; the folder is a frozen copy of the v8.0.4 "
                    "default preset."),
-        Exemption("governance/presets/default@7/vocabulary.yml", "verify",
+        Exemption("tests/fixtures/presets/default@7/vocabulary.yml", "verify",
                    "the display name of the verify stage, not the verb; the "
                    "folder is a frozen copy of the v8.0.4 default preset."),
         # The stored configuration of an issue compass 8.0.4 assessed, kept as
@@ -1571,21 +1125,6 @@ _register(Rule(
         Exemption(_OLDER_ISSUE_RESOLVED, "verify",
                    "the display name of the verify stage; the file is a stored "
                    "configuration compass 8.0.4 wrote."),
-        Exemption(
-            "tests/fixtures/receipt-fixture-project/governance/guardrails.yml",
-            "checked_at: [verify]",
-            "a verbatim copy of governance/guardrails.yml, restored after an "
-            "earlier commit wrongly trimmed it to dodge this sweep - same "
-            "text, same reason as the governance/guardrails.yml exemption "
-            "above: an example YAML value inside a comment, not the verb."),
-        Exemption(
-            "tests/fixtures/receipt-fixture-project/governance/guardrails.yml",
-            "attempts: <int>",
-            "a verbatim copy of governance/guardrails.yml, restored after an "
-            "earlier commit wrongly trimmed it to dodge this sweep - same "
-            "text, same reason as the governance/guardrails.yml exemption "
-            "above: attempts: <int> names the evidence field, not the verb "
-            "\"attempt\"."),
         # The first half of a hyphenated compound noun about a chain of
         # suppliers is not the plain verb the word table replaces with
         # "give". The exemption function does not check for a hyphen right
@@ -1598,30 +1137,11 @@ _register(Rule(
         # word table replaces with "need". The match is the second half of
         # the hyphenated identifier, so the backtick before its first half
         # does not sit immediately before the match.
-        Exemption("architecture/decisions/"
-                   "ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
-                   "They become `RP-REQUIRE-*`",
-                   "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("architecture/decisions/"
-                   "ADR-016-id-codes-are-part-of-the-frozen-vocabulary.md",
-                   "define `RP-FLOOR` and `RP-REQUIRE` honestly",
-                   "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("architecture/decisions/README.md",
                    "RP-REQUIRE-001/002, verify.analyze",
                    "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("architecture/system-context.md",
-                   "added by `RP-REQUIRE-003` and `RP-REQUIRE-004`",
-                   "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("tests/test_verify_fitness_route_promotion.py",
-                   "When cross-cutting fires RP-REQUIRE-003, it appears in "
-                   "fired_guardrails.",
-                   "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("tests/test_verify_fitness_route_promotion.py",
-                   "When touches fires RP-REQUIRE-004, it appears in "
-                   "fired_guardrails.",
-                   "RP-REQUIRE is an id prefix, not the verb."),
-        Exemption("governance/routing-policy.yml",
-                   "six of the entries below carry RP-REQUIRE ids",
+        Exemption("tests/fixtures/check-set-digests.yml",
+                   "RP-REQUIRE-003 and RP-REQUIRE-004 removed",
                    "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("governance/strategies-rationale.md",
                    "[RP-REQUIRE-003] requirement:",
@@ -1639,11 +1159,6 @@ _register(Rule(
                    "the derived text of the same terminology.yml line - "
                    "RP-REQUIRE is an id prefix, not the verb the word table "
                    "retires."),
-        Exemption("tests/test_artifact_registry.py",
-                   "`RP-REQUIRE-003` already adds",
-                   "RP-REQUIRE-003 is a policy rule id, not the verb the "
-                   "word table retires; found while fixing batch 7, not by "
-                   "the audit."),
         Exemption("tests/test_allow_marker_needs_a_reason.py",
                    "(allow-marker-supplies-its-own-reason)",
                    "the issue's own slug, an identifier (section 4), not "
@@ -1673,15 +1188,10 @@ _register(Rule(
             "an absorbed-into marker quoting the merge-base sentence "
             "verbatim, per PBW-F7 - not a new use of the retired word."),
         Exemption(
-            "tests/test_governance_drift.py",
-            "that considered RP-REQUIRE-003 and rejected it",
-            "the same rule-id false match as the RP-REQUIRE exemptions "
-            "above - RP-REQUIRE is an id prefix, not the verb."),
-        Exemption(
             "tests/test_plugin_doc_drift.py",
             "/ `compass tdd-green` write typed test-run evidence the verify gates accept.",
-            "names the verify stage's gates, the same identifier-adjacent "
-            "use as \"All Verify gates\" in approaches/hotfix.md."),
+            "names the verify stage's gates, an identifier-adjacent use "
+            "of the stage name, not the verb."),
         Exemption(
             "tests/test_pre_tool_hook.py",
             "A red recorded with `tdd-red --verified-by` (`TRC-R8-1`, `TRC-R8-2` hook",
@@ -1705,46 +1215,8 @@ _register(Rule(
             "the same `--verified-by` flag name as the exemption above."),
         Exemption(
             "tests/test_tdd_evidence.py",
-            "`--verified-by` - instead of about the evidence layout.",
-            "names the real `--verified-by` CLI flag (cli/compass_pkg/"
-            "tdd.py), an identifier, not the verb the word table retires."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
-            "First-class `--verified-by` red (`R8`, `TRC-R8-2`..`R8-6`; "
-            "`R8-1` hook part in test_pre_tool_hook)",
-            "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
-            "The green carries the `--verified-by` kind forward and binds the",
-            "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
             "No smuggling - a passing command with no --verified-by records no red",
             "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
-            "An unrecognised `--verified-by` kind is refused with the allowed set",
-            "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_tdd_evidence.py",
-            "A `--verified-by` red still needs the guard to genuinely fail",
-            "the same `--verified-by` flag name as the exemption above."),
-        Exemption(
-            "tests/test_printed_output_vocabulary.py",
-            "RP-REQUIRE-001/002 both add verify.analyze and RP-REQUIRE-003/004 both add",
-            "the same rule-id false match as the RP-REQUIRE exemptions "
-            "above - RP-REQUIRE is an id prefix, not the verb."),
-        Exemption(
-            "tests/test_release_invariants.py",
-            "added by the RP-REQUIRE-003 and RP-REQUIRE-004 floors.",
-            "the same rule-id false match as the RP-REQUIRE exemptions "
-            "above - RP-REQUIRE is an id prefix, not the verb."),
-        Exemption(
-            "tests/test_release_invariants.py",
-            "RP-REQUIRE-003 and RP-REQUIRE-004 are present and use "
-            "add_gate: verify.architecture.",
-            "the same rule-id false match as the RP-REQUIRE exemptions "
-            "above - RP-REQUIRE is an id prefix, not the verb."),
         Exemption(
             "tests/test_release_invariants.py",
             "A landed issue's test-run evidence (no attempts field) must "
@@ -1840,18 +1312,6 @@ _register(Rule(
         # name (threatmodelingmanifesto.org), spelt with the American form in
         # its own title. Respelling it would misquote the name, the same
         # protection section 4 gives a verbatim quote or an identifier.
-        Exemption("cli/compass_pkg/borrowed_docs.py",
-                   "The threat model asks the Threat Modeling Manifesto's",
-                   "the manifesto's own name, spelt as it spells itself; "
-                   "not the ordinary word."),
-        Exemption("cli/compass_pkg/borrowed_docs.py",
-                   "The Threat Modeling Manifesto names the failure",
-                   "the manifesto's own name, spelt as it spells itself; "
-                   "not the ordinary word."),
-        Exemption("tests/test_stream_c_no_new_checks_or_gates.py",
-                   "Modeling Manifesto's named",
-                   "the manifesto's own name, spelt as it spells itself; "
-                   "not the ordinary word."),
         # An evidence-id prefix carries the gate's own American spelling as
         # a machine identifier, not the ordinary word it is spelt like. The
         # exemption function recognises a backtick right before the match,
@@ -1864,55 +1324,6 @@ _register(Rule(
                    "ADR-007-conditional-gate-promotion-via-floors.md",
                    "EV-ANALYZE-ADVISORY",
                    "evidence-id prefix, a machine identifier."),
-        # The same no-op case as the ADR-007 exemption above: this line names
-        # the evidence-id prefix the fixture globs for, a machine
-        # identifier, not the ordinary word.
-        Exemption("tests/analyze/test_analyze_core.py",
-                   "the `EV-ANALYZE-` prefix",
-                   "evidence-id prefix, a machine identifier - same case as "
-                   "the ADR-007 exemption above."),
-        Exemption("cli/compass_pkg/analyze.py",
-                   "id prefix `EV-ANALYZE-<task>-<ts>`",
-                   "evidence-id prefix, a machine identifier - the same "
-                   "class as the ADR-007 exemption above."),
-        Exemption("cli/compass_pkg/analyze.py",
-                   "id prefix `EV-ANALYZE-ADVISORY-<task>-<ts>`",
-                   "evidence-id prefix, a machine identifier."),
-        Exemption("cli/compass_pkg/analyze.py",
-                   "Gate-clearing: type=consistency-check, prefix "
-                   "EV-ANALYZE-<task>-<ts>",
-                   "evidence-id prefix, a machine identifier."),
-        Exemption("cli/compass_pkg/analyze.py",
-                   "Advisory:      type=command-output,  prefix "
-                   "EV-ANALYZE-ADVISORY-<task>-<ts>",
-                   "evidence-id prefix, a machine identifier."),
-        Exemption("cli/compass_pkg/analyze.py",
-                   "--- command: analyze ---",
-                   "names the CLI verb `compass analyze`, an identifier "
-                   "(section 4 rule 1), not the ordinary word."),
-        Exemption("cli/compass_pkg/receipt.py",
-                   'is worse than a bare one: "EV-ANALYZE-signup-email-va...',
-                   "evidence-id prefix, a machine identifier, inside a "
-                   "worked example of a truncated one."),
-        Exemption("cli/compass_pkg/receipt.py",
-                   "`EV-ANALYZE-<slug>-<timestamp>` runs to 51 characters",
-                   "evidence-id prefix, a machine identifier."),
-        Exemption("tests/test_identifier_expansion.py",
-                   "EV-ANALYZE-signup-email-va",
-                   "the same evidence-id-prefix machine identifier as the "
-                   "ADR-007 exemption above, truncated mid-token by the "
-                   "docstring it illustrates."),
-        # The same no-op case as the ADR-007 exemption above: R3's own
-        # real command name, hyphenated, so the backtick right before the
-        # match opens two segments earlier and the identifier is not caught.
-        Exemption("evals/harness.py",
-                   "`R3-analyze`",
-                   "R3's own real command name, a machine identifier "
-                   "- same case as the ADR-007 exemption above."),
-        Exemption("tests/test_eval_harness.py",
-                   "`R3-implement`, `R3-analyze`",
-                   "R3's own real command name, a machine identifier "
-                   "- same case as the ADR-007 exemption above."),
     ),
 ))
 
@@ -2029,11 +1440,6 @@ _register(Rule(
             "example the section exists to show, and "
             "tests/test_reply_shape_instructions.py:125-152 requires the "
             "literal word on its row."),
-        Exemption(
-            "templates/requirements-review.md",
-            "> a knob.",
-            "an absorbed-into marker quoting the merge-base sentence "
-            "verbatim, per PBW-F7 - not a new use of the retired idiom."),
         Exemption(
             "tests/test_trace_rot_detection.py",
             "Scenarios: trace-rot-detection/acceptance-criteria.md",
@@ -2333,10 +1739,6 @@ _register(Rule(
             "the machine-parsed scenario-id marker `compass bdd extract` "
             "reads; see the comment above."),
         Exemption(
-            "templates/ui-contract.md", "<!-- traceability id:",
-            "the machine-parsed scenario-id marker `compass bdd extract` "
-            "reads; see the comment above."),
-        Exemption(
             "examples/bdd-adapters/behave/docs/compass/"
             "2026-08-03-reset-password/acceptance-criteria.md",
             "<!-- traceability id:",
@@ -2357,24 +1759,6 @@ _register(Rule(
         Exemption(
             "examples/bdd-adapters/pytest-bdd/docs/compass/"
             "2026-08-03-reset-password/acceptance-criteria.md",
-            "<!-- traceability id:",
-            "the machine-parsed scenario-id marker `compass bdd extract` "
-            "reads; see the comment above."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/acceptance-criteria.md",
-            "<!-- traceability id:",
-            "the machine-parsed scenario-id marker `compass bdd extract` "
-            "reads; see the comment above."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/acceptance-criteria.md",
-            "<!-- traceability id:",
-            "the machine-parsed scenario-id marker `compass bdd extract` "
-            "reads; see the comment above."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/acceptance-criteria.md",
             "<!-- traceability id:",
             "the machine-parsed scenario-id marker `compass bdd extract` "
             "reads; see the comment above."),
@@ -2431,18 +1815,6 @@ _register(Rule(
             "a literal filename example, inside backticks - the same "
             "reasoning as the CLI command exemption on this line."),
         Exemption(
-            "examples/README.md", "evidence/red-TRC-001.json",
-            "a literal filename example, inside backticks - the third on "
-            "this page and the same reasoning as the two above. Added when "
-            "fixups/clarity-findings merged: that branch repaired the "
-            "nested backtick that had been hiding this one, so the quote "
-            "only exists here post-merge."),
-        Exemption(
-            "templates/threat-model.md", "EV-T-TRC-B4",
-            "a placeholder evidence id, inside backticks, built from the "
-            "placeholder scenario id `TRC-B4` on the same row - not a real "
-            "code pointing at meaning kept outside the file."),
-        Exemption(
             "examples/quick-fix-typo/docs/compass/"
             "2026-05-04-fix-timeout-error-message/verification-note.md",
             "evidence/green-TRC-001.json",
@@ -2456,11 +1828,6 @@ _register(Rule(
             "the real evidence filename `compass tdd-red` wrote for this "
             "issue's one real scenario, inside backticks - nesting a "
             "second backtick span inside it would break the filename."),
-        Exemption(
-            "docs/quickstart.md", "`--scenario TRC-x`",
-            "a placeholder scenario id, the same shape as `<test cmd>` "
-            "elsewhere on this page - not a real code pointing at meaning "
-            "kept outside the file"),
         Exemption(
             "templates/devlog.md", "green-TRC-3.json",
             "the placeholder evidence filename `compass tdd-green` writes "
@@ -2492,12 +1859,6 @@ _register(Rule(
             "used (line 8, \"the scenario that added automatic "
             "triggering, `TRC-B2`\"), not where this marker quotes it."),
         Exemption(
-            "cli/compass_pkg/analyze.py",
-            "traceability id: TRC-A1",
-            "a literal syntax example of the HTML comment the function "
-            "parses, byte-identical to templates/acceptance-criteria.md's "
-            "own example - not a pointer standing in for an explanation."),
-        Exemption(
             "cli/compass_pkg/bdd.py",
             "traceability id: TRC-A1",
             "a literal syntax example of the HTML comment the extractor "
@@ -2509,12 +1870,6 @@ _register(Rule(
             "a worked example of a sentence that merely mentions a file, "
             "inside quotes - the point is that this text is prose, not a "
             "path reference, so S7 here names nothing and needs no meaning."),
-        Exemption(
-            "cli/compass_pkg/receipt.py",
-            "Ids written by the CLI do (`EV-T-TRC-A1`)",
-            "a real evidence-id shape this module itself generates and "
-            "sorts on (`row[0].startswith(\"EV-T-\")` below) - not a "
-            "dangling reference."),
     ),
 ))
 
@@ -2595,6 +1950,191 @@ def _looks_like_runtime_evidence(path: str) -> bool:
 # replacement.
 _LEGACY_SETTINGS_PATHS = frozenset({".compass/config.yml"})
 
+# The files 9.0.0 deleted with the stage agents, the multiagent breakdown,
+# model tiers, execution profiles and the headless runner (ADR-090), with
+# the living spec (ADR-091), and with the approaches and stages (ADR-092). A decision
+# record, and an archived issue's record, is history: it names the file as it
+# was when the work was done, and it is never edited to follow a deletion. So is
+# the ledger of re-baselines in `test_public_surface_truth.py`. Only these exact
+# paths are excused, and only in those places; any other file that names one is
+# still reported.
+_REMOVED_IN_9_0_0 = frozenset({
+    "cli/compass_pkg/run_cmd.py", "docs/headless-runner.md", "ci/headless-verify.yml",
+    "scripts/run-demo.sh", ".github/workflows/compass-run-demo.yml",
+    "tests/test_run_cmd.py", "tests/test_headless_runner.py",
+    "tests/test_headless_runner_doc.py", "tests/test_run_demo.py",
+    "cli/compass_pkg/execution_profile.py", "cli/compass_pkg/execution_profile_cmd.py",
+    "cli/compass_pkg/execution_profile_store.py", "schemas/execution-profile.schema.json",
+    "docs/execution-profiles.md", "tests/test_execution_profiles.py",
+    "cli/compass_pkg/model_tiers.py", "tests/test_model_tiers.py",
+    "cli/compass_pkg/subtasks.py", "cli/compass_pkg/multiagent_check.py",
+    "scripts/multiagent.sh", "scripts/integrate.sh", "scripts/lib/issue-docs.sh",
+    "docs/multiagent-protocol.md", "skills/worktree-multiagent/SKILL.md",
+    "agents/orchestrator.md", "tests/test_orchestrator_loop_prose.py",
+    "agents/architect.md", "agents/builder.md", "agents/planner.md",
+    "agents/product-marketer.md", "agents/product-owner.md", "agents/reviewer.md",
+    "agents/router.md", "agents/spec-author.md", "agents/verifier.md",
+    "tests/test_agent_tools.py",
+    "tests/test_subtask_record.py", "tests/test_multiagent_run_recorded.py",
+    "tests/test_one_unit_breakdown.py", "tests/test_check_compares_record_with_map.py",
+    "tests/test_swarm_cap.py", "tests/test_swarm_script_parser.py",
+    "tests/test_swarm_seeding.py", "tests/test_map_cells_checked.py",
+    "tests/test_map_counts_agree.py", "tests/test_integrate_keeps_records.py",
+    "tests/test_integrate_refuses_committed_ignored_records.py",
+    "tests/derive/test_integrate_sh_status.py", "tests/test_multiagent_docs_and_waves.py",
+    "tests/test_multiagent_protocol_doc.py",
+    "tests/test_multiagent_scripts_match_the_protocol.py",
+    "tests/test_subtask_cost_covers_every_try.py",
+    # The living spec, `compass spec sync` and their tests (ADR-091).
+    "docs/system-spec.md", "docs/system-spec-archive.md",
+    "cli/compass_pkg/spec_refresh.py", "tests/derive/test_derive_system_spec.py",
+    "tests/test_derive_spec_multi_intent.py", "tests/test_living_spec_completed.py",
+    "tests/test_living_spec_refresh.py", "tests/test_living_spec_setting.py",
+    "tests/test_living_spec_supersession.py", "tests/test_system_spec_currency.py",
+    "tests/test_system_spec_split.py", "tests/test_spec_keeps_missing_issues.py",
+    "tests/test_finish_shows_a_failed_derive.py",
+    # The readers and printers of the removed documents (ADR-091).
+    "cli/compass_pkg/template_lists.py", "cli/compass_pkg/verification_plan.py",
+    "cli/compass_pkg/decision_scope.py", "cli/compass_pkg/block_renderers.py",
+    "cli/compass_pkg/approach_blocks.py", "cli/compass_pkg/header_block.py",
+    "cli/compass_pkg/render_inputs.py", "tests/test_templates_render_lists.py",
+    "tests/test_design_scope_review_and_bug_report.py",
+    # Document registration and status (ADR-091).
+    "cli/compass_pkg/artifact_cmd.py", "cli/compass_pkg/artifact_status.py",
+    "cli/compass_pkg/artifact_owed.py", "scripts/measure-artifact-catalogue.py",
+    "tests/test_artifact_status_written_by_stages.py",
+    "tests/test_verify_report_approved_when_gates_pass.py",
+    "tests/test_word_ceilings_registry.py",
+    # The fourteen templates of the removed documents and their test (ADR-091).
+    "templates/delivery-approach.md", "templates/verification-note.md",
+    "templates/technical-design.md", "templates/low-level-design.md",
+    "templates/distribution-map.md", "templates/verification-report.md",
+    "templates/intent.md", "templates/requirements-review.md",
+    "templates/threat-model.md", "templates/rollback-plan.md",
+    "templates/bug-report.md", "templates/review.md",
+    "templates/spike-conclusion.md", "templates/incident.md",
+    "tests/test_word_ceilings_templates.py",
+    # The 8.x delivery approach files and the plan stage's skill, which went
+    # with the four-stage path (ADR-092).
+    "approaches/quick-fix.md", "approaches/regular.md", "approaches/full.md",
+    "approaches/hotfix.md", "skills/plan-authoring/SKILL.md",
+    "commands/define.md", "commands/refine.md", "commands/plan.md",
+    "commands/breakdown.md", "commands/implement.md", "commands/verify.md",
+    # The role entry points, their brief reader, templates, guide and tests (ADR-093).
+    "commands/intent.md", "commands/position.md", "commands/design.md",
+    "commands/consult.md", "cli/compass_pkg/ingest.py", "docs/roles-guide.md",
+    "skills/intent-interview/role-translation.md", "templates/positioning.md",
+    "templates/launch-readiness.md", "templates/ui-contract.md",
+    "templates/product-owner-review.md", "templates/architecture-notes.md",
+    "tests/test_intent_ingest.py", "tests/test_intent_interview.py",
+    "tests/test_manifest_intent_source_schema.py", "tests/test_consult_doc.py",
+    "tests/test_architect_lens.py",
+    # The HTML board, the GitHub label sync, their docs and their tests (ADR-093).
+    "cli/compass_pkg/board_cmd.py", "cli/compass_pkg/board_file.py",
+    "cli/compass_pkg/board_page.py", "cli/compass_pkg/board_trees.py",
+    "cli/compass_pkg/github_labels.py", "cli/compass_pkg/github_sync_record.py",
+    "docs/board.md", "docs/github-labels.md", "docs/github-labels-walkthrough.md",
+    "assets/board-example.png", "tests/test_board_commands.py", "tests/test_board_data.py",
+    "tests/test_board_file.py", "tests/test_board_page.py", "tests/test_board_speed.py",
+    "tests/test_board_worktrees.py", "tests/test_github_label_sync.py",
+    "tests/test_github_issue_page_docs.py",
+    # The eval harness, which moved to sdd-bench, and what only it used (ADR-093).
+    "evals/README.md", "evals/harness.py", "evals/judge.py", "evals/compare.py",
+    "cli/compass_pkg/host_launch.py", "tests/test_eval_comparison_tasks.py",
+    # The autonomy and cost report's doc, renamed to docs/checkpoints.md when
+    # the cost figures went (ADR-093). ADR-063 names it and is not edited.
+    "docs/autonomy-and-cost.md",
+    # The readiness measure, its record, its doc and its tests (ADR-093).
+    "cli/compass_pkg/readiness_cmd.py", "cli/compass_pkg/readiness_catalogue.py",
+    "cli/compass_pkg/readiness_floor.py", "cli/compass_pkg/readiness_record.py",
+    "cli/compass_pkg/readiness_run.py", "cli/compass_pkg/readiness_signals.py",
+    "docs/readiness.md", "schemas/readiness-record.schema.json",
+    "tests/test_project_readiness.py", "tests/project_readiness_support.py",
+    "tests/test_readiness_override_assess.py", "tests/test_adr_075_process_group.py",
+    # The issue layer, `compass issue configure`, its doc and its tests (ADR-094).
+    "cli/compass_pkg/issue_config_cmd.py", "cli/compass_pkg/config_preview.py",
+    "docs/issue-configure.md", "tests/test_issue_configure.py",
+    "tests/test_issue_layer_at_its_point.py", "tests/test_issue_layer_evaluator.py",
+    "tests/test_waived_stage_on_floor.py", "tests/configure_fixtures.py",
+    "tests/fixtures/issue-configure-example.json",
+    "tests/fixtures/issue-configure-refused-example.json",
+    # The stop hook's phrase file, its schema and its test (ADR-094). The six
+    # phrases are a constant in hooks/py/stop_scan.py now.
+    "governance/signals.yml", "schemas/signals.schema.json",
+    "tests/test_signals_design_smell.py",
+    # `compass policy diff`, `policy update`, `policy migrate`, `preset init`
+    # and `preset test`, their docs and their tests (ADR-094). ADR-094 names the
+    # docs and is not edited.
+    "cli/compass_pkg/replay.py", "cli/compass_pkg/policy_update.py",
+    "cli/compass_pkg/preset_init.py", "cli/compass_pkg/preset_test.py",
+    "cli/compass_pkg/policy_migrate.py", "cli/compass_pkg/policy_migrate_undo.py",
+    "cli/compass_pkg/config_words.py", "cli/compass_pkg/shipped_releases.py",
+    "scripts/generate-shipped-releases.py", "governance/shipped-releases.yml",
+    "docs/policy-diff.md", "docs/policy-update.md", "docs/policy-test.md",
+    "docs/policy-migrate.md", "tests/test_policy_diff.py", "tests/test_policy_update.py",
+    "tests/test_policy_update_git.py", "tests/test_policy_test.py",
+    "tests/test_preset_group.py", "tests/policy_update_fixtures.py",
+    "tests/test_policy_migrate.py", "tests/test_shipped_releases.py",
+    "tests/fixtures/policy-diff-json-example.json",
+    "tests/fixtures/policy-update-json-example.json",
+    "tests/fixtures/policy-migrate-example.json",
+    "tests/fixtures/preset-interfaces/policy-test-groups.json",
+    # The configuration layers, the classifier, the locks, the layered lint, the
+    # live preset, the generator of the two views, their docs and their tests
+    # (ADR-094, #357 step 8). The frozen presets name the generator and its
+    # sidecar in their headers and are never edited.
+    "cli/compass_pkg/merge.py", "cli/compass_pkg/parents.py",
+    "cli/compass_pkg/parent_states.py", "cli/compass_pkg/chain_class.py",
+    "cli/compass_pkg/policy_lint.py", "cli/compass_pkg/policy_effective.py",
+    "cli/compass_pkg/catalogue_check.py", "cli/compass_pkg/vocabulary.py",
+    "cli/compass_pkg/locks.py", "cli/compass_pkg/classify.py",
+    "cli/compass_pkg/classify_lists.py", "cli/compass_pkg/json_shape.py",
+    "cli/compass_pkg/legacy_views.py", "cli/compass_pkg/legacy_views_template.py",
+    "cli/compass_pkg/layers.py", "cli/compass_pkg/waivers.py",
+    "scripts/generate-legacy-views.py", "scripts/bench-classifier.py",
+    "governance/legacy-views.yml", "docs/git-parents.md", "docs/waivers-and-locks.md",
+    "governance/presets/default/approaches.yml", "governance/presets/default/artifacts.yml",
+    "governance/presets/default/checks.yml", "governance/presets/default/dimensions.yml",
+    "governance/presets/default/evidence-types.yml", "governance/presets/default/gates.yml",
+    "governance/presets/default/preset.yml", "governance/presets/default/readiness.yml",
+    "governance/presets/default/rules.yml", "governance/presets/default/stages.yml",
+    "governance/presets/default/vocabulary.yml",
+    "tests/test_layers_and_merge.py", "tests/test_parent_chain.py",
+    "tests/test_parent_pin.py", "tests/test_parent_states.py", "tests/test_locks.py",
+    "tests/test_locks_footprint_scan.py", "tests/test_classifier.py",
+    "tests/test_classifier_speed.py", "tests/test_classify_list_parameters.py",
+    "tests/test_obligations.py", "tests/test_policy_lint.py", "tests/test_default_views.py",
+    "tests/test_default_preset.py", "tests/test_preset_digests.py",
+    "tests/test_preset_interfaces.py", "tests/test_artifact_graph.py",
+    "tests/test_waivers.py", "tests/test_vocabulary.py", "tests/parent_fixtures.py",
+    "tests/classifier_fixtures.py", "tests/waiver_fixtures.py",
+    "tests/fixtures/classifier-json-example.json",
+    # The pins of the frozen presets, which moved into
+    # tests/test_frozen_files_unchanged.py when the presets became test fixtures
+    # (#359 step 10). ADR-094 names the file and is not edited.
+    "tests/fixtures/preset-digests.yml",
+    # The generated views, their schemas, the reader of a governance copy and the
+    # tests of the views (ADR-098, #359 step 6). The reader is the test helper
+    # `tests/legacy_copy.py` now.
+    "governance/routing-policy.yml", "governance/guardrails.yml",
+    "schemas/routing-policy.schema.json", "schemas/routing-policy.reference.yml",
+    "schemas/guardrails.schema.json", "schemas/guardrails.reference.yml",
+    "cli/compass_pkg/legacy_adapter.py", "tests/test_governance_drift.py",
+    "tests/test_governance_discovery.py", "tests/fixtures/governance-content-hashes.json",
+})
+# A sample decision record under `templates/architecture/decisions/` is a
+# decision record too.
+_DECISION_RECORD_FOLDERS = ("architecture/decisions/", "governance/decisions/",
+                            "templates/architecture/decisions/",
+                            "docs/compass/", "examples/", "docs/upgrade-",
+                            "tests/test_public_surface_truth.py",
+                            # The frozen presets and the 8.0.4 catalogue are kept
+                            # byte for byte as the release that shipped them
+                            # (ADR-094, VD-055), headers included.
+                            "tests/fixtures/presets/default@6/",
+                            "tests/fixtures/presets/default@7/",
+                            "governance/artifacts-8.0.4.yml")
+
 
 def test_pbw_a8_only_the_exact_runtime_record_path_may_be_missing():
     assert not _find_missing_reference(
@@ -2613,22 +2153,15 @@ def _find_missing_reference(span: ProseSpan) -> list[Finding]:
         path = match.group(1)
         if path in _LEGACY_SETTINGS_PATHS or path in _RUNTIME_STATE_PATHS:
             continue
+        if path in _REMOVED_IN_9_0_0 and span.path.startswith(_DECISION_RECORD_FOLDERS):
+            continue
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
-        if (not (REPO_ROOT / path).exists() and not _exists_in_own_seed(span.path, path)
+        if (not (REPO_ROOT / path).exists()
                 and not _exists_in_own_example(span.path, path)):
             findings.append(Finding(
                 span.path, span.line, f'named path "{path}" does not exist'))
     return findings
-
-
-def _exists_in_own_seed(file_path: str, path: str) -> bool:
-    """An eval scenario's seed is its own small repository: a file in the
-    scenario names paths relative to that seed, not to this repository."""
-    parts = Path(file_path).parts
-    if len(parts) < 3 or parts[:2] != ("evals", "scenarios"):
-        return False
-    return (REPO_ROOT / "evals" / "scenarios" / parts[2] / "seed" / path).exists()
 
 
 def _exists_in_own_example(file_path: str, path: str) -> bool:
@@ -2659,26 +2192,17 @@ def test_pbw_a8_an_example_path_resolves_only_in_its_own_example():
     assert _find_missing_reference(elsewhere)
 
 
-def test_pbw_a8_a_scenario_path_resolves_only_in_its_own_seed():
-    """The seed rule narrows the check to the scenario's own seed: a path
-    that exists there is fine, and one that does not is still reported.
-    The scenario is found at run time, so this file names none - a scenario
-    id outside evals/ would reach the eval sessions' plugin copy."""
-    for seed_test in sorted((REPO_ROOT / "evals" / "scenarios").glob("*/seed/tests/*.py")):
-        if not (REPO_ROOT / "tests" / seed_test.name).exists():
-            break
-    else:
-        pytest.skip("no seed test file with a name unique to its seed")
-    scenario_file = str(seed_test.relative_to(REPO_ROOT))
-    named = f"tests/{seed_test.name}"
-    assert _exists_in_own_seed(scenario_file, named)
-    assert not _exists_in_own_seed(scenario_file, "tests/no_such_seed_file.py")
-    assert not _exists_in_own_seed("docs/five-minutes.md", named)
-    # And the check itself still reports a path missing from the seed.
-    missing = ProseSpan(scenario_file, 1, "See `tests/no_such_seed_file.py`.", "markdown")
-    assert _find_missing_reference(missing)
-    present = ProseSpan(scenario_file, 1, f"See `{named}`.", "markdown")
-    assert not _find_missing_reference(present)
+def test_pbw_a8_a_path_9_0_0_removed_is_excused_only_in_a_decision_record():
+    """A decision record may name a file 9.0.0 deleted. Another file may not,
+    and a decision record may not name any other missing path."""
+    line = "The runner is `cli/compass_pkg/run_cmd.py`."
+    for record in ("architecture/decisions/ADR-030-x.md", "governance/decisions/2026-x.md"):
+        assert not _find_missing_reference(ProseSpan(record, 1, line, "markdown"))
+        assert _find_missing_reference(
+            ProseSpan(record, 1, "See `cli/compass_pkg/no_such_module.py`.", "markdown"))
+    for other in ("docs/x.md", "architecture/ownership.md", "README.md",
+                  "examples.md", "docs/compass.md"):
+        assert _find_missing_reference(ProseSpan(other, 1, line, "markdown")), other
 
 
 def test_pbw_a8_only_the_legacy_settings_path_may_be_missing():
@@ -2715,120 +2239,13 @@ _register(Rule(
             "this repository does not ship, not a real path reference - "
             "the comment's point is that the ban ignores it."),
         # PBW-A8's reference sweep resolves every path against the repository
-        # root. Each of the five worked examples under examples/ narrates a
+        # root. Each worked example under examples/ narrates a
         # fictional application change, naming source and test files that
         # belong to the STORY's application, not to this repository - the same
         # way a textbook's code listing names a file that exists only in the
-        # chapter. None of the five examples ships the application source it
+        # chapter. No example ships the application source it
         # narrates; only the Compass documents (devlog, delivery-approach,
         # technical-design, and the rest) are real, tracked files.
-        Exemption(
-            "examples/feature-api-change/.compass/work/"
-            "rate-limit-search-endpoint/devlog.md",
-            "src/api/middleware/rate_limit.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/.compass/work/"
-            "rate-limit-search-endpoint/devlog.md",
-            "src/api/routes/search.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/.compass/work/"
-            "rate-limit-search-endpoint/devlog.md",
-            "src/api/config.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/technical-design.md",
-            "src/api/middleware/rate_limit.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/technical-design.md",
-            "src/api/routes/search.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/feature-api-change/docs/compass/"
-            "2026-04-21-rate-limit-search-endpoint/technical-design.md",
-            "src/api/config.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/hotfix-regression/.compass/work/"
-            "search-crash-on-empty-filter/devlog.md",
-            "src/api/search/filter_compiler.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "tests/api/test_search.py",
-            "a path relative to this issue's own directory - it resolves "
-            "at examples/hotfix-regression/tests/api/test_search.py, "
-            "which is tracked; the sweep checks every path against the "
-            "repository root, the same gap the bdd-adapters exemptions "
-            "above name."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/verification-report.md",
-            "src/api/search/filter_compiler.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/distribution-map.md",
-            "src/notifications/dispatch.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/distribution-map.md",
-            "src/notifications/preferences.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/technical-design.md",
-            "src/notifications/dispatch.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/technical-design.md",
-            "src/notifications/store.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/technical-design.md",
-            "src/notifications/api.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/technical-design.md",
-            "src/notifications/preferences.py",
-            "the fictional application file the walkthrough narrates, not a "
-            "file this repository ships."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/verification-report.md",
-            "tests/notifications/test_dispatch.py",
-            "a path relative to this issue's own directory - it resolves "
-            "at examples/initiative-new-subsystem/tests/notifications/"
-            "test_dispatch.py, which is tracked."),
-        Exemption(
-            "examples/initiative-new-subsystem/docs/compass/"
-            "2026-03-02-notifications-subsystem/verification-report.md",
-            "tests/notifications/test_preferences.py",
-            "a path relative to this issue's own directory - it resolves "
-            "at examples/initiative-new-subsystem/tests/notifications/"
-            "test_preferences.py, which is tracked."),
         Exemption(
             "examples/quick-fix-typo/.compass/work/"
             "fix-timeout-error-message/devlog.md",
@@ -2866,28 +2283,30 @@ _register(Rule(
             "the comment quotes a fixture path a test builds, not a real "
             "path - see the PBW-A6 exemption above for the same line."),
         Exemption(
-            "agents/architect.md", "architecture/invariants.yml",
+            "commands/go.md", "architecture/invariants.yml",
             "a real, conditional artifact a consuming project supplies - "
             "`cli/compass_pkg/core.py`'s `_INVARIANTS_FILE` reads it \"if "
             "present\", and `tests/test_frame_loads_architecture.py` "
             "exercises both the present and absent case. Compass's own "
             "architecture/ does not ship one, which is correct, not a "
-            "broken reference."),
+            "broken reference. It moved here from the define command, which "
+            "9.0.0 removed (ADR-092)."),
         Exemption(
-            "agents/spec-author.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
+            "cli/compass_pkg/migrate.py", "`commands/plan.md` is a shipped command file",
+            "an example of a repository path a manifest's `changed_files:` "
+            "can hold, named as the 8.x plugin shipped it - the comment is "
+            "about a path a manifest names, not a file this tree has."),
         Exemption(
-            "commands/consult.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
-        Exemption(
-            "commands/define.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
+            "tests/test_migrate_to_docs_compass.py",
+            "`changed_files:` entry naming `commands/plan.md`",
+            "the same example repository path as the migrate.py comment "
+            "above, which the test builds into a fixture manifest."),
         Exemption(
             "templates/architecture/ownership.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
+            "the same conditional artifact reference as commands/go.md."),
         Exemption(
             "templates/architecture/relations.md", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md."),
+            "the same conditional artifact reference as commands/go.md."),
         Exemption(
             "templates/manifest.yml", "tests/api/test_ledger_export.py",
             "the template's own worked example of a scenarios: entry, not a "
@@ -2943,12 +2362,13 @@ _register(Rule(
             "at examples/bdd-adapters/pytest-bdd/tests/steps/"
             "test_reset_password_steps.py, which is tracked."),
         Exemption(
-            "tests/test_architect_lens.py", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md; "
-            "found while fixing batch 7, not by the audit."),
+            "tests/test_go_command.py", "architecture/invariants.yml",
+            "the same conditional artifact reference as commands/go.md; "
+            "the architect trigger tests moved here from "
+            "test_architect_lens.py when /compass:consult was removed (ADR-093)."),
         Exemption(
             "tests/test_frame_loads_architecture.py", "architecture/invariants.yml",
-            "the same conditional artifact reference as agents/architect.md; "
+            "the same conditional artifact reference as commands/go.md; "
             "found while fixing batch 7, not by the audit."),
         # writing-style-sweep-drops-the-leading-dot-on-a-dotdir-citation was
         # fixed at the source: `_REFERENCE_RE` above now allows a leading dot
@@ -3106,16 +2526,6 @@ _register(Rule(
             ".claude/settings.json (or ~/.claude/settings.json), the "
             "install destination, not a path this repository tracks."),
         Exemption(
-            "scripts/integrate.sh", "lib/compass-python.sh",
-            "a shellcheck `source=` directive, resolved relative to the "
-            "sourcing file's own directory (scripts/), not to the "
-            "repository root; the real file is scripts/lib/compass-python.sh."),
-        Exemption(
-            "scripts/multiagent.sh", "lib/compass-python.sh",
-            "a shellcheck `source=` directive, resolved relative to the "
-            "sourcing file's own directory (scripts/), not to the "
-            "repository root; the real file is scripts/lib/compass-python.sh."),
-        Exemption(
             "cli/compass_pkg/migrate.py", "commands/technical-design.md",
             "the path's non-existence is the point of the sentence - it "
             "names the wrong path a filename-only rewrite would produce, "
@@ -3158,25 +2568,6 @@ def _find_doubled_word(span: ProseSpan) -> list[Finding]:
 _register(Rule(
     "PBW-A9", "No sentence is left broken by an earlier find-and-replace",
     _find_doubled_word,
-    exemptions=(
-        # The doubled-word pattern matches any repeated \w+ token, including
-        # two adjacent numbers - a date immediately followed by a time whose
-        # hour repeats the day is not a doubled English word, and rewording a
-        # timestamp to dodge the pattern would be an edit for the sweep's own
-        # convenience rather than for clarity.
-        Exemption(
-            "examples/hotfix-regression/.compass/work/"
-            "search-crash-on-empty-filter/devlog.md",
-            "2026-05-11 11:",
-            "a date immediately followed by a time starting with the same "
-            "number, not a doubled word."),
-        Exemption(
-            "examples/hotfix-regression/docs/compass/"
-            "2026-05-11-search-crash-on-empty-filter/delivery-approach.md",
-            "2026-05-11 11:",
-            "a date immediately followed by a time starting with the same "
-            "number, not a doubled word."),
-    ),
 ))
 
 
@@ -3428,8 +2819,8 @@ _register(Rule("PBW-C3", "A CLI module's header describes that module",
 # The blocks copied across test files (audit 5.6), matched by the
 # distinctive phrase `git grep` finds each one by. The fifth is the
 # stage-key rename's own copied block, missed by the first four and found
-# by a second review reading `tests/derive/test_derive_system_spec.py:18-23`
-# - the same shape as the vocabulary-rename block above it, for a different
+# by a second review reading lines 18-23 of the living-spec derivation test
+# (deleted in 9.0.0, ADR-091) - the same shape as the vocabulary-rename block above it, for a different
 # rename, and fixed the same way.
 COPIED_BLOCK_MARKERS: tuple[str, ...] = (
     "vocabulary rename landed on 2026-08-25",
@@ -3837,15 +3228,15 @@ _GROWING_REACH = {
     # 14 with the packed routing baseline in tests/fixtures/compat/;
     # 15 with the check-verdict baseline beside it, which is plain JSON;
     # 61 with the 46 check-corpus case labels, which hold a verdict and one line;
-    # 62 with tests/fixtures/classifier-json-example.json, plain JSON;
-    # 63 with tests/fixtures/policy-diff-json-example.json, plain JSON;
-    # 64 with tests/fixtures/policy-migrate-example.json, plain JSON;
-    # 65 with tests/fixtures/policy-update-json-example.json, plain JSON;
-    # 66 with tests/fixtures/issue-configure-example.json, plain JSON;
-    # 67 with tests/fixtures/issue-configure-refused-example.json, plain JSON;
+    # 62 with the JSON example of the classifier, plain JSON;
+    # 63 with the JSON example of `compass policy diff`, plain JSON;
+    # 64 with the JSON example of `compass policy migrate`, plain JSON;
+    # 65 with the JSON example of `compass policy update`, plain JSON;
+    # 66 with the JSON example of `compass issue configure`, plain JSON;
+    # 67 with its refused example, plain JSON;
     # 68 with tests/fixtures/scenario-tests-json-example.json, plain JSON;
     # 69 with tests/fixtures/evidence-review-example.json, plain JSON;
-    # 70 with tests/fixtures/preset-interfaces/policy-test-groups.json, plain JSON;
+    # 70 with the JSON example of grouped `compass preset test` fixtures, plain JSON;
     # 71 with tests/fixtures/evidence-approve-example.json, plain JSON;
     # 72 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files;
     # 73 with the check-corpus case label for the recorded case of dod-evidence-typed, which
@@ -3878,8 +3269,41 @@ _GROWING_REACH = {
     #    case labels of acceptance-applicability-agrees;
     # 150 when the extracted feature file replaced the 8.0.4 refusal text: the
     #    scan reads the refusal as prose and finds none in the feature file;
-    # 153 with the three check-corpus case labels of outer-loop-recorded.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 153),
+    # 153 with the three check-corpus case labels of outer-loop-recorded;
+    # 157 with the 8.0.4 inner-loop setup error and the three check-corpus
+    # case labels of acceptance-support-present.
+    # 160 with the three check-corpus case labels of `outer-loop-attempts-recorded`.
+    # 166 with the six check-corpus case labels of `isolation-proven` and
+    # `layering-test-passed`, three each.
+    # 157 when 9.0.0 removed execution profiles and the nine files of
+    # tests/fixtures/execution-profiles/ (ADR-090).
+    # 155 when 9.0.0 removed `multiagent-run-recorded` and its two check-corpus
+    # case labels (ADR-090).
+    # 153 when 9.0.0 removed `consistency-check-passes` and its two check-corpus
+    # case labels (ADR-091).
+    # 151 when 9.0.0 removed `compass issue receipt` and its fixture project,
+    # which held two files with no prose (ADR-091).
+    # 149 when 9.0.0 removed `rendered-blocks-current` and its two check-corpus
+    # case labels (ADR-091).
+    # 129 when 9.0.0 removed the four checks of the removed documents and their
+    # twenty check-corpus case labels (ADR-091).
+    # 130 with tests/fixtures/compat/v8.0.4-governance.tgz, the packed 8.0.4 governance files.
+    # 122 when 9.0.0 removed the usage record (ADR-093): the five fixture
+    # transcripts and base-quick-fix-usage.json of
+    # tests/fixtures/autonomy-ratio-and-cost/, and retro.json and ships.json of
+    # tests/fixtures/autonomy-ratio-and-cost-views/.
+    # 120 when 9.0.0 removed `compass issue configure` and its two plain JSON
+    # examples (ADR-094).
+    # 116 when 9.0.0 removed `policy diff`, `policy migrate`, `policy update` and
+    # `preset test` and their four plain JSON examples (ADR-094).
+    # 115 when 9.0.0 removed the classifier and its plain JSON example (ADR-094).
+    # 122 with the seven case manifests of tests/fixtures/impls/ship-approval-present/
+    # (ADR-095).
+    # 127 with the five case manifests of tests/fixtures/impls/request-recorded/
+    # (#356).
+    # 126 when 9.0.0 deleted the generated views and the plain JSON fixture of
+    # their content hashes (ADR-098).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 126),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.
@@ -4422,7 +3846,7 @@ def test_pbw_e4_a_prose_sequence_item_is_blanked_but_still_counted(tmp_path):
     """A prose sequence item under a `PROSE_KEYS` key can be reworded and
     rewrapped freely, but adding or removing one is reported. `PBW-E4`.
 
-    `governance/routing-policy.yml`'s `biases:` holds free-text tie-breakers,
+    The 8.x `routing-policy.yml`'s `biases:` held free-text tie-breakers,
     and its own comment says they are not machine-evaluated. The reader
     blanked only scalar values, so batch 3 could not prove a rewording of them
     safe and correctly left the findings unfixed in a shipped governance file.
@@ -4973,7 +4397,7 @@ def test_pbw_f7_a_marker_is_not_itself_a_replacement_sentence(tmp_path):
 
 
 def test_pbw_d8_the_excluded_paths_are_out_of_every_sweep():
-    """`docs/system-spec.md`, `cli/vendor/yaml/`, `cli/vendor/LICENSE-PyYAML`,
+    """`cli/vendor/yaml/`, `cli/vendor/LICENSE-PyYAML`,
     `LICENSE` and `assets/` never appear in `scanned_paths()`, so no sweep in
     group A can report a finding inside them. `PBW-D8`.
 
@@ -4994,7 +4418,7 @@ def test_pbw_d1_every_tracked_yaml_file_parses():
     whole-line comments only, so a YAML file that does not parse loses every
     `PROSE_KEYS` value the sweeps would otherwise read - and nothing says
     so. Finding 12, `review-dimensions.md`: `schemas/manifest.reference.yml`
-    and `schemas/routing-policy.reference.yml` both failed to parse, on a
+    and the routing-policy reference (deleted in 9.0.0) both failed to parse, on a
     `key:# comment` with no space between the colon and the `#`, which YAML
     reads as an unterminated key rather than a mapping entry with a trailing
     comment. Both are fixed; this is the guard against the next one."""
@@ -5010,44 +4434,6 @@ def test_pbw_d1_every_tracked_yaml_file_parses():
     assert not unparseable, (
         "these tracked YAML files do not parse, so the sweeps silently "
         "read only their whole-line comments:\n" + "\n".join(unparseable))
-
-
-#: The kinds of finding the excluded derived spec is allowed to contain, and
-#: the ground the exclusion rests on: an archived scenario title is a record
-#: of what a scenario was called when it ran. A sixth kind would not be that,
-#: so it needs a reader before the exclusion still covers it.
-#:
-#: PBW-A9 is read and recorded: the spec heading "### <slug> (landed <date>)"
-#: repeats the word "landed" when a slug ends in it, which is the heading's
-#: own format and not a broken sentence.
-SYSTEM_SPEC_KINDS = frozenset({
-    "PBW-A1", "PBW-A2", "PBW-A3", "PBW-A5", "PBW-A7", "PBW-A9"})
-
-
-def test_pbw_d8_system_spec_findings_are_the_recorded_kinds():
-    """`docs/system-spec.md`'s exclusion names what it hides so a reader can
-    check it rather than take it on trust (finding 7,
-    `review-dimensions.md`).
-
-    The kinds are pinned and the totals are not. Every landed issue appends
-    its scenario titles to this derived file, so a total can only rise and a
-    pinned total fails on the next issue to land rather than on anything
-    being wrong. That is what happened first: this test pinned 286, the spec
-    was re-derived at ship, one more word-table hit arrived with the new
-    titles, and continuous integration failed on a number that was never the
-    point. A sixth KIND is the thing worth stopping, because the exclusion's
-    reasoning covers archived titles and nothing else."""
-    spans = (_spans_for_file(REPO_ROOT / "docs" / "system-spec.md")
-             + _spans_for_file(REPO_ROOT / "docs" / "system-spec-archive.md"))
-    by_rule = {rid: len([f for s in spans for f in rule.find(s)])
-               for rid, rule in RULES.items()}
-    unexpected = {rid: n for rid, n in by_rule.items()
-                  if n and rid not in SYSTEM_SPEC_KINDS}
-    assert not unexpected, (
-        f"docs/system-spec.md reports a kind of finding the exclusion's "
-        f"reasoning does not cover: {unexpected}. The exclusion rests on "
-        f"these being archived scenario titles; read the new findings before "
-        f"widening it. Recorded kinds: {sorted(SYSTEM_SPEC_KINDS)}.")
 
 
 def test_pbw_e1_prose_keys_are_the_one_shared_list():
@@ -5079,8 +4465,8 @@ def test_pbw_c4_the_stage_key_rename_block_has_a_marker():
     """A second copied block, alongside the vocabulary-rename one
     `COPIED_BLOCK_MARKERS` already names: the stage-key rename explanation
     ("The stage keys moved on 2026-08-24 ... Re-pointed, not relaxed.")
-    copied into `tests/derive/test_derive_system_spec.py`. Found by a second
-    review, reading `tests/derive/test_derive_system_spec.py:18-23`: the
+    copied into the living-spec derivation test, which 9.0.0 deleted (ADR-091).
+    Found by a second review, reading lines 18-23 of that test: the
     check reported clean with an instance still on disk, because no marker
     named its opening phrase."""
     span = ProseSpan(
@@ -5091,18 +4477,6 @@ def test_pbw_c4_the_stage_key_rename_block_has_a_marker():
         "the stage-key rename block's opening phrase must be a named "
         "marker, the same as the vocabulary-rename block's")
 
-
-
-def test_other_frameworks_records_are_left_out_and_nothing_else_is():
-    """Files in another framework's overlay under `evals/scenarios/` are in
-    that framework's own words, so no Compass writing rule reads them; every
-    other file under `evals/scenarios/` is still scanned, and at least one
-    overlay file exists, so the rule is not checking nothing."""
-    scanned = {str(p.relative_to(REPO_ROOT)) for p in scanned_paths()}
-    tracked = [r for r in _git_ls_files() if r.startswith("evals/scenarios/")]
-    overlays = [r for r in tracked if _is_other_frameworks_record(r)]
-    assert overlays, "no other framework's record is tracked"
-    assert sorted(r for r in tracked if r not in scanned) == sorted(overlays)
 
 
 def test_dcj_103_pbw_a6_counts_only_committed_ignore_rules(tmp_path):

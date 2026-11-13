@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: "Debugging from evidence: read the failure, form one hypothesis, test it. Load on an unexpected failure."
+description: Debugging an unexpected failure from evidence, one hypothesis at a time.
 ---
 
 # Systematic Debugging
@@ -56,8 +56,7 @@ You stop being able to attribute the result, and both changes stay in the code.
 
 **Write the regression test first, watch it go red, then fix it.**
 
-This is the same red-green discipline the implement stage already runs (`compass tdd-red`,
-then `compass tdd-green`) - see `tdd-discipline`. It matters more here, not
+This is the red-green discipline of `tdd-discipline`. It matters more here, not
 less: a bug fixed without a test that failed for the bug's reason is a bug you
 cannot prove you fixed, and one that returns without anyone noticing.
 
@@ -86,7 +85,7 @@ So:
 ```
 
 Re-score the dimensions honestly. If familiarity is genuinely unmapped, the
-unmapped-familiarity floor (`RP-FLOOR-002`) will force `behavior-mapping`
+unmapped-familiarity floor (`RP-FLOOR-002`) will force behavior mapping with the `atdd` skill
 (on an atomic or small change with trivial or contained risk and no domain
 label, `RP-ADV-002` gives it as advice),
 and writing the current behavior down is very often the thing that ends the

@@ -41,9 +41,8 @@ class Permission:
 def untrusted_reason(project_root, env=None):
     """The trust reason when the contribution is untrusted here, else None.
     UNKNOWN on CI counts as untrusted, because Compass cannot tell whose work
-    it is. Read from the environment only: `approach evaluate --write` asks
-    this before it reads the readiness record, so a record a contribution
-    committed cannot answer it."""
+    it is. Read from the environment only, so nothing a contribution
+    committed can answer it."""
     state, reason = contribution_trust(env=env, project_root=project_root)
     if state == UNKNOWN and is_ci(env):
         state = UNTRUSTED
@@ -52,8 +51,8 @@ def untrusted_reason(project_root, env=None):
 
 def command_permission(project_root, opt_in_from=None, env=None):
     """May Compass run a command this project declares? One answer for
-    `command-passes` and `compass readiness` (ADR-061), so the two cannot
-    order the decision differently.
+    `command-passes` (ADR-061), so no caller can order the decision
+    differently.
 
     The trust decision comes first and the opt-in is read only when trust
     allows: a contribution can turn the opt-in on, but it cannot change what

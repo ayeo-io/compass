@@ -23,9 +23,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PROSE_ROOTS = ("approaches", "skills", "agents", "commands", "templates",
                "docs", "governance", "architecture")
 EXEMPT = ("architecture/decisions/", "templates/architecture/decisions/",
-          "docs/compass/",
-          "docs/proposals/", "docs/analysis/", "docs/system-spec.md",
-          "docs/system-spec-archive.md")
+          "governance/decisions/", "docs/compass/",
+          "docs/proposals/", "docs/analysis/")
 
 
 def _tracked(root: Path) -> set[str]:
@@ -124,10 +123,26 @@ def test_a4_named_files_resolve():
     # skims past, and the guard cannot read it.
     named = re.compile(r"(?<![\w/.-])((?:approaches|governance|templates|skills"
                        r"|agents|commands|docs)/[\w./-]+\.md)\b")
+    # An upgrade guide is history: it names a template as it shipped then, and
+    # 9.0.0 deleted fourteen of them (ADR-091), then the five role templates and
+    # the roles guide with the role entry points, the board and label pages
+    # with the board and the label sync, and the readiness page with the
+    # readiness measure (ADR-093).
+    removed = {f"templates/{name}.md" for name in (
+        "delivery-approach", "verification-note", "technical-design", "low-level-design",
+        "distribution-map", "verification-report", "intent", "requirements-review",
+        "threat-model", "rollback-plan", "bug-report", "review", "spike-conclusion",
+        "incident", "positioning", "launch-readiness", "ui-contract",
+        "product-owner-review", "architecture-notes")} | {
+        "docs/roles-guide.md", "docs/board.md", "docs/github-labels.md",
+        "docs/github-labels-walkthrough.md", "docs/readiness.md"}
     missing = []
     for p in _prose_files():
+        history = p.relative_to(REPO_ROOT).as_posix().startswith("docs/upgrade-")
         for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
             for path in named.findall(line):
+                if history and path in removed:
+                    continue
                 if not (REPO_ROOT / path).exists():
                     missing.append(f"{p.relative_to(REPO_ROOT)}:{n}: {path}")
     assert not missing, (
@@ -384,7 +399,7 @@ def test_d2_repairs_change_only_retired_names():
     Two were re-baselined by `orchestrator-loop-hardening`, which adopted the
     multiagent loop's rules: `agents/orchestrator.md` gained a
     "Briefing a reviewer" section and two numbered steps, and
-    `skills/worktree-multiagent/SKILL.md` gained the brief-file, budget,
+    the `worktree-multiagent` skill gained the brief-file, budget,
     batching and no-subagent rules as list items.
 
     One was re-baselined by `dispatch-protocol`: `templates/distribution-map.md`
@@ -487,7 +502,7 @@ def test_d2_repairs_change_only_retired_names():
     `templates/distribution-map.md` (list_items 10 -> 7) and
     `templates/requirements-review.md` (17 -> 14) lost the boxes of their
     `## Gate` checklists, which are now a `breakdown-exit` block and the
-    existing `dor` block. `skills/worktree-multiagent/SKILL.md` (list_items
+    existing `dor` block. The `worktree-multiagent` skill (list_items
     29 -> 32, one more `##` heading) gained the section that holds the
     wording of the removed distribution-map boxes.
     Two more were re-baselined by `project-readiness-caps-autonomy`:
@@ -634,16 +649,226 @@ def test_d2_repairs_change_only_retired_names():
     `governance/guardrails.md` (list_items 73 -> 78) gained the outer-loop
     check, one list item and its 4 sub-items.
 
-    The other 45 are untouched, and a NEW structural change to any of the 59
-    still fails.
+    Two files already counted above were re-baselined again by
+    `stage-review-checkpoints` (ADR-083):
+    `docs/quickstart.md` (one heading, list_items 19 -> 22) gained the stage 2
+    and 3 reviews of `compass next`, and `governance/routing-policy.md`
+    (list_items 71 -> 73) gained two checkpoint bullets.
+
+    One more was re-baselined by `support-code-readiness`:
+    `governance/strategies.md` (list_items 105 -> 106) gained the support-code
+    bullet, and `governance/guardrails.md` (list_items 78 -> 84) gained the
+    support-code check, one list item and its 5 sub-items.
+    One more was re-baselined by `attempts-required`: `governance/guardrails.md`
+    (list_items 84 -> 88) gained the `attempts` check, one list item and its 3
+    sub-items.
+
+    One more was re-baselined by `candidate-and-client`: `governance/guardrails.md`
+    (list_items 88 -> 89) gained the outer-loop check's sub-item on where a
+    green with no candidate or client is refused.
+
+    One more was re-baselined by `isolation-and-layering`: `governance/strategies.md`
+    (list_items 106 -> 107) gained the isolation and layering bullet, and
+    `governance/guardrails.md` (list_items 89 -> 98) gained the isolation check
+    and the layering check, two list items and their 7 sub-items.
+
+    One more was re-baselined by ayeo-io/compass-delivery#347:
+    `governance/guardrails.md` (list_items 98 -> 99) gained the `G1` bullet on
+    the red for each scenario.
+
+    ayeo-io/compass-delivery#352 removed two and re-baselined two (ADR-090):
+    `agents/orchestrator.md` and `skills/worktree-multiagent/SKILL.md` were
+    deleted with the multiagent breakdown, so their entries left the fixture;
+    `governance/routing-policy.md` (list_items 73 -> 62, table_rows 20 -> 12,
+    one more `##` heading) lost the model-tier section's table and bullets and
+    gained a short loop-ceilings section; and `templates/distribution-map.md`
+    (list_items 7 -> 6) lost the worktree-root line.
+
+    The same issue then removed the four other agent files the fixture held,
+    `agents/planner.md`, `agents/product-marketer.md`, `agents/product-owner.md`
+    and `agents/spec-author.md`, with the rest of `agents/` (ADR-090).
+
+    One more was re-baselined by ayeo-io/compass-delivery#353 (ADR-091):
+    `governance/guardrails.md` (list_items 99 -> 91) lost the bullets on the
+    checks `artifacts-approved`, `contracts-declared` and
+    `design-within-word-ceiling`, which 9.0.0 removed, and kept those of
+    `nfr-rows-resolved` with its fixed-path rule. The same issue deleted
+    `templates/distribution-map.md` and `templates/requirements-review.md`
+    with twelve other templates, so their entries left the fixture. It
+    re-baselined three more: `approaches/quick-fix.md` (list_items 8 -> 7) and
+    `approaches/rubric.md` (list_items 5 -> 3, table_rows 22 -> 18) lost the
+    rule that an `intent.md` or `positioning.md` on disk adds gates, and
+    `templates/acceptance-criteria.md` (one `##` heading fewer) lost its
+    Coverage ledger, which the removed render wrote.
+
+    Three files already counted above were re-baselined again by
+    ayeo-io/compass-delivery#351, which replaces the approaches and eight
+    stages with one four-stage path (ADR-092):
+    `docs/quickstart.md` (one more `##` heading, fences 36 -> 38, table_rows
+    0 -> 21) gained "What `compass next` prints", with an example line, the
+    table of how a legacy stage is shown and the table of the `next:`
+    command; `docs/safety-contract.md` (one more `###` heading, list_items
+    133 -> 136) gained the section on the pre-tool hook's scenario check on
+    a path issue; and `governance/routing-policy.md` (one more `##` heading,
+    table_rows 12 -> 25) gained "The evidence rows", with the table of the
+    rows and the table of the rules that add to them. The path writer then
+    added three table rows to `docs/quickstart.md` (21 -> 24, the `next:`
+    rows of a path issue) and "The path writer" to
+    `governance/routing-policy.md` (one more `##` heading, list_items
+    62 -> 67, table_rows 25 -> 34). Turning the path writer on added four
+    bullets to `governance/routing-policy.md` (list_items 67 -> 71): what
+    the command shows without `--write`, the evidence row `--verbose` names,
+    and the two `compass next` lines on `layering` and on the files to stage.
+    Shipping the path in the default preset left the four 8.x shapes out of
+    the `default_shapes` example in `governance/routing-policy.md`
+    (list_items 71 -> 67) and added the table of the shipped default's two
+    checkpoint rows (table_rows 34 -> 38). Removing the dead 8.x code added
+    one bullet to "The path writer" in `governance/routing-policy.md`
+    (list_items 67 -> 68): a path issue's output has no candidate approach,
+    no blocked stage and no subtask ceiling.
+
+    The same issue deleted `approaches/quick-fix.md`, `approaches/regular.md`,
+    `approaches/full.md` and `approaches/hotfix.md`, so their entries left the
+    fixture, and re-baselined two files it rewrote for the path:
+    `approaches/spike.md` (one `##` heading fewer, table_rows 17 -> 9) has
+    one table of its three stages in place of the per-stage weights and the
+    de-scope ledger, and `skills/adaptive-routing/SKILL.md` (list_items
+    21 -> 17) lost the de-scope ledger's bullets, because the path has no
+    stage to skip. The fixture holds 47 files now, and the count is checked
+    exactly, so a truncated fixture still fails.
+
+    The narrative docs step of the same issue rewrote three more for the path:
+    `docs/quickstart.md` (three `###` headings fewer, fences 38 -> 32,
+    list_items 22 -> 25) walks one path issue through assess, specify, build
+    and ship in place of the per-stage commands, and shows a real rail;
+    `docs/routing-deep-dive.md` (three `###` headings fewer, fences 0 -> 14,
+    list_items 20 -> 47, table_rows 36 -> 37) shows the real `approach
+    evaluate --verbose` output of each case and the evidence row it matches,
+    in place of the per-stage weights of each approach; and
+    `governance/strategies.md` (list_items 107 -> 108) gained the `S17`
+    bullet on the stage reviews at the `build` and `ship` checkpoints.
+
+    ADR-093 deleted the feature, hotfix and initiative examples
+    (`examples/feature-api-change/`, `examples/hotfix-regression/` and
+    `examples/initiative-new-subsystem/`), so their 17 entries left the
+    fixture, among them the distribution map named above. It re-baselined
+    `examples/README.md` (three `###` headings fewer), which lost the section
+    on each deleted example. The fixture holds 30 files now.
+
+    ayeo-io/compass-delivery#354 removed the role entry points (ADR-093). It
+    deleted `templates/positioning.md`, `templates/launch-readiness.md`,
+    `templates/ui-contract.md` and `skills/intent-interview/role-translation.md`,
+    so their entries left the fixture, which holds 43 files now. It
+    re-baselined `docs/quickstart.md` (seven headings fewer, fences 32 -> 26,
+    list_items 25 -> 22): the product owner's and the product marketer's
+    walkthroughs, built on `/compass:intent` and `/compass:position`, became
+    one short section on a brief and a public claim. It also re-baselined
+    `architecture/ownership.md` (one `###` heading fewer, list_items 15 -> 12),
+    which lost the "Role Pipeline" section that named `commands/consult.md`.
+
+    The same issue removed `compass retro` and `compass rework-scan` (ADR-093),
+    which re-baselined three files: `architecture/ownership.md` (two `###`
+    headings fewer) lost the two rules on what those commands must not do,
+    `architecture/relations.md` (list_items 4 -> 3, table_rows 34 -> 33) lost
+    the row and the rule that named them, and
+    `skills/flow-management/SKILL.md` (one `##` heading fewer, list_items
+    19 -> 18) lost its "Calibration" section. Removing the pre-tool hook's
+    session record re-baselined `docs/safety-contract.md` (one `###` heading
+    fewer, list_items 136 -> 128), which lost the section on that record.
+    Removing the readiness measure (ADR-093) re-baselined two more:
+    `docs/safety-contract.md` (one `###` heading fewer, list_items 128 -> 125)
+    lost the section on the readiness floor's record, and
+    `governance/routing-policy.md` (list_items 68 -> 64) lost the floor's
+    list of refusals. The narrative docs step of the same issue
+    re-baselined `architecture/system-context.md` (one `###` heading
+    fewer), which lost its "Role Pipeline" section on the four role entry
+    points.
+
+    One more was re-baselined by #357, step 2 (the fixed check set):
+    `governance/guardrails.md` (one `##` heading more, list_items 91 -> 95)
+    gained the section "The fixed check set", on `governance/check-set.yml`
+    and its reader.
+
+    One more was re-baselined by #357, step 3 (the tighten-only settings):
+    `governance/routing-policy.md` (list_items 64 -> 66) gained the
+    bullets on the two policy keys the settings add.
+
+    One more was re-baselined by #357, step 4 (waivers):
+    `governance/guardrails.md` (list_items 95 -> 96) gained the bullet "A
+    waived check", on the WAIVED row of `compass check`.
+
+    Two were re-baselined by #357, step 8, which deleted the configuration
+    layers, the classifier, the locks and the live preset (ADR-094):
+    `governance/guardrails.md` (list_items 96 -> 79), whose section on locks
+    and conformance became a short "No locks" section, and
+    `governance/routing-policy.md` (list_items 66 -> 50, table_rows 38 -> 33,
+    fences 4 -> 2, one `##` heading fewer), which lost the generator steps of
+    the two views and the section on how the classifier compared two
+    configurations.
+
+    One more was re-baselined by #355, step 2 (the ship approval):
+    `governance/guardrails.md` (list_items 79 -> 83) gained the bullet on the
+    check `ship-approval-present` and its three sub-bullets. #355 step 5
+    re-baselined `docs/safety-contract.md` (list_items 125 -> 130): the rule
+    that the hook refuses an agent's approving review of a pull request, and
+    its limits. #355 step 8 re-baselined `docs/quickstart.md` (table_rows
+    24 -> 25): the `next:` table gained the row of a landed issue that owes
+    the ship approval.
+
+    #356 step 2 (the request link) re-baselined two more:
+    `governance/guardrails.md` (list_items 83 -> 88) gained the bullet on the
+    check `request-recorded` and its four sub-bullets, and `docs/quickstart.md`
+    (table_rows 25 -> 26) gained the `next:` row that asks for the request.
+
+    #356 step 8 (the rebuild of a missing generation) re-baselined
+    `governance/guardrails.md` (list_items 88 -> 89): it gained the bullet on
+    `held`, which finds a check set by its `<id>@<version>` and sha256.
+
+    #356 step 6 (the record committed with the code, ADR-096) re-baselined
+    `docs/safety-contract.md` (list_items 130 -> 133): the three limits of a
+    committed landing (a hand edit of the trail's prose, a hook that rewrites
+    a record file, a shallow clone). #356 step 7 re-baselined
+    `docs/quickstart.md` (table_rows 26 -> 27): the `next:` table gained the
+    row that names `compass record commit` after the merge.
+
+    #356 step 9 (the words) re-baselined `docs/quickstart.md` (fences
+    26 -> 28): the `sha256sum -c -` command a reviewer runs over `trail.md`
+    is a fenced block, because a path named inline must exist in the tree.
+
+    #359 step 5 (the deleted-check refusal, commit 11a3cf96) re-baselined
+    `governance/guardrails.md` (one `##` heading more, list_items 89 -> 92):
+    it gained the section "A deleted check", with the three settings and
+    waivers that make `compass check` refuse.
+
+    The fix that writes manifests with no YAML anchors (024f2497) added one
+    bullet to `docs/safety-contract.md` (list_items 133 -> 134).
+
+    #359 step 6 (copied governance and the generated views, ADR-098)
+    re-baselined `architecture/relations.md` (table_rows 33 -> 32: the row for
+    the deleted views went) and `governance/routing-policy.md` (list_items
+    50 -> 49: the bullet that said never to edit the deleted views went).
+
+    #359 (the deletion of `acceptance_strategy.pinned_below`, ADR-098 open
+    question 6) re-baselined `governance/guardrails.md` (list_items 92 -> 91):
+    the bullet on an issue in a project pinned at major 6 or 7 went.
+
+    ADR-099 (a change takes two commands) re-baselined five more, when the
+    docs and the taught text were cut to the two-command path:
+    `docs/quickstart.md` (list_items 22 -> 26, table_rows 27 -> 18),
+    `docs/routing-deep-dive.md` (list_items 47 -> 34),
+    `docs/safety-contract.md` (one more heading), `governance/routing-policy.md`
+    (list_items 49 -> 47) and `skills/evidence-gates/traceability.md`
+    (list_items 19 -> 17).
+
+    A NEW structural change to any of the 26 still fails.
     """
     import json
     snap = json.loads(
         (REPO_ROOT / "tests" / "fixtures" / "repaired-file-structure.json")
         .read_text(encoding="utf-8"))
-    assert len(snap) > 50, (
-        f"only {len(snap)} files in the structure fixture - it has been "
-        f"truncated, and this check would pass over almost nothing")
+    assert len(snap) == 26, (
+        f"{len(snap)} files in the structure fixture, not 26 - it has been "
+        f"truncated, or an entry was added or removed without this count")
 
     drift = []
     for rel, expected in sorted(snap.items()):

@@ -29,7 +29,6 @@ sys.path.insert(0, str(ROOT / "cli"))
 
 from compass_pkg import check_registry  # noqa: E402
 from compass_pkg.check_cmd import CHECK_FNS  # noqa: E402
-from compass_pkg.policy import _lint_errors_guardrails  # noqa: E402
 
 import check_corpus_runner as runner  # noqa: E402
 
@@ -67,18 +66,38 @@ def label_problems(scratch: Path, root: Path = CORPUS) -> list[str]:
 def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
     proofs = {e["check"] for e in yaml.safe_load(PROOFS.read_text(encoding="utf-8"))}
     # 26 with design-within-word-ceiling (ADR-067), 27 with the four-layer acceptance
-    # strategy's acceptance-applicability-agrees, 28 with its outer-loop-recorded (ADR-080).
-    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 28
+    # strategy's acceptance-applicability-agrees, 28 with its outer-loop-recorded (ADR-080),
+    # 29 with its acceptance-support-present, 30 with its `outer-loop-attempts-recorded`
+    # (ADR-084), 32 with its isolation-proven and layering-test-passed (ADR-086),
+    # 31 when 9.0.0 removed multiagent-run-recorded (ADR-090), 30 when it removed
+    # consistency-check-passes with `compass analyze` (ADR-091), 29 when it removed
+    # rendered-blocks-current with the rendered blocks (ADR-091), 25 when it removed
+    # the four checks of the removed documents (ADR-091), 26 with ship-approval-present (#355),
+    # 27 with request-recorded (#356).
+    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 27
     for name, entry in check_registry.REGISTRY.items():
         # dod-evidence-typed moved to 2.0.0: its verdict on a ticked page with no record changed.
         # human-approval-present moved to 1.1.0: it counts only an approval given for
         # guardrail `G5`, and its corpus verdicts held, so the major stayed (ADR-066).
         # It moved to 1.2.0 when a withdrawn sign-off stopped counting (ADR-069).
-        # multiagent-run-recorded moved to 1.1.0 when it accepted a single-unit
-        # record (ADR-071).
-        assert entry.version == {"dod-evidence-typed": "2.0.0",
-                                 "human-approval-present": "1.2.0",
-                                 "multiagent-run-recorded": "1.1.0"}.get(name, "1.0.0"), name
+        # suite-passed moved to 1.1.0 when a newer issue needed a red
+        # for each scenario (ADR-088). evidence-matches-tree moved to 1.1.0 when a
+        # landed issue was judged by the SHA-256 of each file (ADR-089).
+        # dod-evidence-typed moved to 2.1.0 when a 9.0.0 issue was judged with no
+        # verification report, and its corpus verdicts held (ADR-091). It moved to
+        # 2.2.0 when a follow-up on a path issue had to link to a GitHub issue, and its
+        # corpus verdicts held (ADR-093). The check that owed follow-ups are resolved
+        # moved to 1.1.0 when a path issue had nothing for it to check, and its corpus
+        # verdicts held (ADR-093).
+        # human-approval-present moved to 1.3.0 and ship-approval-present to 1.1.0
+        # when an approval given for an earlier state of the change stopped
+        # counting (ADR-099 decision 6); their corpus verdicts held.
+        assert entry.version == {"dod-evidence-typed": "2.2.0",
+                                 "backfills-paid": "1.1.0",
+                                 "human-approval-present": "1.3.0",
+                                 "ship-approval-present": "1.1.0",
+                                 "suite-passed": "1.1.0",
+                                 "evidence-matches-tree": "1.1.0"}.get(name, "1.0.0"), name
         assert isinstance(entry.params_spec, dict), name
         assert set(entry.tighter) <= set(entry.params_spec), name
         for param in entry.params_spec:
@@ -92,7 +111,7 @@ def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
 
 
 def test_cr_2_the_registry_answers_the_installed_version_and_major():
-    assert check_registry.installed_version("suite-passed") == "1.0.0"
+    assert check_registry.installed_version("suite-passed") == "1.1.0"
     assert check_registry.installed_major("suite-passed") == 1
     assert check_registry.installed_version("no-such-check") is None
     assert check_registry.installed_major("no-such-check") is None
@@ -126,47 +145,3 @@ def test_cr_3_a_false_label_is_reported_by_case(tmp_path):
     assert problems == ["suite-passed/broken is labelled pass but computes fail"]
 
 
-# --- policy lint (`CR-5`) ---------------------------------------------------------
-
-def _policy(name, decl):
-    return {"defaults": [{"id": "G9", "checks": [name]}], "checks": {name: decl}}
-
-
-def test_cr_5_lint_refuses_an_impl_the_registry_does_not_hold_by_name():
-    errs = _lint_errors_guardrails(
-        _policy("suite-passed", {"description": "x", "impl": "no-such-impl"}))
-    assert any("no-such-impl" in e and "registry" in e and "G9" in e
-               for e in errs), errs
-
-
-def test_cr_5_lint_accepts_a_registered_impl_and_a_check_with_none():
-    assert _lint_errors_guardrails(
-        _policy("suite-passed", {"description": "x", "impl": "suite-passed"})) == []
-    assert _lint_errors_guardrails(
-        _policy("suite-passed", {"description": "x"})) == []
-
-
-@pytest.mark.parametrize("decl", ["a string", ["a", "list"]])
-def test_cr_5_lint_refuses_a_check_declared_as_a_string_or_list_by_name(decl):
-    errs = _lint_errors_guardrails(_policy("suite-passed", decl))
-    assert any("suite-passed" in e and "mapping" in e for e in errs), errs
-
-
-def test_cr_5_an_impl_on_a_default_check_does_not_change_what_runs(
-        run_cli, edit_governance, make_task):
-    """A project's guardrails.yml must not redirect a default check to a
-    weaker implementation. `impl:` is read by lint only until stored
-    generations and locks decide who may choose an implementation."""
-    with edit_governance("guardrails.yml") as gr:
-        gr["checks"]["suite-passed"]["impl"] = "spike-no-production-changes"
-    make_task("redirect-probe", {
-        "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
-                       "size": "small", "intent": "delivery"},
-        "delivery_approach": "regular",
-        "scenarios": [{"id": "SCN-001", "intent": "INT-1",
-                       "tests": ["tests/test_x.py::test_y"]}],
-        "gates": [{"id": "verify.correctness", "status": "pending"}],
-    })
-    r = run_cli("check", "--issue", "redirect-probe")
-    assert r.returncode != 0, r
-    assert "no test-run evidence" in (r.stdout + r.stderr), r

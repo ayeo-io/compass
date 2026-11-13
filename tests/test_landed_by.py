@@ -7,7 +7,7 @@ exists.
 Six issues sat as `abandoned` with an empty record and had actually been
 delivered - the fix arrived through a different issue. `abandoned` was the only
 status that did not lie about the record, so it lied about the outcome instead,
-in the one place `compass retro` reads to judge whether assessment is drifting.
+in the record a reader uses to judge whether assessment is drifting.
 
 Scenario ids: DEL-A1..A2, B1..B5, C1..C2 in
 no-status-for-work-done-elsewhere/acceptance-criteria.md
@@ -77,9 +77,6 @@ def _check(project, slug):
     every check, so asserting against the short view would be testing the
     truncation rather than the behaviour.
     """
-    # The issue page is a document the check expects (`rendered-blocks-current`, ADR-051).
-    subprocess.run([sys.executable, str(CLI), "issue", "render", "--issue", slug],
-                   cwd=str(project), capture_output=True, text=True, timeout=120)
     return subprocess.run(
         [sys.executable, str(CLI), "check", "--issue", slug, "--verbose"],
         cwd=str(project), capture_output=True, text=True, timeout=120)
@@ -364,26 +361,6 @@ def test_del_c3_an_issue_that_was_decided_against_stays_abandoned():
         "that is what abandoned means" % manifest.get("status"))
     assert not manifest.get("landed_by"), (
         "publish-the-archive carries a `landed_by` - nothing delivered it")
-
-
-def test_del_c2_retro_does_not_count_the_delivered_ones_as_abandoned():
-    """DEL-C2: the mechanism `compass retro` reads is now telling the truth."""
-    _archive_or_skip()
-    run = subprocess.run([sys.executable, str(CLI), "retro"],
-                         cwd=str(checkable_root()), capture_output=True, text=True,
-                         timeout=180)
-    combined = run.stdout + run.stderr
-    for slug in ("the-human-review-pack",
-                 "evaluator-prints-code-before-meaning"):
-        assert not _abandoned_in(combined, slug), (
-            "%s is still being counted as abandoned by retro:\n%s"
-            % (slug, combined[:2000]))
-
-
-def _abandoned_in(text, slug):
-    """Is `slug` named on a line that also says abandoned?"""
-    return any(slug in line and "abandon" in line.lower()
-               for line in text.splitlines())
 
 
 def test_del_a4_an_absorbed_issue_that_was_never_assessed_still_lints(tmp_path):

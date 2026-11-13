@@ -1,76 +1,82 @@
 ---
-description: Start any change with one command - assess it, show the plan in three lines, then begin
+description: Run a change from the request to a checked commit
 argument-hint: "<what you want>"
 allowed-tools: Read, Write, Edit, Bash(compass *), Glob, Grep
 ---
 
 # /compass:go
 
-One command for the ordinary path. It sets Compass up if needed, assesses
-the change, shows the person the plan in three lines, and starts the work.
-Do not ask the person which Compass command to use: this one decides.
+One command for every change. Do not ask the person which Compass command to
+use.
 
 **Change:** $ARGUMENTS
 
-## 1. Set up
+One request is one issue. Never start a second issue for follow-on work or
+feedback in the same request; add it to this one.
 
-Run `compass init`. It is safe every time: it creates `.compass/` only if it
-is missing, and says so. Tell the person in one line if it created it.
+1. Start, once:
 
-## 2. Assess
+   ```
+   compass quick-fix start <slug> --intent "<what will be true afterwards>" \
+     --request <issue URL or owner/repo#N> --requester "<who asked>"
+   ```
 
-Read the code the change touches, then rate it honestly and record it in one
-call:
+   Add `--labels <label,...>` only for `auth`, `payments`, `personal-data`,
+   `migrations` or a label the project adds, and `--risk "critical - <why>"`
+   only for critical risk. If `start` creates `.compass/`, say so in one line.
 
-```
-compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
-  --familiarity "<VALUE> - <reason>" --size "<VALUE> - <reason>" \
-  --intent "<what will be true afterwards>" \
-  --scenario "Given ... When ... Then ..." --test <test node id> \
-  [--labels <tag,...>]
-```
+2. Only with one of those: write every scenario in the
+   `acceptance-criteria.md` that `start` names, each in the form of the first
+   one, with the next `TRC-` id. Run `compass evidence request --checkpoint
+   specify`, ask the person to type `/compass:approve <n>`, and stop. Code
+   edits are refused until then.
 
-- risk: `trivial`, `contained`, `cross-cutting` or `critical`
-- familiarity: `greenfield` (new code), `brownfield-mapped` (existing code
-  whose behavior tests or docs pin) or `brownfield-unmapped`
-- size: `atomic`, `small`, `medium`, `large` or `product`
-- `--labels auth`, `payments`, `personal-data` or `migrations` when the
-  change touches one; those make the change need a person's sign-off
+3. Write the tests and the code. Run the tests, and the project's linters
+   and type checker if it has them.
 
-A rating is a judgment with a reason, not a way to reach a lighter process.
-When unsure, rate the size up.
+4. Finish:
 
-## 3. Show the plan
+   ```
+   compass quick-fix finish -m "<commit message>" -- <test command>
+   ```
 
-Run `compass approach show --issue <slug>` and show its three lines to
-the person, unedited, before you edit any file. They are the only Compass
-text the person needs before code: the approach, the gates it must pass,
-and where its files go.
+   It writes the whole record. When its `next:` line asks for a person's
+   approval, stop. It commits once a person has approved, on a new branch if
+   you are on the default one. Do not check that commit again.
 
-## 4. Continue
+5. After feedback, edit and run `finish` again, once.
 
-Do not stop to ask whether to go ahead.
+Each command ends with a `next:` or `done:` line: do what it says. `compass
+next` prints the `next:` line again. If a command refuses, its message says
+why and how to clear it.
 
-- **Quick fix:** write the failing test and record it against the one
-  scenario `quick-fix start` wrote, then make the change and finish:
+If you cannot state what will be true afterwards, it is a spike: run
+`/compass:assess`.
 
-  ```
-  compass tdd-red --scenario TRC-001 -- <test command>
-  compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
-  ```
+## When you write scenarios
 
-  The change is checked and gated but not committed: committing is the
-  person's to ask for. Say so when you finish.
-- **Anything heavier:** `quick-fix start` has already recorded the
-  assessment and computed the approach. Run `/compass:assess` steps 4 to 6,
-  from `${CLAUDE_PLUGIN_ROOT}/approaches/assess-procedure.md`
-  (write `delivery-approach.md`, the pointer and any spike marker), then
-  follow that approach's stages. Do not wait at its step 7: the summary you
-  showed is the confirmation, and the person can still override a dimension
-  at any point.
-- **Not yet clear what it delivers:** if you cannot state what will be true
-  afterwards, that is exploration. Run `/compass:assess`; it routes a spike. <!-- vocabulary-scan: allow - route is a verb here -->
+- When the labels include `public-api`, or the change touches a service in
+  `architecture/relations.md` or a `lens_trigger_tag` in
+  `architecture/invariants.yml`, take the architect's perspective first, and
+  write `architecture-notes.md` beside the acceptance criteria before you
+  write the scenarios.
+- Ask which input classes and failure modes the intent implies that no
+  scenario covers. Each becomes a scenario or is recorded with
+  `compass scenario descope "<mode>" --reason "<why>"`.
+- Scan the criteria for placeholders, orphan intents, untestable Thens and
+  ambiguous quantifiers, and fix each in place. This self-review is not
+  repeated later.
 
-If a command refuses, its message says why and how to clear it. Act on it;
-ask the person only for a decision that is theirs, such as approving an
-irreversible change.
+## Before you edit shared code
+
+Run the existing suite and see it pass: that run is the baseline of the
+`regression-baseline` strategy (`S6`). Run the suite again after the change.
+
+## Hand-off
+
+When you wrote scenarios, hand `acceptance-criteria.md` to the person for a
+cold read. Ask them to look for intent fidelity, untestable Thens, a missing
+failure mode and ambiguous quantifiers. The manifest's `checkpoints:` lists
+the stages that wait for a person. Where the `specify` checkpoint is
+listed, wait for approval; build starts after it. Otherwise say you are going
+on, and name the autonomy setting.

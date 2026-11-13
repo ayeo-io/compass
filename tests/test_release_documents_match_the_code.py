@@ -15,19 +15,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Every command that can reach the network through a git parent, as a reader
-# types it after `compass`.
-FETCHING = ("policy lint", "policy show", "policy diff", "policy update",
-            "preset test", "approach evaluate --write")
+# The commands that reached the network through a git parent in 8.x, as a reader
+# types it after `compass`. 9.0.0 refuses a git parent (ADR-094), so none of them
+# fetches, and the documents must say so.
+FETCHING = ("policy lint", "policy show", "approach evaluate --write")
 
 # The modules that pass a fetch decision to the code that resolves a git
-# parent, and the commands each one serves.
-FETCH_MODULES = {
-    "effective.py": "approach evaluate --write (the generation it commits)",
-    "issue_config_cmd.py": "approach evaluate --write (the reassess plan)",
-    "policy_cmd.py": "policy lint, policy show, policy diff, preset test",
-    "policy_update.py": "policy update",
-}
+# parent, and the commands each one serves. None since 9.0.0 (ADR-094).
+FETCH_MODULES: dict = {}
 
 
 def _text(*parts: str) -> str:
@@ -77,33 +72,26 @@ def test_the_source_scan_finds_the_modules_that_fetch_a_git_parent():
     found = fetching_modules(sources)
     assert found == set(FETCH_MODULES), (
         f"a module now fetches a git parent, or one stopped: {sorted(found)}. "
-        "Name the command in README.md, docs/security.md and docs/git-parents.md.")
+        "Name the command in README.md and docs/security.md.")
 
 
-def test_the_fetch_list_names_every_command_that_fetches():
-    readme = _paragraph(_text("README.md"), "Only `compass")
-    security = _paragraph(_text("docs", "security.md"), "Only `compass")
+def test_the_documents_say_no_command_fetches_a_git_parent():
+    readme = _paragraph(_text("README.md"), "**Fetches nothing for a configuration.**")
+    security = _paragraph(_text("docs", "security.md"),
+                          "**Fetches nothing for a configuration.**")
     for name, text in (("README.md", readme), ("docs/security.md", security)):
+        assert "L-PARENT-REMOVED" in text and "no command runs git" in text, (name, text)
         for command in FETCHING:
             assert command in text, f"{name} does not list `compass {command}`: {text}"
         assert "compass check" in text, name
-    # `issue configure --commit` runs the reassess, which fetches; the preview
-    # and the proposal do not.
-    assert "issue configure --commit" in security, security
-    assert "issue configure never fetch" not in security, security
-    table = _text("docs", "git-parents.md").split("## When Compass fetches", 1)[1]
-    table = _flat(table.split("\n\n", 2)[1])
-    for command in ("policy lint", "policy update", "policy diff", "preset test",
-                    "approach evaluate --write"):
-        assert command in table, f"docs/git-parents.md does not list {command}"
-
-
-def test_the_fetch_lists_say_that_policy_update_always_asks_the_remote():
-    for name, text in (("README.md", _text("README.md")),
-                       ("docs/security.md", _text("docs", "security.md"))):
-        flat = _flat(text)
-        assert ("policy update always asks the remote which commit its ref names, "
-                "unless COMPASS_OFFLINE=1 is set") in flat, name
+        assert "--offline" not in text and "COMPASS_PARENT_REMOTE_BASE" not in text, name
+    # `issue configure` went with the issue layer, and the verbs that compared,
+    # moved and tested configurations went with the layers (ADR-094).
+    for removed in ("issue configure", "policy diff", "policy update", "preset test"):
+        assert removed not in security, (removed, security)
+        assert removed not in readme, (removed, readme)
+    # The page on git parents went with them (ADR-094).
+    assert not (ROOT / "docs" / "git-parents.md").exists()
 
 
 def test_the_release_notes_say_what_happens_to_a_5x_user_who_does_nothing():
@@ -138,7 +126,7 @@ def test_the_reader_documents_make_no_claim_the_code_contradicts():
     assert "The marker only ever means a real failure was observed" not in quickstart
     assert "refuses the edit" in quickstart and "red record" in quickstart
     assert "Most spec-driven development systems" not in readme
-    assert "Compass chooses the process for each change from its assessment" in readme
+    assert "Compass chooses the evidence each change owes from its assessment" in readme
 
 
 SHIPPED_TEXT = ("cli/compass_pkg", "hooks", "docs", "README.md", "agents", "skills",

@@ -26,6 +26,9 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
+from check_set_files import view as shipped_view  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t",
        "-c", "commit.gpgsign=false"]
@@ -35,15 +38,10 @@ OLD_TRIGGER = ("      any_of:\n"
                "      - labels_any: [auth, payments, personal-data, migrations]\n"
                "      - {risk: critical}\n")
 
-TIGHTER = """\
-gates:
-  G5:
-    set:
-      when:
-        any_of:
-        - labels_any: [auth, payments, personal-data, migrations]
-        - {risk: critical}
-"""
+#: The trigger with the critical-risk arm, as a generation stored before 9.0.0
+#: holds it when its project put the arm back. Since 9.0.0 a project can only
+#: add labels to the trigger (`signoff_labels`, ADR-094).
+TIGHTER_WHEN = {"any_of": [{"labels_any": LABELS}, {"risk": "critical"}]}
 LOOSER = """\
 gates:
   G5:
@@ -121,14 +119,15 @@ def old_framework(tmp_path_factory):
     """A copy of the framework whose `G5` trigger still has the critical-risk
     arm, as every release before this change shipped it."""
     dest = tmp_path_factory.mktemp("old-framework")
-    for name in ("cli", "governance", "agents", "templates", "approaches", "schemas"):
+    for name in ("cli", "governance", "templates", "approaches", "schemas"):
         shutil.copytree(ROOT / name, dest / name,
                         ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copy(ROOT / "VERSION", dest / "VERSION")
-    gates = dest / "governance" / "presets" / "default" / "gates.yml"
+    # The check set is the file the resolver reads (ADR-094).
+    gates = dest / "governance" / "check-set.yml"
     text = gates.read_text(encoding="utf-8")
-    assert text.count(LABEL_TRIGGER) == 1, "G5's trigger is not the four labels"
-    gates.write_text(text.replace(LABEL_TRIGGER, OLD_TRIGGER), encoding="utf-8")
+    assert text.count("\n" + LABEL_TRIGGER) == 1, "G5's trigger is not the four labels"
+    gates.write_text(text.replace("\n" + LABEL_TRIGGER, "\n" + OLD_TRIGGER), encoding="utf-8")
     old = yaml.safe_load(gates.read_text(encoding="utf-8"))["gates"]["G5"]["when"]
     assert {"risk": "critical"} in old["any_of"], old
     return dest / "cli" / "compass"
@@ -148,22 +147,37 @@ def test_gil_5_a_generation_stored_before_the_change_keeps_critical_risk(
 
 # --- Group C - tightening and the assess prompt ------------------------------
 
-def test_gil_7_a_project_can_put_critical_risk_back(tmp_path):
-    root = _project(tmp_path, risk="critical", labels=[], layer=TIGHTER)
-    lint = _run(CLI, root, "policy", "lint")
-    assert lint.returncode == 0 and "PASS" in lint.stdout, lint.stdout + lint.stderr
+def _tightened(root):
+    """Store the issue's next generation with the critical-risk arm in the `G5`
+    trigger, as a project that put it back before 9.0.0 stored it."""
+    sys.path.insert(0, str(ROOT / "tests"))
+    import stored_generation
+
+    def put_back(resolved):
+        resolved["gates"]["G5"]["when"] = TIGHTER_WHEN
+
+    stored_generation.commit(root, root / ".compass" / "work" / "thing", put_back)
+
+
+def test_gil_7_a_generation_that_put_critical_risk_back_needs_the_sign_off(tmp_path):
+    root = _project(tmp_path, risk="critical", labels=[])
+    assert "FAIL human-approval-present" not in _check(root)
+    _tightened(root)
     out = _check(root)
     assert "FAIL human-approval-present" in out, out
 
 
 def test_gil_8_a_project_cannot_drop_a_label(tmp_path):
-    root = tmp_path / "proj"
-    root.mkdir()
-    (root / "compass.yml").write_text("schema: 1\nextends: compass:default@6\n" + LOOSER)
+    """A `gates:` block in `compass.yml` is a removed setting since 9.0.0
+    (ADR-094): the lint warns, the file is read without it, and every label
+    still owes the sign-off."""
+    root = _project(tmp_path, risk="contained", labels=["migrations"], layer=LOOSER)
     lint = _run(CLI, root, "policy", "lint")
     out = lint.stdout + lint.stderr
-    assert lint.returncode != 0, out
-    assert "K-LOCK-REFUSED" in out and "gates.G5" in out, out
+    assert lint.returncode == 0, out
+    assert "L-SETTING-REMOVED [project] gates" in out, out
+    out = _check(root)
+    assert "FAIL human-approval-present" in out, out
 
 
 def _prompt(out):
@@ -182,7 +196,8 @@ def test_gil_9_evaluate_names_the_labels_at_critical_risk(tmp_path):
     done = _run(CLI, labelled, "approach", "evaluate", "--issue", "thing")
     assert not _prompt(done.stdout), done.stdout
 
-    tightened = _project(tmp_path, risk="critical", labels=[], layer=TIGHTER, name="c")
+    tightened = _project(tmp_path, risk="critical", labels=[], name="c")
+    _tightened(tightened)
     done = _run(CLI, tightened, "approach", "evaluate", "--issue", "thing")
     assert not _prompt(done.stdout), done.stdout
 
@@ -201,10 +216,13 @@ def _section(path, start, end):
 
 
 def test_gil_10_the_documents_name_the_same_four_cases():
-    gate = yaml.safe_load((ROOT / "governance/presets/default/gates.yml").read_text())
+    gate = shipped("gates.yml")
     g5 = gate["gates"]["G5"]
     assert g5["when"] == {"labels_any": LABELS}, g5["when"]
-    assert g5["locked"] == "hard" and g5["checks"] == ["human-approval-present"]
+    # The 8.x hard lock on guardrail `G5` is the check set's `never_waived` since
+    # 9.0.0 (ADR-094).
+    assert "gates.G5" in shipped("preset.yml")["never_waived"]
+    assert "locked" not in g5 and g5["checks"] == ["human-approval-present"]
 
     contract = _section("docs/safety-contract.md",
                         "### 5. Irreversible work", "The evidence records")
@@ -217,9 +235,9 @@ def test_gil_10_the_documents_name_the_same_four_cases():
             assert word in text, (word, text)
         assert "critical" not in text, text
 
-    view = yaml.safe_load((ROOT / "governance/guardrails.yml").read_text())
+    view = shipped_view("guardrails.yml")
     g5_view = next(g for g in view["defaults"] if g["id"] == "G5")
-    assert g5_view["applies_when"] == {"touches_any": LABELS}, g5_view
+    assert g5_view["applies_when"] == {"labels_any": LABELS}, g5_view
 
     methodology = (ROOT / "docs/methodology.md").read_text(encoding="utf-8")
     assert "critical-risk work" not in methodology
@@ -239,5 +257,5 @@ def test_gil_11_the_decision_record_and_upgrade_note_exist():
 
     upgrade = _section("docs/upgrade-7-0-0.md",
                        "## Guardrail 5 triggers on the irreversible labels", "\n## ")
-    assert TIGHTER.strip().splitlines()[0] in upgrade
+    assert "gates:" in upgrade        # the 7.0.0 block that put the arm back
     assert "{risk: critical}" in upgrade and "set:" in upgrade

@@ -67,7 +67,7 @@ def _copy_checkout(root: Path, dest: Path) -> None:
 
 def _entries(copy: Path) -> list[dict]:
     sys.path.insert(0, str(copy / "cli"))
-    from compass_pkg import core  # the bundled YAML, as evals/compare.py reads it
+    from compass_pkg import core  # the bundled YAML
     return core.yaml.safe_load(
         (copy / "tests" / "mutation_proofs.yml").read_text(encoding="utf-8")) or []
 

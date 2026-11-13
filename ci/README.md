@@ -36,8 +36,10 @@ the other; this is "Compass CI checks process integrity" in
 
 ## What `compass ci` catches on a pull request
 
-- **Governance drift** - `routing-policy.yml` or `guardrails.yml` is malformed,
-  or a guardrail names a check the CLI does not implement (the integrity rule).
+- **A malformed settings or governance file** - `compass.yml` fails the settings lint,
+  or `governance/quarantine.yml`, `review-rules.yml` or `architecture-sources.yml`
+  is malformed. A project with a copy of the 8.x governance files and no
+  `compass.yml` is refused (`governance-copy-removed`).
 - **A malformed issue manifest** - a `manifest.yml` that does not match the schema.
 - **An unmet guardrail** - an issue whose `compass check` fails: a scenario with
   no test, a changed file with no traced scenario, a gate marked `pass` with

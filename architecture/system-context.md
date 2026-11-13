@@ -27,25 +27,25 @@ adopters. This `architecture/` tree is the self-application of that governance.
 
 ## Components
 
-The framework has five logical surfaces. Each maps to artifacts on disk and
-to agent roles that own them.
+The framework has four logical surfaces. Each maps to artifacts on disk and
+to the part of Compass that owns them.
 
 ### Pipeline
 
-The pipeline is the ordered sequence of stages every delivery issue passes
-through: assess → define → refine → plan → breakdown → implement → verify → ship.
-Stage weights (full / light / skipped) are determined at assess by the router.
-The pipeline is implemented through the slash commands in `commands/` and the
-CLI subcommands in `cli/compass`.
+The pipeline is the four-stage path every delivery issue passes through:
+assess → specify → build → ship (ADR-092). The assessment changes the evidence
+each stage owes, not which stages run. The pipeline is implemented through the
+slash commands in `commands/` and the CLI subcommands in `cli/compass`.
 
 Logical surface: **pipeline**
 
 ### Router
 
-The router reads the four context dimensions (risk, familiarity, size,
-goal + role) recorded in `manifest.yml.assessment` and deterministically selects a
-delivery approach, stage weights, and gate set by running `governance/routing-policy.yml`
-through `compass approach evaluate`. No human judgement enters after the assessment
+The router reads the assessment (risk, familiarity and size, with the optional
+goal and urgency) recorded in `manifest.yml.assessment` and deterministically
+computes the delivery approach, the evidence required and the gate set by running
+the routing rules of the check set (`governance/check-set.yml`, ADR-094) through
+`compass approach evaluate`. No human judgement enters after the assessment
 is recorded; the delivery approach is a pure function of the assessment.
 
 Logical surface: **router**
@@ -56,7 +56,9 @@ Guardrails are the five hard, checkable, blocking rules that no delivery
 approach, agent, or convenience can cross: `G1` (tested before it lands), `G2`
 (acceptance defined before built), `G3` (traceability holds), `G4` (evidence
 not assertion), `G5` (human signs off on the irreversible). They are encoded
-in `governance/guardrails.yml` and checked mechanically by `compass check`.
+in the fixed check set, `governance/check-set.yml`, and checked mechanically by
+`compass check`. A project can only add to the set, through the tighten-only
+settings of `compass.yml`.
 
 Logical surface: **guardrails**
 
@@ -73,31 +75,20 @@ correct implementation, and persistence over conversation. They are encoded in
 
 Logical surface: **strategies**
 
-### Role Pipeline
-
-Compass has five roles - engineer, product owner, designer, marketer, QA -
-each with its own entry point into the pipeline. Each role has entry-point slash commands
-(`/compass:intent`, `/compass:position`, `/compass:design`,
-`/compass:consult`) and dedicated agent files in `agents/`. The architect
-role (`agents/architect.md`) is an advisory role over the role pipeline,
-not a sixth full role.
-
-Logical surface: **role pipeline**
-
 ## External dependencies
 
 | Dependency | What Compass reads / writes | Criticality |
 |---|---|---|
-| `governance/routing-policy.yml` | The evaluator reads this at assess to compute the delivery approach | high |
-| `governance/guardrails.yml` | `compass check` reads this to run gate assertions | high |
+| `governance/check-set.yml` | The evaluator reads its rules at assess to compute the delivery approach, and `compass check` runs its gates and checks | high |
+| `compass.yml` | The project's settings; the five tighten-only settings add to the check set | high |
 | `governance/strategies.md` | Consulted by agents when deciding TDD/BDD application | medium |
-| `governance/signals.yml` | `hooks/stop.sh` and `compass rework-scan` read this | medium |
+| `.compass/work/<issue>/devlog.md` | `hooks/stop.sh` scans it for the scope-bloat phrases in `hooks/py/stop_scan.py` | medium |
 | `.compass/work/<issue>/manifest.yml` | The manifest; written by the assess stage, read by every stage | high |
 | `.compass/work/<issue>/*.md` | Stage artifacts (acceptance criteria, technical design, requirements review, and so on) | high |
 | `.compass/current-task` | One-line pointer resolved by CLI and hooks | high |
 | `architecture/` (this tree) | Assess loads into `architecture-loaded.yml`; architect reads | medium |
 | `templates/` | Worked examples and starting shapes for adopter artifacts | low |
-| `gh` and GitHub | Only when `github_labels` is set in `compass.yml`: Compass writes an issue's labels to its linked GitHub issue and reads the labels back to compare. With `github_labels.page` on it also writes one comment holding the issue's README and, once, an empty issue body; it reads back only comment ids and whether the body is empty. It stores and reads no token | low |
+| `gh` and GitHub | Only when a person runs `compass issue link set --pr`: Compass reads the pull request's number, state and merge commit with `gh pr view`. It writes nothing to GitHub (9.0.0 removed the label sync, ADR-093). It stores and reads no token | low |
 | Claude Code session | The execution environment; not a file dependency | n/a |
 
 ## Boundary conditions
@@ -112,14 +103,14 @@ Logical surface: **role pipeline**
    changed_files, evidence, follow_ups, reassessments. No mechanism may write into
    `manifest.yml.assessment`.
 
-3. **A dropped or weakened guardrail is reported, not hidden.** A project's
-   `governance/guardrails.yml` can omit a default `G1`–`G5` entry;
-   `compass policy lint` and `compass check` name what is missing rather than
-   counting it as passing (`docs/safety-contract.md` guarantee 2). Adopters
-   declare architecture checks as project guardrails using the generic
-   `command-passes` check (see ADR-009); the `verify.architecture` gate is
-   added by `RP-REQUIRE-003` and `RP-REQUIRE-004` when risk or labels
-   warrant it.
+3. **A dropped or weakened guardrail is reported, not hidden.** No setting
+   can drop or weaken a guardrail of the check set. A project that kept its
+   own copy of the 8.x governance files from 5.x, and has no `compass.yml`,
+   is refused rather than run on the copy (`governance-copy-removed`,
+   ADR-098). Adopters declare
+   architecture checks as `project_checks` in `compass.yml`, which run the
+   generic `command-passes` check (see ADR-009); a project owes the `verify.architecture` gate through
+   the `architecture` token in `require_evidence` or a floor of its own.
 
 4. **The shipped core is framework-owned.** Changing a shipped delivery
    approach, assessment dimension, stage or guardrail needs a framework

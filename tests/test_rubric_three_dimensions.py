@@ -17,7 +17,11 @@ import yaml
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT / "cli"))
 
-from compass_pkg.classify import EVALUATOR_REQUIRED  # noqa: E402
+sys.path.insert(0, str(REPO_ROOT / "tests"))
+from check_set_files import shipped  # noqa: E402
+# The dimensions the evidence evaluator refuses an assessment without. The
+# classifier held the same tuple until 9.0.0 removed it (ADR-094).
+from compass_pkg.evidence_required import _REQUIRED as EVALUATOR_REQUIRED  # noqa: E402
 
 RUBRIC_FILES = ("approaches/rubric.md", "skills/adaptive-routing/SKILL.md")
 
@@ -29,16 +33,14 @@ GOAL_AS_SCORED = re.compile(
     r"risk,\s+familiarity,\s+size,?\s+(?:and\s+)?goal", re.I)
 
 # The docs and agents a session or an adopter reads to learn how Compass
-# assesses a change. governance/routing-policy.yml is generated from the
-# default preset, so it is checked here and fixed at its source.
+# assesses a change. The check set is read in its routing-policy shape below.
 DESCRIBING_FILES = (
     "AGENTS.md",
     "README.md",
-    "agents/router.md",
     "approaches/README.md",
     "approaches/assess-procedure.md",
     "approaches/composition-reference.md",
-    "approaches/hotfix.md",
+    "approaches/path.md",
     "approaches/spike.md",
     "commands/assess.md",
     "commands/status.md",
@@ -48,11 +50,9 @@ DESCRIBING_FILES = (
     "docs/methodology.md",
     "docs/portability.md",
     "docs/quickstart.md",
-    "docs/receipt.md",
     "docs/routing-deep-dive.md",
     "docs/safety-contract.md",
     "governance/routing-policy.md",
-    "governance/routing-policy.yml",
     "commands/quick-fix.md",
 )
 
@@ -62,19 +62,24 @@ def _text(rel: str) -> str:
 
 
 def _switches() -> list[str]:
-    """The dimensions a shipped default shape reads that are not scored."""
-    policy = yaml.safe_load(_text("governance/routing-policy.yml"))
-    keys = []
-    for shape in policy["routing_strategies"]["default_shapes"]:
-        for key in shape["when"]:
-            if key not in EVALUATOR_REQUIRED and key not in keys:
-                keys.append(key)
-    return keys
+    """The closed dimensions of the shipped default that are not scored. Since 9.0.0
+    the shapes read only `goal` (the spike) and the evidence rows read `urgency`
+    (ADR-092), so the switches are read from the dimensions catalogue."""
+    dims = shipped("dimensions.yml")["dimensions"]
+    return [name for name, body in dims.items()
+            if name not in EVALUATOR_REQUIRED and body.get("type") != "set"]
 
 
 def test_the_switches_are_goal_and_urgency():
     assert EVALUATOR_REQUIRED == ("risk", "familiarity", "size")
     assert _switches() == ["goal", "urgency"]
+    # The spike shape reads `goal`, and the evidence rows read `urgency`.
+    from check_set_files import view as shipped_view
+    policy = shipped_view("routing-policy.yml")
+    read = {key for shape in policy["routing_strategies"]["default_shapes"]
+            for key in shape["when"]}
+    assert read == {"goal"}, read
+    assert '"urgency"' in _text("cli/compass_pkg/evidence_required.py")
 
 
 def test_rubric_names_three_scored_dimensions():

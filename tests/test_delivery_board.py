@@ -1,14 +1,12 @@
-"""`compass flow` as a delivery board, with a static HTML export.
+"""`compass flow` as a delivery board.
 
 The board shows each in-progress issue's route, stage, gates passed and
 whether its newest test record still matches its files; sets stale evidence
-and parked issues apart; shows the queue with its age, what landed in the
-last seven days and the most common friction among them. `--html` writes
-the board page that `compass board render` writes (issue `compass-board`
-replaced the earlier tables). It stays advisory and under two seconds
-(issue #354; the design records the architect's four changes).
+and parked issues apart; and shows the queue with its age and what landed in
+the last seven days. It stays advisory and under two seconds. 9.0.0 removed
+the HTML export (`--html`) and the friction line (ADR-093).
 
-Scenario ids: DB-1 to DB-5 (issue `delivery-board`).
+Scenario ids: DB-1 to DB-3, DB-5 and DB-6 (issue `delivery-board`).
 """
 from __future__ import annotations
 
@@ -45,6 +43,8 @@ def _manifest(root, slug, **fields):
 
 
 def _green(repo):
+    # The four-layer acceptance strategy is guidance by default (ADR-099), so the
+    # green is a unit-test green: it names no candidate and no client.
     r = _run(repo, "tdd-green", "--issue", "fix-greeting", "--scenario",
              "TRC-001", *GREET_CMD)
     assert r.returncode == 0, r.stdout + r.stderr
@@ -76,9 +76,11 @@ def test_db_1_an_in_progress_row_shows_stage_gates_and_evidence(repo):
     _ready_to_finish(repo, "fix-greeting")
     _green(repo)
     data = board(str(repo / ".compass" / "work"), today=TODAY)
-    row = _row(data["in_progress"], "fix-greeting")
-    assert row["delivery_approach"] == "quick-fix"
-    assert row["stage"]
+    # A quick fix is on the four-stage path, whose one approach is `delivery`
+    # (ADR-092). Its red and its green end Build, so it is at Ship, in review.
+    row = _row(data["in_review"], "fix-greeting")
+    assert row["delivery_approach"] == "delivery"
+    assert row["stage"] == "ship"
     assert row["gates"] == "0/3", row
     assert row["evidence"] == "fresh", row
 
@@ -101,7 +103,7 @@ def test_db_2_stale_evidence_and_parked_issues_are_set_apart(repo):
 
 # --- DB-3 -------------------------------------------------------------------
 
-def test_db_3_queue_landed_this_week_and_friction(tmp_path):
+def test_db_3_queue_and_landed_this_week(tmp_path):
     root = tmp_path / "proj"
     (root / ".compass").mkdir(parents=True)
     old = (TODAY - datetime.timedelta(days=30)).isoformat()
@@ -119,33 +121,8 @@ def test_db_3_queue_landed_this_week_and_friction(tmp_path):
     queued = _row(data["backlog"], "old-idea")
     assert queued["age_days"] == 30, queued
     assert [r["slug"] for r in data["done_this_week"]] == ["shipped-today"]
-    assert data["friction"] == {"category": "tooling", "count": 2}
-
-
-# --- DB-4 -------------------------------------------------------------------
-
-def test_db_4_the_html_page_has_the_sections_and_escapes_every_value(repo, tmp_path):
-    _ready_to_finish(repo, "fix-greeting")
-    _manifest(repo, "waiting", status="parked",
-              parked_reason='<script>alert("x")</script> & more')
-    out = tmp_path / "board.html"
-    r = _run(repo, "flow", "--html", str(out))
-    assert r.returncode == 0, r.stdout + r.stderr
-    page = out.read_text(encoding="utf-8")
-    # `--html` writes the board page: ten lanes, a card for each issue.
-    assert page.count('<section class="lane"') == 10
-    assert "fix-greeting" in page and "waiting" in page
-    assert "<script" not in page.lower()
-    assert "&lt;script&gt;" in page and "&amp; more" in page
-    assert "http://" not in page and "https://" not in page
-
-
-def test_db_4_html_refuses_a_directory_and_compass_folders(repo, tmp_path):
-    for target in (tmp_path, repo / ".compass" / "board.html",
-                   repo / "docs" / "compass" / "board.html"):
-        r = _run(repo, "flow", "--html", str(target))
-        assert r.returncode != 0, (target, r.stdout + r.stderr)
-    assert not (repo / ".compass" / "board.html").exists()
+    # An old manifest's friction still reads, and the board no longer reports it.
+    assert "friction" not in data
 
 
 # --- DB-5 -------------------------------------------------------------------
@@ -195,24 +172,6 @@ def test_db_6_a_malformed_manifest_does_not_stop_the_board(tmp_path):
         assert row and ("unreadable" in row[0].lower() or "malformed" in row[0].lower()), r.stdout
 
 
-def test_db_4_html_refuses_symlinked_and_case_variant_paths(repo, tmp_path):
-    (repo / ".compass").mkdir(exist_ok=True)
-    (repo / "docs" / "compass").mkdir(parents=True, exist_ok=True)
-    link = tmp_path / "into-compass"
-    link.symlink_to(repo / ".compass")
-    sub = repo / "sub"
-    sub.mkdir()
-    (sub / "link").symlink_to(repo / "docs" / "compass")
-    for target, cwd in ((link / "board.html", repo), ("link/board.html", sub),
-                        (repo / ".COMPASS" / "board.html", repo),
-                        (repo / "Docs" / "Compass" / "board.html", repo)):
-        r = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "flow",
-                            "--html", str(target)], cwd=cwd, capture_output=True, text=True)
-        assert r.returncode != 0, (target, r.stdout + r.stderr)
-    assert not list((repo / ".compass").glob("board.html"))
-    assert not list((repo / "docs" / "compass").glob("board.html"))
-
-
 def test_dm_1_the_queue_age_test_holds_across_midnight(tmp_path, monkeypatch):
     """CI ran this file across midnight UTC once: `TODAY` was set before it
     and `board()` read the clock after it, so a 30-day-old issue read 31."""
@@ -232,4 +191,4 @@ def test_dm_1_the_queue_age_test_holds_across_midnight(tmp_path, monkeypatch):
         timedelta = real.timedelta
 
     monkeypatch.setattr(flow, "datetime", _Clock)
-    test_db_3_queue_landed_this_week_and_friction(tmp_path)
+    test_db_3_queue_and_landed_this_week(tmp_path)

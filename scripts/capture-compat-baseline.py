@@ -54,8 +54,10 @@ def _archive_assessments():
 
 def capture_archive(force):
     """Contracts 3 and 6: `compass check`'s verdict per check on each issue
-    in the archive sample, and the exit of `issue lint` and `issue receipt`
-    on each, so old records are shown to stay readable."""
+    in the archive sample, and the exit of `issue lint` and `approach show`
+    on each, so old records are shown to stay readable. The 5.6.0 capture
+    recorded `issue receipt`, which 9.0.0 removed (ADR-091), as the second
+    reader; `compat_baseline.RECORDED_READER` compares it as `approach show`."""
     from compat_baseline import ARCHIVE, archive_results
     if ARCHIVE.exists() and not force:
         sys.exit(f"{ARCHIVE.relative_to(ROOT)} exists. A baseline is captured once; "
@@ -84,6 +86,10 @@ def main():
     if ROUTING.exists() and not args.force:
         sys.exit(f"{ROUTING.relative_to(ROOT)} exists. A baseline is captured once; "
                  f"pass --force only for a new major version's defaults.")
+    # The release's own shipped policy, which is what the baseline records. The
+    # tests compare the baseline with the 8.0.4 governance copy instead of the
+    # live default (`compat_baseline.policy_8_0_4`), because 9.0.0 replaces the
+    # delivery approaches the live default routes (ADR-092).
     policy = shipped_policy()
     vocabulary = {d: policy["assessment_vocabulary"][d] for d in DIMENSIONS}
     labels = named_labels(policy)

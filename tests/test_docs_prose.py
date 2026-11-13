@@ -39,11 +39,11 @@ def test_the_ratchet_reaches_zero():
 
 
 def test_reference_docs_carry_v2_names():
-    """`TRC-2`: approaches/ holds the rubric and the five shape docs under
+    """`TRC-2`: approaches/ holds the rubric, the path and the spike under
     v2 names; routes/ is gone; no live surface points at the old path. <!-- vocabulary-scan: allow - names the retired directory this test asserts is gone -->"""
     approaches = REPO_ROOT / "approaches"
-    for name in ("rubric.md", "quick-fix.md", "regular.md",
-                 "full.md", "hotfix.md", "spike.md"):
+    # The four 8.x delivery approach files went with the path (ADR-092).
+    for name in ("rubric.md", "path.md", "spike.md"):
         assert (approaches / name).is_file(), (
             f"approaches/{name} is missing")
     assert not (REPO_ROOT / "routes").exists(), (
@@ -55,7 +55,7 @@ def test_reference_docs_carry_v2_names():
                 "approaches/*.md", "cli/compass_pkg/*.py"):
         surfaces += sorted(REPO_ROOT.glob(pat))
     for path in surfaces:
-        if not path.is_file() or path.name in ("system-spec.md", "system-spec-archive.md"):
+        if not path.is_file():
             continue
         for lineno, line in enumerate(
                 path.read_text(encoding="utf-8").splitlines(), 1):
@@ -70,9 +70,7 @@ def test_examples_carry_v2_names():
     the manual teaches vocabulary from the directory listing."""
     names = {p.name for p in (REPO_ROOT / "examples").iterdir()
              if p.is_dir()}
-    expected = {"quick-fix-typo", "feature-api-change",
-                "initiative-new-subsystem", "hotfix-regression",
-                "spike-technical-unknown", "bdd-adapters"}
+    expected = {"quick-fix-typo", "spike-technical-unknown", "bdd-adapters"}
     missing = expected - names
     assert not missing, f"missing v2-named examples: {sorted(missing)}"
     v1 = {"express-typo", "standard-api-change", "expedition-new-subsystem"}
@@ -81,24 +79,13 @@ def test_examples_carry_v2_names():
 
 
 def test_remaining_docs_are_enforced():
-    """`TRC-4`: all six remaining docs are scanned surfaces, and the
-    doctrine document is enforced with them."""
+    """`TRC-4`: the remaining docs are scanned surfaces, and the doctrine
+    document is enforced with them. The roles guide went in 9.0.0 (ADR-093)."""
     scan = _scan_cfg()
-    for f in ("docs/roles-guide.md", "docs/safety-contract.md",
+    for f in ("docs/safety-contract.md",
               "docs/security.md", "docs/quickstart.md",
               "docs/portability.md", "docs/routing-deep-dive.md"):
         assert f in scan["surfaces"], f"{f} is not a scanned surface"
-    # Asserted as "not scanned", which is the property that matters, rather
-    # than as "exempt". `scan.exempt` applies only to files under
-    # `scan.surfaces`, and this file is under none, so the test asserts
-    # "not scanned".
-    reachable = [sfc for sfc in scan["surfaces"]
-                 if "docs/system-spec.md".startswith(sfc.rstrip("/") + "/")
-                 or sfc == "docs/system-spec.md"]
-    assert not reachable, (
-        f"docs/system-spec.md is now reachable from {reachable} and would be "
-        f"scanned. It is derived at ship time from landed scenarios, so it "
-        f"carries whatever words those scenarios used")
 
 
 def test_install_refusal_points_at_plugin_dir():
@@ -155,7 +142,7 @@ def test_no_live_doc_teaches_a_retired_cli_spelling():
         surfaces += sorted(REPO_ROOT.glob(pat))
     hits = []
     for path in surfaces:
-        if not path.is_file() or path.name in ("system-spec.md", "system-spec-archive.md"):
+        if not path.is_file():
             continue
         for lineno, line in enumerate(
                 path.read_text(encoding="utf-8").splitlines(), 1):

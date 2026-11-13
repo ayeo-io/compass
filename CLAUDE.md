@@ -13,29 +13,29 @@ and the things it does not claim.
 ## Assessment
 
 - `/compass:assess` writes `.compass/current-task`, a one-line pointer to the
-  active issue. `compass check`, `compass tdd-red` and the pre-tool hook all
-  resolve the current issue through it. Move it with `compass issue use
+  active issue. `compass check`, `compass quick-fix finish` and the pre-tool
+  hook all resolve the current issue through it. Move it with `compass issue use
   <slug>`, not by writing the file: the hook records each session's issue,
   and refuses an edit (`pointer-moved`) in the session's own project when
   another session moved it. An edit in a worktree is judged by that
   worktree's own pointer.
 - `/compass:assess --reassess` re-runs the evaluator and records the change in
   the manifest's `reassessments:` log.
-- Pass `--reason "..."` with it. `compass retro` aggregates those across issues
-  and reports whether assessment is systematically over- or under-sizing the
-  work.
+- Pass `--reason "..."` with it. The reason is kept in the `reassessments:`
+  log.
 - If you cannot yet state what would be delivered, that is a **spike**, and a
   spike is assessed like anything else.
-- `/compass:init` is optional and is not what creates the project. The five
-  entry points - `/compass:assess`, `/compass:intent`, `/compass:design`,
-  `/compass:position`, `/compass:consult` - run `compass init` first, which
-  creates `.compass/` for you if it is absent and says so.
-- It creates project state only, never `governance/`. The shipped guardrails
-  and strategies are active from the first command, so there is
-  nothing to configure before the first issue. `/compass:init` writes the
-  project's `compass.yml` (or runs `compass policy migrate` on a project that
-  has a `.compass/config.yml` or copied governance), and a project adds its own
-  governance there later.
+- `/compass:init` is optional and is not what creates the project.
+  `/compass:go`, `/compass:quick-fix` and `/compass:assess` run `compass init`
+  first, which creates `.compass/` for you if it is absent and says so.
+- It creates project state only, never `governance/`. The fixed check set is
+  active from the first command, so there is nothing to configure before the
+  first issue. `/compass:init` writes the project's `compass.yml`. A project
+  can only add to the check set there, with the tighten-only settings
+  (`docs/configuration.md`). A project with a `.compass/config.yml` or copied
+  governance must run `compass policy migrate` on Compass 8.x first.
+- A waiver excuses one check on one issue (`compass waiver add`). A person
+  approves it, as for any approval.
 
 ## Governance
 
@@ -44,15 +44,17 @@ and the things it does not claim.
 - When your recommendation and an instruction disagree, measure the disputed
   quantity and report the numbers before defending either position (`S11`).
   Report what you find even when it undercuts you.
-- `governance/routing-policy.yml` and `governance/guardrails.yml` are what the
-  CLI runs. The prose companions - `guardrails.md`, `routing-policy.md`,
+- `governance/check-set.yml` is what the CLI runs: one fixed set of checks,
+  gates and evidence types. Each issue records its id, version and sha256 in
+  the manifest's `policy:` block. The prose companions - `guardrails.md`, `routing-policy.md`,
   `strategies.md` - explain why. Read them when a question comes up. Read
   `strategies-rationale.md`, which holds the incidents behind the strategies,
   only when a rule looks arbitrary.
-- `compass check` runs `guardrails.yml` against the manifest and `evidence/`.
-  `/compass:verify` calls it.
+- `compass check` runs the issue's check set against the manifest and
+  `evidence/`.
+  `/compass:ship` and `compass quick-fix finish` call it.
 - Gate evidence is **typed** - a `{type, path}` record, not a bare path.
-  `guardrails.yml` says which types each gate accepts, so a mechanical gate
+  The check set says which types each gate accepts, so a mechanical gate
   cannot be cleared with a written note.
 - Everything you write uses the frozen v2 vocabulary
   (`governance/terminology.yml`, enforced by `tests/test_terminology.py`).
@@ -82,52 +84,42 @@ and the things it does not claim.
 
 ## The pipeline
 
-- The requirements review ends with the **Definition of Ready**; where that
-  review collapses it is met without further work.
-- Before shipping comes the **Definition of Done**. Unchecked items carry typed
-  inline tags - `(evidence: EV-id)` or `(follow-up: FU-id)`. A bare unchecked
-  box fails `compass check`.
+- A change takes two commands: `compass quick-fix start`, then `compass
+  quick-fix finish -m "<message>" -- <test command>`. `finish` writes the
+  record and commits once a person has approved (ADR-099).
+- The **Definition of Done** is owed only where the project's
+  `require_evidence` adds `definition-of-done`. An open item must then link to
+  an issue: `compass follow-up add FU-<id> --defers <item> --github
+  owner/repo#N --summary "..."`. An item with no record fails `compass check`.
 
 ## Commits and sign-off
 
 These repeat three rules of `compass-contract.md` for this repository. A test
 (`tests/test_contract_claude_md_drift.py`) fails when the two files differ.
 
-- **Approvals.** Approve only under a delegation naming you. Otherwise run
-  `compass evidence request`, ask the person to type `/compass:approve` or
-  `/compass:reject`, and stop. An unattended session ends there.
-- **Commit only what you mean to.** Stage each file by its path, never
-  `.compass/`, and check the staged list and commit authors. If
-  something is staged by mistake, say so and stop; do not retry a refused
-  unstage.
+- **Approvals.** Approve only under a delegation naming you. Otherwise,
+  when a command asks for a person's approval, ask the person to type
+  `/compass:approve <n>` and stop. An unattended session ends there.
+- **Commit only what you mean to.** `compass quick-fix finish` stages the
+  changed files and the record; do not `git add` anything under `.compass/`
+  yourself. For any other commit, stage each file by its path and check the
+  staged list and commit authors. If something is staged by mistake, say so
+  and stop; do not retry a refused unstage.
 - `.compass/private/` and issue state (`.compass/work/<slug>/` and
   `docs/compass/<date>-<slug>/`) stay untracked. Do not force-add them.
 - A lint fix never weakens an assertion; re-run affected tests.
 
-## Roles
-
-- Five roles, four of them non-engineering, each with its own entry point into
-  the pipeline.
-- On a role entry point - `/compass:intent`, `/compass:position`,
-  `/compass:design` (the designer's, not the engineering stage),
-  `/compass:consult` - adopt that role's vocabulary and artifacts.
-- Do not collapse a product owner's intake into an engineering issue. The
-  intake is upstream of the acceptance criteria, and the criteria must be
-  checked back against it.
-
 ## Where to look
 
-- `skills/compass-runtime/SKILL.md` - which agent owns which stage, which skill
-  to load with it, the stage-to-command map, the shape of an issue directory.
-- The `worktree-multiagent` skill, loaded by the orchestrator - who may create
-  a worktree, who works inside one, how the subtask count is bounded.
+- `skills/compass-runtime/SKILL.md` - which skill to load with each stage, the
+  stage-to-command map, the shape of an issue directory.
 - `docs/compass/<created>-<slug>/` - the issue's documents, registered in
   the manifest. `.compass/work/<slug>/` - the manifest, the evidence and the
   markers.
 - `governance/` and `architecture/` - at the project root, not under
   `.compass/`. Compass ships an `architecture/`: its own invariants and the
-  decision records behind the guardrails, the sizing model and the role
-  perspectives. Assess loads it, when present, into `architecture-loaded.yml`;
+  decision records behind the guardrails and the sizing model. Assess loads
+  it, when present, into `architecture-loaded.yml`;
   projects without one keep working.
 
 ## Owning docs
@@ -139,7 +131,7 @@ Each code area's facts live in one doc, named in the "Owning docs" table in
 
 Communicate the decision, not the process: what you found, what you need, what
 changed. Read `skills/compass-runtime/writing-voice.md` before a devlog entry,
-a requirements review, or a line of dialogue - and before you say anything out
+the scenarios, or a line of dialogue - and before you say anything out
 loud in this conversation.
 
 ### Plain English
@@ -220,8 +212,8 @@ such as D272.
 
 ## When you are unsure
 
-Re-read the delivery-approach record (`delivery-approach.md`). It was written
-at the assess stage so a later session, or a different agent, can pick the
-issue up without re-deriving the process. If it does not answer the question,
-the assessment under-sized the process; say so and re-assess rather than
+Run `compass approach show` to read the delivery approach chosen at assess.
+It was recorded so a later session, or a different agent, can pick the issue
+up without re-deriving the process. If it does not answer the question, the
+assessment under-sized the process; say so and re-assess rather than
 improvise.

@@ -20,13 +20,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg.core import CompassError, load_yaml  # noqa: E402
+from compass_pkg.core import CompassError, load_yaml, reading_matches  # noqa: E402
 from compass_pkg.routing import evaluate_route  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "fixtures" / "compat"
 ROUTING = FIXTURES / "contract-1-routing.jsonl.gz"
 OWED = FIXTURES / "contract-2-owed.yml"
-POLICY = ROOT / "governance" / "routing-policy.yml"
 
 DIMENSIONS = ("risk", "familiarity", "size", "goal", "urgency", "role")
 AUTONOMY = ("controlled", "balanced", "autonomous")
@@ -96,7 +95,172 @@ def _as_recorded_with_role(out, role):
 
 
 def shipped_policy():
-    return load_yaml(str(POLICY))
+    """The routing policy the evaluator reads for a project with no
+    configuration: the shipped check set, in the shape `evaluate_route` takes.
+    It replaced the generated view `routing-policy.yml`, which 9.0.0
+    deleted (ADR-098)."""
+    from compass_pkg import check_set, effective
+    return effective.EffectiveView("live", None, None, check_set.resolved(),
+                                   {}).evaluator_policy()
+
+
+# 9.0.0 removes `compass analyze` (ADR-091), and with it the gate `verify.analyze` and
+# the two rules that added it. The evaluator leaves a removed gate out (`routing.
+# REMOVED_GATES`), so a rule whose only effect was to add it no longer fires, even in a
+# policy that still declares it, such as a copy of the 5.6.0 governance (configuration
+# C). The baseline still records the gate and the two rules. So a result is compared with
+# exactly these put back: each of the two rules that the policy declares (the live
+# default has them put back first, before `RP-REQUIRE-003`, where they were), that adds
+# `verify.analyze` and that matches the assessment, goes back into `rules_fired` at its
+# place in the floor order, and its gate goes back into `gates` unless the approach is a
+# spike, which takes no rule-added gate. Nothing is merged or taken out, so any other
+# change to routing, a doubled rule or gate included, still differs from the baseline.
+REMOVED_RULES_9_0_0 = (
+    {"id": "RP-REQUIRE-001", "when": {"risk": "critical"}, "add_gate": "verify.analyze",
+     "rationale": "Cross-artifact consistency checked before high-care work lands."},
+    {"id": "RP-REQUIRE-002",
+     "when": {"labels_any": ["auth", "payments", "personal-data", "migrations"]},
+     "add_gate": "verify.analyze",
+     "rationale": "Irreversible-surface issues have consistency checked before they ship."},
+)
+REMOVED_GATE_9_0_0 = "verify.analyze"
+
+# ADR-099 also removed `RP-REQUIRE-003` and `RP-REQUIRE-004` from the check set. They
+# added `verify.architecture` when risk or labels matched, and risk and labels add no
+# review now. The baseline still records them. So a policy that holds neither is
+# compared with both put back at the end of the floors, as they stood in the check set.
+# A copied older policy that holds either is returned as it is.
+REMOVED_ARCHITECTURE_FLOORS_9_0_0 = (
+    {"id": "RP-REQUIRE-003", "when": {"risk": ["cross-cutting", "critical"]},
+     "add_gate": "verify.architecture",
+     "rationale": "Architecture checked before cross-cutting or critical changes land."},
+    {"id": "RP-REQUIRE-004", "when": {"labels_any": ["auth", "payments", "personal-data",
+                                                      "migrations"]},
+     "add_gate": "verify.architecture",
+     "rationale": "Irreversible-surface issues have architecture checked before they ship."},
+)
+
+
+def _with_architecture_floors_removed_in_9_0_0(policy):
+    """`policy` with the two floors ADR-099 removed put back after its other floors,
+    when it holds neither; a policy that holds either is returned as it is."""
+    floors = (policy.get("routing_guardrails") or {}).get("floors")
+    if not isinstance(floors, list):
+        return policy
+    ids = [rule.get("id") for rule in floors if isinstance(rule, dict)]
+    if any(rule["id"] in ids for rule in REMOVED_ARCHITECTURE_FLOORS_9_0_0):
+        return policy
+    policy = copy.deepcopy(policy)
+    policy["routing_guardrails"]["floors"].extend(
+        copy.deepcopy(list(REMOVED_ARCHITECTURE_FLOORS_9_0_0)))
+    return policy
+
+
+def _with_rules_removed_in_9_0_0(policy):
+    """`policy` with the two rules 9.0.0 removed put back before `RP-REQUIRE-003`, when it
+    has neither; a copied older policy that still has them is returned as it is. The
+    floors ADR-099 removed are put back first, so the anchor exists."""
+    policy = _with_architecture_floors_removed_in_9_0_0(policy)
+    floors = (policy.get("routing_guardrails") or {}).get("floors")
+    if not isinstance(floors, list):
+        return policy
+    ids = [rule.get("id") for rule in floors]
+    if any(rule["id"] in ids for rule in REMOVED_RULES_9_0_0) or "RP-REQUIRE-003" not in ids:
+        return policy
+    policy = copy.deepcopy(policy)
+    at = ids.index("RP-REQUIRE-003")
+    policy["routing_guardrails"]["floors"][at:at] = copy.deepcopy(list(REMOVED_RULES_9_0_0))
+    return policy
+
+
+# 9.0.0 also removes the documents an approach owes (ADR-091): the approach `artifacts:`
+# maps, the two floors that added a document (`RP-REQUIRE-005`, `RP-REQUIRE-006`) and the
+# two document rules (`RP-ART-001`, `RP-ART-002`). The baseline still records the
+# documents, the rules and what they added. So a policy that holds none of them is
+# compared with exactly what 8.0.0 declared put back, as they stood in the generated
+# view at 8.0.0. A policy that still holds any of them, such as a copy of the 5.6.0
+# governance (configuration C), is returned as it is. Any other change to routing still
+# differs from the baseline.
+REMOVED_DOCUMENT_MAPS_9_0_0 = {
+    "spike": {"delivery-approach": "lightweight", "spike-conclusion": "thorough"},
+    "quick-fix": {"delivery-approach": "lightweight", "verification-note": "lightweight"},
+    "regular": {"intent": "lightweight", "acceptance-criteria": "thorough",
+                "requirements-review": "lightweight", "technical-design": "thorough",
+                "distribution-map": "lightweight", "verification-report": "thorough"},
+    "hotfix": {"bug-report": "thorough", "acceptance-criteria": "lightweight",
+               "verification-report": "thorough"},
+    "full": {"intent": "thorough", "acceptance-criteria": "thorough",
+             "requirements-review": "thorough", "technical-design": "thorough",
+             "distribution-map": "thorough", "verification-report": "thorough"},
+}
+REMOVED_DOCUMENT_FLOORS_9_0_0 = (
+    {"id": "RP-REQUIRE-005", "when": {"labels_any": ["auth", "payments", "personal-data"]},
+     "add_artifact": "threat-model",
+     "rationale": "Work on a trust boundary states the threats it considered."},
+    {"id": "RP-REQUIRE-006", "when": {"labels_any": ["migrations"]},
+     "add_artifact": "rollback-plan",
+     "rationale": "A change that is hard to undo says in advance how it would be undone."},
+)
+REMOVED_DOCUMENT_RULES_9_0_0 = (
+    {"id": "RP-ART-001", "when": {"artifacts_any": ["positioning"]},
+     "require_artifact": "launch-readiness", "gate": "verify.claims", "block_phase": "ship",
+     "until": "every claim in positioning.md traces to a passing scenario",
+     "rationale": "A launch claim with no backing scenario must not ship."},
+    {"id": "RP-ART-002", "when": {"artifacts_any": ["intent"]}, "block_phase": "plan",
+     "until": "the spec has been checked against intent.md for intent fidelity",
+     "rationale": "Built-the-thing-right and built-the-right-thing are different checks."},
+)
+
+
+def _with_documents_removed_in_9_0_0(policy):
+    """`policy` with the document maps, floors and rules 9.0.0 removed put back, when it
+    holds none of them; a policy that holds any of them is returned as it is."""
+    shapes = policy.get("route_shapes")
+    guard = policy.get("routing_guardrails")
+    if not isinstance(shapes, dict) or not isinstance(guard, dict) \
+            or not isinstance(guard.get("floors"), list):
+        return policy
+    floor_ids = [rule.get("id") for rule in guard["floors"] if isinstance(rule, dict)]
+    if any((shape or {}).get("artifacts") for shape in shapes.values()) \
+            or guard.get("artifact_rules") or guard.get("role_rules") \
+            or any(rule["id"] in floor_ids for rule in REMOVED_DOCUMENT_FLOORS_9_0_0) \
+            or "RP-REQUIRE-004" not in floor_ids:
+        return policy
+    policy = copy.deepcopy(policy)
+    for name, documents in REMOVED_DOCUMENT_MAPS_9_0_0.items():
+        if name in policy["route_shapes"]:
+            policy["route_shapes"][name]["artifacts"] = dict(documents)
+    floors = policy["routing_guardrails"]["floors"]
+    at = [rule.get("id") for rule in floors].index("RP-REQUIRE-004") + 1
+    floors[at:at] = copy.deepcopy(list(REMOVED_DOCUMENT_FLOORS_9_0_0))
+    policy["routing_guardrails"]["artifact_rules"] = copy.deepcopy(
+        list(REMOVED_DOCUMENT_RULES_9_0_0))
+    return policy
+
+
+def as_recorded_before_9_0_0(out, assessment, policy):
+    """`out`, one result of `compact`, with what 9.0.0 stopped routing put back in the
+    shape 5.6.0 recorded it: the rules of `REMOVED_RULES_9_0_0` that `policy` declares,
+    that add `verify.analyze` and that match `assessment`, and their gate."""
+    floors = (policy.get("routing_guardrails") or {}).get("floors") or []
+    order = [rule.get("id") for rule in floors if isinstance(rule, dict)]
+    removed = {rule["id"] for rule in REMOVED_RULES_9_0_0}
+    fired = list(out["rules_fired"])
+    added = False
+    for rule in floors:
+        if not isinstance(rule, dict) or rule.get("id") not in removed \
+                or rule.get("add_gate") != REMOVED_GATE_9_0_0 \
+                or not reading_matches(rule.get("when"), assessment,
+                                       policy.get("dimension_orders")):
+            continue
+        before = order[:order.index(rule["id"])]
+        at = max((i + 1 for i, rid in enumerate(fired) if rid in before), default=0)
+        fired.insert(at, rule["id"])
+        added = True
+    out = dict(out, rules_fired=fired)
+    if added and out["delivery_approach"] != "spike":
+        out["gates"] = sorted(out["gates"] + [REMOVED_GATE_9_0_0])
+    return out
 
 
 # The baseline was captured at 5.6.0, before the depth words and the size were
@@ -115,6 +279,7 @@ def compact(readings, policy):
     """The fields the compatibility promise covers, for every autonomy
     setting, or the refusal text when the evaluator refuses."""
     out = {}
+    policy = _with_documents_removed_in_9_0_0(_with_rules_removed_in_9_0_0(policy))
     readings, role = _role_as_documents(readings, policy)
     if "size" in readings:
         readings["size"] = SIZE_NOW.get(readings["size"], readings["size"])
@@ -150,6 +315,7 @@ def compact(readings, policy):
                 "rules_fired": [f["id"] for f in r["policy_rules_fired"]],
                 "checkpoints": {},
             }
+            out = as_recorded_before_9_0_0(out, readings, policy)
         out["checkpoints"][autonomy] = r["checkpoints"]
     if role is not None or "role" not in (policy.get("assessment_vocabulary") or {}):
         out = _as_recorded_with_role(out, role)
@@ -298,8 +464,13 @@ def _issues(root):
 
 def archive_results(root, only=None):
     """For each sampled issue: `compass check`'s exit and its verdict per
-    check, and the exit of `issue lint` and `issue receipt`. Contract 3 is
-    the verdicts; contract 6 is that old records stay readable."""
+    check, and the exit of `issue lint` and `approach show`. Contract 3 is
+    the verdicts; contract 6 is that old records stay readable.
+
+    5.6.0 recorded the exit of `issue receipt` as the second reader. 9.0.0
+    removes the receipt (ADR-091), so `approach show`, which reads the same
+    manifest and prints its assessment, approach and gates, takes its place
+    (`RECORDED_READER`)."""
     import subprocess
 
     def run(*args):
@@ -319,9 +490,15 @@ def archive_results(root, only=None):
             "check_exit": check.returncode,
             "verdicts": verdicts,
             "lint_exit": run("issue", "lint", "--issue", slug).returncode,
-            "receipt_exit": run("issue", "receipt", "--issue", slug).returncode,
+            "show_exit": run("approach", "show", "--issue", slug).returncode,
         }
     return results
+
+
+#: The key 5.6.0 recorded the second reader's exit under, and the key it is compared as.
+#: 9.0.0 removes `compass issue receipt` (ADR-091); `compass approach show` reads the same
+#: record in its place. Only the key changes: the recorded exit is compared as it is.
+RECORDED_READER = ("receipt_exit", "show_exit")
 
 
 #: The checks 7.0.0 adds outside every gate that read a section of the spec or the design.
@@ -330,6 +507,20 @@ SECTION_CHECKS = ("nfr-rows-resolved", "contracts-declared")
 #: Every check 7.0.0 adds outside every gate that may appear on an archived issue only
 #: as nothing to check: the two section checks and the design-size check (ADR-067).
 OUTSIDE_GATE_7_0_0 = SECTION_CHECKS + ("design-within-word-ceiling",)
+
+
+#: The checks 9.0.0 removed: `multiagent-run-recorded` with the multiagent breakdown
+#: (ADR-090) and `consistency-check-passes` with `compass analyze` (ADR-091).
+REMOVED_9_0_0 = ("multiagent-run-recorded", "consistency-check-passes", "rendered-blocks-current",
+                 "artifacts-approved", "contracts-declared", "design-within-word-ceiling",
+                 "borrowed-documents-answered")
+
+#: The removed checks whose recorded `fail` may also become `nothing-to-check` or no row.
+#: The archive sample records `consistency-check-passes` failing on publish-the-archive,
+#: which owed `verify.analyze` without its evidence. Removing the check clears that one
+#: verdict, a move from fail that ADR-091 allows; the issue's other failures, and so its
+#: exit code, stay compared.
+FAIL_MAY_CLEAR_9_0_0 = ("consistency-check-passes",)
 
 
 def allow_7_0_0_moves(recorded, now):
@@ -344,23 +535,42 @@ def allow_7_0_0_moves(recorded, now):
       5.6.0 governance, still lists it, so it may stay `nothing-to-check`);
     - `rendered-blocks-current` was not a row and now `pass`es;
     - `dod-evidence-typed` was `pass` and is `pass` or `nothing-to-check`.
-    The caller runs this on the sample after `issue migrate` and `issue render --all`
-    (`archive.checkable_root`), where an issue page and the records exist.
+    The caller runs this on the sample after `issue migrate` (`archive.checkable_root`),
+    where the records exist.
 
     7.0.0 also adds the two section checks (ADR-064) and the design-size check (ADR-067),
     which sit in no gate. Each may appear only where the recorded verdicts have no row for
     it, and only as `nothing-to-check`: any other verdict means the check judged an archived
-    issue, and stays a difference."""
+    issue, and stays a difference.
+
+    9.0.0 removes `multiagent-run-recorded` (ADR-090), `consistency-check-passes` and
+    `rendered-blocks-current` (ADR-091). For each, a recorded `pass` or `nothing-to-check` may become
+    `nothing-to-check` (a stored generation still lists it) or no row. A recorded `fail`
+    that moves stays a difference, except for a check in `FAIL_MAY_CLEAR_9_0_0`.
+
+    9.0.0 also removes `compass issue receipt` (ADR-091): the recorded `receipt_exit` is
+    compared as `show_exit`, the exit of `approach show` (`RECORDED_READER`)."""
     old_all, new_all = {}, {}
     for slug in set(recorded) | set(now):
         old = dict(recorded.get(slug) or {})
         new = dict(now.get(slug) or {})
+        if RECORDED_READER[0] in old:
+            old[RECORDED_READER[1]] = old.pop(RECORDED_READER[0])
         old_v, new_v = dict(old.get("verdicts") or {}), dict(new.get("verdicts") or {})
         if old_v.get("dashboard-current") == "nothing-to-check" \
                 and new_v.get("dashboard-current") in (None, "nothing-to-check"):
             old_v.pop("dashboard-current"), new_v.pop("dashboard-current", None)
-        if "rendered-blocks-current" not in old_v and new_v.get("rendered-blocks-current") == "pass":
+        # 9.0.0 removes it again (ADR-091), so a stored generation reports it as nothing
+        # to check.
+        if "rendered-blocks-current" not in old_v \
+                and new_v.get("rendered-blocks-current") in ("pass", "nothing-to-check"):
             new_v.pop("rendered-blocks-current")
+        for check in REMOVED_9_0_0:
+            was = ("pass", "nothing-to-check") + (("fail",) if check in FAIL_MAY_CLEAR_9_0_0
+                                                  else ())
+            if old_v.get(check) in was \
+                    and new_v.get(check) in (None, "nothing-to-check"):
+                old_v.pop(check), new_v.pop(check, None)
         if old_v.get("dod-evidence-typed") == "pass" \
                 and new_v.get("dod-evidence-typed") in ("pass", "nothing-to-check"):
             old_v.pop("dod-evidence-typed"), new_v.pop("dod-evidence-typed")
@@ -388,8 +598,10 @@ def archive_differences(recorded, now):
 #
 # The contracts hold under three configurations: A (nothing, the shipped
 # default alone), B (an empty overlay) and C (a copy of the 5.6.0 governance
-# files, read through the legacy adapter). The files for C are byte copies of
+# files, read through `tests/legacy_copy.py`). 9.0.0 refuses a project with
+# copied governance, so C holds for contracts 1 and 2 only (VD-043 decision 2). The files for C are byte copies of
 # what 5.6.0 shipped, taken once with `git show v5.6.0:governance/<file>`.
+# Contracts 1 and 2 read the 8.0.4 governance copy in place of A (see below).
 
 # Packed, so the prose scans do not read the 5.6.0 wording as this tree's.
 GOVERNANCE_5_6_0 = FIXTURES / "v5.6.0-governance.tgz"
@@ -399,19 +611,24 @@ EMPTY_OVERLAY = "schema: 1\nextends: compass:default@6\n"
 # configuration has something to see:
 #   routing: a valid configuration that routes differently from 5.6.0;
 #   broken:  a configuration Compass cannot read.
+# A project file holds settings only since 9.0.0 (ADR-094): a catalogue key is a
+# removed setting, read as if absent. So the planted change is the tighten-only
+# setting that adds the architecture evidence to every assessment, and the broken
+# file holds a setting with a value no reader accepts. The tightening does not
+# reach `evaluate_route`, so contracts 1 and 2 under B check that B still gives
+# A's results with it (`test_compat_configurations.py`).
 PLANTED_OVERLAY = EMPTY_OVERLAY + (
-    "approaches:\n  regular:\n    set:\n      subtask_ceiling: 5\n"
-    "      gates: [verify.correctness, verify.governance, verify.traceability,"
-    " verify.clarity, verify.security]\n")
-BROKEN_OVERLAY = EMPTY_OVERLAY + "approaches: oops\n"
+    "require_evidence:\n  - when: {}\n    add: [architecture]\n")
+BROKEN_OVERLAY = EMPTY_OVERLAY + "autonomy: sometimes\n"
 
 
-def add_governance_copy(root, fault=None):
-    """Put the 5.6.0 governance files in `root/governance/`."""
+def add_governance_copy(root, fault=None, source=GOVERNANCE_5_6_0):
+    """Put the governance files packed in `source` (5.6.0 by default) in
+    `root/governance/`."""
     folder = Path(root) / "governance"
     folder.mkdir(parents=True, exist_ok=True)
     import tarfile
-    with tarfile.open(GOVERNANCE_5_6_0) as tar:
+    with tarfile.open(source) as tar:
         for name in GOVERNANCE_FILES:
             member = tar.extractfile(f"governance/{name}")
             (folder / name).write_bytes(member.read())
@@ -441,18 +658,86 @@ def build_configuration(kind, root, fault=None):
         raise ValueError(f"unknown configuration {kind!r}")
 
 
-def policy_under(kind, scratch, fault=None):
+def policy_under(kind, scratch, fault=None, governance=None):
     """The routing policy the evaluator reads for a project in configuration
-    `kind`: the resolved configuration, in the shape `evaluate_route` takes."""
+    `kind`: the resolved configuration, in the shape `evaluate_route` takes.
+    With `governance`, a packed governance copy, the project carries that copy
+    under the configuration: contracts 1 and 2 read configuration B as the
+    empty overlay over the 8.0.4 copy, because 9.0.0 replaces the delivery
+    approaches the live default routes (ADR-092), as they read A."""
     from compass_pkg import effective
+    import legacy_copy
 
     root = Path(scratch) / "project"
     (root / ".compass" / "work").mkdir(parents=True)
+    if governance is not None:
+        # A project with a `compass.yml` resolves the check set, never its copy, so
+        # the overlay's settings are applied to the copy's resolved form here. The
+        # overlay holds no catalogue, so nothing merges (ADR-094).
+        from compass_pkg import tighten
+        add_governance_copy(root, source=governance)
+        resolved = legacy_copy.resolved_from_copy(str(root))
+        build_configuration(kind, root, fault)
+        doc = load_yaml(str(root / "compass.yml"))
+        if not isinstance(doc, dict):
+            raise CompassError("the overlay of configuration B cannot be read")
+        resolved = tighten.apply(resolved, tighten.settings_of(doc))
+        return effective.EffectiveView("live", None, None, resolved, {}).evaluator_policy()
     build_configuration(kind, root, fault)
+    if kind == "C":
+        # 9.0.0 refuses a project with copied governance (`governance-copy-removed`),
+        # so contracts 1 and 2 read C's copy through the 8.x reader the tests keep
+        # (VD-043 decisions 1 and 2).
+        resolved = legacy_copy.resolved_from_copy(str(root))
+        return effective.EffectiveView("live", None, None, resolved, {}).evaluator_policy()
     resolution = effective.resolve_live(str(root))
     view = effective.EffectiveView("live", None, None, resolution.resolved,
                                    resolution.versions)
     return view.evaluator_policy()
+
+
+# --- the 8.0.4 governance copy ---------------------------------------------------
+#
+# The last release that routed delivery approaches. 9.0.0 replaces the approaches
+# with one path (ADR-092), so the live default stops routing them. Contracts 1 and
+# 2, and the route tests that compare approach routing with a recorded result,
+# read this copy in place of the live default, so a change to the live default's
+# approaches does not move them. The evidence rows of 9.0.0
+# (`compass_pkg.evidence_required`) must owe the gates 8.0.4 routed, so their test
+# compares them with this copy too. It is read through the 8.x copy reader the
+# tests keep (`tests/legacy_copy.py`), as configuration C reads the 5.6.0 copy. The two files are byte copies taken with
+# `git show v8.0.4:governance/<file>`, packed for the same reason as the 5.6.0
+# copy. The copy is not named with a letter: the D of `docs/releasing.md` is the
+# settings moved into `compass.yml`.
+#
+# The copy is a frozen corpus like the 5.6.0 copy: its digest in
+# `tests/fixtures/frozen-digests.yml` records the owner's sign-off (2026-11-06).
+GOVERNANCE_8_0_4 = FIXTURES / "v8.0.4-governance.tgz"
+
+_POLICY_8_0_4 = []
+
+
+def policy_8_0_4(scratch=None):
+    """The routing policy the evaluator reads for a project that carries the 8.0.4
+    governance copy, in the shape `evaluate_route` takes.
+
+    With no `scratch` folder, the project is built once in a temporary folder that
+    is then removed, and each call returns a new copy of that policy, so a caller
+    can change its copy as it can change what `shipped_policy` returns."""
+    from compass_pkg import effective
+    import legacy_copy
+
+    if scratch is None:
+        if not _POLICY_8_0_4:
+            import tempfile
+            with tempfile.TemporaryDirectory(prefix="policy-8-0-4-") as folder:
+                _POLICY_8_0_4.append(policy_8_0_4(folder))
+        return copy.deepcopy(_POLICY_8_0_4[0])
+    root = Path(scratch) / "project"
+    (root / ".compass" / "work").mkdir(parents=True)
+    add_governance_copy(root, source=GOVERNANCE_8_0_4)
+    resolved = legacy_copy.resolved_from_copy(str(root))
+    return effective.EffectiveView("live", None, None, resolved, {}).evaluator_policy()
 
 
 def archive_under(kind, fault=None):

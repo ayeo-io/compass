@@ -92,28 +92,37 @@ def _make_project(tmp_path: Path,
                   project_guardrails: Optional[List[Dict[str, Any]]] = None,
                   config_extra: str = "",
                   risk: str = "critical") -> Path:
-    """A minimal Compass project using the real shipped governance files.
+    """A minimal Compass project on the shipped check set.
 
     Built under `project/` rather than directly in tmp_path, so runner-owned
     state (the event payload) has somewhere to live outside the checkout.
+    Each project guardrail becomes a project check of `compass.yml` (ADR-094):
+    9.0.0 reads no copy of `guardrails.yml` (ADR-098). The settings in
+    `config_extra` go with it; a key `compass.yml` cannot hold stays in
+    `.compass/config.yml`, which nothing reads once `compass.yml` is there.
     """
     tmp_path = tmp_path / "project"
     tmp_path.mkdir(parents=True, exist_ok=True)
-    gov_dst = tmp_path / "governance"
-    gov_dst.mkdir()
-    gov_src = FRAMEWORK_ROOT / "governance"
-    shutil.copyfile(gov_src / "routing-policy.yml", gov_dst / "routing-policy.yml")
-    guardrails = yaml.safe_load((gov_src / "guardrails.yml").read_text())
-    guardrails["project"] = project_guardrails if project_guardrails is not None else []
-    (gov_dst / "guardrails.yml").write_text(yaml.safe_dump(guardrails, sort_keys=False))
 
     compass_dir = tmp_path / ".compass"
     task_dir = compass_dir / "work" / "test-task"
     task_dir.mkdir(parents=True)
     (task_dir / "evidence").mkdir()
     (compass_dir / "current-task").write_text("test-task\n")
-    (compass_dir / "config.yml").write_text(
-        "version: 1.0.0\nmode: enforced\n" + config_extra)
+    if project_guardrails:
+        extra = yaml.safe_load(config_extra) or {}
+        settings = {k: v for k, v in extra.items() if k == "allow_project_commands"}
+        (tmp_path / "compass.yml").write_text(yaml.safe_dump({
+            "schema": 1, **settings,
+            "project_checks": [{"id": g["id"], "name": g["name"],
+                                "command": g["params"]["command"], "stage": "ship"}
+                               for g in project_guardrails]}, sort_keys=False))
+        rest = {k: v for k, v in extra.items() if k not in settings}
+        if rest:
+            (compass_dir / "config.yml").write_text(yaml.safe_dump(rest))
+    else:
+        (compass_dir / "config.yml").write_text(
+            "version: 1.0.0\nmode: enforced\n" + config_extra)
 
     (task_dir / "manifest.yml").write_text(yaml.safe_dump({
         "schema_version": "2.0",
@@ -444,122 +453,6 @@ def test_e1_disabled_guardrail_is_reported_every_run(tmp_path):
 # ---------------------------------------------------------------------------
 # Group C - a safer way to declare an architecture check.
 # ---------------------------------------------------------------------------
-
-def test_c1_script_form_runs_without_a_shell(tmp_path):
-    """`TRC-C1`: a project can name a script instead of writing a shell string,
-    and its arguments are passed as a list rather than interpolated.
-
-    The proof that no shell was involved is the argument itself: a value
-    containing shell metacharacters arrives at the script intact. Through a
-    shell it would have been split, expanded, or executed.
-    """
-    project = _make_project(
-        tmp_path,
-        project_guardrails=[{
-            "id": "F1", "name": "Fitness function",
-            "statement": "A declared project script.",
-            "checks": ["command-passes"],
-            "params": {"script": "fitness.py", "args": ["a; touch pwned", "b c"]},
-            "checked_at": ["verify"],
-        }],
-        config_extra="allow_project_commands: true\n",
-    )
-    # The script records exactly the arguments it received.
-    (project / "fitness.py").write_text(
-        "import sys, pathlib\n"
-        "pathlib.Path('argv.txt').write_text(repr(sys.argv[1:]))\n")
-
-    result = _run_check(project, extra_env={})
-    output = result.stdout + result.stderr
-
-    argv_file = project / "argv.txt"
-    assert argv_file.exists(), (
-        "the declared script did not run:\n" + output)
-    assert argv_file.read_text() == repr(["a; touch pwned", "b c"]), (
-        "arguments did not arrive intact, so they went through a shell: "
-        + argv_file.read_text())
-    assert not (project / "pwned").exists(), (
-        "a shell metacharacter in an argument was executed - the script form "
-        "is invoking a shell")
-
-
-def test_c2_script_outside_the_project_is_refused(tmp_path):
-    """`TRC-C2`: a script path that RESOLVES outside the project root is
-    refused.
-
-    Resolves, not reads-as-written: a symlink sitting inside the project and
-    pointing out of it satisfies any check made on the literal string, which is
-    why the comparison is made on the real path.
-    """
-    outside = tmp_path / "outside.py"
-    outside.write_text("import pathlib; pathlib.Path('/tmp/escaped').write_text('x')\n")
-
-    project = _make_project(
-        tmp_path,
-        project_guardrails=[{
-            "id": "F1", "name": "Fitness function",
-            "statement": "A declared project script.",
-            "checks": ["command-passes"],
-            "params": {"script": "innocent.py"},
-            "checked_at": ["verify"],
-        }],
-        config_extra="allow_project_commands: true\n",
-    )
-    # Reads as a plain in-project path; resolves out of the project.
-    os.symlink(str(outside), str(project / "innocent.py"))
-
-    result = _run_check(project, extra_env={})
-    output = result.stdout + result.stderr
-
-    assert "innocent.py" in output, (
-        "the refusal did not name the path it rejected:\n" + output)
-    assert "outside the project" in output.lower(), (
-        "the refusal did not say why the path was rejected:\n" + output)
-    assert result.returncode != 0, (
-        "a script resolving outside the project was not treated as a "
-        "failure:\n" + output)
-
-
-def test_c1_lint_accepts_the_script_form(tmp_path):
-    """`TRC-C1`, the declaration's other half: `compass policy lint` must accept
-    a guardrail that declares `script:` instead of `command:`, and must reject
-    one that declares both."""
-    project = _make_project(
-        tmp_path,
-        project_guardrails=[{
-            "id": "F1", "name": "Fitness function",
-            "statement": "A declared project script.",
-            "checks": ["command-passes"],
-            "params": {"script": "fitness.py"},
-            "checked_at": ["verify"],
-        }],
-    )
-    (project / "fitness.py").write_text("pass\n")
-
-    lint = subprocess.run([sys.executable, str(CLI_PATH), "policy", "lint"],
-                          cwd=str(project), capture_output=True, text=True, timeout=60)
-    out = lint.stdout + lint.stderr
-    assert "params.command` is missing" not in out, (
-        "lint rejected a valid script-form declaration for having no "
-        "`command`:\n" + out)
-
-    both = _make_project(
-        tmp_path / "both",
-        project_guardrails=[{
-            "id": "F1", "name": "Fitness function",
-            "statement": "Both forms at once.",
-            "checks": ["command-passes"],
-            "params": {"script": "fitness.py", "command": "true"},
-            "checked_at": ["verify"],
-        }],
-    )
-    lint2 = subprocess.run([sys.executable, str(CLI_PATH), "policy", "lint"],
-                           cwd=str(both), capture_output=True, text=True, timeout=60)
-    out2 = lint2.stdout + lint2.stderr
-    assert "both" in out2.lower(), (
-        "lint accepted a guardrail declaring both `script` and `command`, "
-        "which leaves the shell reachable through a precedence rule:\n" + out2)
-
 
 def test_c3_shell_form_still_works_and_is_documented(tmp_path):
     """`TRC-C3`: the shell form keeps working, and the documentation says what

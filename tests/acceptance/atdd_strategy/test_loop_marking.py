@@ -34,10 +34,14 @@ def _record(issue, command, loop=None):
     argv = [command, "--issue", issue.slug]
     if loop is not None:
         argv += ["--loop", loop]
+    if command == "tdd-green" and loop == "outer":
+        argv += support.NAMED
     return issue.must(*argv, "--", *(FAIL if command == "tdd-red" else PASS))
 
 
-def _evidence(issue, name):
+def _evidence(issue, name, loop=None):
+    """`evidence/<name>.json`; an outer-loop record has `.outer` before `.json` (ADR-082)."""
+    name += ".outer" if loop == "outer" else ""
     return json.loads((issue.dir / "evidence" / f"{name}.json").read_text(encoding="utf-8"))
 
 
@@ -59,7 +63,8 @@ def test_trc_e1(tmp_path, command, given, recorded):
     """Red and green records say which loop they belong to."""
     _, issue = _in_scope(tmp_path)
     _record(issue, command, given)
-    assert _evidence(issue, "red" if command == "tdd-red" else "green")["loop"] == recorded
+    kind = "red" if command == "tdd-red" else "green"
+    assert _evidence(issue, kind, recorded)["loop"] == recorded
 
 
 # --- `TRC-E2` ------------------------------------------------------------------------------
@@ -69,8 +74,8 @@ def test_trc_e2(tmp_path):
     _, issue = _in_scope(tmp_path)
     _record(issue, "tdd-red", "outer")
     _record(issue, "tdd-green", "outer")
-    support.without_loop(issue, "green")
-    assert "loop" not in _evidence(issue, "green")
+    support.without_loop(issue, "green.outer")
+    assert "loop" not in _evidence(issue, "green.outer")
     code, document = issue.check()
     row = _row(document)
     assert row["status"] == "fail", row
@@ -114,13 +119,13 @@ def test_trc_e5(tmp_path):
     _record(issue, "tdd-green", "outer")
     code, document = issue.check()
     assert _row(document)["status"] == "pass", _row(document)
-    older = _evidence(issue, "green")["tree_id"]
+    older = _evidence(issue, "green", "outer")["tree_id"]
     (project.root / "README.md").write_text("changed after the green\n", encoding="utf-8")
     code, document = issue.check()
     assert code == 1
     row = _row(document)
     assert row["status"] == "fail", row
-    assert "evidence/green.json" in row["detail"], row
+    assert "evidence/green.outer.json" in row["detail"], row
     assert f"recorded on tree {older[:12]}" in row["detail"], row
     assert "a different tree from the current one" in row["detail"], row
 
@@ -138,7 +143,7 @@ def test_trc_e6(tmp_path, reds):
     # The candidate and the client are written from ayeo-io/compass-delivery#326; this
     # issue's green carries `attempts` 1 (requirements review Q1).
     _record(issue, "tdd-green", "outer")
-    assert _evidence(issue, "green")["attempts"] == 1
+    assert _evidence(issue, "green", "outer")["attempts"] == 1
     code, document = issue.check()
     assert code == 1
     row = _row(document)
@@ -170,6 +175,9 @@ def test_trc_a17(tmp_path, records):
 def _quick_fix(tmp_path):
     """A quick fix in a project with the strategy on, its test committed and failing."""
     project = support.Project(tmp_path / "repo")
+    # A project rule owes an atomic change the outer loop (ADR-099 decision 9).
+    project.require_evidence = support.OPT_IN_BY_SIZE
+    project.setting(None)
     root = project.root
     (root / "data").mkdir()
     (root / "data" / "greeting.txt").write_text("Hi\n", encoding="utf-8")
@@ -185,7 +193,9 @@ def _quick_fix(tmp_path):
                "--familiarity", "brownfield-mapped - the file and its test exist",
                "--size", "atomic - one line", "--intent", "The greeting says Hello.",
                "--scenario", "Given the greeting, when it is read, then it says Hello.",
-               "--test", "tests/test_greeting.py::test_greeting")
+               "--test", "tests/test_greeting.py::test_greeting",
+               "--request", "https://example.com/requests/greet",
+               "--requester", "Test fixture")
     return project, issue
 
 
@@ -196,16 +206,29 @@ def _quick_fix(tmp_path):
 def test_trc_e7(tmp_path, given, recorded, result):
     """An in-scope quick fix records the outer loop by default."""
     project, issue = _quick_fix(tmp_path)
-    assert issue.manifest()["delivery_approach"] == "quick-fix"
+    # The quick fix is the light evidence row on the four-stage path (ADR-092
+    # decision 3): no Definition of Done, and `S17` on the existing DSL only.
+    manifest = issue.manifest()
+    assert manifest["delivery_approach"] == "delivery"
+    assert "outer-loop" in manifest["evidence_required"], manifest["evidence_required"]
+    assert "definition-of-done" not in manifest["evidence_required"]
+    assert manifest["acceptance_strategy"]["routing"] == "existing-dsl"
     loop = ["--loop", given] if given else []
     command = ["--", sys.executable, "-m", "pytest", "-q", "tests/test_greeting.py::test_greeting"]
     issue.must("tdd-red", "--issue", "greet", "--scenario", "TRC-001", *loop, *command)
     (project.root / "data" / "greeting.txt").write_text("Hello\n", encoding="utf-8")
     code, out, err = issue.run("quick-fix", "finish", "--issue", "greet", "--no-commit",
                                "-m", "Say Hello", "--release-note", "The greeting says Hello.",
-                               *loop, *command)
-    assert _evidence(issue, "red-TRC-001")["loop"] == recorded
-    assert _evidence(issue, "green-TRC-001")["loop"] == recorded
+                               *loop, *(() if given else support.NAMED), *command)
+    assert _evidence(issue, "red-TRC-001", recorded)["loop"] == recorded
+    if result == "pass":
+        assert _evidence(issue, "green-TRC-001", recorded)["loop"] == recorded
+    else:
+        # On the four-stage path `quick-fix finish` refuses before it writes a
+        # green while the outer loop is owed, and names the next command
+        # (ADR-092 decision 8), so no inner-loop green is recorded.
+        assert not (issue.dir / "evidence" / "green-TRC-001.json").exists()
+        assert "next: compass tdd-red --loop outer --scenario TRC-001" in out, out + err
     assert (code == 0) == (result == "pass"), out + err
     code, document = issue.check()
     assert _row(document)["status"] == result, _row(document)

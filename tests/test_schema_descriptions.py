@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg import catalogue_check  # noqa: E402
+from compass_pkg import settings_lint  # noqa: E402
 
 SCHEMA_FILE = ROOT / "schemas" / "compass.schema.json"
 
@@ -63,9 +63,13 @@ def test_a_node_without_a_description_is_reported_by_path():
 def test_the_walk_reaches_nested_nodes():
     schema = json.loads(SCHEMA_FILE.read_text(encoding="utf-8"))
     paths = [p for p, _ in nodes(schema)]
-    assert len(paths) > 200
+    # Since 9.0.0 the schema holds the settings only (ADR-094), with no
+    # catalogue and so no `patternProperties`; a planted one is still reached.
+    assert len(paths) > 40
     assert any(".oneOf[" in p for p in paths)
-    assert any(".patternProperties[" in p for p in paths)
+    assert any(".items.properties[" in p for p in paths)
+    planted = {"patternProperties": {"^x$": {"description": "One entry."}}}
+    assert [p for p, _ in nodes(planted)] == ["$", "$.patternProperties[^x$]"]
 
 
 def test_a_description_is_one_or_two_sentences_without_trailing_space():
@@ -80,7 +84,7 @@ def test_a_description_is_one_or_two_sentences_without_trailing_space():
 
 
 def test_the_generator_describes_the_schema_it_builds():
-    assert undescribed(catalogue_check.schema()) == []
+    assert undescribed(settings_lint.schema()) == []
 
 
 def test_a_description_names_every_value_its_enumeration_allows():
@@ -96,13 +100,11 @@ def test_a_description_names_every_value_its_enumeration_allows():
     assert not bad, "\n".join(bad)
 
 
-def test_the_schema_allows_governance_drift_with_the_values_the_docs_give():
-    # `compass policy migrate` writes this setting into compass.yml, and the
-    # layer check already accepts it, so the schema must too.
+def test_the_schema_leaves_out_governance_drift():
+    # 9.0.0 removed the drift report and its setting (ADR-098). The schema holds
+    # no removed key, so an editor marks it, and the settings lint warns.
     schema = json.loads(SCHEMA_FILE.read_text(encoding="utf-8"))
-    node = schema["properties"]["governance_drift"]
-    assert node["enum"] == ["advisory", "strict"]
-    assert "advisory" in node["description"] and "strict" in node["description"]
-    assert "governance_drift" in schema["properties"]
-    assert catalogue_check.check_layer({"schema": 1, "governance_drift": "strict"},
-                                       "project") == []
+    assert "governance_drift" not in schema["properties"]
+    assert schema["additionalProperties"] is False
+    found = settings_lint.lint({"schema": 1, "governance_drift": "strict"})
+    assert [f.code for f in found] == ["L-SETTING-REMOVED"]

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 
 import yaml
+from check_set_files import view as shipped_view  # noqa: E402
 
 
 def test_s6_registered_in_strategies_md(framework_root):
@@ -23,10 +24,17 @@ def test_s6_registered_in_strategies_md(framework_root):
     assert ("does not block land" in low or "never" in low)
 
 
-def test_routing_strategy_surfaces_on_touches_no_gate_change(run_cli, make_task):
+def test_routing_strategy_surfaces_on_touches_no_gate_change(run_cli, make_task, project):
     """`TRC-R10-2`: approach evaluate surfaces regression-baseline as
     applicable for a cross-cutting issue - without adding or changing a
-    gate."""
+    gate. A delivery issue owes no regression review by default (ADR-099), so
+    the project's own `require_evidence` rule adds the `regression` token."""
+    # Settings live in one file only (`settings-conflict`).
+    (project / ".compass" / "config.yml").unlink()
+    (project / "compass.yml").write_text(yaml.safe_dump({
+        "schema": 1,
+        "require_evidence": [{"when": {"risk": ["cross-cutting", "critical"]},
+                              "add": ["regression"]}]}), encoding="utf-8")
     body = {"task": "rb", "created": "2026-06-22",
             "assessment": {"risk": "cross-cutting",
                          "familiarity": "brownfield-mapped", "size": "large",
@@ -65,9 +73,9 @@ def test_verify_expects_baseline_and_postrun_as_judgement(framework_root):
 
 
 def test_build_prompts_baseline_before_change(framework_root):
-    """`TRC-R10-4`: the implement command prompts to capture the baseline up
-    front."""
-    text = (framework_root / "commands" / "implement.md").read_text().lower()
+    """`TRC-R10-4`: the build stage of the go command (the implement command
+    until ADR-092) prompts to capture the baseline up front."""
+    text = (framework_root / "commands" / "go.md").read_text().lower()
     assert "baseline" in text
     assert "regression-baseline" in text or "regression baseline" in text
 
@@ -75,7 +83,7 @@ def test_build_prompts_baseline_before_change(framework_root):
 def test_absent_baseline_does_not_block_land(framework_root):
     """`TRC-R10-5`: no guardrails.yml check enforces a baseline - its absence
     cannot fail compass check or block ship (soft strategy)."""
-    g = yaml.safe_load((framework_root / "governance" / "guardrails.yml").read_text())
+    g = shipped_view("guardrails.yml")
     checks = g.get("checks") or {}
     assert not any("regression-baseline" in str(k) or "baseline" in str(k)
                    for k in checks), checks
@@ -92,7 +100,9 @@ def test_no_new_guardrail_or_gate_added(framework_root):
         assert gid in md, gid
     assert "G6" not in md, "a sixth guardrail must not have been added"
     # verify.regression accepted types unchanged
-    g = yaml.safe_load((gov / "guardrails.yml").read_text())
+    from check_set_files import view as shipped_view
+    g = shipped_view("guardrails.yml")
     assert g["gate_evidence_requirements"]["verify.regression"] == ["test-run"]
-    # guardrails.yml does not define the strategy (it is soft, lives in strategies.md)
-    assert "regression-baseline" not in (gov / "guardrails.yml").read_text()
+    # the check set declares no check for the strategy (it is soft, lives in
+    # strategies.md)
+    assert "regression-baseline" not in g["checks"]

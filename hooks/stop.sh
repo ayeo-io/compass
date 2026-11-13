@@ -7,22 +7,21 @@
 # the next session or a person does not have to find it.
 #
 # WHAT IT CHECKS, per issue under .compass/work/
-#   1. the delivery-approach record missing on in-progress work
-#        => an issue directory exists but has no delivery-approach.md. Work
-#           with no delivery-approach record has no computed process, so the
-#           hook warns.
-#   2. a stage whose gate is not cleared
+#   1. the delivery approach missing on in-progress work
+#        => an issue directory exists but its manifest names no
+#           delivery_approach (ADR-091). Work with no delivery approach has
+#           no computed process, so the hook warns.
+#   2. an unresolved red
 #        => a still-present .red marker means implementation is unfinished (a
-#           failing test is on record and was never taken green). The verify stage
-#           cannot have passed cleanly.
-#        => artifacts present out of order, or a verification-report.md whose
-#           gate decision is RED / blank, mean the verify stage was entered
-#           and not cleared.
+#           failing test is on record and was never taken green).
 #   3. a hotfix with an outstanding follow-up
-#        => the delivery-approach record names a hotfix and its outstanding
-#           follow-ups section still has an unchecked item, or
-#           acceptance-criteria.md still lacks the promoted reproduction
-#           scenario.
+#        => the manifest names a hotfix (on a path issue, the assessment's
+#           `urgency: live-defect`; on an issue assessed before 9.0.0, the
+#           hotfix approach) and acceptance-criteria.md still lacks the
+#           promoted reproduction scenario, or, on an issue assessed before
+#           9.0.0, its `follow_ups:` still holds an outstanding entry. A
+#           path issue's follow-up links to a GitHub issue and need not be
+#           resolved (ADR-093).
 #   4. a scope-bloat phrase in the devlog with no re-assessment after it.
 #
 # A closed issue is not checked: its warnings are about work that is over,
@@ -157,22 +156,12 @@ elif [ -f "$POINTER" ]; then
 fi
 
 # --- 1-4. every open issue, in one Python process ---------------------------
-# The scope-bloat phrases come from governance/signals.yml at runtime and are
-# never hardcoded: the project's copy first, then the framework's.
-SIGNALS=""
-if [ -f "$PROJECT_DIR/governance/signals.yml" ]; then
-  SIGNALS="$PROJECT_DIR/governance/signals.yml"
-else
-  _fw_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-  [ -f "$_fw_root/governance/signals.yml" ] && SIGNALS="$_fw_root/governance/signals.yml"
-fi
-
 # Each line of output is a kind, a tab and a message: W for a gate-state
 # warning, N for a scope-bloat reminder. A scan that cannot start prints
 # nothing, which reads as "nothing to report", as an unreadable install did
 # before.
 NUDGES=()
-SCAN="$(compass_python "$HOOK_ROOT/hooks/py/stop_scan.py" "$WORK_DIR" "$SIGNALS" 2>/dev/null </dev/null)" || true
+SCAN="$(compass_python "$HOOK_ROOT/hooks/py/stop_scan.py" "$WORK_DIR" 2>/dev/null </dev/null)" || true
 
 while IFS= read -r _line; do
   case "$_line" in
@@ -217,7 +206,7 @@ if [ "${#NUDGES[@]}" -gt 0 ]; then
     echo "  If the scope grew during Build, re-assess now:"
     echo "    /compass:assess --reassess --reason \"<what changed and why>\""
     echo ""
-    echo "  This preserves the calibration signal (compass retro)."
+    echo "  The reason is kept in the reassessments: log."
     echo "  This reminder does not block - the session ends regardless."
     echo "================================================================"
     echo ""

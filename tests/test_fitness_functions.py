@@ -40,6 +40,13 @@ def _run_cli(*args: str, cwd: Path,
     )
 
 
+def _write_project_checks(root: Path, checks: List[Dict[str, Any]]) -> None:
+    """A `compass.yml` that opts in to project commands and declares `checks`."""
+    (root / "compass.yml").write_text(yaml.safe_dump(
+        {"schema": 1, "allow_project_commands": True, "project_checks": checks},
+        sort_keys=False))
+
+
 def _make_project(
     tmp_path: Path,
     project_guardrails: Optional[List[Dict[str, Any]]] = None,
@@ -47,24 +54,15 @@ def _make_project(
     risk: str = "cross-cutting",
 ) -> tuple[Path, Path]:
     """
-    Build a minimal Compass project tree in tmp_path, using the real shipped
-    governance files.
+    Build a minimal Compass project tree in tmp_path on the shipped check set.
+    Each project guardrail becomes a project check of `compass.yml` (ADR-094):
+    9.0.0 reads no copy of `guardrails.yml` (ADR-098).
     Returns (project_root, task_dir).
     """
-    import shutil
-
-    gov_dst = tmp_path / "governance"
-    gov_dst.mkdir()
-    gov_src = FRAMEWORK_ROOT / "governance"
-    # Use the real routing-policy.yml
-    shutil.copyfile(gov_src / "routing-policy.yml", gov_dst / "routing-policy.yml")
-    # Copy the real guardrails.yml and patch its project: section
-    real_guardrails = yaml.safe_load((gov_src / "guardrails.yml").read_text())
-    real_guardrails["project"] = (
-        project_guardrails if project_guardrails is not None else []
-    )
-    with open(gov_dst / "guardrails.yml", "w") as f:
-        yaml.safe_dump(real_guardrails, f, sort_keys=False)
+    if project_guardrails:
+        _write_project_checks(tmp_path, [
+            {"id": g["id"], "name": g["name"], "command": g["params"]["command"],
+             "stage": "ship"} for g in project_guardrails])
 
     # .compass/
     compass_dir = tmp_path / ".compass"
@@ -78,8 +76,9 @@ def _make_project(
     # fixture opts in; without it every test here would get "nothing to check"
     # and stop exercising the execution path it exists for. The opt-in itself
     # is covered in tests/test_project_command_boundary.py.
-    (compass_dir / "config.yml").write_text(
-        "version: 1.0.0\nmode: enforced\nallow_project_commands: true\n")
+    if not project_guardrails:
+        (compass_dir / "config.yml").write_text(
+            "version: 1.0.0\nmode: enforced\nallow_project_commands: true\n")
 
     # manifest.yml
     gates = task_gates if task_gates is not None else [
@@ -227,13 +226,6 @@ class TestVerifyFitnessAdvisory:
 
     def test_fitness_not_in_gates_for_contained_blast_radius(self, tmp_path):
         """approach evaluate with contained risk does NOT add verify.architecture."""
-        import shutil
-        gov_dst = tmp_path / "governance"
-        gov_dst.mkdir(parents=True, exist_ok=True)
-        gov_src = FRAMEWORK_ROOT / "governance"
-        shutil.copyfile(gov_src / "routing-policy.yml", gov_dst / "routing-policy.yml")
-        shutil.copyfile(gov_src / "guardrails.yml", gov_dst / "guardrails.yml")
-
         (tmp_path / ".compass").mkdir(exist_ok=True)
 
         result = _run_cli(
@@ -345,8 +337,8 @@ class TestPolicyLintCommandPasses:
     """`TRC-B7`: command-passes is recognised by compass policy lint."""
 
     def test_policy_lint_passes_with_command_passes_check(self, tmp_path):
-        """compass policy lint exits 0 when guardrails.yml declares a
-        project guardrail with check: command-passes."""
+        """compass policy lint exits 0 when compass.yml declares a
+        project check, which runs command-passes."""
         project_guardrails = [
             {
                 "id": "F1",
@@ -395,48 +387,15 @@ class TestMalformedCommandPasses:
     """`TRC-FM1`: a malformed command-passes declaration fails policy lint."""
 
     def _make_guardrails(self, tmp_path: Path, params: Dict[str, Any]) -> Path:
-        """Write governance files with a command-passes entry using the given params."""
-        import shutil
-        gov_dst = tmp_path / "governance"
-        gov_dst.mkdir(parents=True, exist_ok=True)
-        gov_src = FRAMEWORK_ROOT / "governance"
-        shutil.copyfile(gov_src / "routing-policy.yml", gov_dst / "routing-policy.yml")
-
-        guardrails_doc: Dict[str, Any] = {
-            "version": "1.0.0",
-            "checks": {
-                "gate-evidence-present": {"description": "test"},
-                "command-passes": {
-                    "description": "Runs the declared command."
-                },
-            },
-            "evidence_types": {
-                "test-run": {"description": "A recorded test execution."},
-                "command-output": {"description": "Captured command output."},
-                "artifact": {"description": "A written record."},
-            },
-            "gate_evidence_requirements": {},
-            "defaults": [],
-            "project": [
-                {
-                    "id": "F1",
-                    "name": "Module directions",
-                    "statement": "Modules respect direction.",
-                    "checks": ["command-passes"],
-                    "params": params,
-                    "checked_at": ["verify"],
-                }
-            ],
-        }
-        with open(gov_dst / "guardrails.yml", "w") as f:
-            yaml.safe_dump(guardrails_doc, f)
-
+        """A `compass.yml` whose project check carries `params` in place of its
+        `command`, so a missing or non-text command is what the lint sees."""
+        _write_project_checks(tmp_path, [
+            {"id": "F1", "name": "Module directions", "stage": "ship", **params}])
         (tmp_path / ".compass").mkdir(exist_ok=True)
         return tmp_path
 
     def test_missing_command_field_fails_lint(self, tmp_path):
-        """A project guardrail using check: command-passes with no `command`
-        in params fails compass policy lint."""
+        """A project check with no `command` fails compass policy lint."""
         project_root = self._make_guardrails(tmp_path, params={})  # MISSING command
         result = _run_cli("policy", "lint", cwd=project_root)
         assert result.returncode != 0, (
@@ -444,12 +403,12 @@ class TestMalformedCommandPasses:
             f"{result.stdout}\n{result.stderr}"
         )
         combined = result.stdout + result.stderr
-        assert "command" in combined.lower() and "missing" in combined.lower(), (
-            f"Expected 'command' and 'missing' in failure output:\n{combined}"
+        assert "command" in combined.lower() and "required" in combined.lower(), (
+            f"Expected 'command' and 'required' in failure output:\n{combined}"
         )
 
     def test_non_string_command_field_fails_lint(self, tmp_path):
-        """A project guardrail where command is not a string fails policy lint."""
+        """A project check whose command is not a string fails policy lint."""
         project_root = self._make_guardrails(
             tmp_path, params={"command": 42}  # NOT a string
         )

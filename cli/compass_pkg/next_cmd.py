@@ -37,28 +37,34 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import status_words
+from compass_pkg import next_step, path_stages, status_words
 from compass_pkg.stable_ids import (
-    APPROACH_QUICK_FIX, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
-    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+    APPROACH_QUICK_FIX, LEGACY_TO_PATH, PATH_STAGE_IDS, REMOVED_GATE_IDS, STAGE_ASSESS,
+    STAGE_BREAKDOWN, STAGE_BUILD, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
+    STAGE_REFINE, STAGE_SHIP, STAGE_SPECIFY, STAGE_VERIFY)
 from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import (CompassError, artifact_path, canonical_shape, manifest_path,
                               normalize_spine, resolve_issue_dir)
 
 # --- command: next -----------------------------------------------------------
-# `compass next` reads manifest.yml + delivery-approach.md and prints ONE
+# `compass next` reads manifest.yml and prints ONE
 # line (at a terminal, framed by the rail; see `_emit`): the next stage, the next uncleared gate, and delivery-approach-aware
 # collapsed-stage markers. It is strictly READ-ONLY over
 # .compass/work/<task>/ - no file is written or created. It derives its
-# answer from manifest.yml and delivery-approach.md, and checks evidence/
+# answer from manifest.yml, and checks evidence/
 # and the .red marker for a red the manifest does not list.
 #
 # The plain line, which is all piped output and the model ever see:
-#   "<NextPhase> [gate: <gate-id>][ | <phase> collapsed in this approach]"
+#   "<Stage> [gate: <gate-id>] | next: <command>[ | <phase> collapsed in this approach]"
+# <Stage> is a stage of the four-stage path (ADR-092). An issue assessed before
+# the path is still judged on its legacy stages; only the word shown is mapped
+# (`stable_ids.LEGACY_TO_PATH`). <command> comes from `next_step`.
 # When the issue has landed:
 #   "all phases complete"
-# When delivery-approach.md is missing:
-#   exit non-zero with a message naming delivery-approach.md
+# When it has landed and still owes the ship approval (ADR-095):
+#   "all phases complete | next: <command>"
+# When the manifest records no delivery approach:
+#   exit non-zero with a message naming assess
 # When manifest.yml is missing (assess has not run):
 #   exit non-zero with a message naming assess
 #
@@ -70,19 +76,6 @@ _PHASE_ORDER = list(STAGE_IDS)
 
 # Weights that show a stage was deliberately left out of this delivery approach
 _SKIPPED_WEIGHTS = {"skipped", "collapsed"}
-
-
-def _next_active_phase(phases: dict) -> str | None:
-    """Return the slug of the next stage that actively runs on this delivery approach.
-
-    Skipped / collapsed stages are bypassed.  Returns None when every stage
-    has a skipped weight (degenerate delivery approach) or phases is empty.
-    """
-    for p in _PHASE_ORDER:
-        weight = (phases.get(p) or "").strip().lower()
-        if weight not in _SKIPPED_WEIGHTS:
-            return p
-    return None
 
 
 def _detect_collapsed_phases(phases: dict) -> list:
@@ -113,21 +106,20 @@ def _typed(task: dict) -> dict:
 
 
 def _first_pending_gate(gates: list) -> str | None:
-    """Return the id of the first gate whose status is not 'pass'."""
+    """Return the id of the first gate whose status is not 'pass'. A gate a release
+    removed owes nothing, so it is never the next one to clear."""
     for g in (gates or []):
-        if isinstance(g, dict) and g.get("status") != "pass":
+        if (isinstance(g, dict) and g.get("status") != "pass"
+                and g.get("id") not in REMOVED_GATE_IDS):
             return g.get("id")
     return None
 
 
 def _all_gates_pass(gates: list) -> bool:
-    """True when every gate is marked pass."""
-    if not gates:
-        return False
-    return all(
-        isinstance(g, dict) and g.get("status") == "pass"
-        for g in gates
-    )
+    """True when every gate is marked pass. A gate a release removed owes nothing
+    (`gate_status`), so the issue is past the verify stage while only that gate is pending."""
+    from compass_pkg import gate_status
+    return gate_status.all_gates_passed({"gates": gates})
 
 
 def _entries(task: dict, key: str) -> list:
@@ -153,9 +145,9 @@ def _registered(task: dict, kind: str) -> bool:
 
 
 def _earned(task: dict, kind: str) -> bool:
-    """True when the issue's route earns the `kind` document.
-    `approach evaluate` seeds an entry for every document the route earns,
-    and `compass issue artifact set` refuses any other kind."""
+    """True when the issue's route earns the `kind` document. Before 9.0.0
+    `approach evaluate` seeded an entry for every document the route earned;
+    9.0.0 writes no `artifacts:` list (ADR-091), so a newer issue earns none."""
     return any(a.get("kind") == kind for a in _entries(task, "artifacts"))
 
 
@@ -163,7 +155,7 @@ def _review_written(task_dir: str | None) -> bool:
     """True when the issue's requirements review exists on disk, registered
     or not. The resolver finds a registered one, or one beside the manifest
     as issues before 5.0.0 kept it; an unregistered one in the documents
-    folder is what refine writes on a route that does not earn it."""
+    folder is what refine wrote before 9.0.0 on a route that did not earn it."""
     if not task_dir:
         return False
     from compass_pkg.core import unregistered_document
@@ -172,9 +164,19 @@ def _review_written(task_dir: str | None) -> bool:
             or unregistered_document(task_dir, name) is not None)
 
 
+def _handed_off(task: dict, stage: str) -> bool:
+    """True when the manifest records the hand-off of `stage`: `skipped`, written
+    by `compass issue checkpoint add`, or `waited`, written when a person
+    approved it. Every route that runs the stage records one or the other."""
+    from compass_pkg import checkpoint_outcomes
+    return stage in checkpoint_outcomes.outcomes(task)
+
+
 def _testing_started(task: dict, task_dir: str | None) -> bool:
     """True once any test result is on record: a test-run in the manifest, or
-    a red that `compass tdd-red` wrote, which the manifest does not list."""
+    a red that `compass tdd-red` wrote, which the manifest does not list. A red
+    that ends stage 1 (`before_implement`) is written at refine, so it does not
+    count (ADR-081)."""
     if any(e.get("type") == "test-run" for e in _entries(task, "evidence")):
         return True
     if not task_dir:
@@ -185,7 +187,9 @@ def _testing_started(task: dict, task_dir: str | None) -> bool:
         names = os.listdir(os.path.join(task_dir, "evidence"))
     except OSError:
         return False
-    return any(n.startswith("red") and n.endswith(".json") for n in names)
+    from compass_pkg.red_first import load_record
+    return any(n.startswith("red") and n.endswith(".json") and not load_record(
+        os.path.join(task_dir, "evidence", n)).get("before_implement") for n in names)
 
 
 def _every_scenario_tested(task: dict) -> bool:
@@ -199,31 +203,70 @@ def _every_scenario_tested(task: dict) -> bool:
     return bool(ids) and all(i in tested for i in ids)
 
 
+def _path_stages_on_record(task: dict, task_dir: str | None) -> set:
+    """The path stages the records show as done, on a path issue (ADR-092).
+
+    Assess is done once the approach and `evidence_required` are set; specify
+    once each scenario has an id, an intent and a declared test, and the
+    `specify` checkpoint has an outcome where it is listed; build once each
+    scenario that is not narrative has a red no later than its first green, and
+    the green. Ship's record, a closed issue, is handled by the callers. As on
+    the legacy stages, a later stage's record means every stage before it is
+    done.
+    """
+    from compass_pkg.red_first import scenario_reds
+    specified = next_step.specify_done(task)
+    ids = [s["id"] for s in next_step.needing_tests(task)]
+    reds = scenario_reds(task, task_dir) if task_dir else {"no_red": ids, "late": []}
+    green = next_step.greens(task)
+    built = (specified and not reds["no_red"] and not reds["late"]
+             and all(i in green for i in ids))
+    own = {
+        STAGE_ASSESS: bool(task.get("delivery_approach")),
+        STAGE_SPECIFY: specified,
+        STAGE_BUILD: built,
+        STAGE_SHIP: False,
+    }
+    order = path_stages.stages_of(task)
+    reached = max((i for i, p in enumerate(order) if own.get(p)), default=-1)
+    return set(order[:reached + 1])
+
+
 def _stages_on_record(task: dict, task_dir: str | None) -> set:
     """The stages the records on disk show as done.
 
     A stage is done when its own record exists, or when a later stage's
     does. The second rule covers a record that was never written, such as
-    a builder starting without a design registered. `compass next` cannot
+    a hand-off nobody recorded before the builder started. `compass next` cannot
     run without the approach record, so assess is always done. Ship's
     record, a closed issue, is handled by the callers before they ask for
-    a stage.
+    a stage. A path issue has its own records (`_path_stages_on_record`).
     """
+    if path_stages.is_path_issue(task):
+        return _path_stages_on_record(task, task_dir)
     own = {
         STAGE_ASSESS: True,
         # A quick fix earns no criteria document; its scenarios are define's
         # record.
         STAGE_DEFINE: (_registered(task, "acceptance-criteria")
                    or bool(_entries(task, "scenarios"))),
-        # Refine's record is its requirements review. Only a route that earns
-        # the review (an initiative) can register it; elsewhere refine writes
-        # the file and leaves it unregistered (commands/refine.md), so the
-        # file itself is the record.
-        STAGE_REFINE: (_registered(task, "requirements-review")
+        # 9.0.0 writes no requirements review and no technical design
+        # (ADR-091), so refine and plan are done when their hand-off is on
+        # record. An issue made before 9.0.0 can hold the document instead:
+        # refine's review, registered where the route earned it and otherwise
+        # read from the file, and plan's registered design.
+        STAGE_REFINE: (_handed_off(task, STAGE_REFINE)
+                   or _registered(task, "requirements-review")
                    or (not _earned(task, "requirements-review")
                        and _review_written(task_dir))),
-        STAGE_PLAN: _registered(task, "technical-design"),
-        STAGE_BREAKDOWN: bool(_entries(task, "subtasks")) or _registered(task, "distribution-map"),
+        STAGE_PLAN: _handed_off(task, STAGE_PLAN) or _registered(task, "technical-design"),
+        # Breakdown records nothing of its own: one session builds the units
+        # (ADR-090), and 9.0.0 writes no distribution map (ADR-091). It is done
+        # once plan is handed off, unless the route earned a map before 9.0.0.
+        STAGE_BREAKDOWN: (bool(_entries(task, "subtasks"))
+                          or _registered(task, "distribution-map")
+                          or (_handed_off(task, STAGE_PLAN)
+                              and not _earned(task, "distribution-map"))),
         STAGE_IMPLEMENT: _every_scenario_tested(task),
         STAGE_VERIFY: _all_gates_pass(task.get("gates") or []),
         STAGE_SHIP: False,
@@ -248,8 +291,11 @@ def _current_phase_from_task(task: dict, task_dir: str | None = None) -> str | N
     cp = task.get("current_phase")
     if cp and isinstance(cp, str):
         return cp.strip().lower()
-    phases = task.get("stages") or {}
     done = _stages_on_record(task, task_dir)
+    if path_stages.is_path_issue(task):
+        # The path stages have no modes, so none is skipped.
+        return next((p for p in path_stages.stages_of(task) if p not in done), None)
+    phases = task.get("stages") or {}
     for p in _PHASE_ORDER:
         weight = (phases.get(p) or "").strip().lower()
         if weight not in _SKIPPED_WEIGHTS and p not in done:
@@ -264,26 +310,32 @@ def _unmet_entry(task: dict, task_dir: str, stage: str) -> list:
     gives none."""
     try:
         from compass_pkg import effective, stage_lists
-        view = effective.view_or_legacy(task_dir)
+        view = effective.effective_for(task_dir)
         return stage_lists.unmet_entry(stage_lists.evaluate(view, task, task_dir), stage)
     except Exception:  # noqa: BLE001 - the stage line is the answer; this is extra
         return []
 
 
-def _stale_entry(task: dict, task_dir: str, stage: str) -> list:
-    """The stale documents `stage` consumes, as `<kind> is stale`, when the
-    capability `artifact-freshness` is on for the issue; none otherwise."""
-    try:
-        from compass_pkg import effective, freshness
-        view = effective.view_or_legacy(task_dir)
-        if not freshness.enabled(view):
-            return []
-    except Exception:  # noqa: BLE001 - the stage line is the answer; this is extra
-        return []
-    try:
-        return freshness.unmet_entry(freshness.evaluate(view, task, task_dir), stage)
-    except Exception:  # noqa: BLE001 - with the capability on, a record that cannot be read fails closed
-        return ["artifact freshness cannot be evaluated"] if stage in freshness.CONSUMES else []
+def shown_stage(stage):
+    """The stage word a reader shows: a legacy stage shows as the path stage it
+    maps to (`stable_ids.LEGACY_TO_PATH`); any other name is shown as it is."""
+    return path_stages.path_stage_of(stage) or stage
+
+
+def _rail_order(task):
+    """`(stages, weights)` the rail draws. A path issue has its path stages and no
+    modes. An old issue is drawn on the four path stages too, and a path stage is
+    skipped only when every legacy stage it shows is skipped or collapsed."""
+    if path_stages.is_path_issue(task):
+        return path_stages.stages_of(task), {}
+    legacy = task.get("stages") or {}
+    weights = {}
+    for stage in PATH_STAGE_IDS:
+        mapped = [str(legacy.get(k) or "").strip().lower()
+                  for k, p in LEGACY_TO_PATH.items() if p == stage and k in legacy]
+        if mapped and all(w in _SKIPPED_WEIGHTS for w in mapped):
+            weights[stage] = "skipped"
+    return PATH_STAGE_IDS, weights
 
 
 def _emit(args, task, task_dir, line, current_phase, finished, hint=True):
@@ -302,13 +354,17 @@ def _emit(args, task, task_dir, line, current_phase, finished, hint=True):
     try:
         approach = task.get("delivery_approach") or ""
         slug = task.get("issue") or os.path.basename(task_dir.rstrip(os.sep))
-        states = stage_states(_PHASE_ORDER, task.get("stages") or {}, current_phase,
-                             finished, _SKIPPED_WEIGHTS)
+        order, weights = _rail_order(task)
+        shown = shown_stage(current_phase) if current_phase else None
+        states = stage_states(order, weights, shown, finished, _SKIPPED_WEIGHTS)
         out = [header([display_shape(approach), slug], style)]
         out += rail([(display_stage(k).capitalize(), st) for k, st in states], style)
         # The plain line is wrapped here only; piped output keeps it whole.
         out += [""] + wrap(line.rstrip("\n"))
-        if hint and not finished and current_phase in _PHASE_ORDER:
+        # The stage commands still serve an issue assessed before the path. A
+        # path issue's line already names its next command.
+        if hint and not finished and current_phase in _PHASE_ORDER \
+                and not path_stages.is_path_issue(task):
             quick = canonical_shape(approach) == APPROACH_QUICK_FIX
             out += wrap("Next: /compass:" + ("quick-fix" if quick else display_stage(current_phase)))
         text = "\n".join(out) + "\n"
@@ -341,7 +397,7 @@ def _dependency_block(task, task_dir, stage):
 def cmd_next(args):
     """compass next - what comes next on this issue's delivery approach?
 
-    Reads manifest.yml + delivery-approach.md and prints ONE line, framed
+    Reads manifest.yml and prints ONE line, framed
     by the rail when a person reads it at a terminal.
     Strictly read-only.
     """
@@ -358,20 +414,24 @@ def cmd_next(args):
 
     task = _typed(normalize_spine(load_manifest_mapping(task_path)))
 
-    # --- delivery-approach.md: must exist ---
-    route_md_path = artifact_path(task_dir, "delivery-approach.md")
-    if not os.path.isfile(route_md_path):
+    # --- the delivery approach: must be decided ---
+    # The manifest holds the decision; 9.0.0 writes no delivery-approach.md (ADR-091).
+    if not task.get("delivery_approach"):
         raise CompassError(
-            f"delivery-approach.md is missing from {task_dir}\n"
-            "  Run /compass:assess to produce delivery-approach.md before using "
-            "compass next.")
+            f"assess has not chosen a delivery approach for {task_dir}\n"
+            "  Run /compass:assess to record one before using compass next.")
 
     # --- completed issue ---
     # Passed gates alone do not finish it: ship still runs, and a closed
     # issue is ship's record.
     gates = task.get("gates") or []
     if status_words.is_closed(task):
-        _emit(args, task, task_dir, "all phases complete\n", None, True)
+        # A landed issue can still owe the ship approval, which is read after
+        # the merge (ADR-095); `next_step` names the command that records it.
+        command = next_step.next_command(task, task_dir)
+        line = "all phases complete" + (f" | next: {command}" if command else "") + "\n"
+        if not _json_document(args, [line], command):
+            _emit(args, task, task_dir, line, None, True)
         return 0
 
     # --- determine next stage and collapsed siblings ---
@@ -383,8 +443,16 @@ def cmd_next(args):
     next_phase = current_phase
     if not next_phase:
         # No current stage derivable - delivery approach is complete or degenerate
-        _emit(args, task, task_dir, "all phases complete\n", None, True)
+        if not _json_document(args, ["all phases complete\n"], None):
+            _emit(args, task, task_dir, "all phases complete\n", None, True)
         return 0
+
+    # The stage 2 and 3 reviews of strategy `S17`: a rejected one sends the
+    # issue back to its stage, and a listed one with no outcome waits.
+    from compass_pkg import checkpoint_outcomes
+    done = _stages_on_record(task, task_dir)
+    back, review_wait, review_note = checkpoint_outcomes.next_review(task, task_dir, done)
+    next_phase = back or next_phase
 
     # Find the first pending gate for the "next gate" display
     pending_gate = _first_pending_gate(gates)
@@ -393,14 +461,20 @@ def cmd_next(args):
     collapsed = _detect_collapsed_phases(phases)
 
     # --- compose the one-line output ---
-    parts = [next_phase.capitalize()]
+    # The stage is shown as a path stage; the legacy stage stays the one every
+    # reader below acts on, so an old issue keeps its rules (ADR-092).
+    parts = [shown_stage(next_phase).capitalize()]
     if pending_gate:
         parts[0] += f" [gate: {pending_gate}]"
-    unmet = _unmet_entry(task, task_dir, next_phase) + _stale_entry(task, task_dir, next_phase)
+    command = next_step.next_command(task, task_dir, done)
+    parts.append("next: " + command)
+    unmet = _unmet_entry(task, task_dir, next_phase)
     if unmet:
         parts.append("entry not met: " + ", ".join(unmet))
     if collapsed:
         parts.append(f"{', '.join(collapsed)} collapsed in this approach")
+    if review_note:
+        parts.append(review_note)
     # The issues this one waits for (ADR-062). Faults in `depends_on` are not
     # named here: the line stays one line, and `compass issue lint` names them.
     blocked = _dependency_block(task, task_dir, next_phase)
@@ -410,11 +484,33 @@ def cmd_next(args):
     # A decision an agent took for the person: the issue waits at a checkpoint
     # for its confirmation, or lists the decisions and goes on (autonomous).
     from compass_pkg import decisions_taken
-    wait, more = decisions_taken.next_lines(task, _stages_on_record(task, task_dir))
+    wait, more = decisions_taken.next_lines(task, done)
+    wait = wait or review_wait
     if wait and blocked:
         wait += " | blocked: " + blocked
     line = (wait if wait else " | ".join(parts)) + "\n"
+    if _json_document(args, [line] + [extra + "\n" for extra in more], command):
+        return 0
     _emit(args, task, task_dir, line, next_phase, False, hint=not wait)
     for extra in more:
         print(extra)
     return 0
+
+
+def _json_document(args, lines, command):
+    """Print the `--json` document and return True, or return False outside
+    `--json`. It is the document the output wrapper writes for a verb not
+    converted to the output contract (`terminal._run_with_mode`), with one more
+    key, `next`: the command `next_step` names, or null. With `--evidence-out`
+    the wrapper writes the capture and its own document, which has no `next`."""
+    from compass_pkg.terminal import mark_handled, resolve_mode
+    if resolve_mode(args) != "json" or getattr(args, "evidence_out", None):
+        return False
+    text = "".join(lines)
+    print(json.dumps({"output": text.rstrip("\n").splitlines(),
+                      "structured": False,
+                      "note": "this verb has not been converted to the "
+                              "output contract; these are its own lines",
+                      "next": command}, indent=2))
+    mark_handled()
+    return True

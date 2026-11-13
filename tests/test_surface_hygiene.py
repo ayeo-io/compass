@@ -20,8 +20,11 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
-BDD_SKILL = SKILLS / "bdd-specification" / "SKILL.md"
-CLARIFY_CMD = ROOT / "commands" / "refine.md"
+# `bdd-specification` merged into `atdd` in 9.0.0 (#360).
+BDD_SKILL = SKILLS / "atdd" / "SKILL.md"
+# The refine command went with the four-stage path (ADR-092): the specify stage
+# of the go command now states the split from its side.
+PATH_CMD = ROOT / "commands" / "go.md"
 
 # The four scans the spec-author runs inline at the end of the define stage.
 FOUR_SCANS = ["placeholder", "orphan", "untestable", "ambiguous"]
@@ -97,8 +100,8 @@ def test_trc_d2_no_references_to_deleted_skill():
     """
     offenders = []
     for path in _repo_files():
-        # This file necessarily names the string it hunts for, the same way
-        # `compass plan lint` has to exempt the documents that explain it.
+        # This file necessarily names the string it hunts for, so it exempts
+        # itself.
         if path.resolve() == pathlib.Path(__file__).resolve():
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
@@ -122,7 +125,7 @@ def test_trc_d3_bdd_skill_documents_the_split():
 
     for scan in FOUR_SCANS:
         assert scan in text, (
-            f"the bdd-specification skill does not name the {scan!r} scan"
+            f"the atdd skill does not name the {scan!r} scan"
         )
 
     # it must say what the requirements review does that the self-review does not
@@ -132,34 +135,32 @@ def test_trc_d3_bdd_skill_documents_the_split():
         "the skill never says what work the requirements review does that "
         "the inline self-review does not"
     )
-    # and which delivery approaches run each: quick fix or regular.
-    assert "quick fix" in text and re.search(r"regular", text), (
-        "the skill does not say which delivery approaches run the inline "
+    # and which changes run each. The path has no quick fix or regular
+    # approach (ADR-092): the split follows the number of scenarios.
+    assert "one-scenario change" in text and "more than one scenario" in text, (
+        "the skill does not say which changes run the inline "
         "self-review and which run the requirements review"
     )
 
 
 # ---------------------------------------------------------------------------
-# The /compass:refine command states the same split from its side (TRC-D4)
+# The /compass:go command states the same split from its side (TRC-D4)
 # ---------------------------------------------------------------------------
 
-def test_trc_d4_clarify_command_documents_the_split():
-    text = CLARIFY_CMD.read_text(encoding="utf-8").lower()
+def test_trc_d4_go_command_documents_the_split():
+    text = " ".join(PATH_CMD.read_text(encoding="utf-8").lower().split())
 
     assert "self-review" in text or "self review" in text, (
-        "commands/refine.md never mentions the inline self-review the "
-        "spec-author has already run, so Clarify looks like it starts from "
-        "nothing"
+        "commands/go.md never mentions the inline self-review at specify"
     )
     assert re.search(r"(does not repeat|not repeat|already (been )?run|already "
                      r"covered|no need to re-?run)", text), (
-        "commands/refine.md does not say that Clarify does not repeat the "
-        "inline scans"
+        "commands/go.md does not say that the inline scans are not repeated"
     )
     # it names the same four scans the skill names
     for scan in FOUR_SCANS:
         assert scan in text, (
-            f"commands/refine.md does not name the {scan!r} scan; the two "
+            f"commands/go.md does not name the {scan!r} scan; the two "
             f"descriptions of the split must agree"
         )
 
@@ -179,30 +180,34 @@ def test_trc_f7_skill_count_unchanged_on_net():
     present = {p.name for p in SKILLS.iterdir()
                if p.is_dir() and (p / "SKILL.md").is_file()}
 
-    assert "plan-authoring" in present, "plan-authoring was not added"
+    # plan-authoring joined with the richer plans and went with the plan
+    # stage (ADR-092); its design rules live in governance-check now.
+    assert "plan-authoring" not in present, "plan-authoring was not removed"
     assert "constitution-check" not in present, (
         "constitution-check was not removed")
 
     # No skill appears or disappears without an edit to this list.
     expected = {
-        "adaptive-routing", "bdd-specification", "behavior-mapping",
-        # The stub that keeps the old name of behavior-mapping readable
-        # (a project compass.yml can still name it) until 8.0.0.
-        "behav" + "iour-mapping",
+        "adaptive-routing",
+        # `bdd-specification` and `behavior-mapping` merged into `atdd` in
+        # 9.0.0 (#360): their text is its scenario and behavior mapping
+        # sections and references, and cli/compass_pkg/old_names.py maps
+        # both old names to it.
         "compass-runtime", "evidence-gates", "flow-management",
-        "governance-check", "plan-authoring",
-        "tdd-discipline", "worktree-multiagent",
+        "governance-check",
+        "tdd-discipline",
         "receiving-code-review",  # a second pass over someone else's diff
         "systematic-debugging",   # notices three failed fixes in a row
         # Turns a brief that already exists into intent.md by asking rather
         # than assuming: "the discipline is the skill".
         "intent-interview",
-        # The four-layer acceptance tests, loaded at the refine, implement and
-        # verify stage for a change a real client can observe (issue atdd-skill).
+        # The four-layer acceptance tests, loaded at the specify, build and
+        # ship stage for a change a real client can observe (issue atdd-skill).
         "atdd",
-        # Traceability lives in skills/evidence-gates/traceability.md and
-        # role-translation lives in skills/intent-interview/role-translation.md,
-        # each read beside the skill it merged into. The light path has no
+        # Traceability lives in skills/evidence-gates/traceability.md, read
+        # beside the skill it merged into. role-translation merged into
+        # intent-interview and went with the role entry points (ADR-093).
+        # The light path has no
         # skill: commands/quick-fix.md carries its rules, because a skill
         # named like a command is never loaded.
     }

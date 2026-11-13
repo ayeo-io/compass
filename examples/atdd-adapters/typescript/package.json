@@ -1,0 +1,19 @@
+{
+  "name": "atdd-reference-typescript",
+  "private": true,
+  "description": "Four-layer acceptance tests: the TypeScript reference example.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "acceptance": "node --experimental-strip-types --disable-warning=ExperimentalWarning tests/acceptance/run.ts",
+    "layering": "node --experimental-strip-types --disable-warning=ExperimentalWarning tests/acceptance/run.ts tests/acceptance/layering.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "6.0.3",
+    "yaml": "2.8.4"
+  }
+}

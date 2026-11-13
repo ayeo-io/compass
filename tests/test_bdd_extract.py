@@ -171,8 +171,8 @@ def test_trc_a4_feature_names_source_task(demo_task, run_cli):
     features = re.findall(r"^Feature: (.+)$", text, re.M)
     assert features == ["demo"], features
 
-    # a provenance header naming the source, matching the house convention in
-    # docs/system-spec.md ("DERIVED FILE - do not hand-edit")
+    # a provenance header naming the source, in the house convention for a
+    # derived file ("DERIVED FILE - do not hand-edit")
     head = text.split("Feature:")[0]
     assert "acceptance-criteria.md" in head, head
     assert re.search(r"do not hand-edit", head, re.I), head
@@ -307,22 +307,26 @@ def test_trc_f4_extract_mutates_nothing_else(demo_task, run_cli):
 # The full subcommand set, frozen deliberately: a new verb must edit this
 # list, so adding one is a visible decision rather than a silent one.
 EXPECTED_SUBCOMMANDS = {
-    "approach", "bdd", "check", "analyze", "retro", "ci", "tdd-red",
-    "tdd-green", "policy", "plan", "intent", "issue", "adr", "rework-scan", "flow",
+    "approach", "bdd", "check", "ci", "tdd-red",  # 9.0.0 removed `retro` (ADR-093)
+    "tdd-green", "policy", "issue", "adr", "flow",  # and `plan`, `rework-scan`, `intent`
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
-    "profile",                    # `profile lint|add|show` - execution profiles
+    "review-rule",  # `review-rule list`; 9.0.0 removed `preset`, `spec`
     "init",                       # creates .compass/ - safe to run twice
     "acceptance",                 # the acceptance verb group
     "quick-fix",                  # start|finish - the quick-fix verb group
     "lesson",                     # add|list|remove|propose|accept - project lessons (ADR-029)
-    "run",                        # one stage of one issue unattended (ADR-030)
-    "record",                     # sync|restore - the delivery record (ADR-031)
+    "record",                     # sync|restore|commit - the delivery record (ADR-031; commit #356)
     "decision",                   # record|list|show|check - the ledger (ADR-027)
-    "board",                      # render|refresh - the delivery board page (ADR-046)
-    "readiness",                  # measures the repository and writes the readiness record
+    # "board" (render|refresh, ADR-046): ADR-093 removed the delivery board page.
+    # "readiness" (ADR-061): ADR-093 removed the readiness measure.
     "release",                    # notes - the release lines since a git reference (ADR-065)
+    "isolation",                  # record - the isolation proof (#328, ADR-086)
+    "layering",                   # record - the layering record (#328, ADR-086)
+    "waiver",                     # add|withdraw - one-check waivers (#357, ADR-094 decision 8)
+    "trail",                      # write or --check the issue's trail.md (#356, ADR-096);
+                                  # `record commit` (#356) is a sub-verb of `record`
+    "migrate",                    # move an 8.x project to 9.0.0 (#359, ADR-098)
 }
 
 

@@ -171,6 +171,26 @@ def _read_version(manifest, path):
 
 # --- the save -------------------------------------------------------------------
 
+
+class _NoAliasDumper(yaml.SafeDumper):
+    """A safe dumper that writes a value held under two keys in full each time."""
+
+    def ignore_aliases(self, data):
+        return True
+
+
+def dump(data, **options):
+    """The YAML text of a manifest, with no anchors or aliases.
+
+    A manifest can hold one object under two keys, such as the assessment's
+    `labels` list copied to `evaluated_assessment`. `yaml.safe_dump` writes
+    that as `&id001` and `*id001`, which a person reading the committed
+    record must know YAML to follow. Every manifest writer calls this. A
+    manifest written before it can still hold anchors, and `yaml.safe_load`
+    reads them."""
+    return yaml.dump(data, Dumper=_NoAliasDumper, sort_keys=False,
+                     default_flow_style=False, **options)
+
 def save(manifest, path, lock_name, prepare, normalize):
     """Write `manifest` to `path`, keeping any change another command saved
     since `manifest` was read. `prepare` is `core.prepare_manifest_write`
@@ -196,7 +216,7 @@ def save(manifest, path, lock_name, prepare, normalize):
         out = manifest
         if version is not None and current is not None and current != version[0]:
             out = _merge_with_disk(manifest, version, current, path, normalize)
-        text = yaml.safe_dump(prepare(out, path), sort_keys=False, default_flow_style=False)
+        text = dump(prepare(out, path))
         atomic_io.atomic_write_text(os.path.realpath(path), text)
     if out is not manifest:
         _apply(manifest, out)

@@ -3,7 +3,8 @@ applicability, its routing and the project opt-out.
 
 The specification is `acceptance-criteria.md` of the Compass issue
 `acceptance-strategy-core` (ayeo-io/compass-delivery#321). Each test names
-the scenario it checks; `support.py` builds the projects.
+the scenario it checks; `support.py` builds the projects. `TRC-A15` and
+`TRC-A21` were the retrospective's, which 9.0.0 removed (ADR-093).
 """
 from __future__ import annotations
 
@@ -16,6 +17,8 @@ import yaml
 
 from tests.acceptance.atdd_strategy import support
 from tests.acceptance.atdd_strategy.support import ROOT
+from tests.check_set_files import shipped
+from check_set_files import view as shipped_view  # noqa: E402
 
 CHECK = "acceptance-applicability-agrees"
 STRATEGY = "four-layer acceptance strategy"
@@ -23,11 +26,9 @@ OFF_REASON = "no deployable candidate yet"
 
 
 def _strategy_line(text):
-    """The line of the rendered `acceptance-strategy` block of a delivery-approach record."""
-    found = re.search(r"<!-- compass:render acceptance-strategy -->\n(.*?)\n"
-                      r"<!-- /compass:render -->", text, re.S)
-    assert found, "the delivery-approach record has no acceptance-strategy block"
-    return " ".join(found.group(1).split())
+    """The acceptance-strategy line, with its white space made single."""
+    assert text, "the issue's records give no acceptance-strategy line"
+    return " ".join(text.split())
 
 
 def _row(document, name=CHECK):
@@ -46,13 +47,16 @@ def test_trc_a1():
     entry = text[text.index(re.search(r"^### .*\(`S17`\)$", text, re.M).group(0)):]
     entry = entry[:re.search(r"\n##+ ", entry).start()]
     assert STRATEGY in entry.lower(), entry[:200]
-    for needed in ("`validation`", "`refactor`", "quick-fix", "hotfix", "spike",
+    # Since ADR-099 the entry routes by the tokens a project's `require_evidence`
+    # adds, in place of the evidence rows of ADR-092.
+    for needed in ("`validation`", "`refactor`", "`guidance`", "`layering`",
+                   "`isolation`", "`outer-loop`", "`require_evidence`", "spike",
                    "`acceptance_strategy`", "issue waiver"):
         assert needed in entry, needed
     rationale = (ROOT / "governance" / "strategies-rationale.md").read_text(encoding="utf-8")
     assert re.search(r"^## .*\(`S17`\)$", rationale, re.M), "no S17 entry in the rationale"
     before = support.recorded("guardrails")["spike_guardrails"]
-    now = yaml.safe_load((ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8"))
+    now = shipped_view("guardrails.yml")
     assert [g["id"] for g in now["spike_guardrails"]] == before
 
 
@@ -82,7 +86,26 @@ def test_trc_a3(tmp_path, kind):
     issue = support.out_of_scope_issue(project, kind)
     code, document = issue.check()
     assert support.strategy_findings(document) == []
-    assert support.summary(code, document) == support.recorded("out-of-scope-" + kind)
+    expected = support.recorded("out-of-scope-" + kind)
+    # Since 9.0.0 the issue is a path issue, whose follow-ups link to the GitHub
+    # issues that track them, so the check that owed follow-ups are resolved has
+    # nothing to check where 8.0.4 passed it (ADR-093). Every other row is the
+    # 8.0.4 result.
+    changed = [r for r in expected["rows"] if r[0] == "backfills-paid"]
+    assert changed == [["backfills-paid", "pass"]], changed
+    changed[0][1] = "nothing-to-check"
+    got = support.summary(code, document)
+    # Since #355 a path issue owes the ship approval, which 8.0.4 did not check. It
+    # has nothing to check until the pull request merges, so it adds one such row.
+    ship = [r for r in got["rows"] if r[0] == "ship-approval-present"]
+    assert ship == [["ship-approval-present", "nothing-to-check"]], ship
+    got["rows"].remove(ship[0])
+    # Since #356 a path issue owes the request link, which 8.0.4 did not check. Assess
+    # records it, so the row passes.
+    request = [r for r in got["rows"] if r[0] == "request-recorded"]
+    assert request == [["request-recorded", "pass"]], request
+    got["rows"].remove(request[0])
+    assert got == expected
 
 
 # --- `TRC-A5` ------------------------------------------------------------------------------
@@ -112,27 +135,41 @@ def test_trc_a5(tmp_path, line):
 
 # --- `TRC-A6` ------------------------------------------------------------------------------
 
-@pytest.mark.parametrize("approach, routing", [
-    ("regular", "on"),
-    ("full", "on"),
-    ("quick-fix", "existing DSL only"),
-    ("hotfix", "existing DSL only, isolation proof required"),
-    ("spike", "suspended, as strategy `S2`"),
+# On the four-stage path assess selects the evidence, not an approach (ADR-092
+# decision 3). Since ADR-099 every delivery issue lands on the one evidence row
+# and owes the strategy only where a project rule adds its tokens. The rules of
+# `support.OPT_IN_BY_SIZE` stand where the 8.x approaches stood. The
+# line names the stored `delivery_approach`, which is `delivery` for every
+# delivery row (decision 2).
+@pytest.mark.parametrize("approach, stored, row, routing", [
+    ("regular", "delivery", "RP-EVID-COMMON", "on"),
+    ("full", "delivery", "RP-EVID-COMMON", "on"),
+    ("quick-fix", "delivery", "RP-EVID-COMMON", "existing DSL only"),
+    ("hotfix", "delivery", "RP-EVID-COMMON", "existing DSL only, isolation proof required"),
+    ("spike", "spike", None, "suspended, as strategy `S2`"),
 ])
-def test_trc_a6(tmp_path, approach, routing):
-    """The strategy is routed per delivery approach."""
+def test_trc_a6(tmp_path, approach, stored, row, routing):
+    """The strategy is routed per token a project rule adds; the spike keeps its own routing."""
     project = support.Project(tmp_path / "repo")
+    project.require_evidence = support.OPT_IN_BY_SIZE
+    project.setting(None)
     issue = project.issue("change", approach=approach)
     code, out, err = issue.assess()
     assert code == 0, out + err
-    assert issue.manifest()["delivery_approach"] == approach
+    manifest = issue.manifest()
+    assert manifest["delivery_approach"] == stored
+    if row is not None:
+        assert manifest["evidence_required"] and "stages" not in manifest, manifest
+        assert manifest["policy_rules_fired"][0]["id"] == row, manifest["policy_rules_fired"]
     line = _strategy_line(issue.approach_record())
-    assert line.endswith(f"Routing on the {approach} approach: {routing}."), line
+    assert line.endswith(f"Routing on the {stored} approach: {routing}."), line
 
 
 def test_trc_a6_the_record_quick_fix_start_writes_shows_the_line(tmp_path):
     """The quick-fix example of `TRC-A6`, on the record `quick-fix start` itself writes."""
     project = support.Project(tmp_path / "repo")
+    project.require_evidence = support.OPT_IN_BY_SIZE
+    project.setting(None)
     code, out, err = project.run(
         "quick-fix", "start", "docs", "--risk", "trivial - a docs edit",
         "--familiarity", "brownfield-mapped - known file", "--size", "atomic - one line",
@@ -141,13 +178,13 @@ def test_trc_a6_the_record_quick_fix_start_writes_shows_the_line(tmp_path):
         "--test", "tests/test_readme.py::test_names_the_command",
         "--expected-acceptance", "validation")
     assert code == 0, out + err
-    code, out, err = project.run("issue", "render", "--issue", "docs")
-    assert code == 0, out + err
-    records = list((project.root / "docs" / "compass").glob("*-docs/delivery-approach.md"))
-    assert len(records) == 1
-    line = _strategy_line(records[0].read_text(encoding="utf-8"))
+    task_dir = project.root / ".compass" / "work" / "docs"
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+    line = _strategy_line(support.strategy_line(manifest))
     assert "(`S17`): does not apply - acceptance of kind validation" in line, line
-    assert line.endswith("Routing on the quick-fix approach: existing DSL only."), line
+    # The project's rule for an atomic change keeps the routing the quick fix had.
+    assert manifest["delivery_approach"] == "delivery", manifest
+    assert line.endswith("Routing on the delivery approach: existing DSL only."), line
 
 
 # --- `TRC-A9` ------------------------------------------------------------------------------
@@ -199,7 +236,6 @@ def test_trc_a12(tmp_path, green, code, failed):
         issue.must("tdd-green", "--issue", "fix", "--scenario", "TRC-1", "--", "sh", "-c",
                    "echo 'tests/test_one.py::test_one PASSED'")
     assert issue.manifest()["acceptance_strategy"]["state"] == "off"
-    issue.must("issue", "render", "--issue", "fix")
     exit_code, document = issue.check()
     assert support.strategy_findings(document) == []
     assert sorted({r[0] for r in support.findings(document) if r[1] == "fail"}) == failed
@@ -254,92 +290,21 @@ def test_trc_a14(tmp_path):
     assert _row(issue.check()[1])["status"] == "nothing-to-check"
 
 
-# --- `TRC-A15` and `TRC-A21`: the retrospective ----------------------------------------------
-
-def _retro(project):
-    code, out, err = project.run("retro", "--acceptance")
-    assert code == 0, out + err
-    code, raw, err = project.run("retro", "--acceptance", "--format", "json")
-    assert code == 0, raw + err
-    return out, json.loads(raw)
-
-
-def _closed_in_scope(project, slug):
-    issue = project.issue(slug)
-    assert issue.assess()[0] == 0
-    issue.red()
-    issue.green()
-    issue.close()
-    return issue
-
-
-def test_trc_a15(tmp_path):
-    """The retrospective reports an opted-out project apart."""
-    project = support.Project(tmp_path / "repo")
-    project.setting({"state": "off", "reason": OFF_REASON})
-    for n in range(3):
-        _closed_in_scope(project, f"change-{n}")
-    text, report = _retro(project)
-    assert f"has opted out of the {STRATEGY}" in text and OFF_REASON in text, text
-    assert report["opted_out"] == {"reason": OFF_REASON}
-    assert report["measured"] == []
-    assert sorted(report["off"]) == ["change-0", "change-1", "change-2"]
-
-
-WAIVER_REASON = "the staging environment is down until 3 November"
-
-
-def test_trc_a21(tmp_path):
-    """The retrospective reports an issue that stepped off apart."""
-    project = support.Project(tmp_path / "repo")
-    project.setting(None, owner="jed72")
-    for n in range(3):
-        _closed_in_scope(project, f"change-{n}")
-    issue = support.Issue(project, "change-1")
-    body = issue.manifest()
-    body["config"] = {"checks": {CHECK: {
-        "set": {"on_skipped": "pass"},
-        "waiver": {"reason": WAIVER_REASON, "approved_by": "EV-W1"}}}}
-    body["evidence"].append({
-        "id": "EV-W1", "type": "human-approval", "decision": "approved",
-        "approver": "jed72", "role": "owner", "scope": "waiver",
-        "timestamp": "2026-10-29T10:00:00Z",
-        "waiver": {"scope": "issue", "entry": f"checks.{CHECK}",
-                   "fields": {"on_skipped": {"from": "not-applicable", "to": "pass"}}}})
-    issue.write_manifest(body)
-    code, out, err = issue.assess(reason="step off the strategy for one issue")
-    assert code == 0, out + err
-    # An issue closed as not planned delivered nothing, so it is not measured.
-    dropped = project.issue("dropped")
-    assert dropped.assess()[0] == 0
-    dropped.red()
-    body = dropped.manifest()
-    body.update({"status": "done", "close_reason": "not-planned"})
-    dropped.write_manifest(body)
-    text, report = _retro(project)
-    assert "change-1" in text and WAIVER_REASON in text, text
-    assert sorted(report["measured"]) == ["change-0", "change-2"]
-    assert report["stepped_off"] == [{"issue": "change-1", "reason": WAIVER_REASON}]
-
-
 # --- `TRC-A19` -----------------------------------------------------------------------------
 
 def test_trc_a19():
     """The strategy changes no locked guardrail, and the definition of a strategy changed."""
     before = support.recorded("guardrails")["checks"]
-    now = yaml.safe_load((ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8"))
+    now = shipped_view("guardrails.yml")
     lists = {g["id"]: g["checks"] for g in now["defaults"]}
     assert {g: lists[g] for g in ("G1", "G4")} == before
-    preset = yaml.safe_load(
-        (ROOT / "governance" / "presets" / "default" / "preset.yml").read_text(encoding="utf-8"))
-    locked = [entry for kind in preset["locks"].values() for entry in kind]
+    # No lock exists since 9.0.0 (ADR-094); `never_waived` holds the 8.x hard locks.
+    locked = shipped("preset.yml")["never_waived"]
     for check in support.STRATEGY_CHECKS:
         assert f"checks.{check}" not in locked, check
-    checks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "checks.yml")
-                            .read_text(encoding="utf-8"))["checks"]
+    checks = shipped("checks.yml")["checks"]
     assert CHECK in checks and not checks[CHECK].get("locked")
-    gates = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "gates.yml")
-                           .read_text(encoding="utf-8"))["gates"]
+    gates = shipped("gates.yml")["gates"]
     assert not [g for g, body in gates.items() if CHECK in (body.get("checks") or [])]
     sentence = "can carry blocking checks that a recorded step-off makes advisory"
     terms = yaml.safe_load((ROOT / "governance" / "terminology.yml").read_text(encoding="utf-8"))
@@ -349,8 +314,6 @@ def test_trc_a19():
     introduction = strategies[:strategies.index("\n## ")]
     assert sentence in " ".join(introduction.split())
     assert "No strategy fails `compass check`" not in introduction
-    header = (ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8")
-    assert sentence in " ".join(line.lstrip("# ") for line in header.splitlines()[:30])
 
 
 def _terms(doc):
@@ -384,44 +347,51 @@ def test_trc_a22():
 
 # --- `TRC-A23` -----------------------------------------------------------------------------
 
-@pytest.mark.parametrize("major, applies", [(6, False), (7, False), (8, True)])
-def test_trc_a23(tmp_path, major, applies):
-    """A project pinned to an earlier major does not get the strategy."""
+@pytest.mark.parametrize("major", [6, 7, 8])
+def test_trc_a23(tmp_path, major):
+    """A project that still names `extends: compass:default@<major>` gets the
+    strategy. 9.0.0 does not read `extends:`, so a pin before @8 no longer keeps
+    `S17` off; `compass migrate` writes `acceptance_strategy: off` in its place
+    (ADR-098 open question 6)."""
     project = support.Project(tmp_path / "repo")
     project.setting(None, extends=f"compass:default@{major}")
     issue = project.issue("change")
     code, out, err = issue.assess()
     assert code == 0, out + err
-    assert ("acceptance_strategy" in issue.manifest()) is applies
+    assert "acceptance_strategy" in issue.manifest()
     issue.red()
     code, document = issue.check()
-    assert bool([c for c in document["checks"] if c["name"] == CHECK]) is applies
+    assert [c for c in document["checks"] if c["name"] == CHECK]
     line = _strategy_line(issue.approach_record())
-    if applies:
-        assert "(`S17`): applies - " in line, line
-    else:
-        assert f"project extends compass:default@{major}, before the strategy" in line, line
-        assert "assessed before the strategy shipped" not in line, line
+    assert "(`S17`): applies - " in line, line
 
 
 # --- `TRC-A24` -----------------------------------------------------------------------------
 
 def test_trc_a24(tmp_path):
-    """A shipping approach cannot suspend the strategy; the spike keeps `suspended`."""
+    """A shipping approach cannot suspend the strategy; the spike keeps `suspended`.
+
+    `delivery` is the check set's one shipping approach since 9.0.0 (ADR-092),
+    and it does not suspend the strategy. No configuration can change that:
+    `approaches:` in `compass.yml` is a removed setting, left out with
+    `L-SETTING-REMOVED`, and the layers and git parents were removed with the
+    lint that refused a suspending `delivery` (ADR-094), so the strategy stays on."""
     import sys
     sys.path.insert(0, str(ROOT / "cli"))
-    from compass_pkg import acceptance_strategy, policy_lint
+    from compass_pkg import acceptance_strategy, check_set
+    assert acceptance_strategy.approach_routing(check_set.load(), "spike") == "suspended"
+    assert acceptance_strategy.approach_routing(check_set.resolved(), "delivery") == "on"
     project = support.Project(tmp_path / "repo")
-    project.setting(None, approaches={"regular": {"set": {"acceptance_strategy": "suspended"}}})
+    (project.root / "compass.yml").write_text(
+        "schema: 1\napproaches:\n  delivery:\n    set: {acceptance_strategy: suspended}\n",
+        encoding="utf-8")
     code, out, err = project.run("policy", "lint")
-    assert code != 0, out + err
-    assert "acceptance_strategy: {state: off, reason:" in out + err, out + err
-    issue = project.issue("change")
-    code, out, err = issue.assess()
-    assert code == 2, out + err
-    assert "acceptance_strategy: {state: off, reason:" in out + err, out + err
-    shipped, _ = policy_lint.load_parent()
-    assert acceptance_strategy.approach_routing(shipped.doc, "spike") == "suspended"
+    assert code == 0, out + err
+    assert "L-SETTING-REMOVED [project] approaches" in out + err, out + err
+    assert "M-ACCEPTANCE-SUSPENDED" not in out + err, out + err
+    from compass_pkg import effective
+    resolved = effective.resolve_live(str(project.root)).resolved
+    assert acceptance_strategy.approach_routing(resolved, "delivery") == "on"
 
 
 def test_trc_a3_a_quick_fix_started_as_validation_costs_nothing(tmp_path):
@@ -455,9 +425,8 @@ def test_trc_a13_an_empty_key_is_refused(tmp_path):
 
 
 def test_trc_a23_a_pinned_compass_yml_still_passes_its_schema(tmp_path):
-    """The strategy ignores the setting in a pinned project, but `compass.yml`
-    must still pass its schema check, so an issue with no stored configuration
-    is refused (`TRC-A23`)."""
+    """`compass.yml` must pass its schema check whatever `extends:` names, so an
+    issue with no stored configuration is refused (`TRC-A23`)."""
     project = support.Project(tmp_path / "repo")
     issue = project.issue("change")
     (project.root / "compass.yml").write_text(
@@ -466,59 +435,14 @@ def test_trc_a23_a_pinned_compass_yml_still_passes_its_schema(tmp_path):
     assert code == 2 and "acceptance_strategy" in out + err, out + err
 
 
-def test_trc_a23_a_bad_setting_does_not_stop_a_pinned_project(tmp_path):
-    """The strategy's setting is not read in a project pinned before it (`TRC-A23`)."""
+def test_trc_a23_a_pinned_project_reads_its_setting(tmp_path):
+    """A project that names `extends: compass:default@7` reads the strategy's
+    setting like any other project, so `off` with a reason keeps it off (`TRC-A23`)."""
     project = support.Project(tmp_path / "repo")
+    project.setting({"state": "off", "reason": "kept off from 8.x"},
+                    extends="compass:default@7")
     issue = project.issue("change")
-    project.setting(None, extends="compass:default@7")
-    assert issue.assess()[0] == 0
-    (project.root / "compass.yml").write_text(
-        "schema: 1\nextends: compass:default@7\nacceptance_strategy: maybe\n", encoding="utf-8")
-    assert issue.run("check", "--issue", "change")[0] != 2
-    assert project.run("retro", "--acceptance")[0] == 0
-
-
-def test_trc_a23_a_changed_pin_never_blocks_the_record(tmp_path):
-    """The pin line comes from the project's `compass.yml`, not the issue's own
-    records, so a changed `extends:` makes the block stale only as an advisory,
-    as for any block drawn from the project (`TRC-A23`)."""
-    project = support.Project(tmp_path / "repo")
-    project.setting(None, extends="compass:default@6")
-    issue = project.issue("change")
-    assert issue.assess()[0] == 0
-    issue.approach_record()
-    body = issue.manifest()
-    body["current_phase"] = "verify"
-    issue.write_manifest(body)
-    assert issue.run("issue", "render", "--issue", "change")[0] == 0
-
-    def status():
-        rows = [c for c in issue.check()[1]["checks"] if c["name"] == "rendered-blocks-current"]
-        return rows[0]["status"]
-
-    assert status() == "pass"
-    project.setting(None, extends="compass:default@8")
-    assert status() == "advisory"
-
-
-@pytest.mark.parametrize("stage", ["verify", "done"])
-def test_trc_a23_a_stale_stored_line_still_blocks(tmp_path, stage):
-    """A stored block is the issue's own record, so a line that no longer
-    matches it fails at the `verify` stage and on a done issue (`TRC-A23`)."""
-    project = support.Project(tmp_path / "repo")
-    issue = project.issue("change")
-    assert issue.assess()[0] == 0
-    issue.approach_record()
-    body = issue.manifest()
-    assert body["acceptance_strategy"], body
-    if stage == "verify":
-        body["current_phase"] = "verify"
-    else:
-        body.update(status="done", land_timestamp="2026-10-29T12:00:00Z")
-    issue.write_manifest(body)
-    assert issue.run("issue", "render", "--issue", "change")[0] == 0
-    body = issue.manifest()
-    body["acceptance_strategy"]["why"] = "a reason the record does not show"
-    issue.write_manifest(body)
-    rows = [c for c in issue.check()[1]["checks"] if c["name"] == "rendered-blocks-current"]
-    assert rows[0]["status"] == "fail", rows
+    code, out, err = issue.assess()
+    assert code == 0, out + err
+    held = issue.manifest()["acceptance_strategy"]
+    assert held["state"] == "off" and held["why"] == "kept off from 8.x", held

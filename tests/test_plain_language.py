@@ -236,7 +236,11 @@ def test_pl_c1_strategy_states_the_order_with_four_real_pairs():
 
 def test_pl_c5_reviewer_instructions_name_the_bare_code():
     """`TRC-C5` - the reviewer is told what to look for, not just to be careful."""
-    doc = (REPO_ROOT / "agents" / "reviewer.md").read_text(encoding="utf-8")
+    # The review dimensions file carries the review method the reviewer agent
+    # had until 9.0.0 (ADR-090, ADR-092); it moved there from `commands/ship.md`
+    # with ADR-099.
+    doc = (REPO_ROOT / "skills" / "evidence-gates"
+           / "review-dimensions.md").read_text(encoding="utf-8")
     # Normalise whitespace and emphasis first, because hard-wrapped prose
     # splits phrases across lines.
     low = " ".join(doc.replace("*", "").split()).lower()
@@ -326,44 +330,12 @@ def test_pl_d4_correction_rule_is_stated_as_a_checklist_item():
     )
 
 
-def test_pl_c2b_the_receipt_puts_meaning_before_the_policy_code():
-    """`TRC-C2` - the release's own receipt obeys the rule the release writes.
-
-    `compass issue receipt` rendered each fired policy rule as
-    "<id>: <rationale>", so a reader met an unresolvable code and learned what
-    it did only afterwards. That is the defect `S7` forbids in as many words,
-    in the flagship artifact of the release that forbids it.
-
-    Deliberately narrow. Two other findings from the same read - the Gates
-    block naming eight ids with no statement of what they check, and
-    justifications truncated mid-sentence - are NOT fixed here: both need
-    design and a one-screen budget, and they are filed as
-    receipt-and-scan-container-gaps.
-
-    Reads the checked-in fixture, not the live issue - the live issue lives
-    in a directory git ignores.
-    """
-    out = _fixture_receipt()
-    fired = [l for l in out.splitlines() if re.search(r"\((RP|G|S)[-\w]+\)\s*$", l)]
-    assert fired, "no fired policy rules in the receipt to check"
-    for line in fired:
-        body = line.strip()
-        assert not re.match(r"^(RP|G|S|TRC|EV|INT|FU|CLM)[-\w]*\s*:", body), (
-            f"the receipt still opens a policy-rule line with its code:\n  {body}\n"
-            f"State what the rule did, then the code in brackets."
-        )
-        assert re.search(r"\((RP|G|S)[-\w]+\)\s*$", body), (
-            f"the code should follow the meaning, in brackets, so it stays "
-            f"searchable:\n  {body}"
-        )
-
-
 def test_pl_c12_claims_gate_states_traceability_not_truth():
     """`TRC-C12` - the one gate whose name promises less than a reader hears."""
-    g = (REPO_ROOT / "governance" / "guardrails.yml").read_text(encoding="utf-8")
+    g = (REPO_ROOT / "governance" / "check-set.yml").read_text(encoding="utf-8")
     g_norm = " ".join(g.split()).lower()
     assert "traceability, not truth" in g_norm, (
-        "guardrails.yml does not say claim-traces-to-scenario checks "
+        "check-set.yml does not say claim-traces-to-scenario checks "
         "traceability rather than truth"
     )
     skill = _evidence_gates_text()
@@ -479,16 +451,17 @@ def test_pl_c9_derivation_failure_names_the_file():
     with pytest.raises(EmptyRegistry) as exc:
         gloss_registry(guardrails={}, strategies={}, codes={})
     msg = str(exc.value)
-    for named in ("guardrails.yml", "strategies.md", "codes"):
+    for named in ("check-set.yml", "strategies.md", "codes"):
         assert named in msg, (
             f"the failure does not name {named!r} as a source it derives from - "
             f"someone meeting this error has nowhere to look")
     assert "refuses to report a count of zero" in msg, (
         "the failure does not say why it refuses to report zero")
 
-    # Visible from the other end: each source says a check reads its structure.
+    # Visible from the other end: the source says a check reads its structure.
+    # The check set carries no such note: its bytes are pinned per version
+    # (`tests/fixtures/check-set-digests.yml`).
     for path, phrase in (
-        ("governance/guardrails.yml", "A CHECK DERIVES FROM THIS FILE'S STRUCTURE"),
         ("governance/terminology.yml", "A CHECK DERIVES FROM THIS BLOCK'S STRUCTURE"),
     ):
         text = (REPO_ROOT / path).read_text(encoding="utf-8")
@@ -527,31 +500,6 @@ def test_pl_d5_empty_scan_habit_is_stated():
         "nothing while the plain pattern found four uses")
 
 
-def test_pl_g3_living_spec_title_matches_its_source_scenario():
-    """`TRC-G3` - the derived spec says what its source says.
-
-    The living spec derives from each landed issue's `manifest.yml` scenario
-    TITLES, not from the prose headings. A correction applied to the heading
-    and not the manifest leaves the two disagreeing, and the derivation
-    faithfully reproduces the one nobody edited.
-    """
-    text = "".join((REPO_ROOT / "docs" / name).read_text(encoding="utf-8")
-                   for name in ("system-spec.md", "system-spec-archive.md"))
-    # Assembled, never written literally - the same convention every other
-    # guard in this suite uses, so this file is not an exception to the rule
-    # it enforces.
-    needle = "vacu" + "ous"
-    needle2 = "vacu" + "ity"
-    assert needle not in text and needle2 not in text, (
-        "the living spec still carries a word on the everyday-words list. It is "
-        "derived - fix the source scenario title in its issue's manifest.yml and "
-        "re-derive; editing this file is undone by the next derivation.")
-    src = REPO_ROOT / ".compass/work/identifiers-and-vocabulary-in-printed-output/manifest.yml"
-    if src.is_file():
-        assert needle not in src.read_text(encoding="utf-8"), (
-            "the SOURCE manifest still says it, so the next derivation puts it back")
-
-
 def test_pl_d6_correction_rule_distinguishes_record_from_claim():
     """`TRC-D6` - which places take a correction, and which take a note.
 
@@ -578,12 +526,6 @@ def test_pl_d6_correction_rule_distinguishes_record_from_claim():
         "is in neither file the rule is unsupported")
 
 
-# A purpose-built issue on disk, not the one being worked on. These tests assert
-# properties of the RENDERER, and a fixture exercises that completely.
-#
-# A test that reads the current issue passes only while that issue is
-# current, and its state is not in version control.
-RECEIPT_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "receipt-fixture-project"
 
 def _evidence_gates_text():
     """Reads SKILL.md and its sibling files.
@@ -599,57 +541,16 @@ def _evidence_gates_text():
 
 
 
-def _fixture_receipt() -> str:
-    import subprocess
-    import sys as _sys
-    r = subprocess.run(
-        [_sys.executable, str(REPO_ROOT / "cli" / "compass"), "issue", "receipt",
-         "--issue", "receipt-example", "--workdir", str(RECEIPT_FIXTURE)],
-        cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=60)
-    assert r.returncode == 0, (
-        f"the receipt fixture would not render, so nothing below establishes "
-        f"anything:\n{r.stdout}{r.stderr}")
-    return r.stdout
-
-
-def test_pl_c13_evidence_rows_are_one_line_and_lead_with_what_was_proved():
-    """`TRC-C13` - the evidence block is a table a reader can scan down.
-
-    One line per entry, and what was proved before where to find it.
-    """
-    out = _fixture_receipt()
-    block = out.split("Evidence\n--------\n", 1)[1].split("\n\n", 1)[0]
-    rows = [l for l in block.splitlines() if l.strip()]
-
-    orphans = [l for l in rows if not re.match(r"\s+EV-", l)]
-    assert not orphans, (
-        f"{len(orphans)} continuation line(s) in the evidence block. Every "
-        f"entry is one row, or the block cannot be scanned:\n  "
-        + "\n  ".join(orphans[:5]))
-
-    # Asserted as properties, not as the words the fixture happens to use, so
-    # rewording the fixture does not fail a test whose subject is the layout.
-    titled = [l for l in rows if "the fixture scenario" in l]
-    assert titled, f"no row carries a scenario title:\n{block}"
-    row = titled[0]
-    assert row.index("the fixture scenario") < row.index("test-run"), (
-        f"the row puts the evidence type before what was proved:\n  {row}")
-    assert "evidence/" not in block, (
-        "the evidence block still prints file paths. They were retired on "
-        "2026-08-15: widest column, derivable from the id for per-scenario "
-        "records, and rendered as 'evidence/gr...' once the line capped.")
-    assert "SCN-001 - the fixture scenario" in row, (
-        "the row dropped the scenario id. The title is the content and the id "
-        "is the cross-reference; a record whose evidence id does not carry the "
-        "scenario would lose its link entirely.")
-
-
 def test_pl_c15_evaluator_puts_meaning_before_the_code():
-    """`TRC-C15` - both screens that print a fired rule read the same way.
+    """`TRC-C15` - the screen that prints a fired rule puts the meaning first.
 
-    Both screens that print a fired rule must put the meaning first: the
-    receipt and `compass approach evaluate`. This asserts the property on
-    both, not just one - one screen's renderer can drift from the other's.
+    The receipt was the second such screen until 9.0.0 removed it (ADR-091);
+    `compass approach evaluate` remains.
+
+    The first screen shows three fired rules. On the path the evidence rows
+    come before the floors (ADR-092), so the assessment has no `auth` label:
+    with one, `RP-FLOOR-002` is the fifth rule and is not on the screen. Every
+    rule line on the screen is checked, as well as the floor's.
     """
     import subprocess
     import sys as _sys
@@ -657,14 +558,16 @@ def test_pl_c15_evaluator_puts_meaning_before_the_code():
         [_sys.executable, str(REPO_ROOT / "cli" / "compass"), "approach", "evaluate",
          "--assessment", "risk=contained",
          "--assessment", "familiarity=brownfield-unmapped",
-         "--assessment", "size=standard", "--assessment", "goal=delivery",
-         "--assessment", "role=engineer", "--assessment", "labels=auth"],
+         "--assessment", "size=medium", "--assessment", "goal=delivery",
+         "--assessment", "role=engineer"],
         cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=60).stdout
-    rc = _fixture_receipt()
 
-    for screen, out, marker in (("evaluator", ev, "written down"),
-                                ("receipt", rc, "Architectural fitness")):
+    for screen, out, marker in (("evaluator", ev, "written down"),):
         rule_lines = [l for l in out.splitlines() if marker in l]
+        assert rule_lines, f"no fired-rule line found on the {screen} screen"
+        choices = out.split("Key choices:", 1)[-1].split("\n\n", 1)[0]
+        rule_lines += [l for l in choices.splitlines()
+                       if l.strip().startswith("- ") and marker not in l]
         assert rule_lines, f"no fired-rule line found on the {screen} screen"
         for line in rule_lines:
             body = line.strip().lstrip("- ")

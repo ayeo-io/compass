@@ -1,9 +1,12 @@
 """The command files speak the v2 names.
 
-The eight pipeline commands are assess, define, refine, plan, breakdown,
-implement, verify, ship; the designer entry point is design; the retired
-names were removed at 4.0.0; the vocabulary file names them; and no live
-instruction surface may point at a retired name.
+The four-stage path (ADR-092) runs through `go`, with `quick-fix` as its short
+form, `assess` for a re-assess and a spike, and `ship` for the review and the
+commit. The six stage commands (`define`, `refine`, `plan`, `breakdown`,
+`implement` and `verify`) went with it. The four role entry points
+(`intent`, `design`, `position` and `consult`) went in 9.0.0 (ADR-093). The
+retired names were removed at 4.0.0; the vocabulary file names them; and no
+live instruction surface may point at a retired name.
 """
 from __future__ import annotations
 
@@ -17,19 +20,16 @@ REPO_ROOT = Path(__file__).parent.parent
 COMMANDS = REPO_ROOT / "commands"
 
 V2_COMMANDS = {
-    "assess", "define", "refine", "plan", "breakdown", "implement",
-    "verify", "ship", "design", "intent", "position", "consult",
+    "assess", "ship",
     "status", "flow", "resume", "init",
-    # docs-compass-artifacts: the quick-fix approach's single-command entry
-    # point. It inlines assess, define, implement, verify and ship for a small,
-    # safe change rather than delegating to the five stage commands, so the
-    # light path costs one command file and one skill instead of thirteen files.
+    # The short form of `go`: start, red and finish for a change the person
+    # already knows is small, in one command file.
     "quick-fix",
     # approve-inside-claude-code (ADR-068, ADR-069): the four commands a person
     # types to answer, delegate and revoke approvals. The model cannot invoke them.
     "approve", "reject", "delegate", "revoke",
-    # one-entry-point: the single command for the ordinary path. It assesses
-    # with quick-fix start and continues into the computed approach.
+    # The single command for the four-stage path (ADR-092). It assesses with
+    # quick-fix start and follows the `next:` line each verb prints.
     "go",
 }
 
@@ -101,7 +101,7 @@ def test_the_vocabulary_carries_the_command_names_and_a_version_bump():
         "the Frame ban entry does not name assess as the replacement. It has "
         "to point at the current name: a ban naming a banned replacement "
         "sends a reader to a word they must rename again")
-    stages = bans["Specify / Clarify / Distribute / Land"]
+    stages = bans["Clarify / Distribute / Land"]
     joined = stages.get("replacement", "") + stages.get("context", "")
     for cmd in ("define", "refine", "breakdown", "ship"):
         assert cmd in joined, (
@@ -153,25 +153,3 @@ def test_no_live_surface_points_at_a_dead_command_name():
                 hits.append(f"{rel}:{lineno}: {line.strip()[:80]}")
     assert not hits, (
         "retired command names on live surfaces:\n  " + "\n  ".join(hits[:20]))
-
-
-def test_the_ruling_conditions_hold():
-    """`TRC-6`: define's one-line description leads with 'Acceptance criteria';
-    design's says it produces the UI contract; and the UI-contract
-    template's producer line points at /compass:design."""
-    def description(name: str) -> str:
-        text = (COMMANDS / f"{name}.md").read_text(encoding="utf-8")
-        m = re.search(r"^description:\s*(.+)$", text, re.M)
-        assert m, f"{name}.md has no description line"
-        return m.group(1)
-
-    assert description("define").startswith("Acceptance criteria"), (
-        "define's description must lead with 'Acceptance criteria' - the "
-        "bare verb is the vaguest in the set")
-    assert "UI contract" in description("design"), (
-        "wireframe's description must state it produces the UI contract")
-    assert "/compass:design" in (
-        REPO_ROOT / "templates" / "ui-contract.md").read_text(
-        encoding="utf-8"), (
-        "templates/ui-contract.md's producer line must point at "
-        "/compass:design")

@@ -13,7 +13,7 @@ The allowance is a named list, never a prefix: anything under `.compass/`
 would re-admit a sibling issue's artifacts into this issue's commit, which
 is exactly what the check exists to stop.
 
-Scenario ids: see docs/system-spec.md (group D).
+Scenario ids: see the issue's acceptance criteria (group D).
 """
 
 # These tests assert the current file names; files written under older
@@ -100,3 +100,14 @@ def test_rcd_d2b_a_sibling_issues_artifacts_are_still_refused():
         "a sibling issue's artifacts were accepted into this issue's commit - "
         "the allowance widened to a prefix instead of a named set"
     )
+
+
+def test_the_project_index_is_out_of_scope():
+    """9.0.0 writes no project index (ADR-091), the `README.md` of the
+    `docs/compass/` folder, so it is no longer framework bookkeeping (#358). A
+    ship commit that stages it is refused, and the refusal names the file."""
+    owned, artifact_dir = _scope()
+    stray = manifest._out_of_scope(
+        ["src/app.py", "docs/compass/README.md"], owned, artifact_dir)
+
+    assert stray == ["docs/compass/README.md"], stray

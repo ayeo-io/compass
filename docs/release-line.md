@@ -13,8 +13,8 @@ The line is the manifest's `release_note:` key, an optional string. The manifest
 the only copy. Every document that shows the line renders it from the manifest, so no
 document holds a second copy that could drift.
 
-Write it for a user: one sentence for a quick fix or a hotfix, a paragraph for regular
-or full. No command checks the length.
+Write it for a user: one sentence for a small change, a paragraph for a larger one.
+No command checks the length.
 
 ## Who writes it
 
@@ -24,7 +24,7 @@ flag is given:
 | Command | When it writes |
 |---|---|
 | `compass acceptance record --release-note "<text>" -- <command>` | After the command passes, with the evidence record. A failed run stores nothing. |
-| `compass ship-commit --issue <slug> --release-note "<text>"` | After every landing refusal passes and before the landing render, so the landing commit's documents show the line. When nothing is staged and the issue lands at HEAD, after the stale-green, document and scope refusals. |
+| `compass ship-commit --issue <slug> --release-note "<text>"` | After every landing refusal passes and before the landing commit. When nothing is staged and the issue lands at HEAD, after the stale-green, document and scope refusals. |
 | `compass quick-fix finish --release-note "<text>" -- <command>` | It passes the line to `ship-commit`. With `--no-commit`, it stores the line once the three gates pass. |
 
 The latest write wins. A `ship-commit` with no flag keeps the stored line. A write that
@@ -41,12 +41,15 @@ lose one another's change; the release line does not change that.
 Before anything is written, a given line is stripped of leading and trailing space and
 refused when:
 
-- it is blank: the `release-line-missing` refusal, the same text a landing gives;
-- it starts with `#`: the `release-line-heading` refusal, because the living spec reads
-  a line such as `### <slug> (completed <date>)` as one of its issue headings;
-- the living spec's title rules refuse it as a scenario title, with the reason
-  `compass scenario add` gives: a path that does not exist, an eval scenario id, a
-  duration attached to a user's experience, or an outside user's experience.
+- it is blank: the `release-line-missing` refusal, the code a landing gives, naming
+  the writer to run again;
+- it starts with `#`: the `release-line-heading` refusal, because `compass release notes`
+  prints the line under a heading such as `### <slug> (completed <date>)`, where it
+  would read as a heading of its own. The refusal names the writer to run again with
+  `--release-note`;
+- the scenario title rules refuse it, with the reason
+  `compass scenario add` gives: a path that does not exist, a duration attached to
+  a user's experience, or an outside user's experience.
 
 Each writer also refuses a completed or closed issue, naming it as completed or closed,
 so a landed record is never rewritten. `ship-commit --release-note` takes the issue from
@@ -61,14 +64,17 @@ manifest; every reader prints the line on one line.
 runs at every landing, `compass ship-commit` and `compass quick-fix finish`, before
 anything is staged or written. `ship-commit` judges a copy of the manifest with the
 given `--release-note` applied, and `quick-fix finish` judges it before it runs the test
-command.
+command. The refusal does not know which landing runs it, so its fix line
+names both (`release_line.LANDING_VERBS`).
 
 The refusal judges an issue only when all four of these hold, and declines otherwise:
 
 1. the landing names the issue (`--issue`, `COMPASS_ISSUE` or the current-task pointer);
 2. the issue is not completed and not closed;
 3. its manifest has a `generation` key;
-4. its stored configuration sets `release_line: true` on its approach.
+4. its stored configuration sets `release_line: true` on its approach. An issue on
+   the four-stage path (ADR-092) has no approach entry: it owes a line when the
+   configuration sets the field on any approach except the spike.
 
 When it judges, it refuses an issue whose `release_note` is absent or blank. So:
 
@@ -87,11 +93,6 @@ The refusal is not a check of `compass check`, so no archived issue is judged by
 
 ## Where it is shown
 
-- The verification report's `## Release line` section, through the `release-line`
-  rendered block (`docs/rendered-blocks.md`).
-- The verification note of a quick fix, as `Release: <text>`.
-- The project index, in the Release column.
-- The living spec, under the issue's heading.
 - `compass release notes --since <ref>` (`docs/release-notes.md`).
 
 ## Refusal codes

@@ -1,15 +1,15 @@
 {
   "quick-fix/fresh": {
     "exit": 0,
-    "stdout": "Define [gate: verify.correctness] | Refine, Plan collapsed in this approach\n"
+    "stdout": "Specify [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name> | Refine, Plan collapsed in this approach\n"
   },
   "quick-fix/implementing": {
     "exit": 0,
-    "stdout": "Implement [gate: verify.correctness] | Refine, Plan collapsed in this approach\n"
+    "stdout": "Build [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name> | Refine, Plan collapsed in this approach\n"
   },
   "quick-fix/verifying": {
     "exit": 0,
-    "stdout": "Verify [gate: verify.correctness] | Refine, Plan collapsed in this approach\n"
+    "stdout": "Ship [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name> | Refine, Plan collapsed in this approach\n"
   },
   "quick-fix/landed": {
     "exit": 0,
@@ -17,19 +17,19 @@
   },
   "quick-fix/gates-pass": {
     "exit": 0,
-    "stdout": "Ship | Refine, Plan collapsed in this approach\n"
+    "stdout": "Ship | next: compass scenario add TRC-001 --intent <intent id> --test <path::name> | Refine, Plan collapsed in this approach\n"
   },
   "feature/fresh": {
     "exit": 0,
-    "stdout": "Define [gate: verify.correctness]\n"
+    "stdout": "Specify [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name>\n"
   },
   "feature/implementing": {
     "exit": 0,
-    "stdout": "Implement [gate: verify.correctness]\n"
+    "stdout": "Build [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name>\n"
   },
   "feature/verifying": {
     "exit": 0,
-    "stdout": "Verify [gate: verify.correctness]\n"
+    "stdout": "Ship [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name>\n"
   },
   "feature/landed": {
     "exit": 0,
@@ -37,19 +37,19 @@
   },
   "feature/gates-pass": {
     "exit": 0,
-    "stdout": "Ship\n"
+    "stdout": "Ship | next: compass scenario add TRC-001 --intent <intent id> --test <path::name> | the stage 2 review passes without waiting; record it: compass issue checkpoint add implement --outcome skipped --by builder\n"
   },
   "initiative/fresh": {
     "exit": 0,
-    "stdout": "Define [gate: verify.correctness]\n"
+    "stdout": "Specify [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name>\n"
   },
   "initiative/implementing": {
     "exit": 0,
-    "stdout": "Implement [gate: verify.correctness]\n"
+    "stdout": "Build [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name>\n"
   },
   "initiative/verifying": {
     "exit": 0,
-    "stdout": "Verify [gate: verify.correctness]\n"
+    "stdout": "Ship [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name>\n"
   },
   "initiative/landed": {
     "exit": 0,
@@ -57,19 +57,19 @@
   },
   "initiative/gates-pass": {
     "exit": 0,
-    "stdout": "Ship\n"
+    "stdout": "Ship | next: compass scenario add TRC-001 --intent <intent id> --test <path::name> | the stage 2 review passes without waiting; record it: compass issue checkpoint add implement --outcome skipped --by builder\n"
   },
   "spike/fresh": {
     "exit": 0,
-    "stdout": "Define [gate: spike.conclude] | Plan collapsed in this approach\n"
+    "stdout": "Specify [gate: spike.conclude] | next: compass evidence add EV-SPIKE --type spike-conclusion --path <file> --decision <discard|graduate-to-delivery|defer> | Plan collapsed in this approach\n"
   },
   "spike/implementing": {
     "exit": 0,
-    "stdout": "Implement [gate: spike.conclude] | Plan collapsed in this approach\n"
+    "stdout": "Build [gate: spike.conclude] | next: compass evidence add EV-SPIKE --type spike-conclusion --path <file> --decision <discard|graduate-to-delivery|defer> | Plan collapsed in this approach\n"
   },
   "spike/verifying": {
     "exit": 0,
-    "stdout": "Verify [gate: spike.conclude] | Plan collapsed in this approach\n"
+    "stdout": "Ship [gate: spike.conclude] | next: compass evidence add EV-SPIKE --type spike-conclusion --path <file> --decision <discard|graduate-to-delivery|defer> | Plan collapsed in this approach\n"
   },
   "spike/landed": {
     "exit": 0,
@@ -77,10 +77,10 @@
   },
   "spike/gates-pass": {
     "exit": 0,
-    "stdout": "Ship | Plan collapsed in this approach\n"
+    "stdout": "Ship | next: compass evidence add EV-SPIKE --type spike-conclusion --path <file> --decision <discard|graduate-to-delivery|defer> | Plan collapsed in this approach\n"
   },
   "feature/no-approach-record": {
-    "exit": 2,
-    "stdout": ""
+    "exit": 0,
+    "stdout": "Specify [gate: verify.correctness] | next: compass scenario add TRC-001 --intent <intent id> --test <path::name>\n"
   }
 }

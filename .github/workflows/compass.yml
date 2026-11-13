@@ -214,11 +214,12 @@ jobs:
     # whole suite, which the merge queue runs once. A draft and a title or
     # body edit run none. Most pull requests finish in a few minutes. The
     # limit allows for a release, whose changed test files are most of the
-    # suite: 9.0.0 changed 372 of them and reached 84% at 15 minutes.
+    # suite: 9.0.0 changed 372 of them, which took 21 to 29 minutes before the
+    # serial step.
     needs: already-tested
     if: ${{ !cancelled() && github.event_name == 'pull_request' && !github.event.pull_request.draft && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:

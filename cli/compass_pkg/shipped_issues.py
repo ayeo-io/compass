@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass_pkg.shipped_issues - which completed issues ship, and how the living
-# spec names them
+# compass_pkg.shipped_issues - which completed issues ship, and how an older
+# living spec names them
 # =============================================================================
 #
 # DEPENDENCY: standard library; compass_pkg.core, status_words, stable_ids.
 # It must not import compass_pkg.flow or the manifest cache module: the
 # release notes verb reads through this module and must not load that cache.
 # =============================================================================
-"""The facts the living spec derivation and `compass release notes` share.
+"""Which completed issues ship, and which issues a living spec names.
 
-Both read the same records and answer the same two questions: is an issue
-completed and does its approach ship, and which issues does a living spec
-already name. One definition keeps the two views from drifting apart.
+`compass release notes` reads both. 9.0.0 derives no living spec (ADR-091),
+but a revision made before then still holds one, and the issues it names
+place an issue whose land commit a squash merge left off the branch.
 """
 from __future__ import annotations
 
@@ -23,9 +23,10 @@ from compass_pkg import status_words
 from compass_pkg.core import CompassError, load_yaml, manifest_path, normalize_spine
 from compass_pkg.stable_ids import APPROACH_SPIKE
 
-# The living spec and its archive, project-relative. Only the derivation
-# writes them, and ship-commit commits them at landing, so they are never
-# one issue's change to trace.
+# The living spec and its archive, project-relative. 9.0.0 derives neither
+# (ADR-091), but a branch or tag made before then can still hold them: the
+# scope check at landing still passes over them, and `compass release notes`
+# still reads them at an older revision to place an issue.
 LIVING_SPEC_FILES = ("docs/system-spec.md", "docs/system-spec-archive.md")
 
 # Specs written before 2.0.0 label the source with the retired word for an

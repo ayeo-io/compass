@@ -36,7 +36,8 @@ import re as _re
 from compass_pkg.checks import _spec_sha256
 from compass_pkg.terminal import say
 from compass_pkg.manifest_store import load_manifest_mapping
-from compass_pkg.core import CompassError, artifact_path, find_upwards, manifest_path, normalize_spine, now_iso, resolve_issue_dir
+from compass_pkg.core import CompassError, find_upwards, manifest_path, normalize_spine, now_iso, resolve_issue_dir
+from compass_pkg.spec_location import spec_path
 from compass_pkg.tdd import _read_config, _run_test, settings_hint
 
 
@@ -68,25 +69,50 @@ from compass_pkg.tdd import _read_config, _run_test, settings_hint
 _TRC_COMMENT_RE = re.compile(
     r"<!--\s*traceability id:\s*(?P<trc>[A-Z][A-Z0-9]*-[A-Za-z0-9_]+)\b.*?-->",
     re.S)
-_SCENARIO_HEADING_RE = re.compile(r"^###\s+Scenario:\s*(?P<title>.+?)\s*$")
+# Gherkin names an outline `Scenario Outline:` or `Scenario Template:`; both
+# take an Examples table. The keyword is kept as written in the output.
+_KEYWORD = r"(?P<keyword>Scenario(?: Outline| Template)?)"
+OUTLINE_KEYWORDS = ("Scenario Outline", "Scenario Template")
+_SCENARIO_HEADING_RE = re.compile(r"^###\s+" + _KEYWORD + r":\s*(?P<title>.+?)\s*$")
 _FENCE_OPEN_RE = re.compile(r"^\s*```+\s*gherkin\s*$", re.I)
 _FENCE_CLOSE_RE = re.compile(r"^\s*```+\s*$")
 _GHERKIN_STEP_RE = re.compile(
     r"^\s*(Given|When|Then|And|But|\*)\s+\S", re.I)
-_GHERKIN_SCENARIO_RE = re.compile(r"^\s*Scenario:\s*(?P<title>.+?)\s*$")
+_GHERKIN_SCENARIO_RE = re.compile(r"^\s*" + _KEYWORD + r":\s*(?P<title>.+?)\s*$")
+_EXAMPLES_RE = re.compile(r"^\s*(Examples|Scenarios):")
+_TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
 
 
 class ParsedScenario(object):
-    """One extracted scenario, with enough context to report a good error."""
+    """One extracted scenario, with enough context to report a good error.
 
-    __slots__ = ("trc_id", "heading_title", "fence_title", "steps", "line_no")
+    The fence's own scenario line names the scenario. A fence without one takes
+    the title and keyword of its `### Scenario:` heading, so a spec need not
+    write the title twice."""
 
-    def __init__(self, trc_id, heading_title, fence_title, steps, line_no):
+    __slots__ = ("trc_id", "heading_title", "heading_keyword", "fence_title",
+                 "fence_keyword", "steps", "examples", "line_no")
+
+    def __init__(self, trc_id, heading_title, fence_title, steps, line_no,
+                 heading_keyword=None, fence_keyword=None, examples=()):
         self.trc_id = trc_id
         self.heading_title = heading_title
+        self.heading_keyword = heading_keyword
         self.fence_title = fence_title
+        self.fence_keyword = fence_keyword
         self.steps = steps
+        self.examples = list(examples)
         self.line_no = line_no
+
+    @property
+    def title(self):
+        return self.fence_title or self.heading_title
+
+    @property
+    def keyword(self):
+        if self.fence_title is not None:
+            return self.fence_keyword
+        return self.heading_keyword
 
 
 def scan_spec_markdown(text):
@@ -99,6 +125,7 @@ def scan_spec_markdown(text):
     lines = text.splitlines()
     out = []
     pending_heading = None       # most recent "### Scenario:" title
+    pending_keyword = None       # and its keyword
     pending_trc = None           # most recent traceability id
     pending_line = 0
 
@@ -109,6 +136,7 @@ def scan_spec_markdown(text):
         m = _SCENARIO_HEADING_RE.match(line)
         if m:
             pending_heading = m.group("title")
+            pending_keyword = m.group("keyword")
             pending_line = i + 1
             i += 1
             continue
@@ -131,24 +159,34 @@ def scan_spec_markdown(text):
                 # the note on the anchor above.
                 pending_heading = None
                 continue
-            fence_title = None
+            fence_title = fence_keyword = None
             steps = []
+            examples = []                # the Examples line and its table rows
             for b in body:
                 sm = _GHERKIN_SCENARIO_RE.match(b)
-                if sm and fence_title is None:
+                if sm and fence_title is None and not steps:
                     fence_title = sm.group("title")
+                    fence_keyword = sm.group("keyword")
                     continue
-                if b.strip():
+                if not b.strip():
+                    continue
+                if examples or _EXAMPLES_RE.match(b):
+                    examples.append(b.strip())
+                else:
                     steps.append(b.strip())
             out.append(ParsedScenario(
                 trc_id=pending_trc,
                 heading_title=pending_heading,
+                heading_keyword=pending_keyword,
                 fence_title=fence_title,
+                fence_keyword=fence_keyword,
                 steps=steps,
+                examples=examples,
                 line_no=pending_line or i,
             ))
             pending_trc = None
             pending_heading = None
+            pending_keyword = None
             continue
 
         i += 1
@@ -174,12 +212,30 @@ def validate_scenarios(scenarios, spec_path):
     seen = {}
     for s in scenarios:
         where = "%s:%d" % (spec_path, s.line_no)
-        if s.fence_title is None:
+        if s.title is None:
             problems.append(
-                "%s: %s - the gherkin fence has no 'Scenario:' line."
+                "%s: %s - the gherkin fence has no 'Scenario:' line, and no "
+                "'### Scenario:' heading above it gives a title."
                 % (where, s.trc_id))
             continue
-        if s.heading_title is not None and s.heading_title != s.fence_title:
+        if s.keyword in OUTLINE_KEYWORDS and not s.examples:
+            problems.append(
+                "%s: %s - a %s needs an Examples table after its steps."
+                % (where, s.trc_id, s.keyword))
+        elif s.examples and s.keyword not in OUTLINE_KEYWORDS:
+            problems.append(
+                "%s: %s - an Examples table belongs to a Scenario Outline; "
+                "this scenario opens with '%s:'." % (where, s.trc_id, s.keyword))
+        else:
+            bad = [e for e in s.examples
+                   if not (_EXAMPLES_RE.match(e) or _TABLE_ROW_RE.match(e))]
+            if bad:
+                problems.append(
+                    "%s: %s - an Examples block holds only an 'Examples:' line "
+                    "and table rows.\n  offending line: %s"
+                    % (where, s.trc_id, bad[0]))
+        if (s.heading_title is not None and s.fence_title is not None
+                and s.heading_title != s.fence_title):
             problems.append(
                 "%s: %s - the title drifts between the heading and the fence.\n"
                 "  heading: %s\n  fence  : %s"
@@ -219,9 +275,14 @@ def render_feature(slug, scenarios, spec_rel_path):
     ]
     for s in scenarios:
         lines.append("  @%s" % s.trc_id)
-        lines.append("  Scenario: %s" % s.fence_title)
+        lines.append("  %s: %s" % (s.keyword, s.title))
         for step in s.steps:
             lines.append("    %s" % step)
+        if s.examples:
+            lines.append("")
+            for row in s.examples:
+                indent = "    " if _EXAMPLES_RE.match(row) else "      "
+                lines.append(indent + row)
         lines.append("")
     return "\n".join(lines).rstrip("\n") + "\n"
 
@@ -430,21 +491,21 @@ def cmd_bdd_extract(args):
     from compass_pkg import rendered_blocks
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     slug = os.path.basename(os.path.normpath(task_dir))
-    spec_path = artifact_path(task_dir, "acceptance-criteria.md")
-    if not os.path.isfile(spec_path):
+    spec_file = spec_path(task_dir)
+    if not os.path.isfile(spec_file):
         raise CompassError(
             "no acceptance criteria for issue '%s' - define them first (%s)"
-            % (slug, spec_path))
+            % (slug, spec_file))
 
     # The spec without its rendered blocks: a coverage block that repeats a
     # scenario must not lift a second scenario.
-    text = rendered_blocks.read_masked(spec_path)
+    text = rendered_blocks.read_masked(spec_file)
 
     scenarios = scan_spec_markdown(text)
 
     # Check everything before writing anything. This is what makes a failed
     # extract leave the filesystem exactly as it was.
-    problems = validate_scenarios(scenarios, os.path.relpath(spec_path, os.getcwd()))
+    problems = validate_scenarios(scenarios, os.path.relpath(spec_file, os.getcwd()))
     if problems:
         sys.stderr.write("compass bdd extract: %d problem(s) found; nothing written.\n"
                          % len(problems))
@@ -453,7 +514,10 @@ def cmd_bdd_extract(args):
         return 1
 
     out_path = _bdd_out_path(args, task_dir, slug)
-    spec_rel = os.path.join(".compass", "work", slug, os.path.basename(spec_path))
+    # Named from the project root, so the feature names the file it was lifted
+    # from wherever the spec is: registered, at its fixed path, or flat.
+    from compass_pkg import project_settings
+    spec_rel = os.path.relpath(spec_file, project_settings.find_project_root(task_dir)).replace(os.sep, "/")
     atomic_write(out_path, render_feature(slug, scenarios, spec_rel))
     # Print a sentence around the path: a bare string suits a shell pipeline,
     # not a person. --json carries the path alone, under a key.

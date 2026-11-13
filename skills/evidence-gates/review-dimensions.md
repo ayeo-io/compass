@@ -1,14 +1,17 @@
 # The review dimensions, one checklist each
 
-Reference: read the checklist for the dimension you are applying, not all of them at once. The skill names which dimensions an approach carries; this says what each asks.
+Reference: read the checklist for the dimension you are applying, not all of them at once. The issue's `evidence_required` list names which dimensions it carries; this says what each asks.
 
 ## The review-dimension checklists
 
-Which dimensions apply is set by the delivery approach (see the table in `approaches/composition-reference.md`).
-`correctness`, `governance`, `traceability` are on every delivery approach - the
-default guardrails in review form. The delivery approach and routing policy can add; they
-can never remove those or an `immovable_gate`. (Spike runs none of these - it
-ships nothing, so it has only its own Conclude gate.)
+`correctness`, `governance` and `traceability` are on every delivery issue -
+the default guardrails in review form - and `compass quick-fix finish` passes
+their gates from the test records and the output of `compass check`.
+`regression`, `security`, `clarity` and `architecture` are owed only where
+the project's settings add them (`require_evidence` in `compass.yml`).
+Settings can add; they can never remove the first three or an
+`immovable_gate`. (Spike runs none of these - it ships nothing, so it has
+only its own gate, `spike.conclude`.)
 
 **correctness** - Does the change do what the scenarios describe? Is the green
 genuine, or green-by-skipped-test? Do the acceptance scenarios actually exercise
@@ -17,8 +20,8 @@ the new behavior, not just run near it?
 **governance** - Two distinct checks under one dimension, and keeping them
 distinct *is* the check:
 - *Guardrails (checked with evidence).* Does the change clear every applicable
-  guardrail - the five shipped defaults and any project guardrails? Each is cleared with the
-  verifier's artifacts, never a claim. A failed guardrail is a no-pass; a
+  guardrail - the five shipped defaults and any project guardrails? Each is cleared with
+  recorded evidence, never a claim. A failed guardrail is a no-pass; a
   guardrail beats any strategy. See the `governance-check` skill.
 - *Strategies (assessed as judgment).* Did the work follow the applicable
   default and project strategies - and where it departed, is the departure
@@ -27,7 +30,7 @@ distinct *is* the check:
   note, not an automatic gate failure. On a sweep, rename, or cleanup that
   touches many files, this includes whether verification came from a fresh
   agent rather than the implementer - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
-  (an unmigrated 5.x project runs on its own copied `governance/`) `S9` names
+  (an unmigrated 5.x project is refused until it migrates) `S9` names
   the practice. A new or changed guard is accepted on a demonstrated
   failure, not a passing test (`S10`).
 
@@ -38,28 +41,28 @@ the "Owning docs" table of its `docs/README.md`), a change to an area changes it
 owning doc in the same commit, or says why the doc still holds.
 
 **regression** - Does the evidence show nothing that passed before now fails?
-On a multiagent, this is per-subtask at the checkpoint gates and *combined* at ship time -
-per-subtask green does not imply integrated green.
+When the work has more than one unit, check each unit and then the *combined*
+result at ship time - each unit green does not imply the combination is green.
 
-**security** - Full on the full approach and hotfix, scaled to risk on
-the regular approach, off on quick fix unless a label added it. OWASP floor;
+**security** - Owed only where the settings add it. OWASP floor;
 dependency-CVE scan where a project security guardrail needs it; evidence is
 scan output, not "looks fine."
 
-**clarity** - Is the code and are its tests legible to the next person - names,
-structure, no surprising control flow? Off on quick fix; deferred to the
-mandatory follow-up on hotfix. This is also where the writing-voice tells
+**clarity** - Owed only where the settings add it. Is the code and are its
+tests legible to the next person - names, structure, no surprising control
+flow? This is also where the writing-voice tells
 named in `skills/compass-runtime/writing-voice.md` are judged - does the
 artifact communicate a decision, or does it narrate the pipeline? Run
 `scripts/voice-tells.py` over the issue's artifacts for the three tells a fixed string can find; a hit is a note and a conversation, never an automatic gate failure.
-This check applies to every issue - the calibration sample it is read
+The calibration sample it is read
 against is named in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` (`S8`; an
-unmigrated 5.x project runs on its own copied `governance/`).
+unmigrated 5.x project is refused until it migrates).
+Flag a short code with no plain words in front of it: the fix is to put the
+meaning first and the code in brackets, never to delete the code.
 
-**claims** - When `positioning.md` is present (the artifact rule adds
-the blocking `verify.claims` gate): does every
-public claim trace to a *passing* scenario? Evidence is `launch-readiness.md`
-with no red rows.
+**claims** - When the manifest lists claims: does every
+public claim trace to a *passing* scenario? Evidence is the manifest's
+`claims:`, each backed by a passing scenario.
 
 **Read the claim, not just the link.** `claim-traces-to-scenario` checks that a
 claim points at a scenario that exists. It cannot check that what the claim says
@@ -77,3 +80,23 @@ Two questions worth asking of every claim, because both failures showed up in
 one release: does it say what it counted **and what it did not**, and would it
 still be true if someone quoted it on its own six months from now?
 
+## How the review is done
+
+These rules hold on every dimension.
+
+- **Patterns.** Where the design names patterns, check them against the code
+  (the named-patterns strategy, `S16`). It is advice: never fail a gate on it.
+- **Comments.** Open every comment with a plain-word label - **issue**,
+  **suggestion**, **nitpick**, **question**, **praise** (the
+  conventional-comments strategy, `S12`) - and label honestly.
+- **A disputed quantity.** Where a review comment and the author disagree
+  about a quantity - how many call sites, how much output, how often it
+  fires - measure the number and report it before defending either position
+  (the measure-before-arguing strategy, `S11`).
+- **Settled decisions.** Before you recommend a rename or a reversal, read
+  `governance/decisions/` if the project has one. A point that collides with
+  an entry is "settled by <path>", not a defect.
+- **Review rules.** If the project has `governance/review-rules.yml`, run
+  `compass review-rule list --changed-files <paths>` and apply the rules it
+  prints. Report a breach under the RR- id it breaks, and do not flag what a
+  rule's `allowed` list permits.

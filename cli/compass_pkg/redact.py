@@ -2,10 +2,11 @@
 # =============================================================================
 # compass - remove credentials from text before it is recorded
 # =============================================================================
-# An unattended run copies a session's error output into its run record and
-# the manifest. An error message can carry a credential, and a record is
-# read, committed and shared, so every piece of text `compass run` writes or
-# prints passes through `redact` first.
+# The delivery record and the GitHub page copy text out of the project. Text
+# can carry a credential, and a record is read, committed and shared, so
+# every piece of text `compass record sync` writes passes through `redact`
+# first, and the publish check refuses a post that holds text it would
+# replace.
 #
 # Two kinds are removed: text shaped like a known credential, and the value
 # of any environment variable whose name says it is a key, token, secret or

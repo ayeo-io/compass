@@ -33,7 +33,7 @@
 ## Non-goals
 
 <!-- What this system explicitly does NOT do.  Non-goals are important:
-     they prevent scope creep and help the `architect` agent flag when a
+     they prevent scope creep and help the architect perspective flag when a
      proposed change would cross the stated boundary. -->
 
 ## Quality attributes

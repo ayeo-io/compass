@@ -73,6 +73,23 @@ def conflict_body(shown):
 
 
 COMPASS_YML = "compass.yml"
+#: What marks a project's root folder. `core` imports it from here.
+BOUNDARY_MARKERS = (".compass", ".git")
+
+
+def find_project_root(start):
+    """The first folder at or above `start` holding `.compass` or `.git`,
+    or `start` itself when none does. The project file is looked for there
+    only: one in any other folder is ignored."""
+    here = os.path.abspath(os.fspath(start))
+    node = here
+    while True:
+        if any(os.path.exists(os.path.join(node, m)) for m in BOUNDARY_MARKERS):
+            return node
+        up = os.path.dirname(node)
+        if up == node:
+            return here
+        node = up
 OLD_CONFIG = os.path.join(".compass", "config.yml")
 STATE_YML = os.path.join(".compass", "state.yml")
 
@@ -88,7 +105,7 @@ def _load(path, strict):
     except (OSError, ValueError, yaml.YAMLError) as exc:
         raise CompassError(f"cannot read {path}: {exc}") from exc
     if not isinstance(data, dict):
-        raise CompassError(f"{path}: expected a mapping of settings")
+        raise CompassError(f"{path}: expected a mapping, found {type(data).__name__}")
     return data
 
 
@@ -138,6 +155,20 @@ def compass_yml_counts(project_root):
     """Public name of the test above, for a command that must read the same
     file the settings reader reads (`compass policy lint` and `effective`)."""
     return _compass_yml_counts(project_root)
+
+
+def project_file(project_root):
+    """The parsed `compass.yml` at the project root, whether or not it is the
+    settings file read, or None when there is none. Raises `CompassError` when
+    it cannot be read or is not a mapping. The owner and approver readers use
+    it: an `owner` is read from `compass.yml` alone."""
+    path = os.path.join(project_root, COMPASS_YML)
+    if not os.path.isfile(path):
+        return None
+    data, error = _compass_yml(path)
+    if error is not None:
+        raise CompassError(error)
+    return copy.deepcopy(data)
 
 
 def lenient(project_root):
@@ -362,29 +393,6 @@ def settings_file(project_root):
     return OLD_CONFIG
 
 
-def project_text(project_root, key):
-    """One text value of the `project:` section, or None when it is not
-    declared: a command (`lint_command`, `format_check_command`,
-    `build_command`, `typecheck_command`) or a declaration (`secret_scan`,
-    `structured_logging`). An empty or blank string reads as undeclared.
-
-    A value that is not a string raises `CompassError` naming the key and the
-    file, so a readiness run that would otherwise ignore it is refused. The
-    scripts read no such key, so `SCRIPT_SETTINGS` does not list them."""
-    section = settings(project_root).get("project")
-    where = settings_file(project_root)
-    if section is None:
-        return None
-    if not isinstance(section, dict):
-        raise CompassError(f"project in {where} must be a mapping")
-    value = section.get(key)
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise CompassError(f"project.{key} in {where} must be a string")
-    return value if value.strip() else None
-
-
 def settings_key(project_root, key):
     """`key` as the file `settings_file` names calls it: the adoption setting
     is `adoption` in `compass.yml` and `mode` in the old file."""
@@ -413,8 +421,9 @@ def state_source(project_root):
 def state(project_root):
     """`initialized` and `records_signed_since` as a dict, `{}` when neither
     file exists. A state file that exists is the whole answer. The key
-    `initialized` is read from either spelling until 9.0.0 and the new one
-    wins when both are there."""
+    `initialized` is read from either spelling, because an 8.x state file
+    stores the old one (`old_names`, row `state_key`), and the new one wins
+    when both are there."""
     path = state_source(project_root)
     if path is None:
         return {}

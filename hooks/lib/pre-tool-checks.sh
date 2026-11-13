@@ -22,12 +22,16 @@ fi
 # A guardrail beats a strategy, so this runs BEFORE the red check: you cannot
 # write a red for a scenario that does not exist yet.
 #
-# Only `define: thorough` (or the retired `specify: full`, or `define: full`
-# from before the depth words were renamed) triggers it, which
-# routing-policy.yml gives to the regular and full approaches. A hotfix
-# (reproduce-first) and a spike (collapsed) are exempt by construction, and
-# the .spike early exit above suspends this the same way it suspends
-# red-before-green.
+# On a path issue (ADR-092: its manifest records `evidence_required`) every
+# code edit needs a scenario on record, because every path issue owes
+# scenarios. The refusal is `no-scenario`, and it names `compass scenario add`.
+#
+# On an issue assessed before 9.0.0, only `define: thorough` triggers it (or
+# the retired `specify: full`, or `define: full` from before the depth words
+# were renamed), which routing-policy.yml gave to the regular and full
+# approaches. A hotfix (reproduce-first) and a spike (collapsed) are exempt by
+# construction. A spike is never a path issue, and the .spike early exit above
+# suspends this the same way it suspends red-before-green.
 #
 # A false block on unreadable state is how a hook teaches people to bypass it,
 # so if there is no manifest.yml, or its YAML does not parse, the hook skips
@@ -53,8 +57,22 @@ if [ -f "$TASK_DIR/manifest.yml" ]; then
   fi
   rm -f "$G2_ERR"
   if [ "${G2_VERDICT:-}" = "block" ]; then
-    compass_block no-acceptance-criteria "target=$TARGET" "tool=${TOOL:-?}"
+    compass_block no-acceptance-criteria "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}"
   fi
+  if [ "${G2_VERDICT:-}" = "block-path" ]; then
+    compass_block no-scenario "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}"
+  fi
+  # Scenarios that owe a person's approval have it before any code edit
+  # (ADR-099 decision 5). This takes the place of the refusal `compass
+  # tdd-red` gave, because the path records no red before the code.
+  if [ "${G2_VERDICT:-}" = "block-approval" ]; then
+    compass_block code-before-approval "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}"
+  fi
+  RED_AT_FINISH=""
+  case "${G2_VERDICT:-}" in
+    path) RED_AT_FINISH=1 ;;
+    path-depends) RED_AT_FINISH=1; G2_VERDICT="depends" ;;
+  esac
 fi
 
 # --- the issues this one waits for (ADR-062) ----------------------------------
@@ -113,6 +131,13 @@ if [ -f "$TASK_DIR/.acceptance" ]; then
   exit 0
 fi
 
+# --- a path issue: no red before the code (ADR-099 decision 2) ---------------
+# `compass quick-fix finish` proves the red on a copy of the base commit, so a
+# delivery issue on the path edits code with no `.red` marker.
+if [ -n "${RED_AT_FINISH:-}" ]; then
+  exit 0
+fi
+
 # --- the red-before-green check (delivery work) -----------------------------
 # `.red` is an empty file that `touch` can create, so the marker alone proves
 # nothing. The hook checks the marker first because it is cheap - this hook
@@ -160,6 +185,8 @@ if [ -f "$TASK_DIR/.red" ]; then
   compass_block red-marker-no-record "slug=$TASK_SLUG"
 fi
 
-# No .red marker → no failing test on record → block the code edit.
+# No .red marker → no failing test on record → block the code edit. The
+# refusal names the project whose issue judged the edit: in a worktree that
+# is not the session's own folder, and `compass tdd-red` must run there.
 compass_block no-red-on-record "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}" \
-  "guard=${MATCHED_RULE:-the built-in production-code set}"
+  "guard=${MATCHED_RULE:-the built-in production-code set}" "project=$PROJECT_DIR"

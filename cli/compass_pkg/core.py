@@ -34,16 +34,17 @@ import re as _re
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # realpath: resolve symlinks
 FRAMEWORK_ROOT = os.path.dirname(SCRIPT_DIR)  # cli/.. == the compass repo root
 
-COMPASS_VERSION = "8.0.4"   # the CLI's own version
+COMPASS_VERSION = "9.0.0"   # the CLI's own version
 COMPASS_SCHEMA_VERSION = "3.0"    # the manifest.yml schema this CLI writes; it reads majors 1 to 3
 COMPASS_SCHEMA_VERSION_11 = "1.1"  # schema version that introduced manifest.yml.status
 
 from compass_pkg import project_settings  # noqa: E402  (defines CompassError)
 from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 from compass_pkg.stable_ids import (  # noqa: E402
-    APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_ASSESS, STAGE_DEFINE, STAGE_IDS,
-    STAGE_PLAN, STAGE_REFINE)
+    APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, LEGACY_APPROACH_IDS, STAGE_IDS)
 from compass_pkg import manifest_store, word_map  # noqa: E402
+from compass_pkg.path_readers import CHECKPOINT_STAGES, LEGACY_CHECKPOINT_STAGES  # noqa: E402,F401
+from compass_pkg.path_stages import rename_v1_stage, rename_v1_stage_keys  # noqa: E402
 
 
 # --- small helpers -----------------------------------------------------------
@@ -74,91 +75,6 @@ def find_upwards(start, rel):
         cur = parent
 
 
-#: The files that make a `governance/` directory a declaration rather than a
-#: directory that happens to share the name. Both must be present for the
-#: directory to be usable; either one alone means the project declared
-#: governance Compass cannot apply.
-GOVERNANCE_FILES = ("routing-policy.yml", "guardrails.yml")
-
-#: Markers of the project's own boundary. The upward walk does not go above the
-#: first directory holding one of these, so a stray `governance/` in an outer
-#: repository or a home directory cannot stop work inside a project.
-BOUNDARY_MARKERS = (".compass", ".git")
-
-
-def _governance_refusal(gov_dir, present, missing):
-    """The message an incomplete project governance directory earns.
-
-    This is also the migration path. A project in this state works today -
-    its guardrails are quietly ignored - and fails on its first command after
-    upgrading, so the message has to be actionable without reading the source.
-    Two ways out, each one step.
-    """
-    shipped = os.path.join(FRAMEWORK_ROOT, "governance")
-    return CompassError(
-        "this project declares governance that Compass cannot apply.\n\n"
-        f"  found   : {os.path.join(gov_dir, present)}\n"
-        f"  missing : {os.path.join(gov_dir, missing)}\n\n"
-        "Compass will not use its own defaults in place of yours without "
-        "telling you, so nothing here is being applied.\n\n"
-        "To keep your governance, add the missing file and edit it from there:\n"
-        f"  cp {os.path.join(shipped, missing)} {gov_dir}/\n\n"
-        "To use the shipped defaults instead, remove:\n"
-        f"  {os.path.join(gov_dir, present)}"
-    )
-
-
-def find_governance():
-    """The governance directory in force: the project's own, or the shipped one.
-
-    Walks up from the working directory looking for a `governance/` holding at
-    least one recognised file, and stops at the project boundary. What it finds
-    decides the answer:
-
-    - both files      -> that directory
-    - one file only   -> refuse, and say which is missing and how to fix it
-    - neither file    -> keep walking; the directory declared nothing
-    - nothing at all  -> the framework's shipped defaults, silently
-
-    The refusal is the point. Refuse, because otherwise a project that ships
-    `guardrails.yml` without a policy gets the framework's governance with
-    no warning, and a declared guardrail must not quietly become advisory.
-    """
-    cur = os.path.abspath(os.getcwd())
-    while True:
-        gov_dir = os.path.join(cur, "governance")
-        if os.path.isdir(gov_dir):
-            present = [f for f in GOVERNANCE_FILES
-                       if os.path.isfile(os.path.join(gov_dir, f))]
-            if len(present) == len(GOVERNANCE_FILES):
-                return gov_dir
-            if present:
-                missing = next(f for f in GOVERNANCE_FILES if f not in present)
-                raise _governance_refusal(gov_dir, present[0], missing)
-            # Neither file: a directory that shares the name has declared
-            # nothing. Walk past it.
-
-        # Stop at the project's own boundary, inclusive of the directory that
-        # marks it. Without this a project that declares no governance would
-        # inherit - and could be refused by - a directory its author may not
-        # know exists. When no marker is found the walk reaches the
-        # filesystem root; that is deliberate.
-        if any(os.path.exists(os.path.join(cur, m)) for m in BOUNDARY_MARKERS):
-            break
-        parent = os.path.dirname(cur)
-        if parent == cur:
-            break
-        cur = parent
-
-    shipped = os.path.join(FRAMEWORK_ROOT, "governance")
-    if os.path.isfile(os.path.join(shipped, "routing-policy.yml")):
-        return shipped
-    raise CompassError(
-        "could not find governance/ - neither a project-local one nor the "
-        "framework's shipped defaults. Run from inside a Compass project or repo."
-    )
-
-
 def find_compass_dir():
     """The project's .compass/ directory (walking up from cwd)."""
     proj = find_upwards(os.getcwd(), ".compass")
@@ -183,10 +99,9 @@ def load_mode():
     return mode if mode == "advisory" else "enforced"
 
 
-# The stage hand-offs that can wait for a person, and the `autonomy:`
-# values that choose among them. Here, not in policy.py, because core reads
-# the setting and policy.py already imports core.
-CHECKPOINT_STAGES = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN)
+# The `autonomy:` values that choose among the stage hand-offs. The hand-off stages
+# (`CHECKPOINT_STAGES`, imported above) are in path_readers, with the path ones.
+# Here, not in policy.py, because core reads the setting and policy imports core.
 AUTONOMY_VALUES = ("controlled", "balanced", "autonomous")
 
 
@@ -258,9 +173,8 @@ def resolve_issue_dir(slug=None):
 
     Priority: explicit slug > COMPASS_ISSUE > .compass/current-task pointer >
     most recently changed dir under .compass/work/ (with a warning -
-    ambiguous). COMPASS_ISSUE names one session's issue: `compass run` sets
-    it, so an unattended session never works on the person's issue. A bad
-    value is refused, not passed over for the pointer.
+    ambiguous). COMPASS_ISSUE names one session's issue, so two sessions in
+    one project can work on two issues. A bad value is refused, not passed over for the pointer.
     """
     compass_dir = find_compass_dir()
     work = os.path.join(compass_dir, "work")
@@ -474,26 +388,25 @@ def normalize_spine(task):
     if not isinstance(task, dict):
         return task
     out = {}
+    source = {}
     for k, v in task.items():
         k2 = SPINE_KEY_MAP.get(k, k)
         if k2 in out and k in SPINE_KEY_MAP:
             continue
         out[k2] = v
+        source[k2] = k
     # Stage keys. `frame` was banned as a stage name at the v2 freeze and
     # survived as a live machine key, because governance/*.yml is not a scanned
     # surface. Archived issues carry the retired spellings, so they
     # are mapped forward on load and rewritten on disk by `compass issue migrate`
     # (ADR-006: accept both, remove the old at the major version).
+    # `specify` and `build` are path stages too (ADR-092), so the rename runs
+    # only on a v1 map: one under the v1 key `phases:`, or one that holds a
+    # v1-only name.
     st = out.get("stages")
     if isinstance(st, dict):
-        renames = _stage_key_renames()
-        mapped = {}
-        for k, v in st.items():
-            k2 = renames.get(k, k)
-            if k2 in mapped and k in renames:
-                continue
-            mapped[k2] = v
-        out["stages"] = mapped
+        out["stages"] = rename_v1_stage_keys(
+            st, _stage_key_renames(), v1=source.get("stages") != "stages")
 
     a = out.get("assessment")
     if isinstance(a, dict):
@@ -514,11 +427,14 @@ def normalize_spine(task):
         for f in fups:
             if isinstance(f, dict) and f.get("status") in FOLLOW_UP_STATUS_MAP:
                 f["status"] = FOLLOW_UP_STATUS_MAP[f["status"]]
-    # A friction entry's stage (key `phase` in earlier releases) maps like a stage key.
+    # A friction entry's stage (key `phase` in earlier releases) maps like a
+    # stage key. The v1 key `phase` marks a v1 entry; under `stage`, only a
+    # v1-only name maps, so a path stage `build` stays `build`.
+    renames = _stage_key_renames()
     for f in (out.get("friction") if isinstance(out.get("friction"), list) else []):
         for key in ("phase", "stage"):
-            if isinstance(f, dict) and f.get(key) in _stage_key_renames():
-                f[key] = _stage_key_renames()[f[key]]
+            if isinstance(f, dict) and key in f:
+                f[key] = rename_v1_stage(f[key], renames, v1=key == "phase")
     # Gate ids. ADR-023 renamed `verify.fitness` to `verify.architecture`.
     # This is not cosmetic: `compass check` looks a gate's accepted evidence
     # types up BY ID, and an id that no longer resolves yields None, which
@@ -563,8 +479,8 @@ def normalize_spine(task):
             out["subtask_ceiling"] = RETIRED_ORCHESTRATION_CEILING.get(
                 word.split(" ")[0], None)
     # The on-disk schema_version is preserved: readers must be able to say
-    # honestly what generation a manifest was written in (the receipt reports
-    # legacy manifests). Writers stamp the current version when they save.
+    # honestly what generation a manifest was written in. Writers stamp the
+    # current version when they save.
     return word_map.map_manifest(out)
 
 
@@ -607,6 +523,9 @@ CHECK_NAME_MAP = {"coherence-check-passes": "consistency-check-passes"}
 SHAPE_VALUE_MAP = dict(LEGACY_APPROACH_ALIASES)
 #: The route names in weight order; a test keeps them equal to route_shapes.
 ROUTE_NAMES = APPROACH_IDS
+#: The route names of the 8.x presets, which an issue assessed under an 8.x
+#: preset records and copied governance still declares.
+LEGACY_ROUTE_NAMES = LEGACY_APPROACH_IDS
 
 
 def canonical_shape(value):
@@ -615,7 +534,7 @@ def canonical_shape(value):
 
 # Machine delivery-approach values -> the v2 change-type names the display
 # layer prints. The manifest keeps the machine value; the terminal never
-# shows it (the receipt is the most shareable screen Compass produces).
+# shows it.
 # The v2 machine spelling `quick-fix` renders without the hyphen.
 SHAPE_DISPLAY = {APPROACH_QUICK_FIX: "quick fix"}
 for _old, _new in LEGACY_APPROACH_ALIASES.items():
@@ -656,7 +575,7 @@ def prepare_manifest_write(task, path):
     return word_map.prepare(task, path, raw, COMPASS_SCHEMA_VERSION)
 
 
-MANIFEST_LOCK = ".manifest.lock"  # held while a manifest is written (session_record.py)
+MANIFEST_LOCK = ".manifest.lock"  # held while a manifest is written (manifest_store.save)
 def save_manifest(task, path):
     """Replace the manifest atomically, keeping changes saved since it was loaded."""
     manifest_store.save(task, path, MANIFEST_LOCK, prepare_manifest_write, normalize_spine)
@@ -826,14 +745,10 @@ def shape_stages(shape):
     # before this rename says `frame:` where the current one says `assess:`,
     # and the evaluator prints these straight - so without this the tool that
     # computes the approach is the loudest place a retired name still appears.
-    renames = _stage_key_renames()
-    out = {}
-    for k, v in raw.items():
-        k2 = renames.get(k, k)
-        if k2 in out and k in renames:
-            continue
-        out[k2] = v
-    return out
+    # Only a v1 block is renamed, because `specify` and `build` are path
+    # stages too (ADR-092).
+    return rename_v1_stage_keys(raw, _stage_key_renames(),
+                                v1=not shape.get("stages") and bool(shape.get("phases")))
 
 
 WHEN_KEY_MAP = {
@@ -847,7 +762,7 @@ def reading_matches(when, assessment, orders=None):
     """Does a `when:` condition match the assessment? List value == any-of.
     `labels_any` and `artifacts_any`: intersect with `labels` or `artifacts`.
     Special key `any_of`: a list of sub-conditions, matching if ANY matches.
-    `{at_least: v}` on an ordered dimension: see `catalogue_check.at_least`.
+    `{at_least: v}` on an ordered dimension: see `at_least`.
 
     Keys are otherwise ANDed, so `any_of` alongside another key means "that
     key AND one of these". `any_of` exists because a rule sometimes has to
@@ -863,7 +778,7 @@ def reading_matches(when, assessment, orders=None):
             if not any(reading_matches(c, assessment, orders) for c in clauses):
                 return False
         elif isinstance(val, dict) and "at_least" in val:
-            from compass_pkg.catalogue_check import at_least
+            from compass_pkg.catalogue_spec import at_least
             if not at_least(key, val["at_least"], assessment.get(key), orders):
                 return False
         elif key in ("labels_any", "artifacts_any"):     # `artifacts` is derived

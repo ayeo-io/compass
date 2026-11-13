@@ -5,35 +5,70 @@
   </picture>
 </h1>
 
-**Adaptive spec-driven development for Claude Code.**
+**Acceptance-test-driven development for Claude Code, with a record a reviewer can check.**
 
 [![Self-check](https://github.com/ayeo-io/compass/actions/workflows/compass.yml/badge.svg?branch=main)](https://github.com/ayeo-io/compass/actions/workflows/compass.yml)
 [![Docs](https://github.com/ayeo-io/compass/actions/workflows/docs.yml/badge.svg?branch=main)](https://docs.ayeo.io/compass/)
 [![Latest release](https://img.shields.io/github/v/release/ayeo-io/compass)](https://github.com/ayeo-io/compass/releases)
 [![License](https://img.shields.io/github/license/ayeo-io/compass)](LICENSE)
 
-> Enough process for the work at hand. No more.
+Compass lets a team under change control hand code changes to an AI agent
+and still show a reviewer, or an auditor, that the process was followed. A
+person approves each change, and Compass records that approval. A reviewer
+of one change asks five questions. Compass keeps the answer to each on
+record:
 
-A typo fix should not need an architecture pack. A payments rewrite should
-not begin with an unstructured prompt.
+- **Who asked?** The link to the request, and who made it.
+- **What was agreed?** The scenarios, in the change's acceptance criteria.
+  For a change labeled `auth`, `payments`, `personal-data` or `migrations`,
+  or with critical risk, a person approves them before any code edit.
+- **Do the tests fail without the change, and pass with it?** Compass runs
+  them on a copy of the commit the change started from, where they must
+  fail, and on the working tree, where they must pass. This does not show
+  that a test was written before the code
+  ([docs/base-copy.md](docs/base-copy.md)).
+- **Who approved?** One person approves each change. The person types
+  `/compass:approve` when Compass asks, or Compass reads the approval from
+  the merged pull request: an approving review by someone other than its
+  author. An approval covers the change the person saw. After a later
+  change, Compass asks again.
+- **What shipped?** The commit and the pull request.
 
-Compass assesses each piece of work, new or existing, by **risk, familiarity
-and size**. A deterministic policy then composes the delivery approach: which
-stages run at what depth, which documents are worth writing, which checks run,
-and where a person decides. Five guardrails apply to all work that ships code,
-whatever the assessment. They are defaults: a project can add its own, report
-failures without blocking while it tries Compass, or loosen one with the
-owner's recorded waiver. A person's sign-off for irreversible work cannot be
-loosened ([safety contract](docs/safety-contract.md)).
+Each change leaves one plain file, `trail.md`, with a SHA-256 digest for each
+record it names. A reviewer checks it with `sha256sum -c`, without Compass
+installed.
 
-<p align="center">
-  <img src="assets/compass-explainer.svg" alt="Three sliders for risk, familiarity and size feed a policy. As the work changes from a typo fix to a payments rewrite, the eight stage bars grow from a quick fix to the full approach, dots mark the stages where a person decides, and five guardrail lines stay the same." width="960">
-</p>
+**Who it is for.** Teams that work under change control and want an agent's
+speed without losing the trail: a reviewer asks for the evidence of one
+change, an auditor asks for the evidence of every change. ISO 27001 and
+SOC 2 both expect each change to be authorized and traceable. Compass keeps
+the records such a process reads. This is not checked against a specific
+audit.
 
-Judgment goes into the assessment. Everything after it is computed from three
-inputs: the assessment, the project's resolved configuration and the documents
-the issue has on disk. The same three inputs give the same approach, every
-time ([safety contract](docs/safety-contract.md#1-routing-is-deterministic-after-assessment)).
+## What one change leaves
+
+Compass writes `trail.md` into the change's record when it commits the
+change, and `compass trail` writes it again on demand. It answers the
+five questions in six sections, with red and green apart:
+
+1. Who asked
+2. What was agreed
+3. Red, for each scenario
+4. Green
+5. Who approved, and by what authority
+6. What shipped
+
+Under each statement are lines in `sha256sum` format: a digest and the path
+of the file that holds the evidence. The code and test files are named
+with the digests the last passing run recorded, so the check shows that the
+committed code is the code that was tested. From the repository root:
+
+```bash
+grep -E '^[0-9a-f]{64}  ' .compass/work/<issue>/trail.md | sha256sum -c -
+```
+
+The requester is a claim the session records; Compass does not check it
+([docs/delivery-record.md](docs/delivery-record.md)).
 
 ## Install
 
@@ -63,7 +98,7 @@ Add `bin/` to your `PATH` to make `compass` invokable, or call it as
 [docs/install-smoke-test.md](docs/install-smoke-test.md) for checks and
 troubleshooting.
 
-## The first issue
+## The first change
 
 Describe the work:
 
@@ -71,10 +106,23 @@ Describe the work:
 /compass:go "Add rate limiting to the public API"
 ```
 
-`/compass:go` assesses the change, shows the plan in three lines and starts.
-`/compass:assess` does the assessment alone. When the approach reaches a stage
-that waits for a person, the session stops and shows a request. You answer
-in the same session:
+The session runs two `compass` commands
+([docs/five-minutes.md](docs/five-minutes.md)):
+
+1. `compass quick-fix start` opens the issue. It records the request, who
+   asked, the first scenario and the evidence the change owes.
+2. The session writes the scenarios
+   ([docs/writing-specs-and-plans.md](docs/writing-specs-and-plans.md)), the
+   tests and the code, and runs the tests directly.
+3. `compass quick-fix finish` writes the record. It reads the scenarios and
+   the changed files, shows that the tests fail without the change and pass
+   with it, runs `compass check` and asks for your approval.
+4. After you approve, the same `finish` commits the change and its record,
+   with `trail.md`, on a branch.
+
+Each command prints a `next:` line with the one step that comes next. When
+the change waits for a person, the session stops and shows a request. You
+answer in the same session:
 
 ```text
 /compass:approve
@@ -82,55 +130,58 @@ in the same session:
 ```
 
 `/compass:status` reports what is blocked, moving and done. `/compass:resume
-<issue>` picks an issue up in a later session, from its record on disk.
-To write the specs and plans an issue asks for, read
-[docs/writing-specs-and-plans.md](docs/writing-specs-and-plans.md).
+<issue>` picks an issue up in a later session, from its record on disk. To
+link an issue to its GitHub issue and pull request, see
+[docs/github-links.md](docs/github-links.md).
 
-The shipped guardrails are active from the first command. Project settings,
-and a project's own changes to the shipped defaults, live in one file,
-`compass.yml` ([docs/configuration.md](docs/configuration.md)). Upgrading from
-6.x? Read [docs/upgrade-7-0-0.md](docs/upgrade-7-0-0.md); from 5.x, read
-[docs/upgrade-6-0-0.md](docs/upgrade-6-0-0.md) first. To mirror an issue's
-labels on its GitHub issue, see [docs/github-labels.md](docs/github-labels.md).
+The shipped guardrails are active from the first command. Project settings
+live in one file, `compass.yml` ([docs/configuration.md](docs/configuration.md)).
+A setting there can only add to the check set; to excuse one check on one
+issue, see [docs/waivers.md](docs/waivers.md).
+
+Upgrading from 8.x? Read [docs/upgrade-9-0-0.md](docs/upgrade-9-0-0.md) and
+run `compass migrate`. Compass 8.x gets security fixes only, for 90 days
+after 9.0.0 is released. A project on 6.x or 7.x upgrades to 8.x first
+([docs/upgrade-7-0-0.md](docs/upgrade-7-0-0.md), and from 5.x
+[docs/upgrade-6-0-0.md](docs/upgrade-6-0-0.md)).
 
 Compass complements your normal CI. It does not replace tests, linting,
 security scanning, builds or deployment checks.
 
 ## What Compass changes
 
-Compass chooses the process for each change from its assessment of risk,
-familiarity and size.
+Compass chooses the evidence each change owes from its assessment and the
+project's settings. Every change that ships owes the same evidence: a link to the request and
+who asked, scenarios, tests that fail without the change and pass with it, a
+green suite, three gates that Compass passes from those records, and one
+person's approval ([safety contract](docs/safety-contract.md)). Risk, size,
+familiarity and urgency add no review and no record. Three things add to it:
 
-| Work | Typical Compass response |
+| Work | What Compass adds |
 |---|---|
-| **Quick fix** | One clear criterion, a focused change and evidence that it works. |
-| **Regular** | Behavioral specification in Gherkin, proportionate technical design and review. |
-| **Full** | Intent document, acceptance criteria, a thorough requirements review and technical design, and a distribution map for parallel work. |
-| **Hotfix** | Reproduce first, fix safely, then do the follow-up work skipped for speed. |
-| **Spike** | Time-boxed exploration. Record the learning; ship nothing directly. |
+| **`auth`, `payments`, `personal-data` or `migrations`, or a label the project adds** | A person approves the scenarios before any code edit, and signs off before the change lands. |
+| **Critical risk** | A person approves the scenarios before any code edit. |
+| **A project's `require_evidence` setting** | The evidence it names, such as the security review or the Definition of Done ([docs/configuration.md](docs/configuration.md)). |
+| **Spike** | Time-boxed exploration, off the path. Record the learning; ship nothing directly. |
 
-These are reference shapes, not fixed levels. A one-file authentication change
-can get more protection than a large throwaway prototype, because risk and
-size are different things. Optional switches for goal and urgency pick the
-spike, and the hotfix for a small live defect.
+<p align="center">
+  <img src="assets/compass-explainer.svg" alt="A session takes two commands, compass quick-fix start and compass quick-fix finish, with the steps where a person decides: the scenario approval before code for sensitive work, and the approval of the change before finish commits it. Beside it, the evidence each of the four stages judges, the same for every change, and five guardrail lines that stay the same." width="960">
+</p>
 
-## Rigor without ritual
+Five guardrails apply to all work that ships code, whatever the assessment:
+a test that fails without the change, acceptance criteria before code, code
+traced to a criterion, typed evidence rather than a written claim, and a
+person's approval for a change labeled `auth`, `payments`, `personal-data` or
+`migrations`. `compass check` fails on a breach under enforced adoption.
+Every project runs one fixed check set: a project can add checks of its own,
+report failures without blocking while it tries Compass, or excuse one check
+on one issue with a waiver a person approves. The
+[safety contract](docs/safety-contract.md) lists what Compass cannot see.
 
-Compass keeps two kinds of rule apart:
-
-- **Guardrails** are few and checkable: tested before shipping, acceptance
-  defined before implementation, every change traced to a criterion,
-  evidence rather than assertion, and a person's approval for a change
-  labeled `auth`, `payments`, `personal-data` or `migrations`. `compass
-  check` fails on a breach under enforced adoption, and the
-  [safety contract](docs/safety-contract.md) lists what it cannot see.
-- **Strategies** are strong defaults that improve the work without becoming
-  bureaucracy: BDD, TDD, decision records, architecture models and other
-  practices that apply when they add value.
-
-An approach can reduce the amount of process. It cannot remove a guardrail
-from work that ships code
-([safety contract](docs/safety-contract.md#2-a-declared-guardrail-cannot-silently-become-advice)).
+Judgment goes into the assessment. Everything after it is computed from the
+assessment and the settings of `compass.yml`, so the same two inputs give the
+same evidence, every time
+([safety contract](docs/safety-contract.md#1-routing-is-deterministic-after-assessment)).
 
 ## A person stays in control
 
@@ -141,79 +192,40 @@ from work that ships code
   An agent records one only under a delegation you made, and a program
   running as your own user account is not stopped
   ([safety contract](docs/safety-contract.md#5-irreversible-work-needs-recorded-human-approval)).
+- **A person approves each change.** `compass quick-fix finish` writes the
+  request, and commits after you type `/compass:approve`. The approval names
+  a digest of the change. When the code or the tests change afterwards,
+  `finish` asks again, and `compass check` fails until you approve the new
+  state. Compass also reads the approval from the merged pull request: a
+  review that approves it, by a person who is not its author, read by
+  `compass issue link set --pr <n>` after the merge. The pre-tool hook
+  refuses an agent's `gh pr review --approve`
+  ([docs/github-links.md](docs/github-links.md)).
 - **You set the bounds of a delegation.** A bare `/compass:delegate` lets the
   agents of this session approve for you on every issue, until
   `/compass:revoke` ends it. Flags set its bounds: `--agent` names one agent,
   in any session; `--until`, `--on`, `--for` and `--max` narrow it. `--for
-  g5`, which covers irreversible work, needs a code that you type back. Compass lists each delegation with no end time at each new
-  session start. Every delegated approval is on record, and you can overrule
-  one; overruling a guardrail 5 sign-off does not undo work already landed.
+  g5`, which covers irreversible work, `--for waivers` and `--for ship`,
+  which covers the ship approval of a change, each need a code that you
+  type back. Compass lists each delegation with no end time at each new
+  session start. Every delegated approval is on record, with a copy of the
+  delegation in the issue's manifest, and you can overrule one; overruling a
+  guardrail 5 sign-off does not undo work already landed.
 - **Autonomy is a setting, not a promise.** `autonomy: controlled | balanced
   | autonomous` in `compass.yml` says how often a session stops for a person.
-  An autonomous project must first pass the readiness floor: an agent
-  instructions file, a build, a test suite under two minutes and a clean
-  lint, measured by `compass readiness`. Below the floor, assess refuses.
-- **Decisions an agent takes for you are listed.** On `balanced` and
-  `controlled`, the next checkpoint waits for you to confirm or change them.
+  It changes no gate, check or hook.
 
-## Resumable and auditable
+## The record
 
-Every issue leaves a reviewable record. Its documents are in
-`docs/compass/<created>-<issue>/`; its manifest, evidence and markers are in
-`.compass/work/<issue>/`. Another session can resume from that record without
-the chat history, and a reviewer can open the evidence behind each gate.
-
-`compass board render` shows every issue on one page, with a lane for each
-stage. This example is an invented invoicing product:
-
-![The Compass board for an invented invoicing product: a backlog lane, one lane per stage from assess to ship, and a done lane, with cards such as sso-saml-login blocked in implement and four issues done this week](assets/board-example.png)
-
-## One pipeline, five roles
-
-```text
-assess → define → refine → plan → breakdown → implement → verify → ship
-```
-
-The stages stay the same while their depth adapts. Engineer, product owner,
-designer, product marketer and QA each enter the same issue through their own
-command; a product owner starts before the spec, with `/compass:intent`. A role is a
-perspective a session consults. A document a role writes, such as
-`positioning.md`, adds the gates that check it. See
-the [roles guide](docs/roles-guide.md).
-
-## Built to port
-
-Compass runs on Claude Code today, but its core is split on purpose:
-
-- **Methodology:** plain-language guidance, governance and templates.
-- **Kit:** the runtime-neutral Python CLI, schemas and policy engine.
-- **Adapter:** the commands, agents, skills and hooks for Claude Code.
-
-The slash commands are the pipeline; they call the CLI, which does the work
-([docs/cli.md](docs/cli.md)). A future runtime adapter calls the same kit
-rather than reimplementing the rules ([docs/portability.md](docs/portability.md)).
-
-## What the repository contains
-
-```
-commands/     the stage interface, under the /compass: namespace
-agents/       distinct contexts - router, spec-author, planner, builder,
-              orchestrator, verifier, reviewer, product-owner,
-              product-marketer, architect
-skills/       loadable procedures - adaptive-routing, bdd-specification,
-              tdd-discipline, worktree-multiagent, intent-interview and the rest
-hooks/        pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
-              prompt-approval.sh, approval-summary.sh - mechanical enforcement
-cli/compass   the kit: routing, checks and the manifest
-bin/compass   the shim that puts the kit on your PATH
-governance/   guardrails, strategies, routing policy, frozen vocabulary
-approaches/   the reference shapes, and the documents each one writes
-architecture/ Compass's own invariants and decision records
-.claude-plugin/  the plugin manifest and marketplace entry
-```
-
-The first four are the Claude Code adapter and are rebuilt for another
-runtime. Everything below them is reused unchanged.
+Each issue's documents are in `docs/compass/<created>-<issue>/`; its
+manifest, evidence and markers are in `.compass/work/<issue>/`. Another
+session can resume from that record without the chat history. By default the
+record ships in the same commit as the code: `compass quick-fix finish` and
+`compass ship-commit` stage it, and leave out the per-checkout files such as generations and lock files. A
+project that sets `record.commit: false`, or names a `record:` remote and
+does not set `record.commit`, keeps the record out of its commits
+([docs/delivery-record.md](docs/delivery-record.md)). `compass flow` lists
+every issue by state, with what is blocked and whose evidence is stale.
 
 ## What Compass runs, sends and fetches
 
@@ -221,44 +233,52 @@ Compass works on your machine and in your repository. It reaches the network
 only in the cases below, and each one starts only when you ask for it. The
 full account is in [docs/security.md](docs/security.md).
 
-- **Fetches** a brief you name over HTTPS, with `compass intent ingest --from
-  <url>`. It refuses any scheme but `https`, on redirects too.
-- **Fetches** a git parent when the project's `extends:` names one. It runs
-  `git` for the one pinned commit and reads its `compass.yml` as data.
-  Only `compass policy lint`, `compass policy show`, `compass policy diff`,
-  `compass policy update`, `compass preset test` and `compass approach
-  evaluate --write` fetch, and only a commit that is not cached yet; never
-  `compass check`. `compass policy update` always asks the remote which
-  commit its ref names, unless `COMPASS_OFFLINE=1` is set.
-  `--offline` or `COMPASS_OFFLINE=1` stops the others fetching;
-  `COMPASS_PARENT_REMOTE_BASE` names a mirror in place of `https://github.com`
-  ([docs/git-parents.md](docs/git-parents.md)).
+- **Fetches nothing for a configuration.** Compass runs one fixed check set
+  (ADR-094). An `extends:` that names a git parent is refused with
+  `L-PARENT-REMOVED`, and no command runs `git` to fetch one: not `compass
+  policy lint`, `compass policy show`, `compass approach evaluate --write` or
+  `compass check`.
 - **Sends** your delivery record to a git repository you configure, with
   `compass record sync`, which `compass ship-commit` also runs. It happens
   only when `compass.yml` names a `record:` remote, and it redacts
   credentials.
-- **Starts** host sessions (`claude -p`) with `compass run`, which sends their
-  prompts through Claude Code as any session does. Compass denies those
-  sessions `git push` and `gh pr merge` by command prefix.
 - **Runs** commands on your machine: the test command you give `compass
-  tdd-red`, `compass tdd-green` and `compass quick-fix finish`, and, when
-  `allow_project_commands` is true, your project's own guardrails declared
-  with `check: command-passes` and the readiness commands in `compass.yml`;
+  tdd-red`, `compass tdd-green` and `compass quick-fix finish`, which also
+  runs it in a temporary copy of the commit the change started from, and, when
+  `allow_project_commands` is true, your project's own checks declared
+  under `project_checks` in `compass.yml`;
   also git in your repository, and the CLI itself from the plugin's hooks.
-- **Writes** to the linked GitHub issue with `gh`, only when `github_labels`
-  is on in `compass.yml`: label names and, with `page` on, the issue's README
-  as a comment and the ask from `intent.md` into an empty issue body
-  ([docs/security.md](docs/security.md)).
-- **Reads** the current Claude Code session's own transcript when a quick fix
-  finishes, keeping only token counts, model names and times.
-- **Clones and installs** other frameworks only in the evaluation harness,
-  `evals/harness.py`, which maintainers run by hand.
+- **Reads** a pull request with `gh` when you run `compass issue link set
+  --pr`: its number, state, author, head and merge commit, and after the
+  merge its reviews and the login `gh` reads as. Compass writes nothing to
+  GitHub ([docs/security.md](docs/security.md)).
+
+## What the repository contains
+
+```
+commands/     the slash commands, under the /compass: namespace
+skills/       loadable procedures - atdd, tdd-discipline, adaptive-routing
+              and the rest
+hooks/        pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
+              prompt-approval.sh, approval-summary.sh - mechanical enforcement
+cli/compass   the CLI: assessment, checks, the manifest and the trail
+bin/compass   the shim that puts the CLI on your PATH
+governance/   guardrails, strategies, the check set, frozen vocabulary
+approaches/   the path, the spike, and how assess selects the evidence
+architecture/ Compass's own invariants and decision records
+.claude-plugin/  the plugin manifest and marketplace entry
+```
+
+The commands, skills and hooks are the Claude Code adapter; the CLI under
+them does not depend on Claude Code ([docs/cli.md](docs/cli.md),
+[docs/portability.md](docs/portability.md)).
 
 ## Read next
 
 - **[Five-minute walkthrough](docs/five-minutes.md):** install Compass and ship a small issue.
-- **[Methodology](docs/methodology.md):** the design and reasoning behind adaptive delivery.
 - **[Safety contract](docs/safety-contract.md):** what Compass guarantees and what it does not.
+- **[Delivery record](docs/delivery-record.md):** what an issue records, and how to check `trail.md`.
+- **[Methodology](docs/methodology.md):** the design and reasoning behind Compass.
 - **[Security](docs/security.md):** hooks, dependencies, what runs and what is sent.
 - **[Contributing](CONTRIBUTING.md):** what judges a pull request, and where to start.
 

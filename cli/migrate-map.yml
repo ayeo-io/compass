@@ -75,17 +75,6 @@ values:
 friction_keys:
   phase: stage
 
-# Old route names -> the names the display layer prints. Manifests record
-# the route names themselves; an old name is read through the map above.
-shape_display:
-  express: quick fix
-  standard: regular
-  expedition: full
-  feature: regular
-  initiative: full
-  hotfix: hotfix
-  spike: spike
-
 # v1 artifact filenames -> v2, applied inside each issue directory.
 # The migration module consumes this section; the copy it keeps in code
 # is only the fallback for a tree with no framework install.
@@ -109,6 +98,11 @@ artifacts:
 # the planning stage's key, skill (`plan-authoring`), agent (`planner`) and
 # command, even though v1 used `plan.md` for the design document - see the
 # `artifacts:` section above.
+#
+# `specify` and `build` are also stages of the four-stage path (ADR-092). The
+# readers rename them only in a v1 record: a `stages:` map that holds `frame`,
+# `clarify`, `distribute` or `land`, a map under the v1 key `phases:`, or a
+# friction entry under the v1 key `phase` (`path_stages.rename_v1_stage_keys`).
 stage_keys:
   frame: assess
   specify: define
@@ -137,31 +131,31 @@ manifest_keys:
 config_keys:
   swarm: multiagent
 
-# Old typed names that 7.0.0 still reads (language-key-and-us-english). One
-# table of kind -> old word -> {new, removed_in}. Every row ends at 9.0.0:
-# `old_names.removal_problems` lists each row once the package version is 9.0.0
-# or later. A stored value (`reassessment_kind`, `check_id`) is also read by
-# `word_map` as a value section; the other kinds have a small reader of their
-# own that takes the old word from this table. `cli/aliases.yml` stays empty:
-# these are values and keys, not CLI spellings.
+# Old names that a stored record still holds (language-key-and-us-english).
+# One table of kind -> old word -> {new, removed_in}. A typed old name in this
+# table is no longer read (ADR-098); the rows left are read from stored files,
+# or from `governance/terminology.yml` for `term`, and
+# `cli/compass_pkg/old_names.py` says which reader keeps each. Typed input
+# takes only the 9.0.0 names and stored files keep reading as stored (VD-043,
+# decisions 8 and 9), so every row ends at 10.0.0: `old_names.removal_problems`
+# lists each row once the package version reaches its `removed_in`, and the
+# owner then decides whether the 8.x archive still needs it.
+# `bdd-specification` is the skill 9.0.0 merged into `atdd` (#360).
+# `behavior-mapping`, also merged into `atdd`, is not mapped to it under either
+# spelling: closed archived issues load no skill, and `compass migrate` writes
+# each open 8.x issue a new generation from the check set, which names `atdd`.
+# Contract 1 records the 8.0.4 and 5.6.0 copies as they routed, so the name
+# each holds stays. `cli/aliases.yml` stays empty: these are values and keys,
+# not CLI spellings.
 old_names:
   reassessment_kind:
-    judgement: {new: judgment, removed_in: 9.0.0}
+    judgement: {new: judgment, removed_in: 10.0.0}
   check_id:
-    dor-behaviour-is-gwt: {new: dor-behavior-is-gwt, removed_in: 9.0.0}
+    dor-behaviour-is-gwt: {new: dor-behavior-is-gwt, removed_in: 10.0.0}
   skill:
-    behaviour-mapping: {new: behavior-mapping, removed_in: 9.0.0}
-  refusal_code:
-    not-initialised: {new: not-initialized, removed_in: 9.0.0}
+    behaviour-mapping: {new: behavior-mapping, removed_in: 10.0.0}
+    bdd-specification: {new: atdd, removed_in: 10.0.0}
   state_key:
-    initialised: {new: initialized, removed_in: 9.0.0}
-  readiness_key:
-    catalogue_digest: {new: catalog_digest, removed_in: 9.0.0}
-  json_key:
-    behaviour: {new: behavior, removed_in: 9.0.0}
-    behaviours: {new: behaviors, removed_in: 9.0.0}
-  spec_heading:
-    Current Behaviour: {new: Current Behavior, removed_in: 9.0.0}
-    Archived Behaviour: {new: Archived Behavior, removed_in: 9.0.0}
+    initialised: {new: initialized, removed_in: 10.0.0}
   term:
-    catalogue: {new: catalog, removed_in: 9.0.0}
+    catalogue: {new: catalog, removed_in: 10.0.0}

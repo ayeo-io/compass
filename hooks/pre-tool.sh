@@ -36,10 +36,12 @@
 #                                      drops the .red marker. So the marker
 #                                      means "a real, observed failure is on
 #                                      record", not "someone touched a file".
-#     1. The implement stage: `compass tdd-red -- <your failing test command>`.
+#     1. The build stage (implement on an issue assessed before 9.0.0):
+#        `compass tdd-red -- <your failing test command>`.
 #     2. Edit the production code - this hook sees .red and allows it.
 #     3. `compass tdd-green -- <test command>` confirms green, writes
-#        evidence/green.json, and clears .red - the hand-off to the verify stage.
+#        evidence/green.json, and clears .red - the hand-off to the ship stage
+#        (`verify` on an issue assessed before 9.0.0).
 #   .compass/work/<issue-slug>/.spike  "this issue is a spike - the red-
 #                                      before-green strategy is suspended".
 #                                      /compass:assess
@@ -174,8 +176,8 @@ compass_block() {
 }
 
 # Counts the block for the current issue in `.compass/interruptions.log`, an
-# append-only log outside every issue folder, so `compass retro` can report
-# how often the framework stopped work. Only once an issue is known (TASK_DIR is set);
+# append-only log outside every issue folder, so `compass issue diagnose` can
+# report how often the framework stopped work. Only once an issue is known (TASK_DIR is set);
 # every error is swallowed and the exit code is untouched, because a count
 # must never change the block it counts.
 compass_count_block() {
@@ -236,6 +238,13 @@ if command -v jq >/dev/null 2>&1; then
   SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)
   COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
   TRANSCRIPT=$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null || true)
+  # The folder a Bash call runs in, which can name a worktree of the session's
+  # repository (hooks/lib/pre-tool-project.sh, bash_follow_cwd). Read for Bash
+  # only, so an Edit or Write starts no extra process.
+  CALL_CWD=""
+  if [ "$TOOL" = "Bash" ]; then
+    CALL_CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)
+  fi
 else
   # A JSON string runs to the first quote that no backslash escapes, so a
   # command such as `bash -c "..."` is read in full, as jq reads it. The
@@ -270,6 +279,10 @@ else
   SESSION_ID=$(_json_string session_id)
   TOOL=$(_json_string tool_name)
   COMMAND=$(_json_string command)
+  CALL_CWD=""
+  if [ "$TOOL" = "Bash" ]; then
+    CALL_CWD=$(_json_string cwd)
+  fi
 fi
 
 # --- the rest of the hook, in parts ------------------------------------------

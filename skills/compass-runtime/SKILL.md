@@ -1,6 +1,6 @@
 ---
 name: compass-runtime
-description: Which command runs each stage, which agent owns it, where issue state lives. Load when an issue begins.
+description: Where issue state lives and which skill helps with what. Load when a `next:` line does not answer the question.
 ---
 
 # Compass - the stage map
@@ -9,192 +9,177 @@ The rules of behavior are in `compass-contract.md`, and the SessionStart hook
 puts them in every session before you read this. They are not repeated here,
 so the two cannot disagree.
 
-What this file carries is the mapping a session needs once it is already
-following the contract - which command runs which stage, what each writes,
-which agent owns it, and where the result lands on disk.
-
-If anything here conflicts with `docs/methodology.md`, the methodology doc
-wins. First Compass session? `docs/five-minutes.md` has the mental model and a
-worked example; `docs/safety-contract.md` says what Compass guarantees and
-what it explicitly does not.
+This file maps each stage to its command, its records, its skill and its
+place on disk. If it conflicts with `docs/methodology.md`, the methodology doc
+wins. First session: `docs/five-minutes.md` takes one change through the
+path; `docs/safety-contract.md` says what Compass guarantees and what it does
+not.
 
 ## The stages and their commands
 
-| Stage | Command | Artifact it writes |
+Every delivery issue runs one path of four stages: assess, specify, build and
+ship (ADR-092, `approaches/path.md`). Two commands run the path, and a
+`next:` line names each step.
+
+| Stage | What runs it | What it writes |
 |---|---|---|
-| Assess | `/compass:assess` | `delivery-approach.md` + the manifest's assessment |
-| Define acceptance criteria | `/compass:define` | `acceptance-criteria.md` |
-| Requirements review | `/compass:refine` | `requirements-review.md` (ends with the Definition of Ready) |
-| Plan | `/compass:plan` | `technical-design.md` (+ `distribution-map.md` on parallel work) |
-| Break down the work | `/compass:breakdown` | worktrees + subtask assignments |
-| Implement | `/compass:implement` | code + the red and green records (named by binding) |
-| Test & review | `/compass:verify` | `verification-report.md` (ends with the Definition of Done, a block `compass issue render` writes from the manifest's records) |
-| Ship | `/compass:ship` | the integration commit + settled follow-ups |
+| Assess | `compass quick-fix start`; `/compass:assess` for a spike and `--reassess` | the assessment, the request link, `evidence_required` (the evidence the change owes), the gates and the first scenario |
+| Specify | the session, only where a person approves the scenarios before code | the scenarios in `acceptance-criteria.md`, and the request for the `specify` approval |
+| Build | the session: the tests and the code | no record |
+| Ship | `compass quick-fix finish` | the scenarios and the changed files it reads, the red and green records, the three gates, the request for the ship approval, then the commit with the issue's record and `trail.md` |
 
-`/compass:assess` itself carries only that light path. The full assess
-procedure - setup, `--reassess`, steps 1 to 7 and the gate - is in
-`approaches/assess-procedure.md`, which assess names for every heavier
-approach and for `--reassess`.
+- `/compass:go`, `/compass:quick-fix` and `/compass:assess` teach the same
+  two commands. `/compass:assess` also starts a spike and holds `--reassess`
+  (`approaches/assess-procedure.md`).
+- `/compass:ship` covers the commit and the ship approval;
+  `/compass:resume` continues an issue from its state on disk.
 
-When assess computes a **quick fix**, the eight rows above collapse into one
-command: `/compass:quick-fix` carries the whole light path - assess, the one
-scenario, red-green, the check, the commit - inlined in a single file, and it
-is read alone. It is the same pipeline
-at its lightest weight, not a way around it: if `compass approach evaluate`
-returns anything heavier, the rows above are what runs.
+**The older record commands** - `compass tdd-red`, `tdd-green`, `scenario
+add`, `changed-file add`, `evidence add` and `gate pass` - still work. A
+project needs them only when its settings add evidence (`require_evidence`
+in `compass.yml`): `finish` then names each added item on a `next:` line.
+`compass tdd-red` is also the only way to record that a test was written
+before the code.
 
-Cross-issue: `/compass:status` (one issue or a flat list), `/compass:flow`
-(the managed cross-issue view - advisory, never gating), and
-`compass board render` (the same view as one page in the browser;
-`docs/board.md`). Entry points for the consulted perspectives:
-`/compass:intent` (product owner), `/compass:position` (marketer),
-`/compass:design` (designer - produces the UI contract), `/compass:consult`
-(multi-role decisions). `/compass:init` is optional, and it is not what
-creates the project: the entry points above run `compass init` for you.
+**Follow the `next:` line.** `start` and `finish` end with `next:` or
+`done:`, and `compass next` prints the issue's stage and its `next:` line at
+any time:
 
-A command spelling that a release held and 6.0.0 renamed worked through an
-alias in 6.x. The aliases were removed at 7.0.0, so the old spelling now exits 2
-with the parser's usual error. That error names no new spelling, except for
-two removed verbs that add one line. `docs/upgrade-7-0-0.md` names them and lists
-each removed spelling beside its new one. `governance/terminology.yml` names each retired word beside the
-one that replaced it, and `docs/glossary.md` says the same in prose; the
-current verbs are whatever `compass --help` lists.
+```text
+Build [gate: verify.correctness] | next: write the tests and the code, then compass quick-fix finish -m "<commit message>" -- <test command>
+```
 
-**The binding decides the filename.** `compass tdd-red --scenario <id>` and
-`compass tdd-green --scenario <id>` write `evidence/red-<id>.json` and
-`evidence/green-<id>.json`; a run with no `--scenario` writes
-`evidence/red.json` and `evidence/green.json` instead. Nothing else is touched, so
-recording one scenario cannot overwrite the record another gate is citing -
-and a reader knows where their evidence went without guessing.
+Do what it says.
 
-## Which agent and which skill, per stage
+A spike runs assess, build (explore) and ship (conclude): `approaches/spike.md`.
 
-- **Assess** - load the `adaptive-routing` skill; consider the `router`
-  agent.
-- **Define and refine** - load `bdd-specification`; on brownfield work whose
-  behavior is not yet written down, also load `behavior-mapping`. The
-  `spec-author` agent owns both stages.
-- **Plan** - load `plan-authoring` (which optional design sections earn a
-  place) and `governance-check` (how to check the design against the
-  governance in force). The `planner` agent owns it.
-- **Implementing in parallel** - load `worktree-multiagent`. The `orchestrator`
-  agent coordinates; `builder` agents work, one per worktree, each loading
-  `tdd-discipline`.
-- **Test & review** - the `verifier` and `reviewer` agents run; load
-  `evidence-gates`. Load `receiving-code-review` when answering their
-  comments.
-- **An unexpected test failure while implementing** - load
-  `systematic-debugging`, and after three failed fixes re-assess rather than
-  try a fourth.
-- **Role-facing work** - load `intent-interview` and read its
-  `role-translation.md`, which is how one set of
-  acceptance criteria is read through five role perspectives. The
-  `product-owner`, `product-marketer` and `architect` agents apply specific
-  ones.
-- `evidence-gates` carries `traceability.md`, read whenever an artifact is
-  written.
+`/compass:status` reports one issue or lists them all; `/compass:flow` shows
+blockers and follow-ups across issues, and never gates. `/compass:init` is
+optional: the entry commands run `compass init`, which creates `.compass/`.
 
-The full set is in `agents/`. The files in `agents/` are the authority.
+**An 8.x project** runs `compass migrate` once: a dry run lists the changes,
+and `--apply` writes them (`docs/upgrade-9-0-0.md`). The aliases were removed
+at 7.0.0, so an old command spelling exits 2; `docs/upgrade-7-0-0.md` lists
+each one beside its new spelling, and `compass --help` lists the verbs now.
 
-An agent has Bash when it runs a `compass` verb, and Skill when it loads a
-skill. `product-owner` and `product-marketer` have no shell; their caller runs
-their verbs. No agent edits `manifest.yml` by hand (`tests/test_agent_tools.py`).
+## The request link and the ship approval
 
-## Worktrees and multiagent
+- **The request link.** Assess records what asked for the change and who
+  asked: `--request <url or owner/repo#N>` and `--requester "<name>"`.
+  Without them the check `request-recorded` fails; `compass next` names the
+  command that records them.
+- **The ship approval.** One person approves each change, and the agent
+  cannot give it. `finish` writes the request and the person types
+  `/compass:approve <n>`. Or, after the merge, `compass issue link set --pr
+  <n>` reads it from an approving review by a person who is not the author.
 
-Only the `orchestrator` agent creates worktrees (`scripts/multiagent.sh`) and
-integrates them (`scripts/integrate.sh`). A `builder` works *inside* its
-assigned worktree and never touches a sibling's. The approach's distribution
-map says how many subtasks exist; policy can cap the count. On solo work there
-is no worktree - work on the current branch.
+## Which skill helps
+
+This session runs every stage; Compass starts no stage agent (ADR-090). A
+change needs no skill. Load one when it helps:
+
+- `adaptive-routing` - rating risk, familiarity and size for a spike or a
+  re-assessment.
+- `atdd` - scenarios and acceptance tests for behavior a real client can
+  observe. It is guidance: no check of it runs unless the project's settings
+  add one.
+- `tdd-discipline` - writing the test first, and a change with no natural
+  failing test.
+- `evidence-gates` - what counts as evidence, when the project's settings
+  add a review.
+- `governance-check` - a change that needs a design a reviewer can argue
+  with.
+- `receiving-code-review` - answering a review's comments.
+- `systematic-debugging` - an unexpected test failure. After three failed
+  fixes re-assess rather than try a fourth.
+- `intent-interview` - a brief or an idea with no acceptance criteria yet.
+
+No session edits `manifest.yml` by hand: a `compass` verb writes it.
+
+## Never stash across a worktree hop
+
+Compass starts no worktree (ADR-090), but a person or a delegated agent can
+work in one; the hook judges an edit there by that worktree's own pointer
+(ADR-078). Never stash in one worktree and pop in another, and never stash
+inside a temporary worktree: a stash lives in the shared repository, but the
+state it captures belongs to one checkout, so removing a temporary worktree
+destroys the stashed work along with the worktree. A CI fix nearly lost work
+this way. To move work between worktrees, commit it: the branch is durable.
 
 ## Where state lives
 
 ```
-compass.yml                     The one file a person edits: settings, and the project's edits to the shipped default (written by /compass:init or compass policy migrate)
+compass.yml                     The one file a person edits: settings, and the tighten-only settings that add to the check set
 .compass/
-├── state.yml                   What the CLI wrote: what initialized the project, and when
-├── config.yml                  Projects from 5.x only: read until the project moves its settings with compass policy migrate; no 6.0.0 command writes it
-├── legacy/, migration.yml      Written by compass policy migrate: the superseded files, and the digests of them
+├── state.yml                   What initialized the project, and when
+├── config.yml                  Projects from 5.x only: read until the project moves its settings with compass policy migrate on 8.x; no 6.0.0 command writes it
+├── legacy/, migration.yml      Written by compass policy migrate on 8.x: the superseded files, and the digests of them
 ├── current-task                One-line pointer to the active issue
-├── work/
-│   └── <issue-slug>/            One directory per issue: its machine state
-│       ├── manifest.yml         The manifest
-│       ├── generations/<n>/     The configuration the issue runs against (written by compass approach evaluate --write)
-│       ├── evidence/            red/green records + typed gate evidence
-│       ├── .red, .spike, ...    The markers the hook reads
-│       └── devlog.md            Append-only running log
-└── flow/
-    └── digest-<date>.md         Periodic cross-issue digest
+└── work/
+    ├── .gitignore              Keeps generations, lock files and markers out of the commit
+    └── <issue-slug>/           One folder per issue: its record
+        ├── manifest.yml        The manifest
+        ├── trail.md            Who asked, what was agreed, red, green, who approved, what shipped, with sha256sum lines
+        ├── evidence/           Red and green records, typed gate evidence, SHA256SUMS
+        └── generations/<n>/    The configuration the issue runs against; not committed
 
 docs/compass/
-└── <created>-<issue-slug>/      One directory per issue: its documents
-    ├── intent.md                Intake (if a product owner was involved)
-    ├── ui-contract.md           Designer contracts (if a designer was involved)
-    ├── acceptance-criteria.md   The shared artifact every role reads
-    ├── requirements-review.md   (ends with the Definition of Ready gate)
-    ├── technical-design.md      The design
-    ├── distribution-map.md      Multiagent orchestration (full-approach scale work)
-    ├── positioning.md           Marketer messaging (if written)
-    ├── launch-readiness.md      Marketer claims gate (if `positioning.md` exists)
-    └── verification-report.md   (ends with the Definition of Done gate)
+└── <created>-<issue-slug>/
+    └── acceptance-criteria.md  The one document Compass needs and checks
 ```
 
-An issue's documents are in `docs/compass/<created>-<issue-slug>/`, where
-`<created>` is the manifest's `created:` date. `compass issue artifact-path
-<kind>` prints where one document is.
+In `docs/compass/<created>-<issue-slug>/`, `<created>` is the manifest's
+`created:` date. A team can keep its own notes there; Compass does not read
+them (ADR-091).
 
-The manifest's `artifacts:` registry holds each document's status. The stage
-commands move it: a command that writes the record of a stage approves the
-`draft` documents of earlier stages (`approved_by` names the command), or sets
-`awaiting-approval` for a document with a human check. Ask with `compass evidence
-request --artifact <kind>`; the person types `/compass:approve` (or runs `compass
-evidence approve --artifact <kind>` at a terminal). `compass ship-commit` refuses a
-document that is not approved.
+**The record mode** decides whether the issue's record ships with the code
+(ADR-096, `docs/delivery-record.md`). By default it is committed: the commit
+that `finish` or `compass ship-commit` makes holds the issue folder and its
+documents folder with the code. It is kept out when `compass.yml` says so,
+when git ignores the folder or outside git; then `compass record sync` can
+copy it elsewhere. Never stage `.compass/` yourself. `compass record commit`
+commits the fields the merge adds, and the `next:` line names it.
 
-A regular issue owes `intent.md` at depth `lightweight`: the router drafts it
-at assess and the spec author corrects it at define. Every issue whose stored
-configuration sets `release_line: true` on its approach (quick fix, regular,
-hotfix and full on the shipped default) owes a release line, the manifest's
-`release_note` (`schemas/manifest.schema.json`). Give it with
-`--release-note "<text written for a user>"` on `compass ship-commit`,
-`compass quick-fix finish` or `compass acceptance record`; a landing refuses
-the issue without one (`docs/release-line.md`).
+**The release line.** A change that ships owes the manifest's `release_note`.
+`finish` takes it from `--release-note "<text written for a user>"`, or from
+the first line of the commit message (`docs/release-line.md`).
 
-A new project has no `governance/` directory: the shipped default preset is in
-force, and `compass.yml` holds only what differs from it. An unmigrated 5.x
-project runs on its own copied `governance/` until `compass policy migrate`
-converts it. `compass policy show` shows what is in force for a project with a
-`compass.yml` or none, but it does not read that copy.
+**A waiver** excuses one check on one issue: `compass waiver add --check <id>
+--reason "..."`, then `compass evidence request --waiver W-<n>`, and stop. Only
+a person, or an agent under a delegation typed `--for waivers`, approves it
+(`docs/waivers.md`).
+
+A new project has no `governance/` directory: the fixed check set
+(`governance/check-set.yml` in the plugin) is in force, and `compass.yml`
+holds the project's settings, which can only add to it. An unmigrated 5.x
+project with a copied `governance/` is refused until `compass policy migrate`
+on 8.x converts it. `compass policy show` prints the check set, its digest and
+the settings applied, but it does not read that copy.
 
 ## Project lessons
 
 A project keeps rules a person has had to repeat as lessons; the session
-start shows the `always` ones after the contract. When the person states
-one, run `compass lesson propose "<their words>"`, quoting them,
-and never `compass lesson add`. A proposal takes effect only when someone runs
-`compass lesson accept`. The CLI cannot tell whether the person or the model
-typed a rule, so this instruction is what keeps the model on the proposing
+start shows the `always` ones after the contract. When the person states one,
+run `compass lesson propose "<their words>"`, quoting them,
+and never `compass lesson add`. A proposal takes effect only when someone
+runs `compass lesson accept`. The CLI cannot tell whether the person or the
+model typed a rule, so this instruction keeps the model on the proposing
 side. A lesson is advice: a guardrail always wins.
 
 ## Writing voice
 
-Before you write:
-
-- a devlog entry, a requirements review, or anything else this skill
-  produces - read `skills/compass-runtime/writing-voice.md`, the principle
-  and the tells that mark prose narrating the pipeline instead of
-  communicating a decision;
-- a repository-wide replacement - read `text-sweeps.md`, what a text sweep
-  must not touch.
-
-`writing-voice-worked-example.md` beside `writing-voice.md` carries the
-before-and-after pairs from this project's own archive, for when the
-principle alone does not settle a sentence.
+Before you write a scenario's intent, a review, a commit message or other
+prose, read `skills/compass-runtime/writing-voice.md`: the principle, and the
+tells that mark prose narrating the pipeline instead of communicating a
+decision. `writing-voice-worked-example.md` beside it holds before-and-after
+pairs for when the principle alone does not settle a sentence. Before a
+repository-wide replacement, read `text-sweeps.md`: what a text sweep must
+not touch.
 
 ## When you are unsure
 
-Re-read `delivery-approach.md`. It was written at assessment precisely so a
-later session, or a different agent, can pick the issue up without re-deriving
-the process. If it does not answer the question, the assessment under-sized
-the work: say so and re-assess rather than improvise.
+Run `compass next` and `compass approach show`, and re-read the manifest.
+The assessment was recorded so a later session, or a different agent, can
+pick the issue up without re-deriving the process. If it does not answer the
+question, the assessment under-sized the work: say so and re-assess rather
+than improvise.

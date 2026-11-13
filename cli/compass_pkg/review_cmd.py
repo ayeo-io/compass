@@ -7,7 +7,7 @@ issue's `evidence/` folder and registers it as `manual-review` evidence with
 `check: <id>`. `compass check` then reads it through `review_records`.
 """
 # DEPENDENCY: standard library (os, re); compass_pkg.atomic_io, core,
-# effective, old_names, red_first, review_records, terminal.
+# effective, red_first, review_records, terminal.
 from __future__ import annotations
 
 import os
@@ -15,7 +15,7 @@ import re
 
 import yaml
 
-from compass_pkg import effective, old_names, review_records
+from compass_pkg import effective, review_records
 from compass_pkg.atomic_io import atomic_write_text
 from compass_pkg.core import (CompassError, load_manifest, now_iso, resolve_issue_dir,
                               save_manifest, issue_arg)
@@ -87,7 +87,7 @@ def cmd_evidence_review(args):
     reviewer = parse_reviewer(args.reviewer)
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
-    check = _check_of(effective.view_or_legacy(task_dir), check_id)
+    check = _check_of(effective.effective_for(task_dir), check_id)
     if not review_records.declared_inputs(check):
         raise CompassError(f"compass evidence review: '{check_id}' declares no inputs, so "
                            f"a review of it has nothing to stay current with. Add `inputs:` "
@@ -132,7 +132,7 @@ def register(evidence_subs):
     """Add `review` to the `evidence` group."""
     p = evidence_subs.add_parser(
         "review", help="record a judgment against a judged check")
-    p.add_argument("check", type=old_names.check_type, help="id of the judged check")
+    p.add_argument("check", help="id of the judged check")
     issue_arg(p)
     p.add_argument("--verdict", required=True, choices=VERDICTS,
                    help="what was judged: pass or fail")

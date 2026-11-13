@@ -1,20 +1,21 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034,SC2154  # the parts share variables; checked joined, none is unused or unset
-# Part of hooks/pre-tool.sh: resolve the project, and record the session on the issue.
+# Part of hooks/pre-tool.sh: resolve the project.
 # hooks/pre-tool.sh sources each part in order, at its top level, so the parts
 # run as one script in one shell. This file is not a hook of its own.
 
 # --- resolve the project this hook is enforcing -----------------------------
 # The resolution order, and why each step exists:
 #   1. The edited file's own path, when the tool call names one. It is the
-#      only input that names the tree being changed - Compass creates git
-#      worktrees at breakdown, so on a multiagent approach the session
-#      directory and the edited file can be in different trees, and resolving
+#      only input that names the tree being changed - a person or a delegated
+#      agent can work in a git worktree, so the session directory and the
+#      edited file can be in different trees, and resolving
 #      from the session reads the wrong project either way: it can miss a red
 #      recorded in the edited tree, or borrow one recorded in the session's
 #      tree.
-#   2. CLAUDE_PROJECT_DIR, when the tool call names no file (a Bash call with
-#      no write target). The session is the best answer there.
+#   2. CLAUDE_PROJECT_DIR, when the tool call names no file (a Bash call).
+#      The session is the best answer there, unless the Bash call's `cwd`
+#      is in a worktree of the session's repository (bash_follow_cwd below).
 #   3. The ancestor walk from that starting point up to the nearest
 #      .compass/ directory, bounded by .git so the walk does not cross into
 #      another repository.
@@ -116,8 +117,8 @@ find_compass_root() {
     # project's .compass/ (a monorepo sibling, a stray one in $HOME) and
     # allow the edit if that issue has a red on record.
     #
-    # -e, not -d: in a git worktree .git is a file, and Compass creates
-    # worktrees itself for multiagent orchestrations.
+    # -e, not -d: in a git worktree .git is a file, and a project can be
+    # worked on from one.
     [ -e "$search/.git" ] && break
     [ "$search" = "/" ] && break
     # A relative path ends at "." and the parent of "." is ".", so stop
@@ -152,7 +153,7 @@ git_common_dir() {
 
 # Whether the foreign project is a tree of the session's repository: both git
 # common directories are readable and equal. Any other result is "no", so the
-# caller refuses. Computed once, because the session record and the issue
+# caller refuses. Computed once, because the Bash folder check and the issue
 # block both need it. This is a consistency check, not a defence against a
 # forged .git file: an edit inside a forged folder is not an edit of the
 # project's code.
@@ -206,13 +207,11 @@ classify_foreign() {
 # missing-.compass/work/ branch below gives the useful message.
 PROJECT_RESOLVED=1
 
-# Bash keeps the session as its project: its target is extracted much later,
-# by a classifier that resolves candidates against PROJECT_DIR, and
-# re-running resolution inside that loop would break every write shape it
-# guards. So the worktree fix covers the tools that name a file directly -
-# Edit and Write - which is where a builder in a worktree actually works. A
-# Bash redirect inside a worktree still resolves from the session;
-# docs/safety-contract.md states that scope.
+# A Bash call names no file here: its targets are extracted much later, by a
+# classifier that resolves candidates against PROJECT_DIR, and re-running
+# resolution inside that loop would break every write shape it guards. So a
+# Bash call starts from the session's project, and bash_follow_cwd below may
+# move it to the tree of the folder the call runs in.
 if [ "${TOOL:-}" = "Bash" ]; then
   resolve_project ""
 else
@@ -226,50 +225,37 @@ fi
 # used, and the tree must be tied to the session's repository.
 classify_foreign
 
-# --- record the session on the issue (usage.sessions) ------------------------
-# `compass ship-commit` reads the transcripts of every session that worked on
-# an issue, so the hook notes each session id in the issue's manifest the
-# first time it sees one. It runs before the path classification, so a
-# document write and a Bash call are recorded too.
+# A Bash call whose working folder (the input's `cwd`) is in a worktree of the
+# session's repository is judged by that worktree, as an Edit there is
+# (ADR-078, ayeo-io/compass-delivery#337). A subagent started with worktree
+# isolation keeps the parent's CLAUDE_PROJECT_DIR, so without this every shell
+# write it made was judged by the main checkout's issue.
 #
-# The issue comes from COMPASS_ISSUE or the pointer only, read in shell: with
-# neither, nothing is recorded, and the most recently changed issue is never
-# guessed. In a foreign project the selection is the one the guard below
-# uses: the tree must be tied to the session's repository, the pointer comes
-# first and COMPASS_ISSUE only stands in for an empty pointer, and the issue
-# is recorded with via=tree so the session table is not read. An id already
-# recorded costs one `grep` and no python3 process; a new one starts one,
-# which tries the manifest lock once without waiting
-# (cli/compass_pkg/session_record.py). This never refuses a call: every
-# fault, a bad id or a recorder that cannot run returns 0 with its output
-# discarded, and the checks below judge the call as before. A broken install
-# still refuses through those checks.
-compass_record_session() {
-  [ "${PROJECT_RESOLVED:-0}" -eq 1 ] || return 0
-  case "${SESSION_ID:-}" in ""|*[!A-Za-z0-9_-]*) return 0 ;; esac
-  local slug="" via="pointer" pointer="$PROJECT_DIR/.compass/current-task"
-  if [ "${FOREIGN:-0}" -eq 1 ]; then
-    tied_to_session_repo || return 0
-    via="tree"
-    if [ -f "$pointer" ]; then
-      IFS= read -r slug < "$pointer" || true
-      slug="${slug//[[:space:]]/}"
-    fi
-    [ -n "$slug" ] || slug="${COMPASS_ISSUE:-}"
-  elif [ -n "${COMPASS_ISSUE:-}" ]; then
-    slug="$COMPASS_ISSUE"; via="env"
-  elif [ -f "$pointer" ]; then
-    IFS= read -r slug < "$pointer" || true
-    slug="${slug//[[:space:]]/}"
+# The tree is the Compass root found by walking up from `cwd`, as for an Edit.
+# It is used only when it is foreign and tied to the session's repository; a
+# `cwd` that is missing, relative or not a folder, a tree with no Compass
+# root, the session's own project and an untied tree all keep the session's
+# project, as before. BASH_FROM_TREE=1 tells the target loop
+# (pre-tool-issue.sh) to judge the targets outside the tree, and every
+# target of a command that changes folder, against the session's project
+# first, so no write the hook checked before goes unchecked.
+BASH_FROM_TREE=0
+bash_follow_cwd() {
+  [ -n "${CLAUDE_PROJECT_DIR:-}" ] || return 0
+  case "${CALL_CWD:-}" in /*) ;; *) return 0 ;; esac
+  [ -d "$CALL_CWD" ] || return 0
+  normalise_path "$CALL_CWD"
+  find_compass_root "$NORMALISED"  # us-english-scan: allow - shell variable name, not prose
+  [ -n "$FOUND_ROOT" ] || return 0
+  PROJECT_DIR="$FOUND_ROOT"
+  classify_foreign
+  if [ "$FOREIGN" -eq 1 ] && tied_to_session_repo; then
+    BASH_FROM_TREE=1
+    return 0
   fi
-  case "$slug" in ""|.|..|*/*|*\\*) return 0 ;; esac
-  local folder="$PROJECT_DIR/.compass/work/$slug"
-  [ -f "$folder/manifest.yml" ] || return 0
-  grep -qE "^[[:space:]]*- ['\"]?${SESSION_ID}['\"]?[[:space:]]*\$" \
-    "$folder/manifest.yml" 2>/dev/null && return 0
-  compass_python "$HOOK_ROOT/hooks/py/pre_tool_record_session.py" "$folder" "$SESSION_ID" "$via" >/dev/null 2>&1 </dev/null || true
-  return 0
+  PROJECT_DIR="$CLAUDE_PROJECT_DIR"
+  FOREIGN=0 SESSION_ROOT="" TIED=""
 }
-set +e
-compass_record_session
-set -e
+if [ "${TOOL:-}" = "Bash" ]; then
+  bash_follow_cwd
+fi

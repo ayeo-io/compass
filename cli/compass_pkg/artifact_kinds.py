@@ -10,8 +10,8 @@ all of them.
 A generation stores the configuration as it was resolved. One stored before
 the descriptive fields existed holds entries with a `file` and sometimes a
 `stage`, and nothing else. `entry` returns such an entry with each absent
-descriptive field taken from the shipped default, for a kind the shipped
-default declares. A project's own kind is returned as stored, because the
+descriptive field taken from the catalogue 8.0.4 shipped
+(`governance/artifacts-8.0.4.yml`), for a kind that catalogue declares. A project's own kind is returned as stored, because the
 framework knows nothing about it. `required_when` and `every_approach` are
 never filled: they decide what an issue owes, and a stored generation keeps
 the obligations it was stored with.
@@ -34,12 +34,19 @@ FILLED_FIELDS = ("stage", "owner", "audience", "stands_for", "sections", "depend
 _SHIPPED = {}
 
 
+#: The artifacts catalogue as 8.0.4 shipped it, byte for byte. The live default
+#: declares none since 9.0.0 (ADR-091). This file stays because a stored 8.x
+#: generation's entries are filled from it, `compass issue migrate` maps file
+#: names to kinds with it, and the 8.0.4 copy reader of contracts 1 and 2 reads
+#: the description fields and conditions from it (VD-055).
+CATALOGUE_8_0_4 = os.path.join(FRAMEWORK_ROOT, "governance", "artifacts-8.0.4.yml")
+
+
 def shipped():
-    """The shipped default's artifacts catalogue, or {} when it cannot be read.
-    Read once per process."""
+    """The last shipped artifacts catalogue (8.0.4), or {} when it cannot be
+    read. Read once per process."""
     if "artifacts" not in _SHIPPED:
-        path = os.path.join(FRAMEWORK_ROOT, "governance", "presets", "default",
-                            "artifacts.yml")
+        path = CATALOGUE_8_0_4
         try:
             body = (load_yaml(path) or {}).get("artifacts")
         except (CompassError, OSError):
@@ -76,28 +83,6 @@ def catalogue(view):
         return copy.deepcopy(shipped())
     return {kind: entry(view, kind) for kind in declared
             if isinstance(declared[kind], dict)}
-
-
-def _flat(text):
-    return " ".join(str(text).split())
-
-
-def rows(artifacts):
-    """One row per kind of `artifacts`, in its order, for the documents that
-    list the catalogue. `sections` is `{depth: [headings]}`; the other fields
-    are the catalogue's own text, on one line."""
-    found = []
-    for kind, body in (artifacts or {}).items():
-        if not isinstance(body, dict):
-            continue
-        found.append({
-            "kind": kind, "file": _flat(body.get("file", "")),
-            "stage": _flat(body.get("stage", "")), "owner": _flat(body.get("owner", "")),
-            "stands_for": _flat(body.get("stands_for", "")),
-            "audience": _flat(body.get("audience", "")),
-            "sections": {depth: [str(h) for h in (listed or [])]
-                         for depth, listed in (body.get("sections") or {}).items()}})
-    return found
 
 
 #: The rule effects that name a document kind in a rule's `then:`.

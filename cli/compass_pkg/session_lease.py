@@ -19,7 +19,7 @@
 # a runtime that gives no session id, is not tracked at all.
 #
 # DEPENDENCY: standard library (datetime, json, os, tempfile) and
-# compass_pkg.core.
+# compass_pkg (core, record_mode for the shared ignore-file helper).
 # =============================================================================
 """The per-session issue record behind the `pointer-moved` refusal."""
 from __future__ import annotations
@@ -35,6 +35,7 @@ try:
 except ImportError:                                     # pragma: no cover
     fcntl = None                                        # no file locks here
 
+from compass_pkg import record_mode
 from compass_pkg.core import CompassError, _one_segment, find_compass_dir
 
 #: How long a session's record counts.
@@ -80,19 +81,8 @@ def _locked(compass_dir):
 def _ignore(compass_dir):
     """A `.gitignore` beside the table names it, so no project commits it,
     whatever its own ignore rules say."""
-    path = os.path.join(compass_dir, ".gitignore")
-    try:
-        with open(path, encoding="utf-8") as fh:
-            lines = fh.read().splitlines()
-    except OSError:
-        lines = []
-    wanted = [name for name in ("sessions.json", ".sessions.lock")
-              if name not in lines]
-    if wanted:
-        with open(path, "a", encoding="utf-8") as fh:
-            if lines and lines[-1]:
-                fh.write("\n")
-            fh.write("\n".join(wanted) + "\n")
+    record_mode.add_ignore_lines(os.path.join(compass_dir, ".gitignore"),
+                                 ("sessions.json", ".sessions.lock"))
 
 
 def _save(compass_dir, table):

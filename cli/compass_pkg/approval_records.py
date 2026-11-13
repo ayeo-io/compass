@@ -4,7 +4,7 @@ lists `approvers:` has a current approval.
 
 An approval names its subject (ADR-066). A `human-approval` record that holds
 any key of `SUBJECT_KEYS` was given for that check, waiver, checkpoint,
-document or set of decisions. A record that holds none of them, and whose
+document, set of decisions or change at ship (`ship`, #355). A record that holds none of them, and whose
 `guardrail` key is absent or exactly `G5`, was given for guardrail `G5`:
 `gives_g5` says so, and `human-approval-present`, the check of `G5`, counts
 only such a record. `compass evidence approve --guardrail` writes one, given
@@ -32,7 +32,8 @@ rejection withdraws an approval. An approver's name is not authenticated, the
 same limit as every `human-approval` record. `compass evidence approve`
 writes a record; anyone who can write `manifest.yml` can also add one.
 """
-# DEPENDENCY: standard library (dataclasses, os);compass_pkg.layers (the project's owner);
+# DEPENDENCY: standard library (dataclasses, os); compass_pkg.project_settings (the project's owner);
+# compass_pkg.settings_lint (a compass.yml the lint refuses names no owner);
 # compass_pkg.stable_ids (the id of guardrail `G5`).
 # It imports no command module, so the stage-list evaluator and the
 # `compass evidence approve` command can both use it.
@@ -74,7 +75,7 @@ DECISIONS = (APPROVED, REJECTED)
 #: subject, so it is not the sign-off of guardrail `G5`. A deny-list, because
 #: earlier sign-offs hold extra keys such as `path` or `conditions`. A writer
 #: that adds a subject key adds it here (ADR-066).
-SUBJECT_KEYS = ("check", "waiver", "checkpoint", "artifact", "decisions")
+SUBJECT_KEYS = ("check", "waiver", "checkpoint", "artifact", "decisions", "ship")
 
 #: The only guardrail with a sign-off, and the only value of `guardrail` read.
 G5 = GATE_G5
@@ -106,6 +107,43 @@ G5_HOW = ("in Claude Code the person types `/compass:approve` for the request th
 #: The record that withdraws an approval made under a delegation (ADR-069).
 WITHDRAWAL = "approval-withdrawal"
 
+#: The key that holds the digest of the change (ADR-099 decision 6). `compass
+#: quick-fix finish` writes it in the manifest for the change as it is. The
+#: request for the ship approval or the `G5` sign-off holds it, and so does
+#: the approval record: the approval covers the change with that digest.
+CHANGE_KEY = "change_sha256"
+#: The digest of a change with no file: an approval given before the first
+#: `finish` covers no code.
+NO_CHANGE = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+
+def change_fields(task):
+    """`{change_sha256}` for an approval, or the request for one, made now on
+    an issue with an `evidence_required` list: the digest the manifest holds,
+    or `NO_CHANGE` before the first `finish`. `{}` for an issue assessed before
+    9.0.0, whose approvals name no state of the change."""
+    if not isinstance(task, dict) or not isinstance(task.get("evidence_required"), list):
+        return {}
+    held = task.get(CHANGE_KEY)
+    return {CHANGE_KEY: held if isinstance(held, str) and held else NO_CHANGE}
+
+
+def for_earlier_state(task, record):
+    """True when `record` was given for a change whose digest differs from the
+    one the manifest holds now. A record or a manifest with no digest names no
+    state, so the approval keeps the meaning it had before the digest existed."""
+    now, then = (task or {}).get(CHANGE_KEY), record.get(CHANGE_KEY)
+    return bool(now and then and now != then)
+
+
+def earlier_state_detail(task, records):
+    """The failure detail for approvals that `for_earlier_state` set aside."""
+    ids = ", ".join(str(r.get("id", "?")) for r in records)
+    return (f"{ids} was given for an earlier state of the change (sha256 "
+            f"{str(records[-1].get(CHANGE_KEY))[:12]}; the change is now "
+            f"{str(task.get(CHANGE_KEY))[:12]}). A person approves the new state with "
+            f"`/compass:approve`")
+
 
 def not_withdrawn(approved, registry):
     """`(standing, note)`: the approved records that no `approval-withdrawal`
@@ -123,7 +161,7 @@ def not_withdrawn(approved, registry):
 def provenance(record):
     """How a record was made, in words, from its `via` key (ADR-068
     decision 7). No verdict reads it: the detail of `human-approval-present`
-    and the receipt show it. A record with no `via` still counts."""
+    shows it. A record with no `via` still counts."""
     via = record.get("via")
     if via == "prompt":
         return "via a typed prompt"
@@ -206,18 +244,21 @@ def owner_and_cause(task_dir):
     wins: the loader fails, the owner is text, the owner is not text, the owner
     is only in `.compass/config.yml`, the file is above the project folder, the
     file is missing, else the file names no owner."""
-    from compass_pkg import layers
-    root = layers.find_project_root(task_dir)
+    from compass_pkg import project_settings
+    root = project_settings.find_project_root(task_dir)
     path = os.path.join(root, "compass.yml")
     exists = os.path.isfile(path)
     loaded = None
     if exists:
         try:
-            loaded = layers.load_project_layer(root)
+            loaded = project_settings.project_file(root)
         except Exception as exc:                       # noqa: BLE001
             detail = shown_text(str(exc).replace(path + ": ", "").replace(path, ""))
             return OwnerLookup(None, CAUSE_UNREADABLE, detail, root)
-    value = loaded[0].doc.get("owner") if loaded else None
+        refused = _refused_setting(loaded)
+        if refused:
+            return OwnerLookup(None, CAUSE_UNREADABLE, shown_text(refused), root)
+    value = loaded.get("owner") if loaded else None
     if _text(value):
         return OwnerLookup(_text(value), None, root=root)
     if value is not None and not isinstance(value, str):
@@ -232,6 +273,19 @@ def owner_and_cause(task_dir):
                  else CAUSE_MISSING)
         return OwnerLookup(None, cause, root=root)
     return OwnerLookup(None, CAUSE_NO_OWNER, root=root)
+
+
+def _refused_setting(loaded):
+    """The first error the settings lint finds in `compass.yml`, as
+    `path: message`, or None. Every resolution refuses a file with a lint
+    error (VD-020), so its owner is not read either, as 8.x refused the owner
+    of a project layer its loader refused. An owner that is not text is left
+    to its own cause, which names the fix."""
+    from compass_pkg import settings_lint
+    for finding in settings_lint.lint(loaded or {}):
+        if finding.level == "error" and finding.path != "owner":
+            return f"{finding.path}: {finding.message}"
+    return None
 
 
 def project_owner(task_dir):

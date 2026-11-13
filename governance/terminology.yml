@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre24
+version: 2.0.0-pre30
 
 terms:
 
@@ -40,6 +40,62 @@ terms:
       contains.
     github: none
     related: [issue, evidence, scenario, acceptance-criteria]
+  trail:
+    means: >
+      The file `.compass/work/<slug>/trail.md` beside the manifest (ADR-096).
+      It states in order who asked, what was agreed, the red of each
+      scenario, the green, who approved and by what authority, and what
+      shipped. Under each statement are lines in `sha256sum` format with
+      paths from the repository root, so a reviewer checks the named files
+      with `sha256sum -c` and no Compass. `compass trail` writes it in full
+      from the records, as do `compass ship-commit`, `compass issue link set
+      --pr` and `compass record commit`; `compass trail --check` says when it
+      is out of date. It proves the files match their digests, not that its
+      prose is true.
+    related: [manifest, evidence, request-link, record-mode]
+  request-link:
+    means: >
+      The manifest's `request:` record: a link to what asked for the change
+      (an `https://` URL, or `owner/repo#N`, which also links the GitHub
+      issue) and the requester, free text the session records as a claim,
+      not an approval (ADR-096). `--request` and `--requester` on `compass
+      quick-fix start` or `compass issue link set` write it. A delivery issue
+      owes the token `request`, and the check `request-recorded` fails until
+      both parts are on record, but nothing refuses for it.
+    related: [evidence-required, issue, trail]
+  record-mode:
+    means: >
+      Whether an issue's record ships in the same commit as its code
+      (ADR-096). Committed is the default: `compass ship-commit` stages the
+      issue folder, the documents folder and `.compass/work/.gitignore`
+      itself. Kept out applies when `record.commit` is false, when
+      `record.remote` is set and `record.commit` is not, when git ignores
+      the issue folder, or outside a git repository; then nothing under
+      `.compass/` is staged, and `compass record sync` can copy the record
+      elsewhere. The ignore file keeps generations, lock files and markers
+      out in either mode.
+    related: [manifest, trail, landed-with-record]
+  landed-with-record:
+    means: >
+      The manifest key `landed_with_record: true`, written by `compass
+      ship-commit` in committed mode in the same save as the landing, before
+      the commit (ADR-096). Such a manifest holds no `land_commit`: the land
+      commit is read from git as the newest commit that added the
+      manifest's `land_timestamp` line, so after a squash merge it names the
+      squash commit. `compass record commit` commits the fields the merge
+      adds later.
+    related: [record-mode, trail, ship]
+  legacy-record:
+    means: >
+      The manifest's `legacy:` key, which `compass migrate` writes when it
+      moves an open 8.x issue onto the four-stage path (ADR-098). It keeps
+      the 8.x records that no 9.0.0 reader of a path issue uses: the stage
+      map, the subtasks, the model tiers, the page ticks, the readiness
+      record, each document entry other than the acceptance criteria, the
+      status fields of the acceptance-criteria entry, and each legacy stage
+      value that migrate rewrote to its path stage. No check reads it, so a
+      reviewer can still see what 8.x recorded and no verdict depends on it.
+    related: [manifest, path, generation]
 
   # --- Work hierarchy (GitHub-aligned) --------------------------------------
   epic:
@@ -119,15 +175,23 @@ terms:
     related: [issue-type, issue]
   quick-fix:
     means: >
-      A delivery approach for a small, low-risk change on familiar ground.
-      Produces a test and a PR - nothing else exists for it.
-    related: [delivery-approach]
+      `/compass:quick-fix`, the short form of `/compass:go` for a change the
+      person already knows is small: start, red, finish. The evidence-required
+      line says what the change owes. Before 9.0.0 the quick fix was a
+      delivery approach for a small, low-risk change, and an issue assessed
+      then keeps that approach.
+    related: [path, evidence-required, delivery-approach]
   hotfix:
     means: >
-      A delivery approach for a live-incident fix, expedited: reproduce, fix,
-      ship, then pay the follow-up (promote the reproduction into proper
-      acceptance criteria; optional postmortem).
-    related: [delivery-approach, incident, follow-up, postmortem]
+      The setting `urgency: live-defect` on the assessment, for a fix to a
+      defect that is live. It records the urgency and adds no evidence by
+      default: a hotfix owes what every delivery issue owes (ADR-099). A
+      project that wants the reproduction recorded first, or the regression,
+      security or Definition of Done evidence, adds `reproduce-first` or that
+      token in the `require_evidence` of its `compass.yml`. Before 9.0.0 the
+      hotfix was a delivery approach, and an issue assessed then keeps that
+      approach.
+    related: [evidence-required, incident, follow-up, postmortem]
   spike:
     means: >
       A delivery approach for time-boxed exploration whose output is
@@ -142,51 +206,54 @@ terms:
   # Both are defined here so neither is used for the other again.
   design:
     means: >
-      The DESIGNER's stage and its command, /compass:design. It produces the
-      UI contract (ui-contract.md) - scenarios written Given/When/Then that
-      flow into the acceptance criteria, not mockup annotations. The word
-      reads as UI work to most people, which is why the designer has it.
-      `design` names the UI contract and `plan` names the technical design,
-      never the other way round: the engineering design is the plan stage
-      (/compass:plan), whose output is technical-design.md. The placeholder
-      scan is the CLI verb `compass plan lint`.
+      The designer's entry point, /compass:design, which wrote the UI
+      contract (ui-contract.md) until 9.0.0 removed the role entry points
+      and the role templates (ADR-093): scenarios written Given/When/Then
+      that flowed into the acceptance criteria. An older issue can still
+      hold a UI contract. `design` names UI work and never the engineering
+      design. Before 9.0.0 the engineering design was the plan stage
+      (/compass:plan).
     related: [plan, technical-design, delivery-approach]
   plan:
     means: >
-      The engineering design stage: the command /compass:plan, the machine
-      key `plan` in a manifest's stages block, the `plan-authoring` skill, the
-      `planner` agent, and the CLI verb `compass plan lint`. Its output is
-      technical-design.md. The delivery approach is a separate thing: it is
-      computed at the assess stage and recorded in delivery-approach.md.
-    related: [technical-design, delivery-approach, design]
+      The machine key `plan` in an archived issue's stages block: the
+      engineering design stage of the eight stages before 9.0.0. 9.0.0
+      removed the stage, its command /compass:plan and the `plan-authoring`
+      skill (ADR-092); an archived issue keeps the key, and Compass reads it
+      as the specify stage of the path. The stage wrote technical-design.md
+      until 9.0.0 removed that document (ADR-091).
+    related: [path, technical-design, design]
 
   # --- Intake artifacts -----------------------------------------------------
   technical-design:
     means: >
       The engineering plan for one issue: the approach, the design decisions
       as ADR-style notes, the governance check, and the independent work
-      units. Written at the planning stage (/compass:plan) as
-      technical-design.md. The designer's work is the UI contract
-      (ui-contract.md), from /compass:design. In this repository TDD is
-      red-green-refactor and nothing else, so this artifact is never
-      abbreviated to TDD.
+      units. The planning stage (/compass:plan) wrote it as
+      technical-design.md until 9.0.0 removed the document (ADR-091) and the
+      stage (ADR-092). Older issues still hold one. In this repository TDD
+      is red-green-refactor and
+      nothing else, so this artifact is never abbreviated to TDD.
     related: [technical-design, delivery-approach]
   first-slice:
     means: >
-      The 80/20 cut recorded in intent.md: the slice of an initiative that
-      ships first because it delivers most of the value, with what
-      deliberately waits stated beside it. The design and the work breakdown
-      follow the first slice, not the whole document.
+      The 80/20 cut that intent.md recorded until 9.0.0 removed that
+      document (ADR-091): the slice of an initiative that ships first because
+      it delivers most of the value, with what deliberately waits stated
+      beside it. The design and the work breakdown follow the first slice,
+      not the whole intent.
     related: [intent, slice, initiative]
   bug-report:
     means: >
       The intake for a bug fix: observed behavior, expected behavior,
-      reproduction steps.
+      reproduction steps. Compass wrote it as bug-report.md until 9.0.0
+      removed the document (ADR-091).
     related: [bug]
   incident:
     means: >
       The intake that triggers a hotfix: what broke in production, impact,
-      severity. SRE sense of the word.
+      severity. SRE sense of the word. Compass wrote it as incident.md until
+      9.0.0 removed the document (ADR-091).
     related: [hotfix, postmortem]
 
   # --- BDD (the triad, first-class) -----------------------------------------
@@ -213,32 +280,27 @@ terms:
     related: [scenario, intent, acceptance-criteria]
   intent:
     means: >
-      Two related things, and the entry covers both deliberately. (1) The
-      document: intent.md, the originator's statement of what is wanted and
-      why, AUTHORED at the intake stage or INGESTED from a brief that already
-      exists - it does not presume authorship. (2) The goal it carries: the
-      outcome a change is meant to produce, the "why" end of the traceability
-      chain, carrying the INT- ids that scenarios trace back to. The document
-      holds the goals, which is why one name serves both.
-      As a document it carries problem, users, goals, non-goals, success
-      signals, constraints, open questions, and the first slice (the 80/20
-      cut) - iterated through review before the design is built. User stories
-      are welcome inside it as a format; acceptance criteria are derived from
-      them. As a goal it is sourced from intent.md's desired outcome, the UI
-      contract, or the issue description - a goal, not a requirement: the
+      The outcome a change is meant to produce: the "why" end of the
+      traceability chain, carrying the INT- ids that scenarios trace back to.
+      The originator states it - problem, users, outcome, constraints -
+      written fresh or ingested from a brief that already exists, so it does
+      not presume authorship, and assess records it with `--intent`. The specify stage writes it into the
+      Summary and Intent links of acceptance-criteria.md. Until 9.0.0 it was also a document, intent.md,
+      which 9.0.0 removed (ADR-091); older issues still hold one, and Compass
+      does not read it. An intent is a goal, not a requirement: the
       functional requirement is the scenario. It goes further than the
       request: "Add a CSV export" is a request; "let finance self-serve" is
       the intent, and it may need filters and permissions the request never
       mentioned.
-    also: The product owner's entry point, `/compass:intent`, captures it.
     related: [first-slice, scenario, traceability]
   router:
     means: >
       The agent that runs assess: reads the four assessment dimensions, hands
-      them to the CLI, and writes the delivery-approach record. It assesses;
+      them to the CLI, and records the delivery approach in the manifest. It assesses;
       it does not choose a process. Named for what it does - Anthropic's
       platform docs call this shape "Routing", classifying input and directing
-      it to a specialized path - and for the file it runs, routing-policy.yml.
+      it to a specialized path - and for the routing rules it runs, the
+      `rules:` of the check set.
       The approach is computed from the assessment by `compass approach
       evaluate`, which is the determinism boundary.
     related: [assess, assessment, delivery-approach]
@@ -264,27 +326,26 @@ terms:
       The high-level design (HLD): approach, system context, components,
       interfaces, data model, cross-cutting concerns - with sequence
       diagrams, named design patterns, and illustrative code where they add
-      clarity.
+      clarity. The technical design was Compass's HLD until 9.0.0 removed it
+      (ADR-091).
     also: HLD
     related: [lld, adr, operability]
   lld:
     means: >
       Low-level design: the signatures, contracts, file plan and tests of one
       work unit, in its own document, `low-level-design/U<n>.md`. The planner
-      writes one per unit of the technical design's Work units table, so the
-      design stays short and each builder reads only its own unit. No approach
-      owes one; on the full approach, `compass issue lint` notes a unit that
-      has none.
+      wrote one per unit of the technical design's Work units table until
+      9.0.0 removed both documents (ADR-091). Older issues still hold them.
     related: [design-doc, word_ceiling]
   word_ceiling:
     means: >
-      The word limit a document kind carries in the artifacts catalog, per
-      depth, such as 4,000 words for a thorough technical design. Words are
+      The word limit a document kind carried in the artifacts catalog, per
+      depth, such as 4,000 words for a thorough technical design. Words were
       counted from the visible text only: rendered blocks and HTML comments
-      do not count. `compass issue lint` notes a document over its limit, and
-      the check `design-within-word-ceiling` refuses a technical design over
-      1.5 times its limit once plan exit is due. An issue stored before a kind
-      had a limit keeps no limit.
+      did not count. The check `design-within-word-ceiling` refused a
+      technical design over 1.5 times its limit until 9.0.0 removed the check
+      and the live catalog (ADR-091). A stored generation
+      still holds the limits.
     related: [lld, design-doc]
   adr:
     means: >
@@ -304,47 +365,85 @@ terms:
     related: [delivery-approach, label, issue-type, assessment]
   delivery-approach:
     means: >
-      The chosen shape for an issue: which artifacts exist, which gates
-      apply, solo or parallel. Deterministic - same assessment plus same policy
+      The chosen shape for an issue: the weight of each stage and the gates
+      that apply, recorded in the manifest. Since 9.0.0 it names no documents
+      (ADR-091). Deterministic - same assessment plus same policy
       always gives the same approach. `full` is the name of the heaviest
       delivery approach and is not a stage mode: its stages run `thorough`,
-      and the old mode word `full` reads as `thorough` until 9.0.0.
+      and the old mode word `full` in a stored manifest reads as `thorough`.
     related: [assess, quality-gate]
+  path:
+    means: >
+      The four stages a delivery issue runs, in order: assess, specify,
+      build and ship. The stages are fixed in code and have no modes, so the
+      manifest of a path issue has no `stages:` map. A spike runs assess,
+      build and ship. An issue assessed before 9.0.0 keeps its delivery
+      approach and its stages, and each of its stages shows as a path stage.
+    related: [assess, specify, build, ship, evidence-required]
+  specify:
+    means: >
+      The path stage that writes the scenarios, in `acceptance-criteria.md`
+      or a `.feature` file, and declares the test for each one. The
+      guardrails `G2` (acceptance defined before it is built) and `G3`
+      (traceability holds) are judged here. On an issue assessed before
+      9.0.0, the define, refine and plan stages show as specify. A v1
+      manifest used the same word for the define stage and still reads that
+      way.
+    related: [path, scenario, acceptance-criteria]
+  build:
+    means: >
+      The path stage that records a red for each scenario, then the code,
+      then a green. The guardrail `G1` (tested before it lands) is judged
+      here. On an issue assessed before 9.0.0, the breakdown and implement
+      stages show as build. A v1 manifest used the same word for the
+      implement stage and still reads that way.
+    related: [path, scenario, evidence]
   audience:
     means: >
       The one line in an artifact's catalog entry that says who reads the
       document and what the reader decides from it.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [delivery-approach, technical-design]
   stands-for:
     means: >
       The name the industry uses for the kind of document an artifact is,
       such as `hld` for the technical design. It is a field of the artifact's
       catalog entry.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [audience, technical-design]
   sections:
     means: >
       The headings of an artifact's document, in order, for each depth the
       document can be written at (`lightweight` and `thorough`). It is a field
       of the artifact's catalog entry. A document that is one rendered block
-      has an empty list.
+      has an empty list. The acceptance criteria are read through the last
+      shipped catalog when the configuration declares none.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [audience, rendered-block]
   required-when:
     means: >
       A condition in an artifact's catalog entry. The document is owed only
-      when the condition holds. The one condition today is a minimum number of
-      subtasks, so the distribution map is owed from two subtasks.
+      when the condition holds. The one condition was a minimum number of
+      subtasks, so the distribution map was owed from two subtasks.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [audience, delivery-approach]
   review-round:
     means: >
-      One review of an issue's work by a reviewer who did not write it. Each
-      round is its own document, `review-<n>.md`, and its own entry in the
-      artifact registry. Rounds count from 1.
+      One review of an issue's work by a reviewer who did not write it.
+      Rounds count from 1. Until 9.0.0 each round was its own document,
+      `review-<n>.md`, and its own entry in the artifact registry; 9.0.0
+      removed both (ADR-091).
     related: [requirements-review, audience]
   voluntary-kind:
     means: >
       A document kind that no delivery approach, rule or `every_approach`
-      flag names, so nothing owes it. A person registers it when it is
-      written, and a reassessment never supersedes it. `review` is one.
+      flag names, so nothing owes it. A person registered it when it was
+      written, and a reassessment never superseded it. `review` was one.
+      9.0.0 removed document registration (ADR-091).
     related: [required-when, review-round]
   not-an-artifact-list:
     means: >
@@ -352,6 +451,8 @@ terms:
       documents of no kind, such as `README.md` and the review briefs. The
       migrate leaves them in place, and `compass issue lint` does not report
       them.
+      9.0.0 removed the catalog from the live default (ADR-091); a stored
+      generation still holds it.
     related: [audience, sections]
   check:
     means: >
@@ -370,10 +471,11 @@ terms:
     related: [strategy, quality-gate, evidence]
   strategy:
     means: >
-      A strong default you can step off with a recorded reason. Assessed by
-      a reviewer, never mechanically blocking. TDD and BDD are strategies;
-      the outcomes they serve are guardrails.
-    related: [guardrail]
+      A strong default you can step off with a recorded reason. Most are
+      assessed by a reviewer. A strategy can carry blocking checks that a
+      recorded step-off makes advisory; they sit outside every guardrail.
+      TDD and BDD are strategies; the outcomes they serve are guardrails.
+    related: [guardrail, four-layer-acceptance-strategy]
   quality-gate:
     means: >
       A check that must pass before an issue moves state. Which gates apply
@@ -382,7 +484,7 @@ terms:
   definition-of-ready:
     means: >
       The gate between requirements and plan/implementation: acceptance criteria
-      exist, ambiguities resolved, intent.md reviewed where one exists.
+      exist, ambiguities resolved, the criteria checked against the intent.
       Trivially
       satisfied for a quick fix.
     also: DoR
@@ -391,8 +493,10 @@ terms:
     means: >
       The review pass that hardens requirements before plan or implementation:
       ambiguities resolved into recorded decisions, contradictions and
-      gaps closed, intent.md reviewed where one exists. Satisfying it is
-      what makes an issue ready.
+      gaps closed, the criteria checked against the intent. Satisfying it is
+      what makes an issue ready. It wrote requirements-review.md until 9.0.0
+      removed that document (ADR-091); the decisions and the Definition of
+      Ready items are its record now.
     related: [intent, definition-of-ready, acceptance-criteria]
   definition-of-done:
     means: >
@@ -405,12 +509,25 @@ terms:
       A recorded, typed artifact that clears a gate: a test run, a review, a
       sign-off. A claim without evidence clears nothing.
     related: [guardrail, definition-of-done]
+  evidence-required:
+    means: >
+      The list in a path issue's manifest of the evidence the change needs
+      before it ships, such as `scenarios`, `red-before-green` and
+      `suite-green`. Assess computes it from the assessment and the
+      configuration in force. The gates, the acceptance strategy block and
+      the checkpoints come from it, and a manifest that has it is read as a
+      path issue.
+    related: [path, assess, evidence, quality-gate]
   follow-up:
     means: >
       Work owed after an expedited ship (the hotfix's promoted scenario, the
-      optional postmortem). Tracked with a state pair: outstanding (not yet
-      discharged) and resolved. An issue with an outstanding follow-up does
-      not fully close; `compass follow-up resolve` discharges one.
+      optional postmortem), or a Definition of Done item carried to later
+      work. On a path issue a follow-up links to the GitHub issue that tracks
+      the work (`compass follow-up add --github`), and a linked follow-up
+      meets the item it defers, resolved or not. On an issue assessed before
+      9.0.0 a follow-up is outstanding or resolved, the issue does not fully
+      close while one is outstanding, and `compass follow-up resolve`
+      discharges it.
     related: [hotfix, backlog]
 
   decision-taken:
@@ -425,6 +542,28 @@ terms:
       the product.
     related: [requirements-review, evidence]
 
+  scenario-freeze:
+    means: >
+      The manifest's `scenario_freeze` block of a path delivery issue: the
+      time, the red record, the spec's path, the `sha256sum` digest of the
+      spec and the scenario ids (ADR-095). `compass quick-fix finish` writes
+      it when it proves the red, and writes it again each time it proves the
+      red again, so the block names the red that stands now (ADR-099). On a
+      record kept by hand, the first `compass tdd-red` writes it and no later
+      one rewrites it. Each red record also holds the spec digest.
+      `compass check` prints a line, not a row, when the spec has changed
+      since.
+    related: [scenario, acceptance-criteria, evidence]
+  delegation-copy:
+    means: >
+      A copy of a delegation in the manifest's `delegations_used:`, written
+      in the same save as the approval the delegation let an agent record
+      (ADR-095). It keeps who delegated, to whom, until when, for which
+      issues and forms, and a `sha256` of those fields, and leaves out the
+      nonce, the use count and the session ids. A copy whose
+      fields changed since an earlier copy is kept under a suffix, such as
+      `DL-1@2`.
+    related: [ship-approval, evidence]
   checkpoint-outcome:
     means: >
       What happened at one checkpoint stage hand-off, recorded in the
@@ -436,53 +575,54 @@ terms:
       with `compass issue checkpoint add`. A `checkpoint-approval` record
       clears no gate and no human check. `compass ship-commit` refuses a
       judged issue that lists a checkpoint with no outcome, and
-      `compass retro --impact` reads the outcomes to report how much work ran
-      without a person.
+      `compass issue diagnose` shows the outcomes of one issue. On an issue
+      that owes `scenario-approval`, `compass tdd-red` refuses until the
+      `specify` checkpoint has a `waited` outcome, and that answer holds the
+      spec's digest.
     related: [decision-taken, evidence, issue]
 
   receipt:
     means: >
-      The per-issue proof summary rendered from the manifest and the evidence
-      registry: the assessment, the delivery approach, the gates and what
-      cleared them - one screen, shareable as-is. Evidence is the typed
-      records that clear gates; the receipt is the read-only summary that
-      cites them.
+      The one-screen summary of an issue that `compass issue receipt`
+      printed until 9.0.0 removed it (ADR-091): the assessment, the delivery
+      approach, the gates and the evidence that cleared them. Older records
+      and decision records still name it. `compass approach show` lists an
+      issue's gates and `compass check` judges its evidence.
     related: [evidence, quality-gate]
 
   rendered-block:
     means: >
       The lines between `<!-- compass:render KIND -->` and
-      `<!-- /compass:render -->` in an issue's document. `compass issue render`
-      writes them from the manifest and the evidence and leaves every other
-      byte of the document as it is. A check, `rendered-blocks-current`,
-      compares each block with a fresh render. Every digest of a document and
-      every reader of its text leaves the lines inside a block out.
+      `<!-- /compass:render -->` in an issue's document, which `compass issue
+      render` wrote from the manifest and the evidence until 9.0.0 removed it
+      (ADR-091). A document written before then can still hold them, so every
+      digest of a document and every reader of its text leaves the lines
+      inside a block out. Nothing writes or checks a block now.
     related: [issue-page, verification-note, project-index, item-record]
 
   issue-page:
     means: >
       The README of an issue's documents folder,
-      `docs/compass/<created>-<slug>/README.md`. Its rendered blocks answer a
-      reader's questions in order: the header, the ask, the decision required,
-      the acceptance, the related issues, the decisions, the documents, the
-      traceability chart, the documents left out on purpose and the
-      follow-ups. `compass issue render` creates it when it is absent.
+      `docs/compass/<created>-<slug>/README.md`, which `compass issue render`
+      wrote from the issue's records until 9.0.0 removed it (ADR-091). An
+      older archive can still hold one; nothing writes or reads it now.
     related: [rendered-block, project-index]
 
   verification-note:
     means: >
       A quick fix's one-screen record of what was checked: the scenario, its
       test, the red and green records, each gate with its status and the files
-      changed. It is one rendered block, written by `compass quick-fix finish`
-      and approved by it. A person can write prose above the block.
+      changed. It was one rendered block, which `compass quick-fix finish`
+      wrote and approved until 9.0.0 removed it (ADR-091). An older quick fix
+      still holds one.
     related: [rendered-block, quick-fix]
 
   project-index:
     means: >
-      The README.md directly in the folder `docs/compass`, one rendered block that lists every
-      issue once, in a table for its state, with a link to its issue page.
-      The last table is the issues completed in the 30 days before the newest
-      completion the project holds.
+      The README.md directly in the folder `docs/compass`, which listed every
+      issue once, in a table for its state, until 9.0.0 removed the render
+      (ADR-091). An older checkout can still hold one; nothing writes or reads
+      it now. `compass flow` lists every issue.
     related: [rendered-block, issue-page]
 
   item-record:
@@ -509,9 +649,8 @@ terms:
       in-progress, in-review, done. Gates attach to the transitions;
       transitions are earned (evidence), not dragged. A person sets only
       backlog (a hold) and done (closed, with a close reason); Compass
-      derives the other states from the issue's records. Board columns are a
-      user-defined projection - every custom column maps to exactly one
-      state.
+      derives the other states from the issue's records, and `compass flow`
+      lists every issue with its state.
     related: [quality-gate, board-column, blocked, close-reason]
   close-reason:
     means: >
@@ -521,8 +660,10 @@ terms:
     related: [workflow-state, issue]
   board-column:
     means: >
-      A user-defined view column (Design, UAT, Staging...). Maps to exactly
-      one workflow state so gates keep firing regardless of board shape.
+      A user-defined view column (Design, UAT, Staging...) on the HTML board
+      that the `board` verb wrote until 9.0.0 removed it (ADR-093). Each
+      column mapped to exactly one workflow state. Compass ships no board
+      now; `compass flow` lists every issue with its state.
     github: Project column / status field
     related: [workflow-state]
   blocked:
@@ -541,13 +682,10 @@ terms:
   label:
     means: >
       A plain-word tag on an issue carrying classification and risk surface.
-      Local-first (strings in the issue file). Compass writes them to the
-      linked GitHub issue only when the project sets github_labels in
-      compass.yml; with it off, no label leaves the issue file. Compass
-      never reads a GitHub label back into the issue file. Domain labels
-      never track workflow state.
-      The status labels Compass writes do: status:<state>, and on close
-      status:done with close:<reason>.
+      Local-first (strings in the issue file). Compass writes no label to
+      GitHub: 9.0.0 removed the label sync and the github_labels setting it read
+      (ADR-093). Compass never reads a GitHub label back into the issue
+      file. Domain labels never track workflow state.
     github: Label
     related: [label-rule, issue]
   label-rule:
@@ -563,8 +701,29 @@ terms:
   ship:
     means: >
       Merging and releasing the change: the PR lands, follow-ups are
-      recorded, the derived system spec is regenerated.
-    related: [pr, rollout-plan]
+      recorded and the issue is marked done. A path delivery issue also
+      owes a person's ship approval.
+    related: [pr, rollout-plan, ship-approval]
+  ship-approval:
+    means: >
+      One person's approval of a change at ship, owed by every path delivery
+      issue whose `evidence_required` lists `ship-approval` (ADR-095). It is
+      a `pr-approval` record copied from the merged pull request's review,
+      or a typed approval: a `human-approval` record with `ship:`, given
+      with `/compass:approve` after `compass evidence request --ship`. The
+      check `ship-approval-present` fails only when the pull request merged
+      with neither. A `G5` sign-off does not count, and no landing waits
+      for it.
+    related: [pr-approval, ship, evidence-required, delegation-copy]
+  pr-approval:
+    means: >
+      The evidence type of an approving review of the merged pull request,
+      by a person who is not its author. `compass issue link set --pr <n>`
+      reads the reviews with `gh` after the merge and writes one record for
+      each reviewer whose latest review before the merge approved, from a
+      `User` account. The record holds the review id and URL, so a reader
+      can check it on GitHub. `compass evidence add` refuses the type.
+    related: [ship-approval, pr, evidence]
   rollout-plan:
     means: >
       How the change reaches users safely: feature flags, canary or
@@ -578,7 +737,10 @@ terms:
     means: Releasing to a small slice of traffic/users first, watching SLIs.
     related: [rollout-plan, sli]
   rollback-plan:
-    means: The recorded way back if the change misbehaves in production.
+    means: >
+      The recorded way back if the change misbehaves in production. Compass
+      owed one as rollback-plan.md on migrations work until 9.0.0 removed the
+      document and its rule (ADR-091).
     related: [rollout-plan]
   operability:
     means: >
@@ -616,14 +778,16 @@ terms:
     related: [operability]
   dora-metrics:
     means: >
-      Lead time, deployment frequency, change failure rate, MTTR - what the
-      process-impact telemetry measures to ask whether the process itself
-      pays off.
+      Lead time, deployment frequency, change failure rate, MTTR - the
+      industry measures of whether a delivery process pays off. Compass
+      measures none of them; sdd-bench is its only measurement (ADR-093).
     related: [retrospective-signal]
   retrospective-signal:
     means: >
-      Compass's cross-issue self-check: is assess consistently over- or
-      under-sizing the process? Advisory, surfaced in retro language.
+      Compass's cross-issue self-check, whether assess was consistently over-
+      or under-sizing the process, which the `retro` verb reported until 9.0.0
+      removed it (ADR-093). sdd-bench is the measurement now. The
+      `reassessments:` log still records each re-assessment and its reason.
     related: [dora-metrics, assess]
 
   # --- Configuration (the configuration vocabulary decision) ----------------
@@ -634,43 +798,86 @@ terms:
       `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`,
       `artifacts`, `readiness` and `vocabulary`. An id is stable; a display
       name lives in the `vocabulary` catalog.
-    related: [layer, overlay, generation]
+    related: [check-set, generation]
+  check-set:
+    means: >
+      The one fixed set of checks, gates and evidence types that every
+      project runs since 9.0.0 (ADR-094): `governance/check-set.yml`, with
+      `id: compass-checks` and the version of the release that last changed
+      it, such as `compass-checks@9.0.0`. One file has one `sha256sum`, so
+      a change names its rules by one id, one version and one digest. A
+      project can add to the set only through the tighten-only settings of
+      `compass.yml`, and a waiver can excuse one check on one issue.
+    related: [tighten-only-setting, policy-digest, generation, waiver, catalog]
+  tighten-only-setting:
+    means: >
+      One of the five keys of `compass.yml` that can only add to the check
+      set: `signoff_labels`, `require_evidence`, `agent_review`,
+      `project_checks` and `capabilities`. No setting can remove an entry,
+      lower a severity or narrow when a check applies. `compass policy lint`
+      refuses an unknown key or a value outside the closed sets.
+    related: [check-set, project-file, settings-key, capability]
+  policy-digest:
+    means: >
+      The manifest's `policy:` block, written at each generation commit: the
+      check set's id and version, the `sha256sum` of the check set file and
+      of `compass.yml`, the tighten-only settings applied, and the digest of
+      the generation's `resolved.yml`. A reviewer reads in it the rules a
+      change ran under without the generation folder. `compass check` prints
+      it as the `Policy:` line.
+    related: [check-set, generation, manifest]
   layer:
     means: >
-      One source of configuration: the shipped preset, a team parent, the
-      project file or the issue. Layers merge in order, and each states only
-      what it changes.
-    related: [catalog, overlay, preset, project-file]
+      One source of configuration in 8.x: the shipped preset, a team parent,
+      the project file or the issue. Layers merged in order, and each stated
+      only what it changed. 9.0.0 removed the layers (ADR-094): every project
+      runs the check set, and `compass.yml` holds settings. The provenance of
+      a stored 8.x generation still names the layer that wrote each field.
+    related: [check-set, overlay, preset, project-file]
   overlay:
     means: >
-      A layer file that states only its differences from its parent, so it
-      holds the changes and not a copy of the parent.
+      A layer file that stated only its differences from its parent, so it
+      held the changes and not a copy of the parent. 9.0.0 removed the
+      layers and their overlays (ADR-094).
     related: [layer, preset]
   preset:
     means: >
-      A named, versioned parent layer. `default` is the only preset Compass
-      ships.
-    related: [layer, overlay]
+      A named, versioned parent layer. Until 9.0.0 Compass shipped one,
+      `default`, which a project named with `extends:`. 9.0.0 removed the live
+      preset (ADR-094): the check set replaces it, and `extends:` is a
+      removed setting. An issue assessed under a preset keeps it in its
+      stored generation.
+    related: [layer, overlay, check-set]
   generation:
     means: >
-      A stored, numbered copy of the resolved configuration that an issue
-      runs against, so the issue keeps the rules it started with.
-    related: [catalog, layer]
+      A stored, numbered copy of the resolved policy that an issue runs
+      against, so the issue keeps the rules it started with. Since 9.0.0 the
+      policy is the check set with the project's tighten-only settings, and
+      the manifest's `policy:` block names the generation in force.
+    related: [catalog, check-set, policy-digest]
   waiver:
     means: >
-      A recorded departure from a parent's value, with a reason and an
-      approver.
-    related: [lock]
+      An excuse of one check on one issue, with a reason and a person's
+      approval (ADR-094). `compass waiver add` records it in the manifest,
+      and it excuses nothing until a `human-approval` record names it. No
+      waiver can excuse `human-approval-present` or guardrail `G5`. In 8.x a
+      waiver was a recorded departure from a parent's value, written in a
+      layer; such a waiver is not read now.
+    related: [check-set, lock]
   lock:
     means: >
-      A mark on an entry that refuses a change from a lower layer that would
-      loosen it, or that the classifier cannot compare. Tightening stays
-      allowed.
-    related: [waiver, classifier]
+      A mark on an 8.x entry that refused a change from a lower layer that
+      would loosen it, or that the classifier could not compare. 9.0.0
+      removed locks and unlocks (ADR-094): nothing sits above the check set.
+      Its `never_waived` list names the two entries no waiver can excuse,
+      the two hard locks of 8.x.
+    related: [waiver, classifier, check-set]
   capability:
     means: >
       A named switch for new blocking behavior, off in the shipped default.
-    related: [lock]
+      `capabilities: {entry-exit-evaluation: true}` is one of the
+      tighten-only settings.
+    related: [tighten-only-setting]
   stage-mode:
     means: >
       How a stage runs for an issue, such as `collapsed`. It is the `mode`
@@ -679,78 +886,123 @@ terms:
   project-file:
     means: >
       `compass.yml` at the project root, the one file a person edits.
-    related: [layer, settings-key]
+    related: [settings-key, tighten-only-setting]
   settings-key:
     means: >
-      A top-level key of `compass.yml` that configures the CLI instead of the
-      process.
-    related: [project-file]
+      A top-level key of `compass.yml`. Most configure the CLI and leave the
+      check set as it is; the five tighten-only settings add to it.
+    related: [project-file, tighten-only-setting]
   pin:
     means: >
-      The `#<sha>` suffix on a git `extends:`, which names the parent commit
-      a project runs against.
+      The `#<sha>` suffix on a git `extends:`, which named the parent commit
+      a project ran against. 9.0.0 removed git parents (ADR-094): an
+      `extends:` that names one is refused with `L-PARENT-REMOVED`.
     related: [layer, preset]
   obligation:
     means: >
       Anything the configuration asks for at an assessment: a stage mode, a
       check on an entry or exit list, a gate, an artifact, a checkpoint or a
       ceiling.
-    related: [classifier, stage-mode]
+    related: [check-set, stage-mode]
   classifier:
     means: >
-      The component that compares two configurations by their obligations.
+      The component that compared two configurations by their obligations,
+      to tell a layer that tightened from one that loosened. 9.0.0 removed it
+      with the layers (ADR-094): a tighten-only setting can only add, so
+      nothing needs comparing.
     related: [obligation, lock]
 
-  # --- Repository readiness (ADR-058 to ADR-061) ----------------------------
+  # --- Repository readiness (ADR-058 to ADR-061, removed by ADR-093) --------
   readiness-signal:
     means: >
       One binary fact about a repository, such as "a lint command is declared
-      and exits 0". An entry of the `readiness` catalog, it is either
-      `present` or `absent` and carries a one-line reason.
+      and exits 0", that the `readiness` verb measured until 9.0.0 removed the
+      verb (ADR-093). An entry of the `readiness` catalog, it was either
+      `present` or `absent` with a one-line reason. The shipped default
+      declares an empty catalog; a stored generation
+      still declares its signals.
     related: [readiness-floor, readiness-record, catalog]
   readiness-floor:
     means: >
-      The readiness signals whose `required_for_autonomous` is true. A project
-      with every one of them present can run `autonomy: autonomous`.
+      The readiness signals whose `required_for_autonomous` is true. Until
+      9.0.0 removed the floor (ADR-093), assess refused a project on
+      `autonomy: autonomous` unless every one of them was present. Nothing
+      refuses an assess for readiness now.
     related: [readiness-signal, readiness-summary]
   readiness-record:
     means: >
-      The per-checkout file in which a project's readiness measurement is
-      kept: each readiness signal's result and implementation version, when
-      and at which commit it was measured, and the digest of the settings
-      file. Compass never commits it.
+      The per-checkout file, `.compass/readiness.yml`, that the
+      `readiness` verb wrote until 9.0.0 removed the verb (ADR-093): each readiness
+      signal's result and implementation version, when and at which commit
+      it was measured, and the digest of the settings file. A checkout can
+      still hold one; nothing reads it.
     related: [readiness-signal, readiness-summary]
   readiness-summary:
     means: >
-      The `readiness:` key of an issue's manifest, written by every
-      `approach evaluate --write`: the score, whether the floor is met and
-      which signals are absent, or `not-measured` with the reason. It sits
-      outside the generation's digests.
+      The `readiness:` key of an issue's manifest, which `approach evaluate
+      --write` wrote until 9.0.0 removed it (ADR-093): the score, whether the
+      floor was met and which signals were absent, or `not-measured` with
+      the reason. An older manifest still holds one, and the key stays valid.
     related: [readiness-record, readiness-floor]
   temporary-worktree:
     means: >
-      The detached Git worktree of HEAD that a readiness measurement creates
-      in the system temp folder to run the project's commands. It is removed
-      when the measurement ends.
+      The detached Git worktree of HEAD that a readiness measurement created
+      in the system temp folder to run the project's commands, and removed
+      when the measurement ended. 9.0.0 removed the measurement (ADR-093),
+      so Compass creates none now.
     related: [readiness-record]
 
-  # --- Execution profiles (ADR-076) ------------------------------------------
-  execution-profile:
+  # --- The four-layer acceptance strategy, `S17` ------------------------------
+  four-layer-acceptance-strategy:
     means: >
-      One fixed, versioned way of working, kept as a file in the `profiles`
-      folder of the project. It names a model tier and an effort, the exact
-      revision of every skill, prompt fragment and piece of tool guidance, and
-      the limits of an unattended run. It decides how eligible work is done,
-      never whether it is allowed. Content that does not change gives the same
-      digest, and a change gives a new version.
-    related: [component-registry]
-  component-registry:
+      The strategy numbered `S17`. A change to behavior a real client can observe is
+      accepted through four test layers: an executable specification in
+      Given/When/Then, a domain-specific language that each line calls once,
+      a protocol driver for one client interface, and the system under test.
+      It applies unless the change's acceptance is of kind validation or
+      refactor, and a project can turn it off with a recorded reason.
+    related: [strategy, outer-loop, inner-loop, test-layer]
+  outer-loop:
     means: >
-      The file `component-registry.yml` in the `profiles` folder. It lists the
-      skills, prompt fragments and tool guidance that exist, each at an exact
-      revision, with the runner versions it supports and a recorded approval.
-      `compass profile show` reads it and never writes it.
-    related: [execution-profile]
+      The acceptance loop of the four-layer acceptance strategy: the
+      scenarios fail before the code is written and then pass through a
+      client interface against a named candidate. It wraps the inner loop.
+    related: [inner-loop, candidate, client-interface]
+  inner-loop:
+    means: >
+      The unit-level red, green, refactor loop of strategy `S2`, run inside
+      the outer loop while the code that makes a scenario pass is written.
+    related: [outer-loop]
+  candidate:
+    means: >
+      The build an outer-loop green ran against: a deployed build, named by
+      its build id, or a local build, named by the tree id of the code it was
+      built from. The record says which.
+    related: [outer-loop, client-interface]
+  client-interface:
+    means: >
+      The interface a real client uses to reach the system under test, such
+      as an API, a web interface or a command line. A protocol driver speaks
+      to exactly one.
+    related: [candidate, test-layer]
+  isolation-proof:
+    means: >
+      A record, written only by its command, that the issue's acceptance
+      tests passed when run in parallel and when each scenario's tests ran
+      twice, so no scenario depends on another or on the order they run in.
+    related: [layering-record, outer-loop]
+  layering-record:
+    means: >
+      A record, written only by its command, of the project's layering test:
+      the test that checks each test layer calls only the layer below it.
+      Compass reads the record and never the project's code.
+    related: [isolation-proof, test-layer]
+  test-layer:
+    means: >
+      One of the four layers of the four-layer acceptance strategy:
+      specification, domain-specific language, protocol driver or system
+      under test. The word `layer` alone named an 8.x configuration source.
+    related: [four-layer-acceptance-strategy, layer, layering-record]
 
 # =============================================================================
 # CODES - the id prefixes that appear in artifacts
@@ -798,29 +1050,30 @@ codes:
   INT:
     means: >
       Intent id. The "why" end of the traceability chain - the outcome the
-      work is meant to produce, sourced from intent.md's desired outcome, the
-      UI contract, or the issue description. A goal, not a requirement; the
-      requirement is the scenario.
+      work is meant to produce, sourced from the issue description or a
+      brief. A goal, not a requirement; the requirement is the scenario.
     referent: A stated desired outcome.
-    appears_in: [intent.md, acceptance-criteria.md, "manifest.yml scenarios[].intent"]
+    appears_in: [acceptance-criteria.md, "manifest.yml scenarios[].intent", "intent.md (archive)"]
     related: [TRC, intent]
   EV:
     means: >
       Evidence id. Identifies one typed record in the issue's evidence
       registry that clears a quality gate. One record can clear several
-      gates. The accepted types are fixed by guardrails.yml; a gate that
+      gates. The accepted types are fixed by the check set; a gate that
       needs a mechanical type cannot be cleared with a written note.
     referent: One typed evidence record.
-    appears_in: ["manifest.yml evidence[].id", "gates[].evidence", verification-report.md]
+    appears_in: ["manifest.yml evidence[].id", "gates[].evidence", "verification-report.md (archive)"]
     related: [quality-gate, evidence]
   FU:
     means: >
       Follow-up id. Work this issue deferred to ship fast and still owes - the
       hotfix's promoted scenario, a de-scoped artifact. Not "any outstanding
-      work": a newly found defect gets its own issue named by slug. A
-      follow-up may carry target_task, naming the issue whose ship it blocks.
+      work": a newly found defect gets its own issue named by slug. On a
+      path issue a follow-up names the GitHub issue that tracks the work
+      (`--github`). An older follow-up can carry target_task, naming the
+      issue whose ship it blocks.
     referent: One piece of work this issue deferred and still owes.
-    appears_in: ["manifest.yml follow_ups[].id", verification-report.md]
+    appears_in: ["manifest.yml follow_ups[].id", "verification-report.md (archive)"]
     related: [follow-up, definition-of-done]
   BF:
     means: >
@@ -847,11 +1100,12 @@ codes:
     related: [DD]
   CLM:
     means: >
-      Claim id. A public statement the product marketer intends to make.
-      Every claim must trace to a passing scenario before the issue ships;
-      the claims gate blocks on it.
+      Claim id. A public statement the issue intends to make, kept in the
+      manifest's `claims:`. Every claim must trace to a passing scenario
+      before the issue ships (`G3`). Until 9.0.0 removed the role templates
+      (ADR-093) the marketer wrote claims in positioning.md.
     referent: One planned public claim.
-    appears_in: [positioning.md, launch-readiness.md, "manifest.yml claims[].id"]
+    appears_in: ["manifest.yml claims[].id", "positioning.md (archive)", "launch-readiness.md (archive)"]
     related: [TRC, launch-readiness]
   PX:
     means: >
@@ -868,16 +1122,17 @@ codes:
     appears_in: governance/terminology.yml, tests/test_terminology.py
   RP:
     means: >
-      Routing policy rule. One rule in routing-policy.yml that biases or
+      Routing policy rule. One rule in the check set's `rules:` that biases or
       constrains the computed delivery approach. RP-SHAPE and RP-ADV are
       soft - they bias the candidate. RP-FLOOR, RP-CAP, RP-GATE and RP-ART
       are hard - they constrain the result. RP-ART is an artifact rule: it reads
       the documents on disk, such as positioning.md or intent.md. RP-REQUIRE attaches a gate
-      without raising a minimum. A routing rule constrains which delivery
+      without raising a minimum. RP-SETTING is a `require_evidence` setting
+      of the project's `compass.yml`, numbered in file order. A routing rule constrains which delivery
       approach an issue ends up with; a guardrail is one of the five hard
       rules cleared with evidence.
     referent: One rule in the routing policy.
-    appears_in: [routing-policy.yml, delivery-approach.md, "manifest.yml policy_rules_fired[].id"]
+    appears_in: [governance/check-set.yml, delivery-approach.md, "manifest.yml policy_rules_fired[].id"]
     related: [routing-policy, delivery-approach, guardrail]
   LS:
     means: >
@@ -891,8 +1146,8 @@ codes:
   LP:
     means: >
       Lesson proposal. A lesson held in `lessons-pending.yml` in the project's `.compass` folder until
-      someone runs `compass lesson accept`. `compass retro --lessons`
-      proposes, and the model is told to propose rather than add.
+      someone runs `compass lesson accept`. The model is told to propose
+      rather than add.
     referent: One pending proposal.
     appears_in: [lessons-pending.yml, "compass lesson list"]
     related: [LS]
@@ -916,6 +1171,17 @@ codes:
     referent: A routing policy rule. Same referent as RP-.
     appears_in: [".compass/work/ (archive)"]
     related: [RP]
+  DL:
+    means: >
+      Delegation id. Names one delegation a person typed with
+      `/compass:delegate`: it lets a named agent record approvals for that
+      person, for the issues and forms it lists, until it expires or the
+      person revokes it. Each use copies the delegation into the issue's
+      `delegations_used:`; a copy whose fields changed since an earlier
+      copy gets a suffix, such as `DL-1@2`.
+    referent: One delegation file in the project's `.compass/delegations` folder.
+    appears_in: [".compass/delegations/DL-<n>.yml", "manifest.yml delegations_used", "human-approval records (via: delegation)"]
+    related: [EV]
 
 # =============================================================================
 # RETIRED VALUES - words a field still reads and no longer writes.
@@ -941,8 +1207,8 @@ retired_values:
   - {field: close_reason, old: abandoned, new: not-planned}
   - {field: run_stage, old: build, new: implement}
   - {field: friction_keys, old: phase, new: stage}
-  - {field: reassessment_kind, old: judgement, new: judgment}  # us-english-scan: allow - old name read until 9.0.0
-  - {field: check_id, old: dor-behaviour-is-gwt, new: dor-behavior-is-gwt}  # us-english-scan: allow - old name read until 9.0.0
+  - {field: reassessment_kind, old: judgement, new: judgment}  # us-english-scan: allow - old name a stored manifest holds
+  - {field: check_id, old: dor-behaviour-is-gwt, new: dor-behavior-is-gwt}  # us-english-scan: allow - old name a stored manifest holds
 
 # =============================================================================
 # BANNED v1 VOCABULARY - the house test scans user-facing surfaces for these.
@@ -965,7 +1231,7 @@ banned:
     context: "As the name of a changed assessment. The command is /compass:assess --reassess and the manifest key is `reassessments`, so the output and the docs say re-assessment too; two words for one event made a reader guess they were the same. 'reframe debt' is 'unrecorded re-assessments'. The retired manifest key `reframes` is still read so old manifests load. 'frame' as an ordinary verb is a different word and is fine."
   - term: "Wireframe"
     replacement: design
-    context: "As the designer's command. The designer's entry point is /compass:design again - it held that name before, and 'design' reads as UI work to most people. /compass:wireframe was removed at 4.0.0. 'wireframe' as an ordinary noun is fine."
+    context: "As the designer's command. The designer's entry point became /compass:design again - it held that name before, and 'design' reads as UI work to most people. /compass:wireframe was removed at 4.0.0, and 9.0.0 removed /compass:design with the other role entry points (ADR-093). 'wireframe' as an ordinary noun is fine."
   - term: "reading / readings"
     replacement: assessment
     context: "As the four-dimension judgement. Ordinary uses of the word are fine."
@@ -978,12 +1244,12 @@ banned:
   - term: "Expedition"
     replacement: full approach
     context: "Route name."
-  - term: "Specify / Clarify / Distribute / Land"
-    replacement: "define acceptance criteria / requirements review / break down the work / ship"
-    context: "As stage names and commands. The commands are /compass:define, /compass:refine, /compass:breakdown, /compass:ship (the planning stage's command is /compass:plan, and Build's is /compass:implement); the retired names were removed at 4.0.0. Capitalised/heading/command usage only; ordinary verbs fine. NOTE: `plan` is NOT retired - it is the planning stage's machine key, skill (plan-authoring), agent (planner) and, since 2026-08-25, its command. A name that was retired can come back; ADR-014 removes retired names, it does not reserve them."
+  - term: "Clarify / Distribute / Land"
+    replacement: "requirements review / break down the work / ship"
+    context: "As stage names and commands. The retired names were removed at 4.0.0, when the commands became /compass:refine, /compass:breakdown and /compass:ship, beside /compass:define, /compass:plan and /compass:implement. 9.0.0 removed /compass:define, /compass:refine, /compass:plan, /compass:breakdown, /compass:implement and /compass:verify with the eight stages (ADR-092): the four-stage path runs assess, specify, build and ship, and /compass:ship is still a command. The old stage keys stay in an archived manifest and still read. Capitalised/heading/command usage only; ordinary verbs fine. NOTE: `plan` is NOT retired - it is the machine key of an archived issue's planning stage. A name that was retired can come back; ADR-014 removes retired names, it does not reserve them. Specify came back this way: ADR-092 names the second stage of the four-stage path `specify`, so the ban on it is lifted."
   - term: "PRD / prd.md"
     replacement: intent.md
-    context: "As the intake document. /compass:intent writes intent.md - the command and its output had never agreed, and the ids the document sources are INT-. The wider industry name is in Anthropic's AI-Native SDLC playbook, which calls the same artifact intent.md. 'product requirements' as ordinary prose is fine."
+    context: "As the intake document. /compass:intent wrote intent.md - the command and its output had never agreed, and the ids the document sources are INT-. The wider industry name is in Anthropic's AI-Native SDLC playbook, which calls the same artifact intent.md. 9.0.0 removed the document (ADR-091) and /compass:intent (ADR-093); an older issue can still hold one. 'product requirements' as ordinary prose is fine."
   - term: "lens"
     replacement: role
     context: "As the role-perspective concept."
@@ -1009,19 +1275,19 @@ banned:
     context: "As the weight of process a delivery approach carries. Agile teams already own this word for a meeting - a standup is a ceremony - so 'pay back the ceremony borrowed for speed' reads as a missed meeting. Ordinary use about an actual ceremony is fine."
   - term: "distillation"
     replacement: behaviour mapping
-    context: "As reverse-engineering existing behaviour into scenarios. To anyone working near AI, distillation means training a smaller model from a larger one, so the wrong reading arrives first. The skill is `behaviour-mapping`, which also matches the `brownfield-mapped` familiarity value it serves."
+    context: "As reverse-engineering existing behaviour into scenarios. To anyone working near AI, distillation means training a smaller model from a larger one, so the wrong reading arrives first. The `atdd` skill teaches it, and the word also matches the `brownfield-mapped` familiarity value it serves."
   - term: "coherence check"
     replacement: consistency check
-    context: "As what `compass analyze` does across artifacts. Plain English; `coherent` about an argument is fine."
+    context: "As what `compass analyze` did across artifacts before 9.0.0 removed it. Plain English; `coherent` about an argument is fine."
   - term: "fitness function"
     replacement: architecture check
     context: "As a project-declared architectural rule. NOT renamed to `eval`: an eval measures model output against success criteria in Anthropic's docs, while this checks code structure, so borrowing the word would import a meaning it does not have. The gate is `verify.architecture`."
   - term: "navigator"
     replacement: router
-    context: "As the agent that reads the assessment and computes the delivery approach. It runs routing-policy.yml, and Anthropic's docs name this shape Routing."
+    context: "As the agent that reads the assessment and computes the delivery approach. It runs the routing rules of the check set, and Anthropic's docs name this shape Routing."
   - term: "roundtable"
     replacement: consult
-    context: "As the command that convenes several roles on a question. An advisor in Anthropic's docs is one you consult mid-turn. /compass:roundtable was removed at 4.0.0."
+    context: "As the command that convened several roles on a question. An advisor in Anthropic's docs is one you consult mid-turn. /compass:roundtable was removed at 4.0.0, and 9.0.0 removed /compass:consult with the other role entry points (ADR-093)."
   - term: "elicitation"
     replacement: interview
     context: "As the act of drawing intent out of a person. Anthropic's onboarding documentation runs an interview; the skill is `intent-interview`."
@@ -1069,9 +1335,6 @@ scan:
     - scripts/             # the shell a user runs, and what it prints
     - architecture/        # the framework's own invariants and relations
     - examples/           # shipped worked examples - what an adopter copies from
-    - governance/routing-policy.yml   # comments only, per the YAML rule
-    - governance/guardrails.yml
-    - governance/signals.yml
     # This file. Scanned like any other prose, because docs/glossary.md is
     # GENERATED from its `terms:` and `codes:` blocks and titled "Every word
     # and every id prefix Compass uses" - so it is the single place a retired
@@ -1099,12 +1362,7 @@ scan:
     # exempt while their referents keep v1 names.
     - CLAUDE.md
     - AGENTS.md
-    - agents/            # the ten agent definitions, same shape as the
-                         # root instruction files
-    # docs/system-spec.md stays exempt below - it is derived at ship time
-    # and hand-editing it is forbidden.
     - approaches/
-    - docs/roles-guide.md
     - docs/safety-contract.md
     - docs/security.md
     - docs/methodology.md
@@ -1118,7 +1376,6 @@ scan:
     # derivation silently stops matching.
     - docs/releasing.md
     - docs/writing-specs-and-plans.md
-    - docs/receipt.md
     - docs/case-study-compass-rebuilt-itself.md
   # ---------------------------------------------------------------------------
   # POSITION EXEMPTIONS - the inverted default.
@@ -1421,5 +1678,3 @@ retired_in_output:
   - name: queued
     whole_word: true
     replacement: backlog
-  - name: assess, build and ship
-    replacement: assess, implement and ship

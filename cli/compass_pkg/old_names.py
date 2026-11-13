@@ -1,12 +1,36 @@
-# compass_pkg.old_names - read the old typed names that 7.0.0 still accepts
-"""One reader-side table of old typed names, each with the version that ends it.
+# compass_pkg.old_names - the old names a stored record still holds
+"""One reader-side table of old names, each with the version that ends it.
 
 The table is the `old_names:` section of `cli/migrate-map.yml`: kind, then old
-word, then `{new, removed_in}`. Every row ends at 9.0.0. A reader of one kind
-(the `--kind` argument, the state key, the readiness record, a skill, a check
-id) asks this module for the current word. A stored value in a manifest keeps
-the `word_map` mapping and its `.v5.bak` backup; `word_map.tables()` builds its
-`reassessment_kind` and `check_id` sections from this table.
+word, then `{new, removed_in}`. 9.0.0 reads no typed old name from this
+table (ADR-098): an old `--kind`, `--check`, refusal code or size given on the
+command line fails as any unknown name does. The rows left are read from
+stored files, or from a file the framework ships, and each has its reader:
+
+- `reassessment_kind` and `check_id`: `word_map.tables()` builds those two
+  sections from this table for a stored manifest (contract 3 reads the
+  archive sample through `compass issue migrate`);
+- `check_id` and `skill`: a stored generation is read through
+  `word_map.map_layer`; 73 archived generations hold the old check id and
+  skill name. 9.0.0 merged `behavior-mapping` and `bdd-specification` into
+  `atdd` (#360): `bdd-specification` maps to `atdd` until 10.0.0, one major
+  later, as a rename asks (ADR-024). Neither spelling of `behavior-mapping`
+  maps to `atdd`, and the British row keeps its 7.0.0 target: a closed
+  archived issue loads no skill, and `compass migrate` writes a new
+  generation from the check set, which names `atdd`, for every open 8.x
+  issue. So no session that needs the skill reads a stored generation that
+  names either spelling. Contract 1 records the 8.0.4 and 5.6.0 copies as
+  they routed, so the skill name each holds stays (VD-042);
+- `state_key`: `project_settings.state` reads the `initialised` key that an
+  8.x `.compass/state.yml` stores;
+- `term`: `catalogue` stays the other form of the term `catalog`, which the
+  accepted vocabulary decision (ADR-041) defines; the glossary marks it
+  (`terminology_cmd`, reading `governance/terminology.yml`).
+
+Typed input takes only the 9.0.0 names, and stored files keep reading as
+stored (VD-043, decisions 8 and 9). So every row says `removed_in: 10.0.0`:
+it stays through 9.x, and `removal_problems` lists it at 10.0.0, where the
+owner decides whether the 8.x archive still needs it.
 
 `cli/aliases.yml` stays empty: these are values and keys, not CLI spellings.
 
@@ -15,10 +39,9 @@ This is a leaf. It imports nothing from `compass_pkg`, because `core` and
 file that `core` binds, and `_FALLBACK` is the copy for a checkout with no
 framework install; a test keeps the copy equal to the file.
 """
-# DEPENDENCY: standard library (functools, sys); nothing from compass_pkg.
+# DEPENDENCY: standard library (sys); nothing from compass_pkg.
 from __future__ import annotations
 
-import functools
 import sys
 
 # The notice names the kind of name. Keys are the table's kinds.
@@ -26,30 +49,22 @@ LABELS = {
     "reassessment_kind": "kind",
     "check_id": "check",
     "skill": "skill",
-    "refusal_code": "refusal code",
     "state_key": "state key",
-    "readiness_key": "readiness key",
-    "json_key": "JSON key",
-    "spec_heading": "heading",
     "term": "term",
 }
 
 
-def _row(new):
-    return {"new": new, "removed_in": "9.0.0"}
+def _row(new, removed_in="10.0.0"):
+    return {"new": new, "removed_in": removed_in}
 
 
 _FALLBACK = {
-    "reassessment_kind": {"judgement": _row("judgment")},  # us-english-scan: allow - old name read until 9.0.0
-    "check_id": {"dor-behaviour-is-gwt": _row("dor-behavior-is-gwt")},  # us-english-scan: allow - old name read until 9.0.0
-    "skill": {"behaviour-mapping": _row("behavior-mapping")},  # us-english-scan: allow - old name read until 9.0.0
-    "refusal_code": {"not-initialised": _row("not-initialized")},  # us-english-scan: allow - old name read until 9.0.0
-    "state_key": {"initialised": _row("initialized")},  # us-english-scan: allow - old name read until 9.0.0
-    "readiness_key": {"catalogue_digest": _row("catalog_digest")},
-    "json_key": {"behaviour": _row("behavior"), "behaviours": _row("behaviors")},  # us-english-scan: allow - old name read until 9.0.0
-    "spec_heading": {"Current Behaviour": _row("Current Behavior"),  # us-english-scan: allow - old name read until 9.0.0
-                     "Archived Behaviour": _row("Archived Behavior")},  # us-english-scan: allow - old name read until 9.0.0
-    "term": {"catalogue": _row("catalog")},  # us-english-scan: allow - old name read until 9.0.0
+    "reassessment_kind": {"judgement": _row("judgment")},  # us-english-scan: allow - old name a stored manifest holds
+    "check_id": {"dor-behaviour-is-gwt": _row("dor-behavior-is-gwt")},  # us-english-scan: allow - old name a stored manifest or generation holds
+    "skill": {"behaviour-mapping": _row("behavior-mapping"),  # us-english-scan: allow - old name a stored generation holds
+              "bdd-specification": _row("atdd")},
+    "state_key": {"initialised": _row("initialized")},  # us-english-scan: allow - old key an 8.x state.yml holds
+    "term": {"catalogue": _row("catalog")},  # us-english-scan: allow - other form of the term (ADR-041)
 }
 
 _READ = None
@@ -95,21 +110,13 @@ def current(kind, value):
     return value
 
 
-def _notice(kind, old, new):
+def _notice(kind, old, new, removed_in="10.0.0"):
     key = (kind, old)
     if key in _SEEN:
         return
     _SEEN.add(key)
     print(f"compass: {LABELS.get(kind, kind)} {old} is now {new}; "
-          f"the old word is read until 9.0.0.", file=sys.stderr)
-
-
-def read(kind, value):
-    """`current(kind, value)`; an old word prints one notice per run."""
-    new = current(kind, value)
-    if new != value:
-        _notice(kind, value, new)
-    return new
+          f"the old word is read until {removed_in}.", file=sys.stderr)
 
 
 def pick(mapping, kind, new, default=None):
@@ -119,19 +126,9 @@ def pick(mapping, kind, new, default=None):
         return mapping[new]
     for row in rows(kind):
         if row["new"] == new and row["old"] in mapping:
-            _notice(kind, row["old"], new)
+            _notice(kind, row["old"], new, row["removed_in"])
             return mapping[row["old"]]
     return default
-
-
-def twins(kind, mapping):
-    """A copy of `mapping` that also holds, for each new key present, its old
-    twin with the same value (a record that older readers still parse)."""
-    out = dict(mapping)
-    for row in rows(kind):
-        if row["new"] in mapping and row["old"] not in out:
-            out[row["old"]] = mapping[row["new"]]
-    return out
 
 
 def _version(text):
@@ -146,10 +143,3 @@ def removal_problems(version):
             f"and is still read at version {version}; remove the row and its readers"
             for r in rows() if now >= _version(r["removed_in"])]
 
-
-# The parser type of `--kind`: an old word is read as the current one.
-kind_type = functools.partial(read, "reassessment_kind")
-
-# The parser type of a check id given to `compass evidence approve`, `request`
-# and `review`: a script written for 6.x still passes the old id until 9.0.0.
-check_type = functools.partial(read, "check_id")

@@ -16,8 +16,8 @@ They were a single sentence until 2026-08-27, when five pull requests in a row
 shipped with the footer on them. Half a rule in the middle of a paragraph is a
 rule that gets half-followed, so both now stand on their own.
 
-They are house rules, not guardrails: the `reviewer` agent assesses them at
-`verify`, and in
+They are house rules, not guardrails: the review at `verify` assesses them,
+and in
 this repository's vocabulary a guardrail is the hard, blocking kind that
 `guardrails.md` holds.
 
@@ -279,6 +279,23 @@ well-understood pattern is that standard: a reader who knows it reads the
 code faster. But a misapplied pattern is worse than none, because it adds
 indirection a reader must undo, so fit stays a judgement and the strategy
 does not gate.
+
+## Four-layer acceptance strategy (`S17`)
+
+The guardrail tested before it lands (`G1`) is met by a test that failed and then passed, so a unit test
+that never leaves the process meets it, and a passing issue says nothing
+about behavior a user sees. The pilot on Compass's own hook tests
+(`tests/acceptance/hooks/`) showed the four layers working: a change to the
+hook layout touched one driver file where it had touched 22 test files, and
+running the same scenarios through a second client found a real defect.
+
+It is a strategy and not a guardrail because a team must be able to step off
+it: a project with no deployable candidate yet turns it off with a reason,
+and one issue steps off through an approved waiver. Its checks block, which
+no strategy did before, so the definition of a strategy changed with it. The
+checks sit outside the locked guardrails, as `nfr-rows-resolved` does, which
+is what lets a recorded step-off make them advisory without touching the
+guardrails tested before it lands (`G1`) and evidence, not assertion (`G4`).
 
 ## The integrity rule (`guardrails.md`)
 

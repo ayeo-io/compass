@@ -19,14 +19,17 @@ It is typed with flags, each optional and in any order (`parse_flags`):
 - the issues it covers (`--on`), each at the generation it had when the
   delegation was made; with none, every issue at any generation;
 - the forms it covers: `checks`, `documents`, `checkpoints`, `decisions`,
-  `check:<id>`, and `g5` only when typed (default: the first four);
+  `check:<id>`, and `g5`, `waivers` and `ship` only when typed (default: the
+  first four). A waiver lowers what an issue owes, and the ship approval is
+  the one approval of a change a person gives at ship (#355), so no default
+  covers either;
 - optionally `max_uses`.
 
 A file with no `format` is a 7.0.0 file. It is read by the 7.0.0 rules: a
 missing `until` or `issues` grants nothing, and `labels` is read but never
 written. No limit is put on how many are in force.
 
-A delegation that covers `g5` takes effect
+A delegation that covers `g5`, `waivers` or `ship` takes effect
 only when the person types back a code the hook showed them in its block
 message (`confirm`), because a prompt suggestion accepted with Tab lets the
 model word the first command (measured on Claude Code 2.1.300; the owner's
@@ -43,7 +46,10 @@ or a delegation waiting for its code, already holds is refused.
 The named agent approves with `compass evidence approve <form> --delegated
 --as <agent>` (`authorise`, then `record_use`). The record's `approver` is the
 person who delegated; it also holds `approved_by_agent`, `delegation` and
-`via: delegation`. Each use writes a line to the issue's devlog.
+`via: delegation`. Each use counts on the delegation file, and the
+manifest's `delegations_used:` gets a copy of the delegation in the same save
+as the record (`copy_of`, `keep_copy`; ADR-095 decision 12), so the issue
+record shows the authority without the delegation folder.
 `/compass:revoke` ends delegations early (`handle_revoke`). A delegation never
 covers delegation: the agent cannot create, extend or revoke one, or reject an
 approval.
@@ -73,18 +79,27 @@ CONFIRM_MINUTES = 10
 #: The confirmation code's length in bytes: 64 bits, 16 hex characters.
 CODE_BYTES = 8
 DEFAULT_FORMS = ("checks", "documents", "checkpoints", "decisions")
-FORMS = ("g5",) + DEFAULT_FORMS
+#: The forms a delegation covers only when the person types them, and only after
+#: the person types back the confirmation code: each lowers what an issue owes.
+TYPED_ONLY = ("g5", "waivers", "ship")
+FORMS = TYPED_ONLY + DEFAULT_FORMS
 #: The words of the old positional form, which `parse_flags` refuses.
 KEYWORDS = ("until", "on", "for", "labels", "max")
 FLAGS = ("--agent", "--until", "--on", "--for", "--max")
+#: The end of a refused delegated approval: only a person's typed answer counts then.
+ASK_PERSON = ("Ask the person with `compass evidence request` and stop: the person must "
+              "type /compass:approve. Nothing was written.")
 FLAG_FORM = ("/compass:delegate [--agent <name>] [--until <time>] [--on <issues>] "
              "[--for <forms>] [--max <n>]")
 #: The form word that covers each subject form of an approval.
 COVERS = {"guardrail": "g5", "check": "checks", "artifact": "documents",
-          "checkpoint": "checkpoints", "decisions": "decisions"}
+          "checkpoint": "checkpoints", "decisions": "decisions", "waiver": "waivers",
+          "ship": "ship"}
 WORDS = {"g5": "the guardrail 5 sign-off", "checks": "human checks",
          "documents": "documents", "checkpoints": "checkpoints",
-         "decisions": "decisions taken for you"}
+         "decisions": "decisions taken for you",
+         "waivers": "waivers, each excusing one check on one issue",
+         "ship": "the ship approval of a change"}
 VERB = "compass evidence approve"
 
 
@@ -281,8 +296,8 @@ def parse(args, session, now):
     forms = found.get("for", ",".join(DEFAULT_FORMS)).split(",")
     for form in forms:
         if form not in FORMS and not re.fullmatch(r"check:[\w.-]+", form):
-            raise _refused(f"'{form}' is not a form a delegation covers; use g5, checks, "
-                           f"documents, checkpoints, decisions or check:<id>.")
+            raise _refused(f"'{form}' is not a form a delegation covers; use g5, waivers, "
+                           f"ship, checks, documents, checkpoints, decisions or check:<id>.")
     issues = _issues_named(found["on"].split(","), session) if "on" in found else {}
     cap = None
     if "max" in found:
@@ -349,6 +364,15 @@ def _confirmation(body):
               f"migration or a release tag, {_until_words(body)}")
     else:
         g5 = "not the guardrail 5 sign-off"
+    if "waivers" in body["forms"]:
+        g5 += (f"; {who} may approve a waiver, which excuses one check on one issue, "
+               f"{_until_words(body)}")
+    else:
+        g5 += "; not a waiver"
+    if "ship" in body["forms"]:
+        g5 += f"; {who} may give the ship approval of a change, {_until_words(body)}"
+    else:
+        g5 += "; not the ship approval"
     extra = ""
     if body.get("labels"):
         extra += f"; only issues labeled {', '.join(body['labels'])}"
@@ -417,7 +441,7 @@ def handle_delegate(session):
         if words[:1] == ["confirm"]:
             return _confirm(compass_dir, session, words[1] if len(words) > 1 else "", now)
         body = parse(session.args, session, now)
-        if "g5" in body["forms"]:
+        if set(TYPED_ONLY) & set(body["forms"]):
             code = secrets.token_hex(CODE_BYTES)
             salt = secrets.token_hex(8)
             _write(_confirm_path(compass_dir, session.session_id),
@@ -425,12 +449,25 @@ def handle_delegate(session):
                     "salt": salt, "code_hash": _hash(salt, code), "delegation": body})
             from compass_pkg.prompt_approval import Refused
             raise Refused(
-                f"Compass: this delegation would let {_who(body)} sign off irreversible "
-                f"work, such as an archive migration or a release tag, "
+                f"Compass: this delegation would let {_who(body)} {_typed_only_words(body)}, "
                 f"{_until_words(body)}. Nothing is written until you "
                 f"confirm. To confirm, type /compass:delegate confirm {_show_code(code)} in this "
                 f"session within {CONFIRM_MINUTES} minutes.")
         return _confirmation(_write_delegation(compass_dir, body))
+
+
+def _typed_only_words(body):
+    """What a delegation's typed-only forms let the agent do, in words."""
+    parts = []
+    if "g5" in body["forms"]:
+        parts.append("sign off irreversible work, such as an archive migration or a "
+                     "release tag")
+    if "waivers" in body["forms"]:
+        parts.append("approve a waiver, which excuses one check on one issue")
+    if "ship" in body["forms"]:
+        parts.append("give the ship approval of a change, which stands in for a person's "
+                     "review of its pull request")
+    return " and ".join(parts)
 
 
 def _confirm(compass_dir, session, code, now):
@@ -548,17 +585,76 @@ def authorise(task_dir, form, value, agent, session_id="", compass_dir=None):
         if why:
             reasons.append(why)
     if not reasons:
-        raise CompassError(f"{VERB}: no delegation in force names {agent}. Ask the person "
-                           f"with `compass evidence request` and stop. Nothing was written.")
-    raise CompassError(f"{VERB}: {'; '.join(reasons)}. Ask the person with `compass "
-                       f"evidence request` and stop. Nothing was written.")
+        raise CompassError(f"{VERB}: no delegation in force names {agent}. {ASK_PERSON}")
+    raise CompassError(f"{VERB}: {'; '.join(reasons)}. {ASK_PERSON}")
+
+
+#: The fields of a delegation that its copy in an issue's manifest keeps. Left
+#: out: the `nonce`; the use count and the index of records, which name other
+#: issues' folders; the session ids (`session_id`, and the value of
+#: `covers_session`, which the copy keeps as `true`), because a session id
+#: lets a process resume that session; `requested_prompt_id`; and the
+#: revocation, which comes after the use and does not change what was
+#: delegated. `format` and `labels` are kept because they decide how a 7.0.0
+#: file was read.
+COPIED = ("format", "delegated_by", "role", "approver_source", "created_at", "agent",
+          "covers_session", "until", "issues", "forms", "labels", "max_uses",
+          "created_via", "prompt_id")
+#: The manifest key that holds the copies. It is not named after the delegation
+#: folder, so the pre-tool hook's rule on that word does not refuse a read of
+#: the issue folder.
+USED_KEY = "delegations_used"
+
+
+def copy_sha256(copy):
+    """The sha256 of a copy's fields, `sha256` itself left out, as canonical
+    JSON: sorted keys, no spaces, UTF-8."""
+    body = {k: v for k, v in copy.items() if k != "sha256"}
+    text = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def copy_of(delegation):
+    """`(id, copy)`: the copy of `delegation` that an issue's manifest keeps,
+    with the fields of `COPIED` and their `sha256`. Values pass through JSON,
+    so a date read from YAML is kept as the text it is digested as."""
+    kept = {k: delegation[k] for k in COPIED if delegation.get(k) is not None}
+    if kept.get("covers_session"):
+        kept["covers_session"] = True
+    kept = json.loads(json.dumps(kept, default=str))
+    kept["sha256"] = copy_sha256(kept)
+    return str(delegation["id"]), kept
+
+
+def keep_copy(task, authority):
+    """Add the copy `authority` (`copy_of`) to the manifest dict and return
+    the key it is under. A copy with the same `sha256` already kept under the
+    id, or under `<id>@<n>`, is not added again; a copy whose fields differ is
+    added under the next free `<id>@<n>`, starting at 2."""
+    delegation_id, copy = authority
+    used = task.get(USED_KEY)
+    if used is None:
+        used = task[USED_KEY] = {}
+    if not isinstance(used, dict):
+        raise CompassError(f"{VERB}: the manifest's {USED_KEY} is not a mapping, so the "
+                           f"delegation used cannot be added to it. Nothing was written.")
+    key, number = delegation_id, 1
+    while key in used:
+        if isinstance(used[key], dict) and used[key].get("sha256") == copy["sha256"]:
+            return key
+        number += 1
+        key = f"{delegation_id}@{number}"
+    used[key] = dict(copy)
+    return key
 
 
 def record_use(task_dir, delegation, agent, done, subject, compass_dir=None):
-    """Count the use on the delegation, index the record in the delegation file
-    (`records`: the issue, its folder, the record ids and the time, so a summary
-    reads only the folders that hold a record) and write the devlog's audit
-    line. `compass_dir` is the common store's `.compass/` folder."""
+    """Count the use on the delegation and index the record in the delegation
+    file (`records`: the issue, its folder, the record ids and the time, so a
+    summary reads only the folders that hold a record). The issue's copy of
+    the delegation is written with the record itself (`keep_copy`), so nothing
+    is written to the issue folder here. `compass_dir` is the common store's
+    `.compass/` folder."""
     compass_dir = compass_dir or os.path.dirname(os.path.dirname(task_dir))
     path = os.path.join(folder(compass_dir), f"{delegation['id']}.yml")
     body = load_yaml(path)
@@ -567,11 +663,6 @@ def record_use(task_dir, delegation, agent, done, subject, compass_dir=None):
         {"issue": os.path.basename(os.path.normpath(task_dir)), "folder": str(task_dir),
          "ids": list(done.evidence_ids), "at": _iso(_now())})
     _write(path, body)
-    line = (f"- {_iso(_now())} - {', '.join(done.evidence_ids)} recorded by {agent} under "
-            f"{delegation['id']} for {delegation.get('delegated_by')}: {subject}.\n")
-    devlog = os.path.join(task_dir, "devlog.md")
-    with open(devlog, "a", encoding="utf-8") as fh:
-        fh.write(line)
 
 
 # --- the person's review of delegated approvals ----------------------------------------------
@@ -689,6 +780,10 @@ def _subject(record):
         return f"the {record.get('checkpoint')} checkpoint"
     if record.get("check"):
         return f"human check '{record['check']}'"
+    if isinstance(record.get("waiver"), str):
+        return f"waiver {record['waiver']} of '{record.get('waived_check')}'"
+    if isinstance(record.get("ship"), str):
+        return f"the ship approval of issue {record['ship']}"
     return "guardrail 5 sign-off"
 
 
@@ -916,11 +1011,11 @@ def mark_reviewed(session, entry, held):
 def overrule(session, args, where=""):
     """`/compass:reject <record id> <reason>`: overrule one approval made under
     a delegation. A check gets a `rejected` record, a document returns to
-    draft, and a guardrail 5 sign-off gets an `approval-withdrawal` record.
-    None of these reverses anything the agent already did."""
+    draft, and a guardrail 5 sign-off, a waiver's approval or a ship approval
+    gets an `approval-withdrawal` record, so it no longer counts. None of these reverses anything the agent already did."""
     from compass_pkg import approval_records
     from compass_pkg.core import save_manifest
-    from compass_pkg.prompt_approval import HookResult, _send_back
+    from compass_pkg.prompt_approval import HookResult
     record_id, _, reason = args.partition(" ")
     reason = reason.strip()
     task, path = load_manifest(session.task_dir)
@@ -935,7 +1030,10 @@ def overrule(session, args, where=""):
     subject = _subject(record)
     stamp = _iso(_now())
     record.update(reviewed_by=session.approver, reviewed_at=stamp)
-    if record.get("type") == "human-approval" and approval_records.gives_g5(record):
+    withdrawn = record.get("type") == "human-approval" and (
+        approval_records.gives_g5(record) or isinstance(record.get("waiver"), str)
+        or isinstance(record.get("ship"), str))
+    if withdrawn:
         taken = {r.get("id") for r in evidence}
         number = 1
         while f"EV-WITHDRAWAL-{number}" in taken:
@@ -960,10 +1058,6 @@ def overrule(session, args, where=""):
         approvals.record(session.task_dir, answer, save=False)
         save_manifest(task, path)
         written = ", ".join(approvals.record(session.task_dir, answer).evidence_ids)
-    elif record.get("type") == "artifact-approval" and record.get("artifact"):
-        save_manifest(task, path)
-        _send_back(session, record["artifact"], reason)
-        written = f"{record['artifact']} back to draft"
     else:
         raise _refused(f"{record_id} ({subject}) cannot be overruled with /compass:reject; "
                        f"reopen a decision with compass issue decision set.")

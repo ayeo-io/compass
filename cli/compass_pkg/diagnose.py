@@ -3,9 +3,8 @@
 # compass_pkg.diagnose - `compass issue diagnose`
 # =============================================================================
 #
-# Explains one run from its issue's own records, after the session is gone.
-# compass retro, the friction log and compass rework-scan look across issues;
-# this looks at one: each stage against the record that shows it ran, a
+# Explains one run from its issue's own records, after the session is gone:
+# each stage against the record that shows it ran, a
 # timeline of the dated records, the deviations, and the questions only a
 # transcript could answer. It reads and never writes.
 #
@@ -21,10 +20,10 @@ import glob
 import json
 import os
 
-from compass_pkg import autonomy_cost, checkpoint_outcomes, lifecycle, status_words, word_map
+from compass_pkg import checkpoint_outcomes, landing, lifecycle, status_words, word_map
 from compass_pkg.stable_ids import (
-    APPROACH_SPIKE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
-    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+    APPROACH_SPIKE, REMOVED_GATE_IDS, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS,
+    STAGE_IMPLEMENT, STAGE_PLAN, STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
 from compass_pkg.manifest_store import load_manifest_mapping
 from compass_pkg.core import (artifact_path, manifest_path,
                               resolve_issue_dir, unregistered_document)
@@ -40,7 +39,7 @@ CANNOT_SHOW = (
     "how long anything took between records, and time spent with no record",
     "when a gate was passed: the manifest does not date gate passes",
     "when a review ran: a review round is dated when it was recorded, which can be later",
-    "token use of a session the hook did not record",
+    "how many tokens a session used: Compass does not record it",
 )
 
 
@@ -58,10 +57,12 @@ def _dicts(value):
 
 def _records(task_dir):
     """[(kind, scenario, timestamp, command, path)] for every red, green and
-    acceptance record, bound to a scenario (`red-A.json`) or not (`red.json`)."""
+    acceptance record, bound to a scenario (`red-A.json`) or not (`red.json`),
+    of either loop (`red-A.outer.json`, ADR-082)."""
     out = []
     for path in sorted(glob.glob(os.path.join(task_dir, "evidence", "*.json"))):
         name = os.path.basename(path)[:-5]
+        name = name[:-len(".outer")] if name.endswith(".outer") else name
         kind = next((k for k in _KINDS if name == k or name.startswith(k + "-")), None)
         if kind is None:
             continue
@@ -107,9 +108,10 @@ def _landed_by_items(m):
     return by if isinstance(by, list) else [by] if by else []
 
 
-def _landed_as(m):
-    if m.get("land_commit"):
-        return str(m["land_commit"])
+def _landed_as(m, task_dir):
+    commit = landing.land_commit(m, task_dir)
+    if commit:
+        return str(commit)
     names = []
     for item in _landed_by_items(m):
         if isinstance(item, dict):
@@ -119,9 +121,9 @@ def _landed_as(m):
     return ", ".join(names)
 
 
-def _landed_through(m):
+def _landed_through(m, task_dir):
     """The issues this one landed through, when `landed_by` names any."""
-    if m.get("land_commit"):
+    if landing.land_commit(m, task_dir):
         return ""
     return ", ".join(str(i["issue"]) for i in _landed_by_items(m)
                      if isinstance(i, dict) and i.get("issue"))
@@ -162,7 +164,7 @@ def _stage_records(root, task_dir, m, records):
     review = os.path.join(task_dir, "evidence", "review.md")
     if os.path.isfile(review):
         shown[STAGE_VERIFY].append(_rel(root, review))
-    landed_as = _landed_as(m)
+    landed_as = _landed_as(m, task_dir)
     if landed_as or m.get("land_timestamp"):
         shown[STAGE_SHIP].append(f"{mpath} (landed {landed_as})" if landed_as else f"{mpath} (landed)")
     return shown
@@ -206,48 +208,12 @@ def _timeline(root, task_dir, m, records):
         # Comparing text: both are ISO 8601 UTC, so a later time sorts later.
         events = [(w, f"{what} (after landing)" if w[:19] > landed_at[:19] else what, p)
                   for w, what, p in events]
-        events.append((landed_at, f"landed {_landed_as(m)}".strip(), mpath))
+        events.append((landed_at, f"landed {_landed_as(m, task_dir)}".strip(), mpath))
     return sorted(events)
 
 
-def _dollars(value):
-    return "cost unknown" if value is None else "$%.4f" % value
-
-
-def _block(label, counts):
-    """One line for a stage or the requests no stage holds."""
-    if counts.get("measured") is False:
-        return f"    {label:<12} not measured ({counts.get('reason') or 'no reason recorded'})"
-    line = f"    {label:<12} {_dollars(counts.get('cost_usd'))}  {counts.get('requests')} request(s)"
-    return line + ("  (shared with another issue)" if counts.get("shared") else "")
-
-
-def _cost_lines(m):
-    """What the issue's `usage` block says it cost: the total and each stage, or
-    why no cost is recorded."""
-    usage = m.get("usage") if isinstance(m.get("usage"), dict) else None
-    if usage is None:
-        return ["  cost: not recorded (no usage block)"]
-    if usage.get("recorded") is False:
-        return [f"  cost: not recorded ({usage.get('reason') or 'no reason recorded'})"]
-    total = usage.get("total") if isinstance(usage.get("total"), dict) else None
-    stages = [(name, b) for name, b in (usage.get("stages") or {}).items() if isinstance(b, dict)]
-    if total is not None:
-        head = f"  cost: {_dollars(total.get('cost_usd'))} over {total.get('requests')} request(s)"
-    else:
-        # A quick fix's block holds no total: the cost is its measured stages'.
-        cost = autonomy_cost.complete_cost(m)
-        head = f"  cost: {_dollars(cost)}"
-    if total is not None and total.get("shared"):
-        head += "  (shared with another issue)"
-    lines = [head] + [_block(name, b) for name, b in stages]
-    if isinstance(usage.get("unattributed"), dict):
-        lines.append(_block("unattributed", usage["unattributed"]))
-    return lines
-
-
-def _checkpoint_lines(m, task_dir):
-    """The Checkpoints and cost section: each outcome, the three bands and the cost."""
+def _checkpoint_lines(m):
+    """The Checkpoints section: each recorded checkpoint outcome."""
     lines = []
     found = checkpoint_outcomes.outcomes(m)
     for stage in _ORDER:
@@ -255,17 +221,7 @@ def _checkpoint_lines(m, task_dir):
         if entry:
             lines.append(f"  {stage:<8} {entry['outcome']:<8} by {entry.get('by')}  "
                          f"at {entry.get('at')}")
-    if not lines:
-        lines.append("  no checkpoint outcomes recorded")
-    band = autonomy_cost.bands(m, task_dir)
-    if band is None:
-        lines.append("  bands: not counted (the issue's configuration cannot be read)")
-    else:
-        units = autonomy_cost.UNITS
-        lines.append("  bands: human judgment %d (%s), guardrailed %d (%s), autonomous %d (%s)"
-                     % (band["human_judgement"], units["human_judgement"], band["guardrailed"],
-                        units["guardrailed"], band["autonomous"], units["autonomous"]))
-    return lines + _cost_lines(m)
+    return lines or ["  no checkpoint outcomes recorded"]
 
 
 def _deviations(task_dir, m, stages, shown, records):
@@ -277,7 +233,7 @@ def _deviations(task_dir, m, stages, shown, records):
     # An omission recorded early says nothing about how far the work got.
     reached = max((i for i, s in enumerate(_ORDER)
                    if any(not r.startswith("omitted:") for r in shown[s])), default=-1)
-    through = _landed_through(m)
+    through = _landed_through(m, task_dir)
     if through:
         out.append(f"landed through {through}: its records are in that issue, "
                    f"so this issue's own missing stages are not listed")
@@ -315,7 +271,8 @@ def _deviations(task_dir, m, stages, shown, records):
                 out.append(f"{st.get('id')} review round {rnd.get('round')} failed")
     if landed:
         for g in _dicts(m.get("gates")):
-            if g.get("status") != "pass":
+            # A removed gate owes nothing, so an issue landed over it is not a finding.
+            if g.get("status") != "pass" and g.get("id") not in REMOVED_GATE_IDS:
                 out.append(f"gate {g.get('id')} is {g.get('status') or 'unset'}")
     return out
 
@@ -356,7 +313,7 @@ def cmd_issue_diagnose(args):
     if costs:
         lines += ["", "Recorded cost"]
         lines += [f"  {sid}: {cost} tokens" for sid, cost in costs]
-    lines += ["", "Checkpoints and cost"] + _checkpoint_lines(m, task_dir)
+    lines += ["", "Checkpoints"] + _checkpoint_lines(m)
     lines += ["", "Timeline"]
     events = _timeline(root, task_dir, m, records)
     lines += [f"  {when}  {what}  {path}" for when, what, path in events] or ["  no dated records"]

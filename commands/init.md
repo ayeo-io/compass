@@ -1,5 +1,5 @@
 ---
-description: Write the project's compass.yml, or migrate an older project to it
+description: Write the project's compass.yml
 allowed-tools: Read, Write(./.compass/**), Write(./docs/**), Write(./compass.yml), Edit(./.compass/**), Edit(./docs/**), Edit(./compass.yml), Bash(compass *), Glob
 ---
 
@@ -20,11 +20,11 @@ force from install, and `/compass:assess` computes delivery approaches against
 them from the first issue. You do not have to run this command before the
 first issue.
 
-`/compass:init` copies nothing. A new project's `compass.yml` extends the
-shipped default (`extends: compass:default@7`) and holds only what differs from
-it, so "the shipped defaults and nothing project-specific yet" is a complete,
-valid configuration. Copying `governance/` into a project, which 5.x versions
-of this command did, is what `compass policy migrate` now converts.
+`/compass:init` copies nothing. Compass runs one fixed set of checks (ADR-094),
+so a new project's `compass.yml` holds only its settings, and "the shipped
+defaults and nothing project-specific yet" is a complete, valid configuration. 5.x versions of this command copied `governance/` into
+a project. `compass policy migrate` on 8.x converts such a copy; 9.0.0 removed
+that command (ADR-094).
 
 Run it whenever the team is ready. It does not change application code, so
 it is exempt from assessment.
@@ -34,43 +34,26 @@ it is exempt from assessment.
 1. **Check what the project already has.** Look for these, in order:
    - A `compass.yml` with a top-level `schema:` key. Compass already has its
      configuration. Stop and report that. Offer `compass policy lint` and
-     `compass policy show`, which show every resolved field and the layer
-     it came from. Do not overwrite the file.
+     `compass policy show`, which show the check set, its digest and the
+     settings that tighten it. Do not overwrite the file.
    - A `compass.yml` with no `schema:` key. Compass does not read it, so it is
      another tool's file. Stop and report that. Do not overwrite it and do not
-     write a second file beside it. `compass policy migrate` refuses it for the
-     same reason. Tell the person to move it to another name or to add
-     `schema: 1`.
-   - A `.compass/config.yml`, or copied governance: both
-     `governance/routing-policy.yml` and `governance/guardrails.yml` in the
-     project, a copy made under 5.x. Go to step 2.
+     write a second file beside it. Tell the person to move it to another name
+     or to add `schema: 1`.
+   - A `.compass/config.yml`, or copied governance:
+     `routing-policy.yml` or `guardrails.yml` in the
+     project, a copy made under 5.x. Compass 9.0.0 does not read the copy, and
+     refuses every command that reads the policy until the project has a
+     `compass.yml` (`governance-copy-removed`). Go to step 2.
    - None of these. Go to step 3.
 
    Then go on to the status line step below, which runs every time.
 
-2. **Migrate an older project.** Never write a fresh `compass.yml` beside an
+2. **Stop on an older project.** Never write a fresh `compass.yml` beside an
    older settings file: Compass refuses a project that holds settings in both.
-   - Run `compass policy migrate`. It is a dry run and writes nothing. It prints
-     the `compass.yml` it would write, the settings it moves, the state it moves
-     to `.compass/state.yml`, the files it copies to `.compass/legacy/`, and what
-     it could not express.
-   - Show the person that report in plain words and ask: "Apply this migration?"
-     Only on a yes, run `compass policy migrate --apply`. A person approves a
-     change to their project's configuration (guardrail 5).
-   - The command exits 1 when it cannot show the result equivalent to what the
-     project ran, or when a loosening needs an approval. Report each item it
-     names, apply nothing, and let the person decide. It exits 2 when it refuses
-     (for example, `compass.yml` already exists). Report the reason it gives.
-   - After `--apply`, check that `compass.yml` names an `owner`. Migration does
-     not invent one, and without an owner no waiver can be approved, so
-     `compass policy lint` reports `W-NO-OWNER`. Ask who approves waivers and add
-     `owner: <that person>` to `compass.yml`.
-   - Then run `compass init --readiness` and show the absent signals it
-     prints. It is advice and exits 0 whatever it finds.
-   - Then run `compass policy lint` and report the result. An issue
-     that already has a stored configuration keeps it until its next
-     reassessment. An issue without one is judged by the new `compass.yml` at
-     once.
+   9.0.0 has no command that converts the old files (ADR-094). Stop and report
+   that the project must run `compass policy migrate` on Compass 8.x first, and
+   that the upgrade guide names the 9.0.0 settings. Change nothing.
 
 3. **Write a minimal `compass.yml` for a new project.** Ask for the project's
    name, its test command and who approves waivers (the owner). Write
@@ -78,7 +61,6 @@ it is exempt from assessment.
 
    ```yaml
    schema: 1
-   extends: compass:default@7
    owner: <the person who approves waivers>
    project:
      name: <the project's name>
@@ -99,19 +81,6 @@ it is exempt from assessment.
    passed. Do not add keys the team has
    not asked for: every other setting has a default (see
    `docs/configuration.md`), and a missing key is a complete state.
-
-   Then run `compass init --readiness`. It measures the repository against the
-   readiness signals and prints the absent ones first, the signals an
-   autonomous project needs before them, each with the one change that makes it
-   present. Show the person that list in plain words. It is advice: the command
-   exits 0 whatever it finds, and when it cannot measure it says why and names
-   `compass readiness` to run later. Do not delay init for it. Only this
-   step passes `--readiness`, so no other entry point runs a project command.
-
-   The readiness record is per checkout and never committed. On an autonomous
-   project, tell the person that each new clone or worktree must run
-   `compass readiness` (up to five minutes) before its first
-   `compass approach evaluate --write`, or assess refuses the issue.
 
 4. **Help the team extend the defaults, if it wants to** - a few
    questions at a time, in each role's own language. The team does not need to
@@ -135,11 +104,10 @@ it is exempt from assessment.
    `.compass/current-task` (the pointer the CLI uses to resolve which issue
    a `compass` call acts on); it does not need to be created now.
 
-6. **Report.** Summarize what was created or migrated, what the team chose to
+6. **Report.** Summarize what was created, what the team chose to
    leave at the default (a valid state, not owed work), and the next
-   command: `/compass:assess` for an engineer, or a role entry point -
-   `/compass:intent` (product owner/manager), `/compass:position` (product
-   marketer), or `/compass:design` (designer).
+   command: `/compass:go` for a change, or `/compass:assess` to rate one
+   first.
 
 ## The status line, even when step 1 stops
 
@@ -162,6 +130,5 @@ that adopted Compass long ago still needs its status line.
 
 Init is complete when `compass.yml` exists with `schema:`, `compass policy lint`
 passes, and no placeholder remains in it. For an older project, init is complete
-when `compass policy migrate --apply` has run after the person agreed, or the
-person has declined and the old files are untouched. The shipped defaults are in
-force regardless.
+when it has reported that the project must migrate on 8.x first and the old files
+are untouched. The shipped defaults are in force regardless.

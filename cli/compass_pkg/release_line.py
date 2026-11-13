@@ -8,7 +8,8 @@ and the landing refusal agree:
 
 - `owes` decides whether an issue owes a line: it is neither completed nor
   closed, its manifest has a `generation` key, and its stored configuration sets
-  `release_line: true` on its approach. An issue that predates the field, or the
+  `release_line: true` on its approach; a path issue (ADR-092), when it sets the
+  field on any approach that ships. An issue that predates the field, or the
   archive, never owes one.
 - `landing_refusal` is the entry of `manifest.LANDING_REFUSALS`, so it judges only
   the issue a landing names.
@@ -19,16 +20,15 @@ and the landing refusal agree:
 
 The owning doc is `docs/release-line.md`.
 """
-# DEPENDENCY: standard library (copy, os); the bundled PyYAML; compass_pkg.atomic_io,
-# core, effective, manifest (title_problem), refusals, status_words.
+# DEPENDENCY: standard library (copy, os); compass_pkg.atomic_io, core, effective,
+# manifest (title_problem), manifest_store (dump), path_stages, refusals, stable_ids,
+# status_words.
 from __future__ import annotations
 
 import copy
 import os
 
-import yaml
-
-from compass_pkg import atomic_io, status_words
+from compass_pkg import atomic_io, manifest_store, status_words
 from compass_pkg.core import (MANIFEST_LOCK, CompassError, load_manifest, load_yaml,
                               prepare_manifest_write)
 
@@ -62,19 +62,34 @@ def owes(task, task_dir):
         return False
     try:
         # A generation that is not a whole number, or not whole on disk, raises here.
-        view = effective.view_or_legacy(task_dir, manifest=task)
+        view = effective.effective_for(task_dir, manifest=task)
     except Exception:                                   # noqa: BLE001 - nothing to read, nothing owed
         return False
-    if view is None:
-        return False
     approaches = view.config.get("approaches")
-    body = approaches.get(task.get("delivery_approach")) if isinstance(approaches, dict) else None
+    if not isinstance(approaches, dict):
+        return False
+    from compass_pkg.path_stages import is_path_issue
+    if is_path_issue(task):
+        # A path issue has no approach entry (ADR-092 decision 2). It owes a line
+        # when the configuration sets the field on any approach that ships, as
+        # every 8.x delivery approach did, so a stored generation from before
+        # the field still owes none.
+        from compass_pkg.stable_ids import APPROACH_SPIKE
+        return any(isinstance(body, dict) and body.get("release_line") is True
+                   for name, body in approaches.items() if name != APPROACH_SPIKE)
+    body = approaches.get(task.get("delivery_approach"))
     return isinstance(body, dict) and body.get("release_line") is True
 
 
-def missing_text(slug):
+#: The verbs a landing refusal names: it runs at both landings and does not know
+#: which one called it (`manifest.LANDING_REFUSALS`).
+LANDING_VERBS = "compass ship-commit or compass quick-fix finish"
+
+
+def missing_text(slug, verb=LANDING_VERBS):
+    """The `release-line-missing` refusal. `verb` is the command to run again."""
     from compass_pkg import refusals
-    return refusals.render("release-line-missing", slug=slug)
+    return refusals.render("release-line-missing", slug=slug, verb=verb)
 
 
 def landing_refusal(task, task_dir):
@@ -101,15 +116,15 @@ def _project_root(task_dir):
 
 def text_problem(task_dir, text, verb):
     """Why a cleaned line is refused, or None. Blank is no line at all. A line that
-    starts with `#` would read as a heading of the living spec, whose issue headings
-    are `### <slug> (completed <date>)`. A line the living spec's checks would refuse
-    as a scenario title is refused with the reason `compass scenario add` gives,
-    because the living spec prints the line."""
+    starts with `#` would read as a heading in `compass release notes`, which prints
+    each line under `### <slug> (completed <date>)`. A line refused as a scenario
+    title is refused with the reason `compass scenario add` gives, because the
+    release notes and the board print the line as public copy."""
     if not text:
-        return missing_text(_slug(task_dir))
+        return missing_text(_slug(task_dir), verb)
     if text.startswith("#"):
         from compass_pkg import refusals
-        return refusals.render("release-line-heading", slug=_slug(task_dir))
+        return refusals.render("release-line-heading", slug=_slug(task_dir), verb=verb)
     from compass_pkg.manifest import title_problem
     problem = title_problem(_project_root(task_dir), text)
     if problem:
@@ -158,8 +173,7 @@ def write(task_dir, text, verb):
         old = current.get(KEY)
         current[KEY] = text
         prepared = prepare_manifest_write(current, path)
-        atomic_io.atomic_write_text(path, yaml.safe_dump(prepared, sort_keys=False,
-                                                         default_flow_style=False))
+        atomic_io.atomic_write_text(path, manifest_store.dump(prepared))
     return old
 
 

@@ -13,7 +13,7 @@ import re
 
 import yaml
 
-from compass_pkg import migrate_kinds, retired
+from compass_pkg import manifest_store, migrate_kinds, retired
 from compass_pkg.core import COMPASS_SCHEMA_VERSION, CompassError, docs_dir, manifest_path, normalize_spine, prepare_manifest_write
 
 # v1 filename -> v2 filename, applied inside each issue directory.
@@ -143,6 +143,23 @@ def repoint_spine_references(task_dir, node, renamed):
 
 MIGRATED_REASON = "migrated from a 6.0.0 record"
 
+# The statuses of an older registry entry. 9.0.0 gives no document a status (ADR-091),
+# but the migration of a 6.0.0 record still settles the entries that record holds, so a
+# migrated archive reads as it did.
+_DRAFT, _AWAITING, _APPROVED, _SUPERSEDED = ("draft", "awaiting-approval", "approved",
+                                             "superseded")
+_BY_MIGRATE = "compass issue migrate"
+
+
+def _clear_approver(entry):
+    entry.pop("approved_by", None)
+    entry.pop("approved_at", None)
+
+
+def _stamp():
+    from compass_pkg.core import now_iso
+    return now_iso().replace("+00:00", "Z")
+
 
 def _settle_done_artifacts(data, when=None):
     """Settle the artifact status of a done issue, in place.
@@ -154,21 +171,22 @@ def _settle_done_artifacts(data, when=None):
     (approved, superseded); both are 0 for an open issue and for an issue
     already settled, which makes a second run change nothing.
     """
-    from compass_pkg import artifact_status as ast, status_words
+    from compass_pkg import status_words
     if not status_words.is_closed(data):
         return 0, 0
     completed = status_words.is_completed(data)
     approved = superseded = 0
     for entry in data.get("artifacts") or []:
         if not isinstance(entry, dict) \
-                or entry.get("status") not in (ast.DRAFT, ast.AWAITING):
+                or entry.get("status") not in (_DRAFT, _AWAITING):
             continue
         if completed:
-            ast._set_approved(entry, ast.BY_MIGRATE, when or ast.now())
+            entry.update(status=_APPROVED, approved_by=_BY_MIGRATE,
+                         approved_at=when or _stamp())
             approved += 1
         else:
-            entry["status"] = ast.SUPERSEDED
-            ast.clear_approver(entry)
+            entry["status"] = _SUPERSEDED
+            _clear_approver(entry)
             superseded += 1
         # A reason that names the file a document came from stays: the rename map reads it.
         if not str(entry.get("reason") or "").startswith("migrated from "):
@@ -227,8 +245,7 @@ def _write_manifest(path, data):
     """Serialise first, then replace atomically: a dump that raises must not
     leave an empty manifest behind."""
     data = prepare_manifest_write(data, path)
-    body = yaml.safe_dump(data, sort_keys=False,
-                          default_flow_style=False, allow_unicode=True)
+    body = manifest_store.dump(data, allow_unicode=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         fh.write(body)
@@ -305,9 +322,6 @@ def plan_issue_dir(task_dir, problems=None, totals=None):
             simulated = copy.deepcopy(migrated)
     notes.extend(plan_relocations(task_dir, problems, totals, simulated))
     notes.extend(_blocks(task_dir, True, problems))
-    if simulated is not None:
-        from compass_pkg import migrate_blocks
-        migrate_blocks.register_planned(task_dir, simulated)
     notes.extend(plan_artifact_status(task_dir, simulated))
     notes.extend(_pin_generation(task_dir, True, problems))
     return notes
@@ -525,7 +539,7 @@ def _project_root(task_dir):
 
 
 #: The subtask keys that hold a path to a document. `compass issue subtask`
-#: writes each one measured from the project root.
+#: wrote each one measured from the project root, before 9.0.0 removed it.
 _SUBTASK_PATH_KEYS = ("brief", "report", "review_brief", "package")
 
 
@@ -538,10 +552,10 @@ def _reference_slots(data):
 
       * `"project"` - the subtask fields (`brief`, `earlier_briefs`,
         `report`, `review_brief`, `package`) and the stop evidence of a
-        subtask and of a run. `compass issue subtask` writes the subtask
-        fields, and `compass run` writes a run's stop evidence, both from the
-        project root. `multiagent-run-recorded` joins a subtask's stop
-        evidence to the project root.
+        subtask and of a run. Before 9.0.0, `compass issue subtask` wrote the
+        subtask fields and `compass run` wrote a run's stop evidence, both
+        from the project root, and `multiagent-run-recorded` joined a
+        subtask's stop evidence to the project root.
       * `"issue"` - an `evidence:` entry's `path`, and a gate's evidence when
         it holds a path (an inline `{type, path}`, or a list item that is
         one or names a `.md` file). Gates join these to the issue directory.
@@ -681,7 +695,7 @@ def _stale_names(task_dir, moving=None):
 
 def _write_manifest_data(manifest, data):
     data = prepare_manifest_write(data, manifest)
-    body = yaml.safe_dump(data, sort_keys=False, default_flow_style=False, allow_unicode=True)
+    body = manifest_store.dump(data, allow_unicode=True)
     tmp = manifest + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         fh.write(body)
@@ -1023,13 +1037,12 @@ def _stub_problem(slug, stub, problems):
 def _supersede_stub_entry(data, stub):
     """Mark the stub distribution map's registry entry superseded in `data`. The apply
     writes the result; the dry run keeps it in memory for the status step."""
-    from compass_pkg import artifact_status as ast
     entry = _find_entry(data.get("artifacts") or [], "distribution-map", None)
     if entry is None:
         return
-    entry["status"] = ast.SUPERSEDED
+    entry["status"] = _SUPERSEDED
     entry.pop("path", None)
-    ast.clear_approver(entry)
+    _clear_approver(entry)
     entry["reason"] = ("a map for fewer than two subtasks, kept as %s by the 7.0.0 migrate"
                        % os.path.basename(stub["to"]))
 
@@ -1106,8 +1119,7 @@ def migrate_issue_dir(task_dir, problems=None, totals=None):
             # would leave manifest.yml empty and the issue with no record at
             # all. os.replace is atomic on every platform Compass supports.
             migrated = prepare_manifest_write(migrated, manifest)
-            body = yaml.safe_dump(migrated, sort_keys=False,
-                                  default_flow_style=False, allow_unicode=True)
+            body = manifest_store.dump(migrated, allow_unicode=True)
             tmp = manifest + ".tmp"
             with open(tmp, "w", encoding="utf-8") as fh:
                 fh.write(body)

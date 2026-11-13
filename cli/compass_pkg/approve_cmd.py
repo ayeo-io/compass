@@ -1,8 +1,8 @@
 # compass_pkg.approve_cmd - `compass evidence approve`
-"""Record a person's approval: of a human check, of a document or of a set of
+"""Record a person's approval: of a human check, a checkpoint or a set of
 decisions taken for the person.
 
-The verb takes exactly one of five forms:
+The verb takes exactly one of six forms:
 
 - `--check <id>` reads the check from the issue's effective view and registers
   a `human-approval` entry in the manifest's evidence, with `check: <id>`.
@@ -14,11 +14,9 @@ The verb takes exactly one of five forms:
   (`approval_records.gives_g5`). Guardrail `G5` is the only guardrail with a
   sign-off, and the form records an approval only, so it refuses any other
   value and `--decision rejected`.
-- `--artifact <kind>` approves a document that reads `awaiting-approval`. It
-  registers one `artifact-approval` record for each human check on the
-  document, which `approval_records` counts for that check, and sets the
-  entry's `approved_by` and `approved_at`. It never writes a `human-approval`
-  record, so it cannot clear the sign-off of guardrail `G5`.
+- `--artifact <kind>`, which approved a document, was removed in 9.0.0 with
+  the document statuses (ADR-091). An `artifact-approval` record an older
+  release wrote still counts for its check.
 - `--decisions` confirms the decisions an agent took for the person, through
   `decisions_taken.approve_set`.
 - `--checkpoint <stage>` records a person's answer to a checkpoint hand-off:
@@ -26,6 +24,15 @@ The verb takes exactly one of five forms:
   and the stage's `waited` outcome citing it (`checkpoint_outcomes`). No check
   reads the type, so the answer never clears guardrail `G5`, a human check or
   a waiver. `compass evidence add` refuses the type.
+- `--waiver W-<n>` approves one waiver of the issue (`waiver_records`): one
+  `human-approval` record with `waiver: W-<n>` and the check and reason the
+  waiver names. A delegated approval of a waiver needs a delegation typed with
+  `--for waivers`. The record never clears guardrail `G5`.
+- `--ship` approves the change of the issue at ship (#355): one
+  `human-approval` record with `ship: <slug>`, the issue's generation and
+  the `HEAD` commit, which `ship-approval-present` reads. A delegated ship
+  approval needs a delegation typed with `--for ship`. The record never
+  clears guardrail `G5`, and a `G5` sign-off is not a ship approval.
 
 A record holds the issue, the issue's generation and the time, which the verb
 stamps itself, so a person cannot record an approval for another issue or
@@ -42,14 +49,14 @@ refuses the approver `agent`. Nothing else guards the record: anyone who can
 write `manifest.yml` can add one by hand.
 """
 # DEPENDENCY: standard library (os, sys); compass_pkg.approval_records, approvals,
-# core, old_names, terminal.
+# core, terminal.
 from __future__ import annotations
 
 import os
 import re
 import sys
 
-from compass_pkg import approval_records, approvals, launcher, old_names
+from compass_pkg import approval_records, approvals, launcher
 from compass_pkg.core import CompassError, issue_arg, resolve_issue_dir
 from compass_pkg.terminal import say
 
@@ -67,22 +74,25 @@ def _terminal_attached():
 
 
 def _checks_for(args):
-    """Refuse a call that has not one of the five forms (argparse also does)."""
-    forms = [bool(args.check), bool(getattr(args, "guardrail", None)), bool(args.artifact),
-             bool(args.decisions), bool(getattr(args, "checkpoint", None))]
+    """Refuse a call that has not one of the four forms (argparse also does)."""
+    forms = [bool(args.check), bool(getattr(args, "guardrail", None)),
+             bool(args.decisions), bool(getattr(args, "checkpoint", None)),
+             bool(getattr(args, "waiver", None)), bool(getattr(args, "ship", False))]
     if sum(forms) != 1:
-        raise CompassError("compass evidence approve: give exactly one of --check, "
-                           "--guardrail, --artifact, --decisions or --checkpoint.")
+        raise CompassError(f"compass evidence approve: {approvals.ONE_FORM}.")
 
 
 def answer_of(args, provenance):
     """The `approvals.Answer` an argparse namespace of this verb gives."""
     _checks_for(args)
-    for form in ("check", "guardrail", "artifact", "checkpoint"):
+    for form in ("check", "guardrail", "checkpoint", "waiver"):
         value = getattr(args, form, None)
         if value:
             return approvals.Answer(form, value, args.decision, args.approver, args.role,
                                     args.scope or "", provenance)
+    if getattr(args, "ship", False):
+        return approvals.Answer("ship", None, args.decision, args.approver, args.role,
+                                args.scope or "", provenance)
     return approvals.Answer("decisions", None, args.decision, args.approver, args.role,
                             args.scope or "", provenance)
 
@@ -112,7 +122,9 @@ def cmd_evidence_approve(args):
         done = approvals.record(task_dir, answer)
     if done.note:
         print(done.note)
-    return say(args, done.outcome, detail=done.detail, **done.data)
+    from compass_pkg.next_line import announce
+    said = say(args, done.outcome, detail=done.detail, **done.data)
+    return announce(args, task_dir, said)
 
 
 def _delegated_places(slug):
@@ -127,7 +139,10 @@ def _delegated_places(slug):
     except worktree_lookup.HeldTwice as exc:
         raise CompassError(f"compass evidence approve: the issue '{slug}' is held by more "
                            f"than one worktree: {' and '.join(exc.folders)}. Compass cannot "
-                           f"tell which one is meant. Nothing was written.") from None
+                           f"tell which one is meant, and an agent's approval never chooses. Ask "
+                           f"the person: `compass evidence request`, then they type "
+                           f"/compass:approve in the worktree whose record they mean. "
+                           f"Nothing was written.") from None
     except worktree_lookup.NotFound as exc:
         note = f" {exc.note[0].upper()}{exc.note[1:]}." if exc.note else ""
         raise CompassError(f"compass evidence approve: the issue '{slug}' is in none of the "
@@ -207,8 +222,7 @@ def _delegated(args):
     if not os.path.isdir(store):
         # No delegation was ever made: refuse without creating the folder.
         raise CompassError(f"compass evidence approve: no delegation in force names "
-                           f"{agent}. Ask the person with `compass evidence request` and "
-                           f"stop. Nothing was written."
+                           f"{agent}. {delegations.ASK_PERSON}"
                            + _stray_files(task_dir, store_compass))
     try:
         # The delegation lock, taken inside the issue lock in the order the prompt
@@ -224,7 +238,7 @@ def _delegated(args):
             answer = approvals.checked(approvals.Answer(
                 draft.form, draft.value, approval_records.APPROVED,
                 delegation["delegated_by"], delegation.get("role") or "owner", draft.scope,
-                provenance))
+                provenance, delegations.copy_of(delegation)))
             done = approvals.record(task_dir, answer)
             delegations.record_use(task_dir, delegation, agent, done, done.outcome,
                                    store_compass)
@@ -232,8 +246,10 @@ def _delegated(args):
         raise CompassError(str(exc) + _stray_files(task_dir, store_compass)) from None
     if done.note:
         print(done.note)
-    return say(args, done.outcome + f" Under {delegation['id']}, by {agent}.",
+    from compass_pkg.next_line import announce
+    said = say(args, done.outcome + f" Under {delegation['id']}, by {agent}.",
                detail=done.detail, **done.data)
+    return announce(args, task_dir, said)
 
 
 def register(evidence_subs):
@@ -245,17 +261,22 @@ def register(evidence_subs):
         # and a prefix such as `--deleg` must not reach the delegated path unseen.
         allow_abbrev=False)
     form = p.add_mutually_exclusive_group(required=True)
-    form.add_argument("--check", type=old_names.check_type, help="id of the human check")
+    form.add_argument("--check", help="id of the human check")
     form.add_argument("--guardrail", metavar=approval_records.G5,
                       help="sign off guardrail `G5`, the only guardrail with a sign-off; "
                            "needs --scope and records an approval only")
-    form.add_argument("--artifact", metavar="KIND",
-                      help="approve this document, which reads awaiting-approval")
     form.add_argument("--decisions", action="store_true",
                       help="confirm the decisions taken for the person")
     form.add_argument("--checkpoint", metavar="STAGE",
-                      help="answer the hand-off of this checkpoint stage (assess, define, "
-                           "refine or plan)")
+                      help="answer the hand-off of this checkpoint stage (assess, specify, "
+                           "build or ship; on an issue assessed before 9.0.0, a legacy "
+                           "stage such as define)")
+    form.add_argument("--waiver", metavar="W-N",
+                      help="approve this waiver of the issue (compass waiver add); records an "
+                           "approval only")
+    form.add_argument("--ship", action="store_true",
+                      help="approve the change of the issue at ship, when no review of its "
+                           "merged pull request does; records an approval only")
     issue_arg(p)
     p.add_argument("--approver", help="the approver's person id; required unless --delegated")
     p.add_argument("--role", help="the role the approver acts in; required unless --delegated")

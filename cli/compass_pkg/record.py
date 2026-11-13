@@ -13,10 +13,16 @@
 # The clone of the record repository lives in the user's cache folder, never
 # inside the project, so the project can never commit it by mistake.
 #
+# `compass record commit` serves the other mode, where the record is
+# committed with the code (#356): it commits the record alone, after
+# `compass issue link set --pr` wrote the merge fields.
+#
 # DEPENDENCY: standard library (hashlib, os, shutil, subprocess) and
-# compass_pkg (core, effective, redact, rival_names).
+# compass_pkg (core, effective, redact, rival_names; committed_landing,
+# record_mode and terminal for `record commit`).
 # =============================================================================
-"""`compass record sync|restore`: the delivery record in its own repository."""
+"""`compass record sync|restore|commit`: the delivery record in its own repository,
+and the follow-up commit of a record committed with the code."""
 from __future__ import annotations
 
 import hashlib
@@ -42,7 +48,9 @@ _NO_LFS = (("filter.lfs.process", ""), ("filter.lfs.smudge", "cat"),
 
 def settings(project_root):
     """`(remote, paths)` from the project's settings, or None when the
-    project names no record."""
+    project names no record repository. A `record:` that holds only
+    `commit` (the record mode, `record_mode`) names none: a project can
+    write `record: {commit: false}` with no remote."""
     try:
         config = project_settings.settings(project_root)
     except Exception as exc:                            # noqa: BLE001
@@ -50,6 +58,9 @@ def settings(project_root):
                            f"be read: {exc}")
     record = config.get("record")
     if not record:
+        return None
+    if isinstance(record, dict) and "remote" not in record \
+            and "paths" not in record:
         return None
     remote = record.get("remote") if isinstance(record, dict) else None
     paths = record.get("paths") if isinstance(record, dict) else None
@@ -285,12 +296,108 @@ def _mirror(source_root, target_root, rel, prune, names=None, written=None):
             _copy_file(full, os.path.join(target, inner), names, written)
 
 
-def _check_names(clone, names, written, pins=()):
-    """Refuse the sync if a file or path it wrote still names a rival; say
-    how many earlier record files do. Only what this sync wrote is refused,
+def _record_files(clone):
+    """Every file in the record clone, as `(full path, path in the record)`,
+    outside git's own folder, in a stable order."""
+    for base, dirs, files in os.walk(clone):
+        dirs[:] = sorted(d for d in dirs if d != ".git")
+        for name in sorted(files):
+            full = os.path.join(base, name)
+            yield full, os.path.relpath(full, clone)
+
+
+def _listed(paths, limit):
+    """`paths` joined for a message, at most `limit` of them."""
+    shown = ", ".join(paths[:limit])
+    if len(paths) > limit:
+        shown += f" and {len(paths) - limit} more"
+    return shown
+
+
+def _staged_deletions(clone):
+    """The record files the staged change deletes: what a push would
+    remove from the record."""
+    _must(_git(["add", "-A", "--force"], clone), "staging the record")
+    listed = _must(_git(["diff", "--cached", "--name-only", "--no-renames",
+                         "--diff-filter=D", "-z"], clone),
+                   "listing the prune's deletions").stdout
+    return [p for p in listed.split("\0") if p]
+
+
+def _refuse_unconfirmed_prune(deleted, names):
+    """Refuse a prune that would delete record files and was not confirmed
+    with --apply, naming the files with any rival name masked. A prune
+    deletes every record file this checkout lacks, such as an issue landed
+    from another worktree or machine, so it is never run blind
+    (ayeo-io/compass-delivery#339)."""
+    raise CompassError(
+        f"compass record sync --prune: would remove {len(deleted)} file(s) "
+        f"from the record, at paths this checkout does not hold: "
+        f"{_listed(_masked(deleted, names), 20)}. Nothing was committed or "
+        f"pushed. Check that this checkout holds the whole record, then run "
+        f"`compass record sync --prune --apply` to delete them.")
+
+
+def _masked(paths, names):
+    """`paths` with any rival name masked, when a names key is set."""
+    hashes = rival_names.hashes_from_key(names) if names else None
+    return [rival_names.mask(p, hashes) if hashes else p for p in paths]
+
+
+def _redact_existing(clone, names, written, pins=()):
+    """Rewrite each record file this sync did not write whose text or path
+    names a rival: its text with names replaced by codes, and a named path
+    moved to its coded path. Nothing is removed without its content being
+    written elsewhere in the record. A file is left as it is when its coded
+    path is already taken or it is binary with a name in its content; the
+    hint then lists it. Returns how many files were rewritten."""
+    hashes = rival_names.hashes_from_key(names)
+    done = {os.path.realpath(t) for t in written}
+    rewritten = 0
+    for full, rel in list(_record_files(clone)):
+        if os.path.realpath(full) in done:
+            continue
+        with open(full, "rb") as fh:
+            data = fh.read()
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = None
+        in_path = bool(rival_names.scan(rel, hashes))
+        in_text = text is not None and bool(rival_names.scan(text, hashes))
+        if not (in_path or in_text):
+            continue
+        if text is None and not rival_names.is_pinned(rel, data, pins) \
+                and rival_names.scan(rival_names.readable_text(data), hashes):
+            continue  # a binary file cannot be rewritten safely
+        new_rel = rival_names.redact_names(rel, names) if in_path else rel
+        new_data = rival_names.redact_names(text, names).encode("utf-8") \
+            if in_text else data
+        if new_rel == rel and new_data == data:
+            continue  # nothing to change; the hint lists it
+        target = _inside(clone, new_rel)
+        if new_rel != rel and os.path.lexists(target):
+            continue  # the coded path holds another file
+        try:
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+        except (FileExistsError, NotADirectoryError):
+            continue  # a file holds the coded folder's name
+        with open(target, "wb") as fh:
+            fh.write(new_data)
+        if new_rel != rel:
+            os.remove(full)
+        rewritten += 1
+    return rewritten
+
+
+def _check_names(clone, names, written, pins=(), redacted_existing=False):
+    """Refuse the sync if a file or path it wrote still names a rival; list
+    the earlier record files that do. Only what this sync wrote is refused,
     so files from before the key was configured do not block every sync;
-    one `--prune` sync rewrites them. A binary file pinned in the gate's pin
-    file, by blob hash and path, is not scanned, as in the gate."""
+    `--redact-existing` rewrites them in place. The hint never names
+    `--prune`, which deletes every record file this checkout lacks. A
+    binary file pinned in the gate's pin file, by blob hash and path, is
+    not scanned, as in the gate."""
     hashes = rival_names.hashes_from_key(names)
     found = []
     for target in written:
@@ -307,23 +414,27 @@ def _check_names(clone, names, written, pins=()):
             f"product after redaction, so nothing was committed: "
             f"{', '.join(found[:5])}")
     done = {os.path.realpath(t) for t in written}
-    earlier = 0
-    for base, dirs, files in os.walk(clone):
-        dirs[:] = [d for d in dirs if d != ".git"]
-        for name in files:
-            full = os.path.join(base, name)
-            if os.path.realpath(full) in done:
-                continue
-            with open(full, "rb") as fh:
-                data = fh.read()
-            rel = os.path.relpath(full, clone)
-            text = "" if rival_names.is_pinned(rel, data, pins) \
-                else rival_names.readable_text(data)
-            if rival_names.scan(rel, hashes) or rival_names.scan(text, hashes):
-                earlier += 1
-    return (f"; {earlier} earlier record file(s) still name a rival product, "
-            f"and `compass record sync --prune` rewrites them"
-            if earlier else "")
+    earlier = []
+    for full, rel in _record_files(clone):
+        if os.path.realpath(full) in done:
+            continue
+        with open(full, "rb") as fh:
+            data = fh.read()
+        text = "" if rival_names.is_pinned(rel, data, pins) \
+            else rival_names.readable_text(data)
+        if rival_names.scan(rel, hashes) or rival_names.scan(text, hashes):
+            earlier.append(rival_names.mask(rel, hashes))
+    if not earlier:
+        return ""
+    shown = _listed(earlier, 5)
+    if redacted_existing:
+        return (f"; {len(earlier)} earlier record file(s) still name a rival "
+                f"product and could not be rewritten in place, because the "
+                f"coded path is taken or the file is binary: {shown}. Edit "
+                f"them in the record repository")
+    return (f"; {len(earlier)} earlier record file(s) still name a rival "
+            f"product: {shown}. `compass record sync --redact-existing` "
+            f"rewrites them in place and deletes nothing")
 
 
 def _identity(project_root):
@@ -334,13 +445,20 @@ def _identity(project_root):
     return value("user.name", "compass"), value("user.email", "compass@localhost")
 
 
-def sync(project_root, prune=False, only=None):
+def sync(project_root, prune=False, only=None, apply=False,
+         redact_existing=False):
     """Copy the configured paths, or just `only`, into the record
     repository, and commit and push them. Returns a line saying what
     happened.
 
     A linked worktree holds only part of the record, so a full sync from one
-    is refused; ship syncs just the landed issue's folders from it."""
+    is refused; ship syncs just the landed issue's folders from it. A
+    `prune` that would delete record files is refused, naming them, unless
+    `apply` confirms it. `redact_existing` rewrites earlier record files
+    that name a rival, in place."""
+    if apply and not prune:
+        raise CompassError("compass record sync: --apply confirms a prune's "
+                           "deletions, so it needs --prune.")
     found = settings(project_root)
     if found is None:
         return "no record is configured (%s)" % project_settings.named(
@@ -371,9 +489,27 @@ def sync(project_root, prune=False, only=None):
         _mirror(project_root, clone, rel, prune, names, written)
     note = (f" ({', '.join(skipped)} not in this checkout, so left as "
             f"recorded)" if skipped else "")
+    deleted = _staged_deletions(clone) if prune else []
+    if deleted and not apply:
+        _refuse_unconfirmed_prune(deleted, names)
+    # Named in the output and in the record's commit: a file that reached
+    # the record after the listing run is never deleted unseen.
+    shown_deleted = _masked(deleted, names)
+    if deleted:
+        note += (f"; deleted {len(deleted)} record file(s) this checkout "
+                 f"does not hold: {_listed(shown_deleted, 20)}")
+    pins = rival_names.load_pins(
+        os.path.join(project_root, "scripts", rival_names.PINS_NAME)) \
+        if names else ()
+    if redact_existing and names:
+        count = _redact_existing(clone, names, written, pins)
+        note += (f"; rewrote {count} earlier record file(s) that named a "
+                 f"rival product, deleting none")
+    elif redact_existing:
+        note += ("; no names key is configured (record.names_key), so "
+                 "--redact-existing rewrote nothing")
     if names:
-        note += _check_names(clone, names, written, rival_names.load_pins(
-            os.path.join(project_root, "scripts", rival_names.PINS_NAME)))
+        note += _check_names(clone, names, written, pins, redact_existing)
     # --force: a `.gitignore` in the record must not hide files from it.
     _must(_git(["add", "-A", "--force"], clone), "staging the record")
     if not _git(["status", "--porcelain"], clone).stdout.strip():
@@ -381,10 +517,12 @@ def sync(project_root, prune=False, only=None):
     head = _git(["rev-parse", "--short=12", "HEAD"], project_root).stdout.strip()
     branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], project_root).stdout.strip()
     name, email = _identity(project_root)
+    body = (["-m", "Deleted by --prune --apply:\n" + "\n".join(shown_deleted)]
+            if deleted else [])
     _must(_git(["-c", f"user.name={name}", "-c", f"user.email={email}",
                 "-c", "commit.gpgsign=false", "commit", "-q", "-m",
-                f"Record at {head or 'no commit'} ({branch or 'no branch'})"],
-               clone), "committing the record")
+                f"Record at {head or 'no commit'} ({branch or 'no branch'})",
+                *body], clone), "committing the record")
     _must(_git(["push", "-q", "origin", f"HEAD:{BRANCH}"], clone),
           "pushing the record")
     return f"record synced to {remote} at {head}" + note
@@ -476,8 +614,94 @@ def _project_root():
     return os.path.dirname(find_compass_dir())
 
 
+# --- `compass record commit`: the follow-up commit of a committed record -------------
+
+COMMIT_VERB = "compass record commit"
+#: The message of the record commit when `-m` is not given.
+COMMIT_MESSAGE = "Record the merge of {slug}"
+#: The staged paths outside the record a refusal names before it says "and N more".
+_SHOWN_OUTSIDE = 5
+
+
+def _record_paths(rec):
+    """`(folders, files)`: the record's paths relative to the repository root,
+    each folder ending in `/`, so `fix-a/` never matches `fix-ab/`."""
+    top = rec._top()
+    folders, files = [], set()
+    for path in rec.folders():
+        rel = os.path.relpath(path, top).replace(os.sep, "/")
+        if os.path.isdir(path):
+            folders.append(rel + "/")
+        else:
+            files.add(rel)
+    return tuple(folders), files
+
+
+def _outside(staged, paths):
+    folders, files = paths
+    return sorted(p for p in staged if p not in files and not p.startswith(folders))
+
+
+def commit_record(task_dir, message=None):
+    """Commit the issue record of `task_dir`, and nothing else; return
+    `(commit, files)`, the new commit's id and the record files it holds.
+
+    The merge fields `compass issue link set --pr` writes (the pull request's
+    merge time and commit, and the `pr-approval` records) come after the
+    commit that holds the record, so a committed record needs this second
+    commit (#356, ADR-096, plan section 3.5). It writes `trail.md`, stages the
+    issue folder, its documents folder and both ignore files (git skips the
+    files they name), and commits them with git's own
+    hooks. Compass runs no check of its own and calls no network.
+
+    Raises CompassError, having committed nothing, when the record is kept
+    out, when a path outside the record is staged, or when the record has no
+    change. Nothing is written or staged on the first two."""
+    from compass_pkg import committed_landing, record_mode
+    from compass_pkg.core import find_upwards
+    task_dir = os.path.realpath(str(task_dir))
+    slug = os.path.basename(task_dir)
+    root = find_upwards(task_dir, ".compass")
+    if not root:
+        raise CompassError(f"{COMMIT_VERB}: {task_dir} is not inside a Compass project.")
+    found = record_mode.mode(root, task_dir)
+    if found.mode != record_mode.COMMITTED:
+        raise CompassError(
+            f"{COMMIT_VERB}: the record of {slug} is kept out of the project's commits "
+            f"({found.reason}). `compass record sync` copies it to the record "
+            f"repository instead. Nothing was committed.")
+    rec = committed_landing.Record(root, task_dir)
+    paths = _record_paths(rec)
+    outside = _outside(rec._staged(), paths)
+    if outside:
+        shown = ", ".join(outside[:_SHOWN_OUTSIDE])
+        more = len(outside) - _SHOWN_OUTSIDE
+        raise CompassError(
+            f"{COMMIT_VERB}: {len(outside)} staged path(s) are not part of the record of "
+            f"{slug}: {shown}{f', and {more} more' if more > 0 else ''}. This command "
+            f"commits the record only. Commit those first, or unstage them with "
+            f"`git restore --staged -- <path>`. Nothing was written.")
+    committed_landing.write_trail(task_dir)
+    rec.stage()
+    staged = sorted(rec._staged())
+    if not staged:
+        raise CompassError(f"{COMMIT_VERB}: the record of {slug} has no change to commit. "
+                           f"Nothing was committed.")
+    text = message or COMMIT_MESSAGE.format(slug=slug)
+    # record._git: git reads the person's configuration and hooks from the
+    # environment, as `compass record sync` does.
+    done = _git(["commit", "-q", "-m", text], root)
+    if done.returncode != 0:
+        said = " ".join((done.stderr or done.stdout or "no message").split())[:300]
+        raise CompassError(f"{COMMIT_VERB}: git commit failed: {said}. The record of "
+                           f"{slug} stays staged.")
+    return _git(["rev-parse", "HEAD"], root).stdout.strip(), staged
+
+
 def cmd_record_sync(args):
-    print(f"compass record sync: {sync(_project_root(), prune=args.prune)}.")
+    said = sync(_project_root(), prune=args.prune, apply=args.apply,
+                redact_existing=args.redact_existing)
+    print(f"compass record sync: {said}.")
     return 0
 
 
@@ -486,26 +710,47 @@ def cmd_record_restore(args):
     return 0
 
 
+def cmd_record_commit(args):
+    from compass_pkg.core import resolve_issue_dir
+    from compass_pkg.terminal import say
+    task_dir = resolve_issue_dir(args.task)
+    slug = os.path.basename(os.path.normpath(task_dir))
+    commit, files = commit_record(task_dir, args.message)
+    return say(args, f"{COMMIT_VERB}: committed the record of {slug} as {commit[:12]}.",
+               detail=[f"files    : {len(files)} record file(s), no code",
+                       "push     : push the commit, in a pull request or not"],
+               issue=slug, commit=commit, files=files)
+
+
 def register(sub):
     """Add `compass record sync|restore` to the top-level parser."""
     p = sub.add_parser(
-        "record", help="keep the delivery record in a second repository",
+        "record", help="keep the delivery record in a second repository, or "
+                       "commit a committed record",
         description="The paths the `record:` setting names, kept "
                     "in the repository it names (ADR-031). ship-commit runs "
-                    "`sync` after every landing.")
+                    "`sync` after every landing. `commit` commits a record "
+                    "that ships with the code, after the merge (#356).")
     subs = p.add_subparsers(dest="record_cmd", required=True)
     s = subs.add_parser(
         "sync", help="copy the record's paths, redacted, commit and push",
         description="Copy the paths `record:` names into the record "
                     "repository, redacting credentials, and commit and push "
                     "them. It adds and updates; it deletes only with "
-                    "--prune. A full sync from a linked worktree is refused; "
-                    "ship-commit there syncs only the landed issue's "
-                    "folders. A record that holds a symbolic link is "
-                    "refused.")
+                    "--prune --apply. A full sync from a linked worktree is "
+                    "refused; ship-commit there syncs only the landed "
+                    "issue's folders. A record that holds a symbolic link "
+                    "is refused.")
     s.add_argument("--prune", action="store_true",
-                   help="also delete from the record what this checkout no "
-                        "longer has; run it only from a full checkout")
+                   help="also delete from the record every file this "
+                        "checkout does not hold. Without --apply it lists "
+                        "those files and commits and pushes nothing")
+    s.add_argument("--apply", action="store_true",
+                   help="with --prune: delete the files the prune lists")
+    s.add_argument("--redact-existing", action="store_true",
+                   help="also rewrite earlier record files that name a "
+                        "rival product: names become codes in their text and "
+                        "paths. It deletes nothing")
     s.set_defaults(func=cmd_record_sync, output_kind="hand-off")
     r = subs.add_parser(
         "restore", help="copy the record's paths back into this project",
@@ -516,3 +761,16 @@ def register(sub):
     r.add_argument("--force", action="store_true",
                    help="overwrite files here that differ from the record")
     r.set_defaults(func=cmd_record_restore, output_kind="hand-off")
+    from compass_pkg.core import issue_arg
+    c = subs.add_parser(
+        "commit", help="commit the issue record alone, after the merge fields are written",
+        description="In committed mode, commit only the issue's record: its folder "
+                    "under .compass/work/, its documents folder and "
+                    ".compass/work/.gitignore. Run it after `compass issue link set "
+                    "--pr <n>` records the merge. It writes trail.md first, and "
+                    "refuses when the record is kept out, when anything else is "
+                    "staged, or when the record has no change. It never commits code.")
+    issue_arg(c)
+    c.add_argument("-m", "--message", metavar="TEXT",
+                   help="the commit message (default: 'Record the merge of <slug>')")
+    c.set_defaults(func=cmd_record_commit, output_kind="hand-off")

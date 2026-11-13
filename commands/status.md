@@ -13,9 +13,8 @@ in detail; if empty, render the board across every issue under `.compass/work/`.
 
 `/compass:status` answers *"what should I look at?"*. For the managed
 cross-issue view - triage, blockers, owed-follow-up aggregation, and the
-periodic digest - use `/compass:flow`. To see every issue as a page in the
-browser, with a lane for each stage, run `compass board render`
-(`docs/board.md`).
+periodic digest - use `/compass:flow`. To list every issue by state, run
+`compass flow` (`docs/cli.md`).
 
 ## What this command is for
 
@@ -43,7 +42,7 @@ So: **the board is the default. Everything else is detail on request.**
    | **BLOCKED** | cannot progress without a decision or an owed follow-up being settled: `compass check` fails, an owed follow-up, a missing human approval on an irreversible change |
    | **READY TO SHIP** | all gates green and `compass check` passes, but not yet marked shipped - finished work nobody has closed |
    | **IN PROGRESS** | started, not finished: an issue whose state is in-progress or in-review. An issue in progress stores no status; `compass flow` reads its state from its records |
-   | **NEXT UP** | ready to start (defined and refined, no work yet), or held in the backlog |
+   | **NEXT UP** | ready to start (assessed, no work yet), or held in the backlog |
    | **DONE** | a stored status of `done`, whatever its close reason |
 
 3. **Write each column as prose, not a table.** Name the issue and say *why
@@ -77,8 +76,8 @@ READY TO SHIP (1)
   its commit made.
 
 IN PROGRESS (5)
-  import-coordinate-crs-normalization is furthest along (criteria defined and
-  designed, not verified). The other four are barely started.
+  import-coordinate-crs-normalization is furthest along (scenarios written
+  and built, not yet reviewed). The other four are barely started.
 
 NEXT UP
   Nothing is ready to start, and the backlog is empty.
@@ -93,31 +92,31 @@ decision, and no Compass vocabulary appears in it beyond issue names.
 
 Here the internal details *are* what the reader wants. Report:
 
-- **Delivery approach** - from `delivery-approach.md` / `manifest.yml`: the
+- **Delivery approach** - from `compass approach show` / `manifest.yml`: the
   nearest reference shape, the three scored dimensions, and any policy
   rule that fired.
-- **Stage** - inferred from which artifacts exist: `delivery-approach.md`
-  -> assessed; `acceptance-criteria.md` -> criteria defined;
-  `requirements-review.md` -> requirements reviewed; `technical-design.md` ->
-  designed; `distribution-map.md` -> broken down;
-  `verification-report.md` -> verified. Cross-check the approach's
-  de-scope ledger so a *collapsed* stage is not reported as *missing*.
-- **Gates** - from `verification-report.md` and `manifest.yml`'s `gates:`. Run
+- **Stage** - from `compass next --issue <slug>`, which reads the records
+  and names one of the four stages: assess, specify (the scenarios a
+  person approves before code), build (the tests and the code) or ship (the
+  record, the approval and the commit). It also prints the next step. An issue
+  assessed before the path shows its old stage as the path stage it maps
+  to.
+- **Gates** - from `manifest.yml`'s `gates:`. Run
   `compass check --issue <slug>` for the mechanical view (read-only).
   **Say when a check passes without checking anything.** "no changed_files recorded yet"
   and "0/N pass gates" are green lines that assert nothing; reading them as
   progress is how an issue ships untraced.
-- **Owed follow-ups** - scan `delivery-approach.md`'s de-scope ledger and
-  the approach's standing obligations. Report clearly:
-  - an unsettled **hotfix follow-up** (the approach record not completed,
-    reproduction test not promoted to a scenario, no root-cause devlog
-    line);
-  - an **unbacked marketing claim** - a claim in `positioning.md` with no
-    passing scenario behind it;
-  - any de-scoped artifact still marked owed.
+- **Owed follow-ups** - scan `manifest.yml`'s `follow_ups:` and the
+  approach's standing obligations. Report clearly:
+  - an unsettled **defect follow-up** on a change assessed with
+    `urgency: live-defect`, or a hotfix assessed before the path (the
+    reproduction test not promoted to a scenario, no root cause stated);
+  - an **unbacked marketing claim** - a claim in `manifest.yml`'s `claims:`
+    with no passing scenario behind it;
+  - any de-scoped work still marked owed.
 
 ## Note
 
-If `delivery-approach.md` is missing for a directory under `work/`, that
-issue was started without an assessment - flag it as a guardrail violation, not
+If the manifest of a directory under `work/` has no `delivery_approach:`,
+that issue was started without an assessment - flag it as a guardrail violation, not
 merely an incomplete issue. On the board, that belongs in BLOCKED.

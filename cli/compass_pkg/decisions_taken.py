@@ -6,8 +6,8 @@ The manifest's `decisions_taken` holds one entry per decision:
     id, question, resolution, by (an agent), stage, status, reason
 
 `status` is `open`, `confirmed` or `reopened`. `reason` is written only by a
-reopen and never removed, so `compass retro --decisions` can tell a decision
-that was changed from one that was confirmed as taken.
+reopen and never removed, so a reader can tell a decision that was changed
+from one that was confirmed as taken.
 
 This module owns:
 
@@ -17,8 +17,7 @@ This module owns:
 - `waiting`, which `compass next` calls to decide whether the issue waits at a
   checkpoint;
 - `approve_set`, the `decisions` form of an approval, which
-  `approvals.record` calls for every approval path;
-- `report`, which `compass retro --decisions` prints.
+  `approvals.record` calls for every approval path.
 
 Only `approve_set` writes `confirmed`, as one `artifact-approval` record for
 the whole set. The record is never a `human-approval` record, so the sign-off
@@ -26,24 +25,27 @@ of guardrail `G5` cannot be met by it. Owning decision:
 `architecture/decisions/ADR-050-*.md`.
 """
 # DEPENDENCY: standard library (os, re, json); compass_pkg.core, terminal,
-# approval_records, stable_ids. next_cmd and approve_cmd are imported inside
-# the functions that need them, because both import this module.
+# approval_records, path_stages, stable_ids. next_cmd, next_step and approve_cmd
+# are imported inside the functions that need them, because they import this
+# module.
 from __future__ import annotations
 
-import json
 import os
 import re
 
 
 from compass_pkg.core import (CompassError, issue_arg, load_manifest, now_iso,
                               resolve_issue_dir, save_manifest)
-from compass_pkg.stable_ids import STAGE_IDS
+from compass_pkg.path_stages import is_path_issue, path_stage_of, stages_of
+from compass_pkg.stable_ids import PATH_STAGE_IDS, STAGE_IDS, STAGE_SPECIFY
 from compass_pkg.terminal import say
 
 OPEN, CONFIRMED, REOPENED = "open", "confirmed", "reopened"
 LEDGER_REASON = "the resolution changed in the ledger"
-#: Agents that always count, whether or not the plugin's `agents/` folder is found.
+#: Agents that always count.
 BASE_AGENTS = ("builder", "spec-author", "planner")
+#: The agent names 9.0.0 removed (ADR-090), which a ledger written before it uses.
+from compass_pkg.removed_parts import AGENT_NAMES as REMOVED_AGENTS  # noqa: E402
 SCOPE = "requirement decisions"
 
 _ID = r"[A-Z][A-Z0-9]*-?\d+"
@@ -55,13 +57,8 @@ _LABEL = re.compile(
 
 def agent_names():
     """The names a ledger's "Decided by" can use: the three that always count
-    and every stem in the plugin's `agents/` folder."""
-    names = set(BASE_AGENTS)
-    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "agents")
-    try:
-        names.update(os.path.splitext(n)[0] for n in os.listdir(folder) if n.endswith(".md"))
-    except OSError:
-        pass
+    and the agent names 9.0.0 removed, which an older ledger still uses."""
+    names = set(BASE_AGENTS) | set(REMOVED_AGENTS)
     return sorted(names, key=lambda n: (-len(n), n))
 
 
@@ -231,9 +228,11 @@ def cmd_decision_add(args):
         raise CompassError("compass issue decision add: --by must name an agent (%s), not "
                            "'%s'. A decision a person took needs no record here."
                            % (", ".join(sorted(agent_names())), args.by))
-    if args.stage not in STAGE_IDS:
+    # A path issue's decision names a path stage; a legacy name still reads (ADR-092).
+    named = STAGE_IDS + tuple(s for s in PATH_STAGE_IDS if s not in STAGE_IDS)
+    if args.stage not in named:
         raise CompassError("compass issue decision add: '%s' is not a stage; use one of %s."
-                           % (args.stage, ", ".join(STAGE_IDS)))
+                           % (args.stage, ", ".join(named)))
     held = task.setdefault("decisions_taken", [])
     if any(isinstance(e, dict) and e.get("id") == args.id for e in held):
         raise CompassError("compass issue decision add: %s exists already. Change it with "
@@ -280,8 +279,18 @@ def cmd_decision_set(args):
 
 # --- the checkpoint wait ----------------------------------------------------------
 
-def _rank(stage):
-    return STAGE_IDS.index(stage) if stage in STAGE_IDS else 0
+def _order(task):
+    """The stages of the issue, in order: the path stages on a path issue (ADR-092)."""
+    return stages_of(task) if is_path_issue(task) else STAGE_IDS
+
+
+def _rank(stage, task=None):
+    """The place of a decision's stage. On a path issue a decision taken at a legacy
+    stage counts at the path stage that shows it, such as refine at specify."""
+    order = _order(task) if task is not None else STAGE_IDS
+    if task is not None and is_path_issue(task):
+        stage = path_stage_of(stage)
+    return order.index(stage) if stage in order else 0
 
 
 def unconfirmed(task):
@@ -297,12 +306,20 @@ def waiting(task, done_stages):
     is in the manifest's `checkpoints:`, and a decision taken at S or earlier
     is not confirmed. The latest such stage is reported. `entries` are the
     unconfirmed decisions taken at that stage or earlier."""
+    order = _order(task)
     checkpoints = task.get("checkpoints")
-    checkpoints = [s for s in checkpoints if s in STAGE_IDS] if isinstance(checkpoints, list) else []
+    checkpoints = [s for s in checkpoints if s in order] if isinstance(checkpoints, list) else []
+    done_stages = set(done_stages)
+    if is_path_issue(task):
+        # A path issue's specify counts as done only once its listed checkpoint has
+        # an outcome; the decisions wait at that checkpoint once its scenarios exist.
+        from compass_pkg import next_step
+        if next_step.specify_written(task):
+            done_stages.add(STAGE_SPECIFY)
     pending = unconfirmed(task)
-    for stage in reversed(STAGE_IDS):
+    for stage in reversed(order):
         if stage in checkpoints and stage in done_stages:
-            here = [e for e in pending if _rank(e.get("stage")) <= _rank(stage)]
+            here = [e for e in pending if _rank(e.get("stage"), task) <= _rank(stage, task)]
             if here:
                 return stage, here
     return None, []
@@ -356,15 +373,15 @@ def _approvers_in(node, found):
 def project_approvers(task_dir):
     """`(listed, owner)`: every name in any `approvers:` list of the project
     file, and its `owner`. Both are empty when there is no project file."""
-    from compass_pkg import approval_records, layers
+    from compass_pkg import approval_records, project_settings
     owner = approval_records.project_owner(task_dir)
     listed = []
     try:
-        loaded = layers.load_project_layer(layers.find_project_root(task_dir))
+        loaded = project_settings.project_file(project_settings.find_project_root(task_dir))
     except Exception:                                      # noqa: BLE001
         loaded = None
     if loaded:
-        _approvers_in(loaded[0].doc, listed)
+        _approvers_in(loaded, listed)
     return listed, owner
 
 
@@ -403,7 +420,8 @@ def approve_set(task_dir, answer, save=True):
     stage, entries = waiting(task, done)
     if stage is None:
         entries = unconfirmed(task)
-        stage = max((e.get("stage") for e in entries), key=_rank, default=None)
+        stage = max((e.get("stage") for e in entries), key=lambda st: _rank(st, task),
+                    default=None)
     if not entries:
         raise CompassError("compass evidence approve: this issue has no decision waiting to "
                            "be confirmed.")
@@ -426,6 +444,8 @@ def approve_set(task_dir, answer, save=True):
         task.setdefault("evidence", []).append(record)
         for entry in entries:
             entry["status"] = CONFIRMED
+        from compass_pkg import approvals
+        approvals.keep_authority(task, answer)
         save_manifest(task, path)
     return ("compass evidence approve: %d decision(s) confirmed by %s, recorded as %s."
             % (len(ids), answer.approver, evidence_id),
@@ -433,84 +453,6 @@ def approve_set(task_dir, answer, save=True):
              "record    : %s in manifest.yml evidence" % evidence_id],
             dict(decisions=ids, evidence_id=evidence_id, approver=answer.approver, at=stamp),
             [evidence_id])
-
-
-# --- retro --------------------------------------------------------------------------
-
-def _folder_issues(work_root):
-    """`[(manifest, closed)]` read from each manifest in `work_root`. A
-    manifest that does not parse is skipped."""
-    from compass_pkg import status_words
-    from compass_pkg.core import load_yaml, manifest_path, normalize_spine
-    found = []
-    if os.path.isdir(work_root):
-        for name in sorted(os.listdir(work_root)):
-            path = manifest_path(os.path.join(work_root, name))
-            if not os.path.isfile(path):
-                continue
-            try:
-                data = load_yaml(path)
-            except CompassError:
-                continue
-            if isinstance(data, dict):
-                found.append((data, status_words.is_closed(normalize_spine(data))))
-    return found
-
-
-def report(work_root, issues=None):
-    """The counts behind `compass retro --decisions`. `issues` is
-    `[(slug, manifest)]` the caller has already read and normalised, so the
-    retro reads each manifest once; without it the report reads each manifest
-    in `work_root` directly (the parse cache of ADR-049 serves `flow.py` only)."""
-    from compass_pkg import status_words
-    total = confirmed = changed = never = in_flight = held = 0
-    if issues is None:
-        loaded = _folder_issues(work_root)
-    else:
-        loaded = [(d, status_words.is_closed(d)) for _, d in issues if isinstance(d, dict)]
-    for data, closed in loaded:
-        entries = [e for e in data.get("decisions_taken") or [] if isinstance(e, dict)]
-        if not entries:
-            continue
-        held += 1
-        for e in entries:
-            total += 1
-            if e.get("reason"):
-                changed += 1
-            elif e.get("status") == CONFIRMED:
-                confirmed += 1
-            elif closed:
-                never += 1
-            else:
-                in_flight += 1
-
-    def share(n):
-        return round(100 * n / total) if total else 0
-    return {"total": total, "issues": held, "confirmed": confirmed, "changed": changed,
-            "never_confirmed": never, "open_in_flight": in_flight,
-            "share": {"confirmed": share(confirmed), "changed": share(changed),
-                      "never_confirmed": share(never)}}
-
-
-def cmd_retro_decisions(args, work_root):
-    data = report(work_root)
-    if getattr(args, "format", "markdown") == "json":
-        print(json.dumps(data, indent=2))
-        return 0
-    if not data["total"]:
-        print("compass retro --decisions: no decisions taken for the person are recorded yet.")
-        return 0
-    s = data["share"]
-    print("compass retro --decisions: %d agent decisions across %d issue(s)."
-          % (data["total"], data["issues"]))
-    print("  %d%% confirmed (%d): confirmed as the agent took them" % (s["confirmed"], data["confirmed"]))
-    print("  %d%% changed (%d): reopened by a person or by a change in the ledger"
-          % (s["changed"], data["changed"]))
-    print("  %d%% never confirmed (%d): still open on a done issue"
-          % (s["never_confirmed"], data["never_confirmed"]))
-    if data["open_in_flight"]:
-        print("  %d open on an issue in flight" % data["open_in_flight"])
-    return 0
 
 
 # --- registration ----------------------------------------------------------------------

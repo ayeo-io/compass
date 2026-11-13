@@ -9,15 +9,16 @@ The `verify.architecture` gate is the pattern where a routing floor promotes
 architecture checks to blocking - project-declared `command-passes`
 guardrails that assert structural properties of the codebase (e.g. "modules
 respect the dependency direction", "no cyclic imports in the domain layer").
-Adopters declare each architecture check as a project guardrail in
-`governance/guardrails.yml` with `check: command-passes` and a
-`params.command:` that exits 0 on pass. The gate:
+Adopters declare each architecture check in `project_checks` of
+`compass.yml`, with a `command` that exits 0 on pass
+(`docs/configuration.md`). The gate:
 
-- is advisory by default;
-- is promoted to blocking by routing floors `RP-REQUIRE-003` (risk ∈
-  {cross-cutting, critical}) and `RP-REQUIRE-004` (labels ∈ irreversible
-  domains) - following the same promotion pattern as `verify.analyze`
-  (`architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md`);
+- is owed only where the project's settings add it: the token
+  `architecture` in `require_evidence`, or a floor of the project's own that
+  adds the gate. The shipped check set holds
+  no floor that adds this gate
+  (`architecture/decisions/ADR-007-conditional-gate-promotion-via-floors.md`
+  holds the floor mechanism);
 - clears without checking anything when no project guardrails declare
   `command-passes`: a project that has not yet declared any architecture
   checks sees no behavioral change

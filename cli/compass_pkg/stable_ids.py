@@ -5,7 +5,14 @@ APPROACH_QUICK_FIX = "quick-fix"
 APPROACH_REGULAR = "regular"
 APPROACH_HOTFIX = "hotfix"
 APPROACH_FULL = "full"
-APPROACH_IDS = (APPROACH_SPIKE, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_HOTFIX, APPROACH_FULL)
+# The one approach a path issue records besides the spike (ADR-092).
+APPROACH_DELIVERY = "delivery"
+# The approaches the default preset declares (ADR-092): the spike and the path.
+APPROACH_IDS = (APPROACH_SPIKE, APPROACH_DELIVERY)
+# The five approaches of the 8.x presets. A stored generation and copied
+# governance declare them, and an issue assessed before 9.0.0 records one.
+LEGACY_APPROACH_IDS = (APPROACH_SPIKE, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_HOTFIX,
+                       APPROACH_FULL)
 
 LEGACY_APPROACH_ALIASES = {
     "express": APPROACH_QUICK_FIX,
@@ -36,21 +43,30 @@ STAGE_BREAKDOWN = "breakdown"
 STAGE_IMPLEMENT = "implement"
 STAGE_VERIFY = "verify"
 STAGE_SHIP = "ship"
-STAGE_IDS = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN,
-             STAGE_IMPLEMENT, STAGE_VERIFY, STAGE_SHIP)
+# The eight stages an issue assessed before #351 records in its `stages:` map.
+# `STAGE_IDS` keeps the old name so no importer changes.
+LEGACY_STAGE_IDS = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN,
+                    STAGE_IMPLEMENT, STAGE_VERIFY, STAGE_SHIP)
+STAGE_IDS = LEGACY_STAGE_IDS
 
-# The model tiers, weakest first (`compass_pkg.model_tiers`). `standard` is also a
-# retired approach name; as a tier it names the model of the builder's seat.
-TIER_FAST = "fast"
-TIER_STANDARD = "standard"
-TIER_STRONG = "strong"
-MODEL_TIERS = (TIER_FAST, TIER_STANDARD, TIER_STRONG)
-# The effort levels a Claude Code subagent takes, lowest first. `medium` is also a
-# size value; as an effort it names how hard the model works.
-EFFORT_LOW = "low"
-EFFORT_MEDIUM = "medium"
-EFFORT_HIGH = "high"
-EFFORT_LEVELS = (EFFORT_LOW, EFFORT_MEDIUM, EFFORT_HIGH, "xhigh", "max")
+# The four-stage path (ADR-092). The stages are fixed here, not in a preset,
+# and a path issue writes no `stages:` map. A spike explores in build and
+# concludes in ship, so it has no specify stage. `specify` and `build` are
+# also v1 stage names: `path_stages.rename_v1_stage_keys` renames them only
+# in a v1 record.
+STAGE_SPECIFY = "specify"
+STAGE_BUILD = "build"
+PATH_STAGE_IDS = (STAGE_ASSESS, STAGE_SPECIFY, STAGE_BUILD, STAGE_SHIP)
+SPIKE_STAGE_IDS = (STAGE_ASSESS, STAGE_BUILD, STAGE_SHIP)
+# The path stage that shows a legacy stage, for every reader that shows or acts
+# on the stage of an old issue. The migration that #359 adds uses the same mapping.
+LEGACY_TO_PATH = {
+    STAGE_ASSESS: STAGE_ASSESS,
+    STAGE_DEFINE: STAGE_SPECIFY, STAGE_REFINE: STAGE_SPECIFY, STAGE_PLAN: STAGE_SPECIFY,
+    STAGE_BREAKDOWN: STAGE_BUILD, STAGE_IMPLEMENT: STAGE_BUILD,
+    STAGE_VERIFY: STAGE_SHIP, STAGE_SHIP: STAGE_SHIP,
+}
+
 
 GATE_G1 = "G1"
 GATE_G2 = "G2"
@@ -67,13 +83,15 @@ GATE_VERIFY_TRACEABILITY = "verify.traceability"
 GATE_VERIFY_CLAIMS = "verify.claims"
 GATE_VERIFY_CLARITY = "verify.clarity"
 GATE_SPIKE_CONCLUDE = "spike.conclude"
-GATE_VERIFY_ANALYZE = "verify.analyze"
 GATE_VERIFY_ARCHITECTURE = "verify.architecture"
 GATE_IDS = (GATE_G1, GATE_G2, GATE_G3, GATE_G4, GATE_G5, GATE_S1, GATE_S2,
             GATE_VERIFY_CORRECTNESS, GATE_VERIFY_REGRESSION, GATE_VERIFY_SECURITY,
             GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY, GATE_VERIFY_CLAIMS,
-            GATE_VERIFY_CLARITY, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ANALYZE,
-            GATE_VERIFY_ARCHITECTURE)
+            GATE_VERIFY_CLARITY, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ARCHITECTURE)
+# 9.0.0 removed this gate with `compass analyze` (ADR-091). The live default does
+# not declare it; an older manifest and a stored generation do.
+GATE_VERIFY_ANALYZE = "verify.analyze"
+REMOVED_GATE_IDS = (GATE_VERIFY_ANALYZE,)
 
 # The names in an issue's documents folder that are not artifacts: the migrate
 # leaves them where they are and does not register them, and `compass issue

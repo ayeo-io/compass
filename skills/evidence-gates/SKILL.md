@@ -1,21 +1,17 @@
 ---
 name: evidence-gates
-description: What counts as gate evidence, and how to clear a gate. Load at the verify stage.
+description: What counts as evidence, and the review checklists a project's settings can add. Load when a change owes a review.
 ---
 
 # Evidence Gates
 
 **The evidence-not-assertion guardrail** says a guardrail clears with artifacts
 and command output, never a claim. "The tests pass" is not a
-gate-passing statement on any delivery approach; the *recorded test run* is. This skill
-covers what counts as evidence, the checklists for each review dimension, and -
-just as important - the line between what is *checked* and what is *assessed*.
+gate-passing statement on any delivery issue; the *recorded test run* is. This skill
+covers what counts as evidence, the review-dimension checklists, and the line
+between what is *checked* and what is *assessed*.
 
 ## Guardrails are checked; strategies are assessed
-
-This is the distinction the whole gate model rests on. The two kinds of
-governance are checked two different ways, and conflating them is the failure
-mode the evidence-not-assertion guardrail exists to prevent.
 
 - **Guardrails are *checkable*.** They are cleared with evidence - a test ran, a
   scan passed, a human approved, the artifact exists. A guardrail clears or it
@@ -25,14 +21,12 @@ mode the evidence-not-assertion guardrail exists to prevent.
   simplest thing that works, does it follow the team's engineering or voice
   strategies, was a departure recorded. There is no pass/fail artifact for a
   strategy; there is an honest opinion, and it must be **labeled as judgment**,
+  strategy; there is an honest opinion, and it must be **labeled as judgment**,
   not dressed up as evidence. A strategy not followed is a note and a
   conversation, not an automatic gate failure.
 
-Naming them differently is what stops a judgment call being presented as a
-hard gate, and stops a hard gate being waved through on an opinion. When you
-write the `governance` dimension into `verification-report.md`, the guardrail
-findings and the strategy assessment go in clearly separated - evidence on one
-side, judgment on the other.
+In the `governance` dimension, report the guardrail findings (evidence) and
+the strategy assessment (judgment) separately.
 
 ## Evidence vs. assertion
 
@@ -43,38 +37,17 @@ side, judgment on the other.
 | "It's fast enough." | The benchmark output against any project performance-budget guardrail. |
 | "No regressions." | The regression run, before-and-after, showing nothing green before is red now. |
 | "It's secure." | The scan output; the dependency-CVE result where a project security guardrail needs it. |
-| "Every claim is backed." | `launch-readiness.md` with each claim's backing scenario and that scenario's passing status. |
+| "Every claim is backed." | The manifest's `claims:`, each with its backing scenario, and that scenario's passing status. |
 
 The test is simple: **could someone who does not trust you check it from what
 you recorded?** If yes, it is evidence. If they would have to take your word, it
 is assertion.
 
-## Records that meet a Definition of Done item
+## The red and green records
 
-An item of the Definition of Done is met by a record in the manifest, never by a
-tick on the page: `compass gate pass ... --meets <item>` or `compass evidence
-add ... --meets <item>` records evidence, `compass follow-up add FU-<id>
---defers <item> --summary "..."` carries the item to ship, and a person ticks
-an item by typing `/compass:approve` for a `compass evidence request --check
-<item>`, or with `compass evidence approve --check <item>` at a terminal. `dod-evidence-typed`
-fails an item with no record. `compass issue render` writes the list and each
-item's state into the verification report.
-
-## Records that also move a document
-
-`compass tdd-red` and `compass acceptance record` are the first records of the
-implement stage. Each one moves the documents of earlier stages that are still
-`draft` and have a path: to `approved` (with `approved_by` naming the command),
-or to `awaiting-approval` when the document has a human check. A person
-approves that document by typing `/compass:approve` for a `compass evidence
-request --artifact <kind>`, or with `compass evidence approve --artifact <kind>`
-at a terminal. That approval is recorded as `artifact-approval`, which no gate accepts and the
-sign-off check of `G5` never reads.
-
-`compass acceptance record --release-note "<text>"` also stores the issue's
-release line in `release_note`, once the command passes. A failed run stores
-nothing, and the flag is refused on a completed or closed issue
-(`docs/release-line.md`).
+`compass quick-fix finish` writes them. The fields of a record, the loop it
+belongs to, the scenario freeze and the records of the Definition of Done are
+in `skills/evidence-gates/red-green-records.md`.
 
 ## Properties of real evidence
 
@@ -82,49 +55,29 @@ nothing, and the flag is refused on a completed or closed issue
 - **Current** - it is from this change, this run, not a remembered earlier one.
 - **Complete** - it shows the whole relevant output, not a hand-picked green
   line. A run with skipped tests is not a green run; show the skips.
-- **Honest about gaps** - where evidence is missing or a scenario could not be
-  run, that absence is itself reported. A gap surfaced is a finding; a gap
-  hidden is a lie the gate cannot catch.
+- **Honest about gaps** - missing evidence, or a scenario that could not be
+  run, is reported. A hidden gap is one the gate cannot catch.
 
 ## The kinds of evidence
 
-A vocabulary - commit, acceptance, and the rest - in
-`skills/evidence-gates/evidence-kinds.md`.
-
-## How the two halves of the verify stage split
-
-- The **Verifier** does the mechanical half: runs the scenarios as the
-  acceptance suite, runs the TDD suite, runs regression, and **writes each
-  capture to an evidence file and links it** from
-  `verification-report.md`. It establishes what is true.
-  **Link, do not paste.** A report that reproduces its evidence stops being
-  something a person reads - it becomes a transcript with a summary at the top.
-  The record belongs in `evidence/`; the report cites it and states what it
-  shows.
-- The **Reviewer** does the judgment half: applies the review dimensions to
-  that evidence and the change, and renders pass / no-pass. It decides whether
-  what is true is good enough.
-
-Judgment rests on evidence. The Reviewer never passes a gate without the
-Verifier's artifacts in hand.
+A vocabulary - commit, acceptance, and the rest - in `skills/evidence-gates/evidence-kinds.md`.
 
 ## The review-dimension checklists
 
-One checklist per dimension, in `skills/evidence-gates/review-dimensions.md`. Read the one for the dimension you are applying - the delivery approach says which the issue carries.
+One checklist per dimension, in `skills/evidence-gates/review-dimensions.md`.
+The issue's `evidence_required` list says which the issue carries.
 
-## Passing a gate - the procedure
+## Passing a gate
 
-1. Read `delivery-approach.md` for the gate set and the dimensions in play.
-2. Verifier: run everything the dimensions need, write the raw output to an
-   evidence record and link it from `verification-report.md`, flag every gap.
-3. Reviewer: walk each dimension's checklist against the evidence and the
-   change. Record per-dimension **pass** or **no-pass with the specific reason**.
-4. Before the verification report is complete, make sure that every required
-   review dimension passed with evidence attached, that every gate in the
-   delivery-approach record and every immovable gate is green, and that no
-   evidence block is empty. The report holds no tick boxes.
-5. The gate passes only if every applicable dimension passes. One no-pass sends
-   the work back to the implement stage, or to a re-assess. A gate is not "mostly passed."
+`compass quick-fix finish` passes the three gates every delivery issue has
+(`verify.correctness`, `verify.governance`, `verify.traceability`) from the
+test records and the output of `compass check`. Do not pass them by hand.
+
+A gate that the project's settings add is yours to pass. `finish` names the
+command for each on a `next:` line. Run what the dimension's checklist needs,
+write the raw output to a file, register it as evidence and pass the gate
+with it. Then run the same `finish` again. One no-pass sends the work back
+to the code: a gate is not "mostly passed".
 
 ## Architecture checks and the verify.architecture gate
 
@@ -136,6 +89,6 @@ In `skills/evidence-gates/coverage-and-anti-patterns.md`.
 
 ## Traceability - the chain a gate is checked against
 
-In `skills/evidence-gates/traceability.md`. Read it whenever you write an
-artifact: it is how code, scenarios, claims and intents point at each other,
-and `verify.traceability` is checked against exactly that chain.
+In `skills/evidence-gates/traceability.md`: how code, scenarios, claims and
+intents point at each other. `verify.traceability` is checked against that
+chain.

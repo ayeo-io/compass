@@ -25,7 +25,7 @@ import os
 import re
 import subprocess
 
-from compass_pkg import record, rival_names, shipped_issues
+from compass_pkg import landing, record, rival_names, shipped_issues
 from compass_pkg.core import CompassError, find_compass_dir
 
 NO_LINE = "No release line recorded."
@@ -87,7 +87,7 @@ def placement(project_root, ref, items):
     named_at_head = _named_at(project_root, "HEAD")
     listed, left_out, unplaced = [], [], []
     for item in items:
-        commit = item["issue"].get("land_commit")
+        commit = landing.land_commit(item["issue"], item["task_dir"])
         if item["slug"] in named_at_ref or _reaches(project_root, commit, ref):
             left_out.append(item)
         elif _reaches(project_root, commit, "HEAD") or item["slug"] in named_at_head:

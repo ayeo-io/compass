@@ -10,7 +10,7 @@ superseded_by: ''
 <!-- HOW ASSESS AND THE ARCHITECT PERSPECTIVE USE THIS FILE
      Assess scans architecture/decisions/ADR-*.md and includes a summary of
      each record (id, title, status) in architecture-loaded.yml.  The
-     `architect` agent reads these summaries to know which decisions
+     architect perspective reads these summaries to know which decisions
      are already recorded, so it can cite them in architecture-notes.md
      rather than reopening settled decisions.
 

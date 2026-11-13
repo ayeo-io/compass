@@ -10,7 +10,7 @@ choice made, the alternatives considered, and the consequences.
 Architectural decisions tend to be made once and then forgotten.  Six months
 later, a new team member asks "why do we do it this way?" and no one remembers.
 ADRs make the *why* a searchable record.  They also give the
-`architect` agent a corpus to cite rather than reopening decisions
+architect perspective a corpus to cite rather than reopening decisions
 that were already made deliberately.
 
 ## Numbering

@@ -13,7 +13,8 @@ depends_on:      # (optional) list of maps - the issues this one waits for; writ
   - issue:       #   (required in entry) string - the slug of the issue waited for, one path segment
     reason:      #   (required in entry) string - why this issue waits for it
     until:       #   (required in entry) [done, in-review, define, refine, plan, breakdown, implement, verify, ship] - done when not given
-github:          # (optional) map {repo, number} - the GitHub issue this issue is linked to (compass issue link set --github); labels are written there only when compass.yml sets github_labels
+github:          # (optional) map {repo, number} - the GitHub issue this issue is linked to (compass issue link set --github); Compass writes nothing there
+pull_request:    # (optional) map {repo, number} - the pull request that carries the issue (compass issue link set --pr); once it is merged and the issue has landed, land_commit names its merge commit
 
 assessment:        # (required) map - the four-dimension JUDGMENT assessment (assess)
   risk:  # (required) [trivial, contained, cross-cutting, critical]
@@ -21,21 +22,21 @@ assessment:        # (required) map - the four-dimension JUDGMENT assessment (as
   size:     # (required) [atomic, small, medium, large, product]
   goal:          # (optional) [delivery, exploration]   - defaults to delivery
   urgency:       # (optional) [none, live-defect]        - defaults to none
-  role:          # (optional) [engineer, product-owner, product-marketer, designer, qa]
+  role:          # (optional) [engineer, product-owner, product-marketer, designer, qa] - still valid; the role entry points that used it were removed in 9.0.0 (ADR-093)
   labels:        # (optional) list of strings - domain tags (auth, payments, …)
 
 generation:      # (optional) integer, at least 0 - the stored generation of configuration the issue runs against; 0 = assessed under 6.x with none yet; absent = pre-6.0.0, reads live governance
-config:          # (optional) map - the issue's own configuration layer, an input; it takes effect when approach evaluate --write commits it
+config:          # (optional) map - the issue's own configuration layer in 8.x; valid, and not written or read since 9.0.0 (ADR-094)
 
 delivery_approach:  # (optional until approach evaluate) string - the final delivery approach name
 orchestration:       # (optional until approach evaluate) string - solo | pair | multiagent | …
 subtask_ceiling: # (optional) integer or null - how many parallel subtasks the delivery approach permits
 policy_rules_fired: # (optional) list of maps {id, kind, rationale, changed[]}
 stages:          # (optional until approach evaluate) map of stage -> weight string
-checkpoints:     # (optional until approach evaluate) list of the stage hand-offs that wait for a person: assess, define, refine, plan
-models:          # (optional until approach evaluate) map of seat -> {tier, by, not_fired[]} - the model tier of each seat whose stage runs; tier is fast | standard | strong
+checkpoints:     # (optional until approach evaluate) list of the stage hand-offs that wait for a person: assess, define, refine, plan, implement, verify (the last two only where the four-layer acceptance strategy applies)
+models:          # (written before 9.0.0, not read since; ADR-090) map of seat -> {tier, by, not_fired[]} - the model tier of each seat whose stage ran; tier is fast | standard | strong
 checkpoint_outcomes: # (optional) list of maps - one outcome per checkpoint stage hand-off; the first assessment writes []; an issue without the key is not judged:
-  - stage:       #   (required in entry) [assess, define, refine, plan] - here define
+  - stage:       #   (required in entry) [assess, define, refine, plan, implement, verify] - here define
     outcome:     #   (required in entry) [waited, skipped] - waited: a person answered it with compass evidence approve --checkpoint
     by:          #   (required in entry) string - the approver of the record it cites, such as jed72
     at:          #   (required in entry) string - ISO 8601, the record's timestamp
@@ -44,7 +45,7 @@ checkpoint_outcomes: # (optional) list of maps - one outcome per checkpoint stag
     outcome:     #   skipped: the autonomy setting passed it, recorded with compass issue checkpoint add --outcome skipped
     by:          #   the agent that went on, such as spec-author
     at:          #   ISO 8601, the time of the command; a skipped outcome has no evidence
-intent_source:   # (optional) map - the brief ingested with compass intent ingest; absent when intent.md was written in the issue:
+intent_source:   # (optional) map - an older manifest's record of a brief ingested with compass intent ingest, removed in 9.0.0 (ADR-093); still valid, not written or read:
   origin:        #   (optional) string - the file path or URL the brief came from
   scheme:        #   (optional) string - how it was read, such as file
   sha256:        #   (optional) string - digest of the brief as read
@@ -52,7 +53,7 @@ intent_source:   # (optional) map - the brief ingested with compass intent inges
   snapshot:      #   (optional) string - file name of the unedited copy of the brief in the issue directory
   interview:     #   (optional) list of maps - each question asked, with its answer or null; [] before any is asked
   sections:      #   (optional) list of maps {name, from [source, answer, unanswered], answer_id} - where each section of intent.md came from
-readiness:       # (optional) map - the repository's readiness at the last approach evaluate --write: {status: measured, score, signals, floor_met, absent[], measured_at} or {status: not-measured, reason: missing | stale | unreadable, detail}; outside the generation
+readiness:       # (optional) map - written from 7.0.0 to 8.x, not written or read since 9.0.0 (ADR-093); the repository's readiness at the last approach evaluate --write: {status: measured, score, signals, floor_met, absent[], measured_at} or {status: not-measured, reason: missing | stale | unreadable, detail}; outside the generation
 
 evidence:        # (optional) list of maps - the typed evidence registry gates reference by id:
   - id:          #   (required in entry) string - e.g. EV-001 or EV-A1
@@ -78,9 +79,21 @@ evidence:        # (optional) list of maps - the typed evidence registry gates r
                  #     answered; the record has no check, so it never meets guardrail `G5`, a human check or a waiver
     guardrail:   #   (optional) string - for human-approval, the guardrail this sign-off is for; only `G5` is read
                  #     (`compass evidence approve --guardrail` writes it, with the value `G5`)
-    waiver:      #   (optional) map - for human-approval of a waiver, the waiver it approves (its scope and entry)
+    waiver:      #   (optional) string or map - for human-approval of a waiver, the waiver it approves: its id
+                 #     W-<n> from 9.0.0, or before 9.0.0 a map of an issue layer waiver's scope and entry
+    waived_check: #  (optional) string - for human-approval of a waiver, the check the waiver named when approved
+    waiver_reason: # (optional) string - for human-approval of a waiver, the reason it gave when approved
                  #     A human-approval record that holds check, waiver, checkpoint, artifact or decisions, or a
                  #     guardrail other than `G5`, never clears `human-approval-present` (ADR-066)
+
+waivers:         # (optional) list of maps - each excuses one check on this issue once a person approves it (ADR-094);
+                 #   written by compass waiver add and compass waiver withdraw:
+  - id:          #   (required in entry) string - W-<n>, unique in the issue
+    check:       #   (required in entry) string - the one check it excuses
+    reason:      #   (required in entry) string - why; a waiver with no reason excuses nothing
+    requested_at: #  (optional) string - ISO 8601, when it was written
+    requested_by: #  (optional) string - who asked for it
+    withdrawn_at: #  (optional) string - ISO 8601, when an approved waiver was withdrawn; it then excuses nothing
 
 gates:           # (optional until approach evaluate) list of maps:
   - id:          #   (required in entry) string - e.g. verify.correctness
@@ -98,17 +111,17 @@ failure_modes_descoped: # (optional) list of maps - failure modes no scenario co
     reason:      #   (required in entry) string - why no scenario covers it
     recorded:    #   (required in entry) string - ISO date it was recorded
 
-started_at:      # (optional) string - ISO time `compass quick-fix start` ran; where the assess stage ends
-finish_started_at: # (optional) string - ISO time `compass quick-fix finish` began; where implement ends
-committed_at:    # (optional) string - ISO time `quick-fix finish` recorded usage, just before its commit
-usage:           # (optional) map - tokens from the issue's Claude Code transcripts. Numbers only, no text or path. A quick fix's block (quick-fix finish): session, source, skipped_lines, stages{assess, implement, ...: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?}; or recorded: false with a fixed reason. Any other approach's block (ship-commit):
-  sessions:      #   (optional) list of strings - the session ids that worked on the issue, each once; the pre-tool hook appends them
+started_at:      # (optional) string - ISO time `compass quick-fix start` ran; not written since 9.0.0 (ADR-093)
+finish_started_at: # (optional) string - ISO time `compass quick-fix finish` began; not written since 9.0.0
+committed_at:    # (optional) string - ISO time `quick-fix finish` recorded usage; not written since 9.0.0
+usage:           # (optional) map - tokens from the issue's Claude Code transcripts; not written since 9.0.0 (ADR-093), still valid. Numbers only, no text or path. An older quick fix's block: session, source, skipped_lines, stages{assess, implement, ...: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?}; or recorded: false with a fixed reason. An older block of any other approach:
+  sessions:      #   (optional) list of strings - the session ids that worked on the issue, each once
   source:        #   string - claude-code
   skipped_lines: #   integer - transcript lines that were not JSON
   total:         #   map - every request in the issue's span: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?
   unattributed:  #   map - the same keys, for requests after the last stage end; the stages and unattributed add up to total
   stages:        #   map of stage -> the same keys, or {measured: false, reason: no-window}
-  recorded:      #   (only when nothing is counted) false, with reason: a word in session_usage.REASONS
+  recorded:      #   (only when nothing is counted) false, with a reason word
                  #     (not-claude-code, bad-session-id, no-transcript, unreadable, too-large, ...); sessions are kept
 changed_files:   # (optional until implement) list of maps:
   - path:        #   (required in entry) string - the production file path
@@ -123,7 +136,8 @@ follow_ups:       # (optional) list of maps - work still outstanding:
   - id:          #   (required in entry) string
     description: #   (optional) string
     summary:     #   (optional) string - what is owed (compass follow-up add --summary)
-    defers:      #   (optional) string - the Definition of Done or Ready item it carries to ship
+    defers:      #   (optional) string - the Definition of Done or Ready item it carries
+    github:      #   (optional; required on a path issue) map {repo: owner/repo, number: N} - the GitHub issue that tracks it (compass follow-up add --github)
     status:      #   (required in entry) [outstanding, resolved]
 
 page_ticks:      # (optional) list of maps - items ticked on a page before 7.0.0 (compass issue migrate writes it):

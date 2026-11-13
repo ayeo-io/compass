@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass_pkg.tdd - `compass tdd-red`, `compass tdd-green` and `compass acceptance`
+# compass_pkg.tdd - `compass tdd-red` and `compass acceptance`, and the helpers
+# `compass tdd-green` (compass_pkg.tdd_green) shares with them
 # =============================================================================
 #
 # DEPENDENCY: PyYAML, bundled at cli/vendor/yaml/ and pinned in
@@ -38,9 +39,10 @@ from compass_pkg import project_settings
 from compass_pkg.core import CompassError, find_upwards, load_manifest, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.manifest_store import load_file as load_manifest_file
 from compass_pkg import pytest_report
+from compass_pkg.acceptance_strategy import LOOPS
 from compass_pkg.binding import declared_test_paths, ids_for
 from compass_pkg.red_first import (
-    ACCEPTANCE_KINDS as _ACCEPTANCE_KINDS, content_digest as _content_digest, has_red)
+    ACCEPTANCE_KINDS as _ACCEPTANCE_KINDS, content_digest as _content_digest, record_stem)
 
 
 
@@ -105,8 +107,9 @@ def _output_fail_token(out):
     return None
 
 
-def _run_test(cmd, env=None):
-    """Run a test command and return (exit_code, combined_output, warnings).
+def _run_test(cmd, env=None, with_stderr=False):
+    """Run a test command and return (exit_code, combined_output, warnings), and
+    stderr on its own last when `with_stderr` is set.
 
     Hardens against pipeline exit-code masking (R2): pipefail is injected into
     bash/zsh `-c` wrappers; a pager/filter final stage raises a warning.
@@ -130,6 +133,8 @@ def _run_test(cmd, env=None):
     proc = subprocess.run(run_cmd, capture_output=True, text=True,
                           env={**os.environ, **env} if env else None)
     out = (proc.stdout or "") + (proc.stderr or "")
+    if with_stderr:
+        return proc.returncode, out, warnings, proc.stderr or ""
     return proc.returncode, out, warnings
 
 
@@ -175,6 +180,9 @@ def _write_evidence(task_dir, name, payload):
     log_path = os.path.join(ev_dir, name + ".log")
     with open(log_path, "w", encoding="utf-8") as fh:
         fh.write(payload.get("_full_log", ""))
+    # The digest of the bytes just written, for `sha256sum -c` (ADR-089).
+    from compass_pkg import evidence_sums
+    evidence_sums.record_written(task_dir, path)
     return path
 
 
@@ -352,9 +360,89 @@ def _silent_red_reason(out, command, task_dir):
             "files, so no test ran")
 
 
+def _loop(args, task_dir):
+    """The loop a red or green belongs to, from `--loop`. With no `--loop` it is
+    `default_loop`. The parser refuses any other value; a caller that builds its own
+    arguments is checked here."""
+    loop = getattr(args, "loop", None) or default_loop(task_dir)
+    if loop not in LOOPS:
+        raise CompassError(f"--loop {loop!r} is not a loop; use one of: {', '.join(LOOPS)}")
+    return loop
+
+
+def default_loop(task_dir):
+    """`outer` for a quick fix the four-layer acceptance strategy applies to, else
+    `inner` (ADR-080). A quick fix has one scenario, and its declared test is that
+    scenario's acceptance test, so its red and green are the outer loop. Whether the
+    strategy applies is `acceptance_strategy.in_scope`, the one scope rule (ADR-079).
+    A path issue (ADR-092) has no quick fix approach: the light evidence row that
+    replaces it routes the strategy to `existing-dsl`, so that routing defaults to
+    the outer loop."""
+    from compass_pkg.acceptance_strategy import in_scope, stored
+    from compass_pkg.path_stages import is_path_issue
+    from compass_pkg.stable_ids import APPROACH_QUICK_FIX
+    try:
+        task, _ = load_manifest(task_dir)
+    except (CompassError, OSError, ValueError):
+        return "inner"
+    if is_path_issue(task):
+        if (stored(task) or {}).get("routing") != "existing-dsl":
+            return "inner"
+    elif not isinstance(task, dict) or task.get("delivery_approach") != APPROACH_QUICK_FIX:
+        return "inner"
+    return "outer" if in_scope(task, task_dir)[0] else "inner"
+
+
+def _red_scenarios(args, task_dir, loop, verb="tdd-red"):
+    """The scenarios one red or green run is bound to: `[]`, one, or several
+    (ADR-081 for the red, ADR-085 for the green). Several, from a repeated
+    `--scenario` or from `--every-scenario`, need the outer loop, which runs the
+    whole suite once."""
+    given = getattr(args, "scenario", None)
+    given = [given] if isinstance(given, str) else list(given or [])
+    if getattr(args, "every_scenario", False):
+        if given:
+            raise CompassError(f"compass {verb}: give --scenario or --every-scenario, not both.")
+        task, _ = load_manifest(task_dir)
+        given = [s["id"] for s in task.get("scenarios") or [] if isinstance(s, dict)
+                 and s.get("id") and s.get("verifiable") != "narrative"]
+        if not given:
+            raise CompassError(f"compass {verb}: --every-scenario found no scenario in this "
+                               "issue's manifest.yml. Add one with `compass scenario add`.")
+    if len(given) > 1 or getattr(args, "every_scenario", False):
+        if loop != "outer":
+            raise CompassError(f"compass {verb}: one run binds several scenarios only for "
+                               "the acceptance suite; add --loop outer.")
+    return [_resolve_scenario(task_dir, s) for s in dict.fromkeys(given)]
+
+
+def _unbound_scenarios(task_dir, scenarios, broken):
+    """The scenarios of a run with no declared test that failed or errored in it,
+    each with its declared tests."""
+    task, _ = load_manifest(task_dir)
+    tests = {s.get("id"): [t for t in s.get("tests") or [] if isinstance(t, str)]
+             for s in task.get("scenarios") or [] if isinstance(s, dict)}
+    return [(s, tests.get(s) or []) for s in scenarios
+            if not any(pytest_report.covers(broken, t) for t in tests.get(s) or [])]
+
+
 def cmd_tdd_red(args):
     task_dir = resolve_issue_dir(args.task)
-    scenario = _resolve_scenario(task_dir, getattr(args, "scenario", None))
+    from compass_pkg import scenario_freeze
+    try:
+        task = load_manifest(task_dir)[0]
+    except (CompassError, OSError, ValueError):
+        task = {}   # no manifest: nothing owes a sign-off, and no red is frozen
+    # The `.red` marker unlocks code edits, so scenarios that owe a person's
+    # approval must have it before the test runs: a refusal here writes no
+    # record and no marker (ADR-095 decision 9).
+    refused = scenario_freeze.refusal(task, task_dir)
+    if refused:
+        raise CompassError(refused)
+    loop = _loop(args, task_dir)
+    scenarios = _red_scenarios(args, task_dir, loop)
+    several = len(scenarios) > 1 or bool(getattr(args, "every_scenario", False))
+    scenario = scenarios[0] if scenarios else None
     verified_by = getattr(args, "verified_by", None)
     if verified_by and verified_by not in _VERIFIED_BY_KINDS:
         raise CompassError(
@@ -374,18 +462,24 @@ def cmd_tdd_red(args):
     # started; see pytest_report.
     env, report, ours, before = pytest_report.with_report(command)
     tree_ids = ids_for(task_dir)   # the tree the test runs on, named before it runs
-    code, out, warnings = _run_test(command, env)
+    code, out, warnings, stderr = _run_test(command, env, with_stderr=True)
     for w in warnings:
         sys.stderr.write(f"compass tdd-red: warning - {w}\n")
     excerpt = "\n".join(out.splitlines()[-25:])
-    red_kind, heading, rejection = None, None, None
+    red_kind, heading, rejection, missing, broken = None, None, None, [], None
     ran_pytest = pytest_report.written(report, before)
-    if code != 0 and (ran_pytest or _is_pytest_command(command)):
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.abspath(task_dir))))
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(task_dir))))
+    if code == 4 and loop == "outer" and not ran_pytest and _is_pytest_command(command):
+        heading = pytest_report.DID_NOT_RUN
+        rejection = pytest_report.exit_4_reason(stderr, project_root)
+    elif code != 0 and (ran_pytest or _is_pytest_command(command)):
         red_kind, heading, rejection = pytest_report.judge(
             report if ran_pytest else None, code, project_root,
-            _NO_TEST_RAN_EXITS)
+            _NO_TEST_RAN_EXITS, loop=loop)
+        if ran_pytest:
+            missing = pytest_report.missing_modules(report, project_root)
+            broken = pytest_report.failed_tests(report)
     elif code != 0:
         # A runner Compass does not recognise, and no pytest report: the
         # exit code is all there is to go on, and the record says so.
@@ -423,11 +517,25 @@ def cmd_tdd_red(args):
             "  command: %s\n--- output (tail) ---\n%s"
             % (rejection, " ".join(command), excerpt)
         )
+    unbound = _unbound_scenarios(task_dir, scenarios, broken) \
+        if several and broken is not None else []
+    if unbound:
+        raise CompassError(
+            "compass tdd-red: no red is recorded - pytest's report shows no failed or "
+            "errored test for: " + "; ".join(
+                f"{s} (declares {', '.join(t) or 'no test'})" for s, t in unbound)
+            + ". Each scenario of the run needs a declared test that failed.")
+    from compass_pkg.acceptance_strategy import stage_one
+    try:
+        before_implement = stage_one(load_manifest(task_dir)[0], loop)
+    except (CompassError, OSError, ValueError):
+        before_implement = False    # no manifest: the red is implement's, as before
     payload = {
         "command": " ".join(command),
         # The argument list as given: two lists can join to the same text.
         "argv": list(command),
         "scenario": scenario,          # the scenario this red is evidence FOR
+        "loop": loop,
         "exit_code": code,
         "passed": False,
         "timestamp": now_iso(),
@@ -438,33 +546,48 @@ def cmd_tdd_red(args):
         payload["verified_by"] = verified_by   # a sanctioned non-unit red
     if red_kind:
         payload["red_kind"] = red_kind         # "import": the module is not written yet
+    if red_kind == "import" and missing:
+        payload["missing_modules"] = missing
+    if before_implement:
+        payload["before_implement"] = True     # stage 1: no marker
+    if several:
+        payload.update(run_id=uuid.uuid4().hex[:16], scenarios_in_run=list(scenarios))
     _bind_to_tree(payload, tree_ids)
-    # The binding decides the path here too, so one scenario's red cannot
-    # overwrite another's.
-    red_name = "red"
-    if scenario:
-        red_name = "red-" + scenario.replace("/", "_")
-    ev_path = _write_evidence(task_dir, red_name, payload)
-    open(os.path.join(task_dir, ".red"), "w").close()  # the hook reads this
+    # The spec this red was written against, inside the record's digest (ADR-095).
+    payload.update(scenario_freeze.red_payload(task, task_dir))
+    # The binding and the loop decide the path, so one scenario's red cannot
+    # overwrite another's, nor an inner red the outer one (ADR-082). One run
+    # bound to several scenarios writes one record per scenario (plan Q14).
+    ev_paths = [_write_evidence(task_dir, record_stem("red", one, loop),
+                                dict(payload, scenario=one)) for one in scenarios or [None]]
+    ev_path = ev_paths[0]
     payload.pop("_full_log", None)
-    # A red is the first record of the implement stage: it moves the documents
-    # of the stages before it (ADR-050).
-    from compass_pkg import artifact_status
-    moved = artifact_status.moved_line(artifact_status.record_stage(
-        task_dir, artifact_status.STAGE_IMPLEMENT, artifact_status.BY_TDD_RED))
-    bound = f" (bound to {scenario})" if scenario else " (unbound - consider --scenario)"
+    frozen = scenario_freeze.freeze(task_dir, ev_path) if task else None
+    marker = os.path.join(task_dir, ".red")
+    if before_implement:
+        unlocked = ["stage 1  : a red before implement writes no .red marker, so code "
+                    "edits stay refused (ADR-081)."]
+    else:
+        open(marker, "w").close()  # the hook reads this
+        unlocked = [f"marker   : {marker}",
+                    "           the pre-tool hook will now allow code edits."]
+    bound = (f" (bound to {', '.join(scenarios)})" if scenarios
+             else " (unbound - consider --scenario)")
     judged = ([("judged by exit code only: Compass does not recognize this "
                 "runner, and it wrote no pytest report")]
               if red_kind == "exit-code" else [])
-    return say(args,
+    from compass_pkg.next_line import announce
+    said = say(args,
                f"compass tdd-red: failing test recorded (exit {code}){bound}.",
-               detail=judged + [f"evidence : {ev_path}"]
-                      + [x for x in [_scenario_line(task_dir, scenario)] if x]
-                      + [f"marker   : {os.path.join(task_dir, '.red')}",
-                         "           the pre-tool hook will now allow code edits."]
-                      + moved,
+               detail=judged + [f"evidence : {p}" for p in ev_paths]
+                      + [x for x in [_scenario_line(task_dir, s) for s in scenarios] if x]
+                      + ([f"frozen   : the scenarios, at this first red (sha256 "
+                          f"{scenario_freeze.short(frozen['spec_sha256'])})"]
+                         if frozen else [])
+                      + unlocked,
                scenario=scenario, exit_code=code, evidence=ev_path,
-               marker=os.path.join(task_dir, ".red"))
+               marker=None if before_implement else marker)
+    return announce(args, task_dir, said)
 
 
 def _source_tree_hash(project_root):
@@ -490,8 +613,8 @@ def _source_tree_hash(project_root):
     _EXCLUDED_DIRS = {".git", "__pycache__", ".venv", "node_modules",
                       "evidence", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
     # `docs/compass/` is the tree id's own exclusion too (`binding._OUTSIDE_THE_TREE`): the
-    # CLI renders issue pages and blocks there after a command, and that is not a change
-    # to the code the test runs on. Without it a second identical green is not a rerun.
+    # issue's documents live there, and an edit to one is not a change to the code the test
+    # runs on. Without it a second identical green is not a rerun.
     _EXCLUDED_AT_ROOT = {".compass", os.path.join("docs", "compass")}
     _INCLUDED_EXTS = {".py", ".md", ".yml", ".yaml", ".json", ".toml"}
 
@@ -528,258 +651,14 @@ def _bind_to_tree(payload, tree_ids):
     payload.update(tree_ids)
 
 
-def _tdd_state_path(task_dir):
-    """Path to the CLI-internal sidecar that tracks the source-tree hash and
-    `attempts` counter between tdd-green invocations. Not part of manifest.yml schema.
-    """
-    return os.path.join(task_dir, "evidence", ".tdd-state.json")
-
-
-def _load_tdd_state(task_dir, scenario):
-    """Load the per-scenario TDD state from the sidecar file.
-
-    Returns a dict with keys: `tree_hash` (str), `attempts` (int),
-    `scenario` (str|None). Returns a fresh empty state if absent or unreadable.
-    """
-    path = _tdd_state_path(task_dir)
-    if not os.path.isfile(path):
-        return {}
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-        if not isinstance(data, dict):
-            return {}
-        # State is keyed by scenario id (or "" for unbound runs)
-        key = scenario or ""
-        return data.get(key) or {}
-    except (OSError, json.JSONDecodeError):
-        return {}
-
-
-def _save_tdd_state(task_dir, scenario, tree_hash, attempts, command=None):
-    """Persist the per-scenario TDD state in the sidecar file."""
-    path = _tdd_state_path(task_dir)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    existing = {}
-    if os.path.isfile(path):
-        try:
-            with open(path, "r", encoding="utf-8") as fh:
-                existing = json.load(fh) or {}
-        except (OSError, json.JSONDecodeError):
-            existing = {}
-    key = scenario or ""
-    existing[key] = {"tree_hash": tree_hash, "attempts": attempts,
-                     "command": command}
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(existing, fh, indent=2)
-
-
-def _red_record_for(task_dir, scenario):
-    """The red record a green bound to `scenario` needs, or None if unbound.
-
-    Same binding, same file: only `evidence/red-X.json` answers
-    `--scenario X` - not an unbound `red.json`, and not a red recorded for
-    a different scenario.
-
-    The looser rule, "any red on this issue", lets a red recorded for one
-    scenario clear a green for another. That is the same class of error as a
-    green with no red at all, one step quieter, and quieter is worse because
-    nothing reports it.
-    """
-    if not scenario:
-        return None
-    name = "red-" + scenario.replace("/", "_") + ".json"
-    return os.path.join(task_dir, "evidence", name)
-
-
-def cmd_tdd_green(args):
-    task_dir = resolve_issue_dir(args.task)
-    scenario = _resolve_scenario(task_dir, getattr(args, "scenario", None))
-    verified_by = getattr(args, "verified_by", None)
-    if verified_by and verified_by not in _VERIFIED_BY_KINDS:
-        raise CompassError(
-            f"compass tdd-green: --verified-by '{verified_by}' is not a "
-            f"recognized kind. Allowed: {sorted(_VERIFIED_BY_KINDS)}.")
-    command = _micro_command(args, task_dir)
-    if not command:
-        raise CompassError("compass tdd-green needs a test command (-- <cmd>) "
-                           "or " + settings_hint(task_dir, "project.test_micro_command"))
-    # A bound green claims a red happened for the same scenario. Check that
-    # before running anything: the refusal is about what may be RECORDED, and
-    # refusing at the moment of writing means a bad record never exists. A
-    # check would find it afterwards, when it is already on disk and already
-    # cited by a gate.
-    red_path = _red_record_for(task_dir, scenario)
-    if red_path and not os.path.isfile(red_path) and _acceptance_state(task_dir):
-        # Telling a session that already declared an acceptance to declare
-        # one sends it in a circle; name the step it has left instead.
-        raise CompassError(
-            f"compass tdd-green: no red is on record for {scenario}, and this "
-            f"issue declared an acceptance instead. Close it with `compass "
-            f"acceptance record --scenario {scenario} -- <the declared "
-            f"command>`. On a quick fix, `compass quick-fix finish` does it.")
-    if red_path and not os.path.isfile(red_path):
-        raise CompassError(
-            f"compass tdd-green: no red is on record for {scenario}, so there "
-            f"is no failure for this green to be the other half of.\n"
-            f"  expected : {red_path}\n"
-            f"  Run `compass tdd-red --scenario {scenario} -- <test command>` "
-            f"first. For work with no natural red - config, docs, a "
-            f"behavior-preserving refactor - declare it before the change "
-            f"with `compass acceptance start --kind validation|refactor -- "
-            f"<command>`."
-        )
-
-    command = _neutralise_coverage(command)
-    tree_ids = ids_for(task_dir)   # the tree the test runs on, named before it runs
-    # `quick-fix finish` records a green for several scenarios from one run.
-    # It hands that run in, and it stands for this scenario only when it ran
-    # this exact command on this exact tree; otherwise the command runs here.
-    prerun = getattr(args, "prerun", None)
-    if prerun and prerun["argv"] == command and prerun["tree_ids"] == tree_ids:
-        code, out, warnings = prerun["result"]
-    else:
-        code, out, warnings = _run_test(command)
-    for w in warnings:
-        sys.stderr.write(f"compass tdd-green: warning - {w}\n")
-    excerpt = "\n".join(out.splitlines()[-25:])
-    if code != 0:
-        raise CompassError(
-            f"compass tdd-green: the test command FAILED (exit {code}) - not "
-            f"green yet. The .red marker is left in place.\n"
-            f"--- output (tail) ---\n" + excerpt
-        )
-    # Output-token cross-check. A zero exit whose output carries
-    # a known-runner fail-token is a suspected masked failure - refuse rather
-    # than record a clean green on a contradictory signal.
-    fail_token = _output_fail_token(out)
-    if fail_token:
-        raise CompassError(
-            f"compass tdd-green: the command exited 0 but its output shows a "
-            f"failure token ('{fail_token}') - a possible masked failure. "
-            f"Refusing to record a green on a contradictory signal. The .red "
-            f"marker is left in place.\n--- output (tail) ---\n" + excerpt
-        )
-
-    # --- `attempts` + rerun_without_change detection --------------------------
-    # Find the project root: walk up from the task_dir to the directory that
-    # contains .compass/ - that is the project root the hash covers.
-    project_root = find_upwards(task_dir, ".compass") or task_dir
-    # The tree's identity is its git tree id - every tracked file, whatever
-    # its type - with the source-file hash beside it, which also sees
-    # untracked source files. The hash alone read only a few extensions, so
-    # an edit to a shell script looked like no change at all. Outside git
-    # there is no tree id, and the hash alone decides.
-    current_hash = _source_tree_hash(project_root)
-    if tree_ids.get("tree_id"):
-        current_hash = "%s+%s" % (tree_ids["tree_id"], current_hash)
-    # The files the record covers are part of what it asserts. After a file
-    # is traced to the issue, the same command over the same tree covers
-    # more files: a new assertion, not a retry of a flaky test.
-    if tree_ids.get("changes_id"):
-        current_hash = "%s+%s" % (current_hash, tree_ids["changes_id"])
-    prior_state = _load_tdd_state(task_dir, scenario)
-    prior_hash = prior_state.get("tree_hash")
-    prior_attempts = prior_state.get("attempts") or 0
-
-    # The command matters as much as the tree. Running the SAME assertion again
-    # with nothing changed is hiding a flaky test by re-running it, which this
-    # flag exists to catch; running a DIFFERENT one - the narrow suite, then
-    # the full suite, which is what the verify stage asks for - is a new
-    # assertion, not a retry.
-    current_command = " ".join(command)
-    prior_command = prior_state.get("command")
-
-    if prior_hash is None:
-        # First invocation for this scenario - clean first pass
-        attempts = 1
-        rerun_without_change = False
-    elif prior_hash == current_hash and prior_command == current_command:
-        # Same tree, same command: nothing changed and nothing new was asked
-        attempts = prior_attempts + 1
-        rerun_without_change = True
-    else:
-        # Either the tree changed (real work) or the command did (a different
-        # assertion). Both are legitimate progress.
-        attempts = prior_attempts + 1
-        rerun_without_change = False
-
-    # Persist the updated state for the next invocation
-    _save_tdd_state(task_dir, scenario, current_hash, attempts, current_command)
-
-    payload = {
-        "command": " ".join(command),
-        # The argument list as given: two lists can join to the same text.
-        "argv": list(command),
-        "scenario": scenario,          # the scenario this green is evidence FOR
-        "exit_code": 0,
-        "passed": True,
-        "attempts": attempts,
-        "timestamp": now_iso(),
-        "log_excerpt": excerpt,
-        "_full_log": out,
-    }
-    # Always record the marker when `attempts` > 1. Absence of the field on
-    # a record of more than one try fails the no-trusted-rerun check
-    # (incomplete evidence cannot clear `G4`). The marker is informative
-    # either way - true means "no source change between tries" (the failure
-    # mode `S5` protects against), false means "source did change" (a legitimate
-    # red→green path).
-    if attempts > 1:
-        payload["rerun_without_change"] = rerun_without_change
-    _bind_to_tree(payload, tree_ids)
-    if verified_by:
-        payload["verified_by"] = verified_by   # carry the guard kind forward
-    # THE BINDING DECIDES THE PATH. One record per run, and nothing else is
-    # touched.
-    #
-    # A bound write touches only its own record and an unbound write only
-    # the unbound one, so a scenario run cannot replace the record a
-    # full-suite citation names.
-    name = "green"
-    if scenario:
-        name = "green-" + scenario.replace("/", "_")
-    ev_path = _write_evidence(task_dir, name, payload)
-    rel_path = f"evidence/{name}.json"
-    # Upsert a test-run entry in the issue's evidence registry - the registry
-    # is what `compass check` reads, so the green has to land there.
-    _upsert_test_run_evidence(task_dir, scenario, rel_path,
-                              record_id=payload.get("record_id"),
-                              content_digest=payload.get("content_digest"))
-    # Say "red -> green" only when a red was there to clear. An unbound green
-    # needs no red, and printing the pair when none existed told the user a
-    # failure had been observed when it had not. The last full-suite green
-    # comes after the bound reds were cleared, so it names those instead of
-    # denying them.
-    red_marker = os.path.join(task_dir, ".red")
-    if os.path.exists(red_marker):
-        os.remove(red_marker)
-        marker_line = "marker   : .red cleared - red -> green is on record."
-    elif has_red(task_dir):
-        marker_line = ("marker   : no .red marker to clear - a red for this "
-                       "issue is already on record.")
-    else:
-        marker_line = ("marker   : no .red marker - no red is on record for "
-                       "this issue.")
-    bound = f" (bound to {scenario})" if scenario else " (unbound - consider --scenario)"
-    return say(args,
-               f"compass tdd-green: passing suite recorded (exit 0){bound}.",
-               detail=[f"evidence : {ev_path}",
-                       "registry : manifest.yml `evidence:` updated with the "
-                       "test-run entry",
-                       marker_line]
-                      + [x for x in [_scenario_line(task_dir, scenario)] if x],
-               scenario=scenario, exit_code=0, evidence=ev_path)
-
-
 def _scenario_line(task_dir, scenario):
     """`scenario : <acceptance criteria>:<line>` for the row that defines
     `scenario`, so a reader opens it with one click (#291), or None."""
     if not scenario:
         return None
-    from compass_pkg.core import artifact_path
+    from compass_pkg.spec_location import spec_path
     from compass_pkg.terminal import relative_to_project
-    path = artifact_path(task_dir, "acceptance-criteria.md")
+    path = spec_path(task_dir)
     try:
         # Rows inside a rendered block are the block's, not the scenario's
         # definition. The removed lines stay as empty lines, so the line number
@@ -820,9 +699,12 @@ def _upsert_test_run_evidence(task_dir, scenario, rel_path,
     if not isinstance(reg, list):
         return
     existing = None
+    # One entry per binding and loop: an outer-loop green (ADR-082) has its own.
+    outer = rel_path.endswith(".outer.json")
     for e in reg:
         if (isinstance(e, dict) and e.get("type") == "test-run"
-                and e.get("scenario") == scenario):
+                and e.get("scenario") == scenario
+                and str(e.get("path") or "").endswith(".outer.json") == outer):
             existing = e
             break
     if existing:
@@ -831,7 +713,7 @@ def _upsert_test_run_evidence(task_dir, scenario, rel_path,
             existing["record_id"] = record_id
             existing["content_digest"] = content_digest
     else:
-        base = f"EV-T-{scenario}" if scenario else "EV-T"
+        base = (f"EV-T-{scenario}" if scenario else "EV-T") + ("-outer" if outer else "")
         used = {e.get("id") for e in reg if isinstance(e, dict)}
         ev_id, n = base, 1
         while ev_id in used:
@@ -1057,10 +939,6 @@ def cmd_acceptance_record(args):
     marker = _acceptance_marker(task_dir)
     if os.path.exists(marker):
         os.remove(marker)
-    # An acceptance record is a record of the implement stage, as a red is.
-    from compass_pkg import artifact_status
-    moved = artifact_status.moved_line(artifact_status.record_stage(
-        task_dir, artifact_status.STAGE_IMPLEMENT, artifact_status.BY_ACCEPTANCE))
 
     print(f"compass acceptance record: {kind} acceptance recorded (exit {code}).")
     for w in warnings:
@@ -1072,6 +950,4 @@ def cmd_acceptance_record(args):
     print(f"  evidence : {relative_to_project(ev_path)}")
     print("  registry : manifest.yml `evidence:` updated with the test-run entry")
     print("  marker   : .acceptance cleared")
-    for line in moved:
-        print("  " + line)
     return 0

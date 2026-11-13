@@ -4,8 +4,7 @@
 # =============================================================================
 # Shell scripts call compass_python, not python3, so every Python program they
 # run imports the bundled PyYAML in cli/vendor/yaml/ and not whatever copy the
-# machine has. The callers are the hooks (their programs are in hooks/py/),
-# scripts/integrate.sh and scripts/multiagent.sh.
+# machine has. The callers are the hooks (their programs are in hooks/py/).
 #
 # This file does NOT know where cli/vendor/ is. It only knows the framework
 # root, and puts cli/ on PYTHONPATH so `import compass_pkg` works - the vendor
@@ -39,8 +38,9 @@ compass_python() {
 # The value comes from compass_pkg.project_settings, the one reader of the
 # project's settings file, so a script follows `compass.yml` as the CLI does
 # and no script parses a settings file itself. In `compass.yml` KEY is read at
-# its documented path (multiagent.worktree_root, multiagent.max_worktrees,
-# project.test_command); in an old project's settings file it is found at any
+# its documented path (project.test_command; multiagent.worktree_root and
+# multiagent.max_worktrees, which 9.0.0 no longer reads, ADR-090); in an old
+# project's settings file it is found at any
 # depth. A key that is absent or empty gives DEFAULT. A settings file that
 # cannot be read returns 1 with the reason on stderr, and the caller must stop:
 # a default in its place would be a silent cap or a skipped regression run.

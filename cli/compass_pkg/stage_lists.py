@@ -12,14 +12,14 @@ configuration has no rows.
 Which list is due. `compass next` names the current stage. The entry list of a
 stage is due once the stage is current or behind the issue, and its exit list
 once the stage is behind it. A landed issue has every list due. A list that is
-not due is still reported, so the receipt can show it, but `compass check`
-counts only due rows.
+not due is still reported, but `compass check` counts only due rows.
 
 How a check is judged:
 
 - `human`: a record in the manifest, read by `item_records`: evidence that meets
   the check (`--meets`), a person's approval (`compass evidence approve
-  --check`), or a follow-up that defers it (`--defers`). A tick on a page counts
+  --check`), or a follow-up that defers it (`--defers`; on a path issue only one
+  that links to a GitHub issue with `--github`). A tick on a page counts
   for nothing; the page is never read. A check that lists `approvers:` needs a
   current approval by one of them, which `compass_pkg.approval_records` judges,
   and a deferral does not excuse it. A check whose document the routed approach
@@ -41,10 +41,21 @@ not run.
 
 An advisory check, by `severity` or by a `blocking_when` that does not match
 the assessment, reports a failure as a pass that says so.
+
+A path issue (ADR-092). It runs assess, specify, build and ship and has no
+stage modes, so no list of it is skipped. Its lists are the configuration's
+lists of those four stages. A configuration that still declares the legacy
+stages has its lists moved onto the path (`path_lists`): each legacy stage's
+lists go to the path stage that shows it, except the `verify` exit list, the
+Definition of Done, which is the build exit list. A path issue owes no
+Definition of Ready, so no `dor-*` check is listed for it. It owes the
+Definition of Done only when `evidence_required` lists `definition-of-done`.
+An issue assessed before 9.0.0 keeps its legacy lists exactly.
 """
 # DEPENDENCY: standard library (dataclasses, os); compass_pkg.check_registry,
 # compass_pkg.check_results, compass_pkg.core, compass_pkg.item_records,
-# compass_pkg.next_cmd, compass_pkg.review_records.
+# compass_pkg.next_cmd, compass_pkg.path_readers, compass_pkg.path_stages,
+# compass_pkg.review_records, compass_pkg.word_map.
 # It reads configuration through an EffectiveView and does not import
 # compass_pkg.obligations, which only classify, effective and replay may import.
 from __future__ import annotations
@@ -56,6 +67,11 @@ from compass_pkg import item_records, review_records
 from compass_pkg.check_registry import CHECK_FNS
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, OMITTED, resolve_artifact, unregistered_document
+from compass_pkg.path_readers import READY_PREFIX
+from compass_pkg.path_readers import owes as path_owes
+from compass_pkg.path_stages import is_path_issue, path_stage_of, stages_of
+from compass_pkg.stable_ids import (APPROACH_DELIVERY, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH,
+                                    PATH_STAGE_IDS, STAGE_BUILD, STAGE_REFINE, STAGE_VERIFY)
 
 CAPABILITY = "entry-exit-evaluation"
 SIDES = ("entry", "exit")
@@ -122,8 +138,8 @@ class _Documents:
 def _tick(check_id, check, stage, side, documents, task, owes):
     """`(status, detail)` of a human check, or None when its document is
     recorded as omitted (the check is skipped). `owes` is `(approach, kinds)`,
-    the document kinds the routed approach lists among its artifacts, or None
-    when the approach is not known. The records of the manifest decide; the
+    the checklist documents the approach owes (`owes`), or None when the
+    approach is not known. The records of the manifest decide; the
     document is not read."""
     state = documents.state(side)
     if state == "omitted":
@@ -138,7 +154,7 @@ def _tick(check_id, check, stage, side, documents, task, owes):
         return approval_records.judge(check_id, check, task, documents.task_dir)
     recorded, ids = item_records.state_of(task, check_id, item_records.accepted_types())
     if recorded == item_records.OPEN:
-        return "fail", f"not recorded: {item_records.open_hint(check_id)}"
+        return "fail", f"not recorded: {item_records.open_hint(check_id, task)}"
     shown = ", ".join(ids)
     return "pass", {
         item_records.MET_EVIDENCE: f"met by {shown}",
@@ -146,6 +162,7 @@ def _tick(check_id, check, stage, side, documents, task, owes):
         item_records.CARRIED: f"carried to ship, {shown}",
         item_records.MET_CARRIED: f"met, {shown} resolved",
         item_records.PAGE_TICK: f"ticked on the page before 7.0.0 ({shown})",
+        item_records.LINKED: f"carried to a GitHub issue, {shown}",
     }[recorded]
 
 
@@ -184,14 +201,79 @@ def _severity(view, check, reading):
 def positions(view, task, task_dir):
     """`(order, reached)`: the stage names in order, and how many stages the
     issue has reached (the index of the current stage). A closed issue, or a
-    current stage no list knows, has reached them all."""
+    current stage no list knows, has reached them all. A path issue's stages are
+    the path's, and a legacy stage name for its current stage reads as the path
+    stage that shows it."""
     from compass_pkg import status_words
     from compass_pkg.next_cmd import _current_phase_from_task
-    order = list(view.stage_order())
+    path = is_path_issue(task)
+    order = list(stages_of(task)) if path else list(view.stage_order())
     if status_words.is_closed(task):
         return order, len(order)
     current = _current_phase_from_task(task, task_dir)
+    if path:
+        current = path_stage_of(current)
     return order, (order.index(current) if current in order else len(order))
+
+
+def path_lists(stages):
+    """`{path stage: {side: [check ids]}}` of a path issue, from a configuration's
+    `stages` map. A configuration that declares a `verify` stage is a legacy one:
+    each of its lists goes to the path stage that shows the stage, and the `verify`
+    exit list (the Definition of Done) goes to build's exit. Any other
+    configuration is read at the path stages as it stands. No `dor-*` check is
+    kept: a path issue has no Definition of Ready."""
+    stages = stages if isinstance(stages, dict) else {}
+    out = {stage: {side: [] for side in SIDES} for stage in PATH_STAGE_IDS}
+    if STAGE_VERIFY in stages:
+        ordered = sorted(stages.items(), key=lambda item: (item[1] or {}).get("order", 0)
+                         if isinstance(item[1], dict) else 0)
+        moves = []
+        for stage, body in ordered:
+            for side in SIDES:
+                target = (STAGE_BUILD if (stage, side) == (STAGE_VERIFY, "exit")
+                          else path_stage_of(stage))
+                moves.append((target, side, body))
+    else:
+        moves = [(stage, side, stages.get(stage)) for stage in PATH_STAGE_IDS
+                 for side in SIDES]
+    for target, side, body in moves:
+        if target not in out or not isinstance(body, dict):
+            continue
+        kept = out[target][side]
+        for check_id in body.get(side) or []:
+            if not str(check_id).startswith(READY_PREFIX) and check_id not in kept:
+                kept.append(check_id)
+    return out
+
+
+#: The stage modes that owe each checklist document when an approach declares no
+#: `artifacts:` map (ADR-091): the same approaches as the shipped maps before 9.0.0.
+_OWING_MODES = {"requirements-review": (STAGE_REFINE, (DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH)),
+                "verification-report": (STAGE_VERIFY, (DEPTH_THOROUGH,))}
+
+
+def owed_by_stages(modes):
+    """The checklist documents an issue's stage modes owe: the requirements review (the
+    Definition of Ready) where refine is lightweight or thorough, the verification report
+    (the Definition of Done) where the `verify` stage is thorough. A mode stored in a
+    retired word (`light`, `full`), as a manifest written before the rename holds, is
+    read as its current word."""
+    from compass_pkg import word_map
+    modes = modes if isinstance(modes, dict) else {}
+    renamed = word_map.tables().get("stage_mode") or {}
+    return {kind for kind, (stage, owing) in _OWING_MODES.items()
+            if renamed.get(modes.get(stage), modes.get(stage)) in owing}
+
+
+def owes(approach_name, approach, modes):
+    """`(approach, kinds)`: the checklist documents the approach owes. A configuration that
+    declares the approach's `artifacts:` map, as a stored generation
+    does, is read as before; one with no map owes by the issue's stage modes, or the
+    approach's own when the issue records none."""
+    if "artifacts" in approach:
+        return approach_name, set(approach.get("artifacts") or {})
+    return approach_name, owed_by_stages(modes or approach.get("stages"))
 
 
 def evaluate(view, task, task_dir, run=True):
@@ -200,18 +282,28 @@ def evaluate(view, task, task_dir, run=True):
     says `requires: [entry-exit-evaluation]` (the shipped Definition of Ready
     and Done) is active only where the capability is on; a check a project adds
     runs whatever the capability. With `run` false a deterministic check is not
-    run and its row is `pending`: the receipt reads the record and never
-    re-runs a check."""
+    run and its row is `pending`, so a reader of the record never re-runs a
+    check."""
     if view is None:
         return []
     config = view.config
     approach_name = task.get("delivery_approach")
     approach = (config.get("approaches") or {}).get(approach_name)
-    owes = (None if approach is None
-            else (approach_name, set(approach.get("artifacts") or {})))
     checks = config.get("checks") or {}
     stages = config.get("stages") or {}
     modes = task.get("stages") if isinstance(task.get("stages"), dict) else {}
+    # An issue assessed before 9.0.0 names an approach the shipped default no longer
+    # declares (ADR-092); it owes by its own stage modes, as it did before.
+    if approach is None and modes and not is_path_issue(task):
+        approach = {}
+    owes_now = None if approach is None else owes(approach_name, approach, modes)
+    if is_path_issue(task):
+        # A path issue has no modes and no approach in the catalogue: what it owes is
+        # its `evidence_required`, and its lists are moved onto the path stages.
+        stages, modes = path_lists(stages), {}
+        owes_now = (f"this {APPROACH_DELIVERY} issue",
+                    {"verification-report"} if path_owes(task, "definition-of-done")
+                    else set())
     reading = view.listing_assessment(task.get("assessment") or {},
                                       task.get("delivery_approach"))
     capabilities = {name for name, on in view.capabilities.items() if on}
@@ -239,7 +331,7 @@ def evaluate(view, task, task_dir, run=True):
                 kind = check.get("kind")
                 status, detail, settled = _outcome(
                     check_id, check, kind, side, stage, producer, modes, task, task_dir,
-                    documents, due, run, owes)
+                    documents, due, run, owes_now)
                 if status != "pending":
                     status, detail = _apply(view, check, status, detail, settled, reading)
                 rows.append(Row(stage, side, check_id, status, detail, due, severity))

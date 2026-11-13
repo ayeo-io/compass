@@ -29,16 +29,14 @@ import yaml
 
 import re as _re
 import fnmatch
-from compass_pkg import model_tiers
-from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCHEMA_VERSION, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, shape_stages
-from compass_pkg.governance import governance_drift
-from compass_pkg import retired, word_map
+from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCHEMA_VERSION, CompassError, canonical_shape, display_shape, display_stage, load_manifest, reading_matches, resolve_issue_dir, shape_stages
+from compass_pkg import retired
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
-                                    ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH, MODE_LIGHTWEIGHT,
-                                    MODE_THOROUGH)
+                                    ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH,
+                                    GATE_VERIFY_ANALYZE, MODE_LIGHTWEIGHT, MODE_THOROUGH,
+                                    STAGE_IMPLEMENT, STAGE_VERIFY)
 from compass_pkg.render import fired_rule_line
 from compass_pkg.manifest import annotate_gate_accepts_text
-from compass_pkg.readiness_floor import FLOOR_REFUSED, _readiness_floor
 
 
 
@@ -67,6 +65,18 @@ def _display_blocked_phase(phase):
 #: The text a rule's `changed` list holds for a gate it adds. The writer formats it and
 #: `gates_added_by` parses it, so the gate-set block cannot disagree with the evaluator.
 GATE_ADDED = "gate '{gate}' added to the approach's gate set"
+
+
+#: The framework-owned table of removed review gates, each with the release that
+#: removed it. A stored generation or copied governance can still
+#: name one; it owes nothing, as a removed check owes nothing
+#: (`check_registry.REMOVED`). The evaluator leaves it out of the gate set, so a new
+#: issue never gets a gate that nothing can clear, and a rule whose only effect was
+#: to add it does not fire. `verify.analyze` accepted only the evidence
+#: `compass analyze` wrote, and 9.0.0 removes that command (ADR-091). Stored 8.x
+#: generations still hold `RP-REQUIRE-001` and `RP-REQUIRE-002`, which add it.
+REMOVED_GATES = {GATE_VERIFY_ANALYZE: "9.0.0"}
+
 _GATE_ADDED_RE = re.compile("^" + re.escape(GATE_ADDED).replace(r"\{gate\}", "(.+?)") + "$")
 
 
@@ -83,19 +93,13 @@ def gates_added_by(fired):
     return found
 
 
-def policy_line(view, policy_file=None, policy=None):
-    """Which policy computed an approach, in one line. `approach evaluate --verbose` and
-    the delivery-approach record's policy-rules block both print it. `policy_file` is
-    the path of a project's own policy file when the approach was read from one."""
-    if policy_file:
-        version = (policy or {}).get("version", "unknown")
-        return f"{policy_file} (v{version})"
-    if view is not None and view.source == "generation":
+def policy_line(view):
+    """Which policy computed an approach, in one line. `approach evaluate --verbose`
+    prints it."""
+    if view.source == "generation":
         return (f"generation {view.generation} of this issue "
                 f"(parent {view.parent_version() or 'unknown'})")
-    if view is None:
-        return "this project's governance files"
-    return "this project's effective configuration (compass.yml over the shipped default)"
+    return "this project's effective configuration (the check set, tightened by compass.yml)"
 
 
 def canonical_routes(policy):
@@ -194,22 +198,32 @@ def prepare_policy(policy):
     """The `PreparedPolicy` of `policy`. A policy that names one route twice
     raises here, as `evaluate_route` has always raised it first."""
     from compass_pkg.policy import checkpoint_table_errors
-    # A policy copied before the depth words and the size were renamed is
-    # read as the new words, so it routes as it did.
-    view, renamed = canonical_view(word_map.map_policy(policy))
+    # The policy is built from the check set or from a stored generation,
+    # which `generation.load` has already read in the new words, so no old
+    # depth or size word reaches it (ADR-098).
+    view, renamed = canonical_view(policy)
     vocab = {_VOCABULARY_KEYS.get(k, k): v
              for k, v in (view.get("assessment_vocabulary")
                           or view.get("reading_vocabulary") or {}).items()}
     return PreparedPolicy(view, renamed, vocab, checkpoint_table_errors(view))
 
 
-def route_checkpoints(prepared, stages, approach, autonomy):
+#: The checkpoints that end stages 2 and 3 of the four-layer acceptance strategy.
+STRATEGY_CHECKPOINTS = (STAGE_IMPLEMENT, STAGE_VERIFY)
+
+
+def route_checkpoints(prepared, stages, approach, autonomy, strategy_applies=False):
     """The hand-offs that wait for a person under `autonomy`, for an approach
     whose stages are `stages`. Only this depends on the autonomy, so a caller
-    that needs every autonomy value routes once and asks for the rest here."""
+    that needs every autonomy value routes once and asks for the rest here.
+    `implement` and `verify` end the stage 2 and 3 reviews of strategy `S17`, so
+    they are listed only with `strategy_applies`: an issue the strategy applies
+    to. An evaluation with no issue, and every obligation, leaves them out
+    (ADR-083)."""
     from compass_pkg.policy import CHECKPOINT_STAGES
     runs = [s for s in CHECKPOINT_STAGES
-            if stages.get(s) not in (None, "collapsed", "skipped")]
+            if stages.get(s) not in (None, "collapsed", "skipped")
+            and (strategy_applies or s not in STRATEGY_CHECKPOINTS)]
     table = prepared.view.get("autonomy_checkpoints")
     row = {canonical_shape(k): v
            for k, v in ((table or {}).get(autonomy) or {}).items()}
@@ -356,7 +370,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
             never_skip.update(fl["never_skip"])
             changed.append("never-skip: " + ", ".join(
                 display_stage(s) for s in fl["never_skip"]))
-        if fl.get("add_gate"):
+        if fl.get("add_gate") and fl["add_gate"] not in REMOVED_GATES:
             floor_gates.append(fl["add_gate"])
             changed.append(GATE_ADDED.format(gate=fl["add_gate"]))
         if fl.get("add_artifact"):
@@ -432,7 +446,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
                                    "until": rr.get("until", "")})
             changed.append(f"stage '{_display_blocked_phase(rr['block_phase'])}' "
                            f"blocked until: {rr.get('until', '')}")
-        if rr.get("gate"):
+        if rr.get("gate") and rr["gate"] not in REMOVED_GATES:
             document_gates.append(rr["gate"])
             changed.append(GATE_ADDED.format(gate=rr["gate"]))
         if changed:
@@ -463,13 +477,13 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     for p in (never_skip | required_phases):
         if _below_thorough(p, phases.get(p), policy.get("stage_mode_ranks")):
             phases[p] = MODE_THOROUGH
-    gates = list(shape.get("gates", []))
+    gates = [g for g in shape.get("gates", []) if g not in REMOVED_GATES]
     # Immovable gates and rule-added gates apply to delivery approaches only. Spike
     # ships nothing - it carries only its own Conclude gate, by design. (A
     # spike that needs a delivery gate is not a spike; it graduates.)
     if final != APPROACH_SPIKE:
         for ig in guardrails.get("immovable_gates", []):
-            if ig.get("gate") and ig["gate"] not in gates:
+            if ig.get("gate") and ig["gate"] not in gates and ig["gate"] not in REMOVED_GATES:
                 gates.append(ig["gate"])
         for rg_gate in document_gates:  # gates a document rule adds (verify.claims)
             if rg_gate not in gates:
@@ -592,7 +606,6 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
         "max_worktrees": max_worktrees,
         "applicable_strategies": applicable_strategies,
         "checkpoints": checkpoints,
-        "models": model_tiers.evaluate(policy.get("model_rules"), matches, phases),
     }
     if issue:
         result["issue_overrides"] = {"applied": applied, "ignored": ignored}
@@ -604,8 +617,9 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
 def cmd_approach_summary(args):
     """`compass approach show`: the three lines a person reads before
     any code - the approach and the assessment behind it, the gates it must
-    pass, and where the issue's files go. `/compass:go` prints this as its
-    decision view, so it stays exactly three lines."""
+    pass (on a path issue, the evidence it owes), and where the issue's files
+    go. `/compass:go` prints this as its decision view, so it stays exactly
+    three lines."""
     from compass_pkg.core import docs_dir
 
     task_dir = resolve_issue_dir(args.task)
@@ -624,42 +638,43 @@ def cmd_approach_summary(args):
         waits = " - does not stop to wait for you"
     print(f"Approach: {display_shape(task.get('delivery_approach'))}"
           + (f" ({readings})" if readings else "") + waits)
-    print("Gates: " + (", ".join(gates) if gates else "none"))
+    from compass_pkg import path_writer
+    from compass_pkg.path_stages import is_path_issue
+    # A path issue owes evidence, and its gates are derived from it (ADR-092).
+    print(path_writer.evidence_line(task) if is_path_issue(task)
+          else "Gates: " + (", ".join(gates) if gates else "none"))
     print(f"Writes: .compass/work/{slug}/ and {docs_dir(task_dir)}/")
-    # The three lines stay three for a project that departs from nothing. One
-    # that unlocks a framework entry is reported on every run (ADR-039).
-    # A git parent adds one line with its state, read from the cache alone.
-    from compass_pkg import locks, parent_states
-    from compass_pkg.layers import find_project_root
-    project = find_project_root(task_dir)
-    for line in locks.conformance_lines(project) + parent_states.summary_lines(project):
-        print(line)
+    # No conformance or parent line: no lock exists to unlock and a git parent
+    # is refused (ADR-094).
     return 0
 
 
 # --- command: approach evaluate -----------------------------------------------
 
-def read_size(dimension, value):
-    """A size given on the command line, read through the retired-word table:
-    the old word evaluates as the new one and the notice goes to standard
-    error, so the output stays the new command's. A dimension other than
-    `size` comes back unchanged."""
-    new = word_map.tables()["size"].get(value) if dimension == "size" else None
-    if new is None:
-        return value
-    print(f"compass: size {value} is now {new}; the old word is read until 9.0.0.",
-          file=sys.stderr)
-    return new
+def _acceptance_block(task, task_dir, resolution, result, args, evaluated_before,
+                      resolved=None):
+    """The manifest's `acceptance_strategy` block a write stores, or None to
+    leave the manifest as it is, as `cmd_route_evaluate` explains where it
+    stores it. With no `resolution` (no --write) it previews from `resolved`."""
+    from compass_pkg import acceptance_strategy
+    from compass_pkg.project_settings import find_project_root
+    held = acceptance_strategy.stored(task)
+    if evaluated_before and held is None:
+        return None
+    resolved = resolution.resolved if resolution is not None else resolved
+    if not acceptance_strategy.declared(resolved):
+        return None
+    expected = getattr(args, "expected_acceptance", None) or (
+        held or {}).get("expected_acceptance") or "none"
+    return acceptance_strategy.block(
+        find_project_root(task_dir), resolved, result["delivery_approach"], expected)
 
 
 def cmd_route_evaluate(args):
     task = None
     task_path = None
-    plan = None
+    resolution = None
     task_dir = None
-    if getattr(args, "offline", False):
-        # Every resolution in this run reads `parents.offline()`.
-        os.environ["COMPASS_OFFLINE"] = "1"
     if args.reading and getattr(args, "write", False):
         # Refused before anything prints: a refusal that follows a printed
         # result reads as a result that was written.
@@ -675,21 +690,12 @@ def cmd_route_evaluate(args):
             if k in ("labels", "artifacts"):
                 readings[k] = [t.strip() for t in v.split(",") if t.strip()]
             else:
-                readings[k] = read_size(k, v.strip())
+                # A typed value takes the 9.0.0 word only: an old size such as
+                # `standard` fails as any unknown value does (ADR-098).
+                readings[k] = v.strip()
     else:
         task_dir = resolve_issue_dir(args.task)
         task, task_path = load_manifest(task_dir)
-        if getattr(args, "write", False):
-            # The slug reaches the living spec at ship, as a title does.
-            from compass_pkg.manifest import slug_problem
-            slug = os.path.basename(os.path.normpath(task_dir))
-            root = os.path.dirname(os.path.dirname(os.path.dirname(
-                os.path.normpath(task_dir))))
-            problem = slug_problem(root, slug)
-            if problem:
-                raise CompassError(
-                    f"compass approach evaluate: issue slug '{slug}' refused: "
-                    f"{problem}")
         readings = task.get("assessment")
         if not readings:
             raise CompassError(
@@ -701,42 +707,29 @@ def cmd_route_evaluate(args):
         key_errors = assessment_key_errors(readings)
         if key_errors:
             raise CompassError(f"{task_path}: " + "; ".join(key_errors))
-        # The proposal, the waiver re-check and the flags are settled before
-        # anything prints, so a refusal never follows a printed result.
+        # An unreadable strategy setting is refused before anything prints, with
+        # a message that names the key, the file and the accepted values.
+        from compass_pkg import acceptance_strategy
+        from compass_pkg.project_settings import find_project_root
+        acceptance_strategy.setting(find_project_root(task_dir))
+        # The configuration a write commits is resolved, and what its commit
+        # would refuse is refused, before anything prints, so a refusal never
+        # follows a printed result.
         if getattr(args, "write", False):
-            from compass_pkg import issue_config_cmd
-            plan = issue_config_cmd.reassess_plan(task, task_dir, args)
-    if plan is None and (getattr(args, "reset_config", False)
-                         or getattr(args, "adopt", None) is not None):
-        flag = "--reset-config" if getattr(args, "reset_config", False) else "--commit"
-        raise CompassError(f"{flag} needs --write and an issue: it works inside the "
-                           f"reassess that commits the next generation")
+            from compass_pkg import effective
+            resolution = effective.reassess_resolution(task_dir, task)
 
     # The configuration the approach is computed from. An issue with a
     # generation is judged by it. `--write` commits the configuration as it is
-    # now, so it computes from that. Only an issue with no generation, in a
-    # project with no `compass.yml`, reads the governance files.
+    # now, so it computes from that.
     from compass_pkg import effective
-    view = effective.view_or_legacy(task_dir, live=bool(args.write))
-    if plan is not None and view is not None:
-        # The reassess plan holds the configuration this write will commit:
-        # the proposal applied, or `config:` dropped, and a stale waiver left out.
-        view = effective.EffectiveView("live", view.issue, None, plan.resolution.resolved,
-                                       plan.resolution.versions, plan.resolution.provenance)
-    if view is None:
-        gov = find_governance()
-        policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
-        from compass_pkg.core import load_autonomy
-        autonomy = load_autonomy()
-    else:
-        gov = None
-        policy = view.evaluator_policy()
-        autonomy = view.autonomy
-    # The readiness floor is settled here, before anything prints, as the
-    # refusals above are: an autonomous issue below it is refused at --write.
-    readiness = _readiness_floor(task_dir, task, autonomy)
-    if args.write and readiness is not None and readiness["would_refuse"]:
-        raise CompassError(readiness["would_refuse"])
+    view = effective.effective_for(task_dir, live=bool(args.write))
+    if resolution is not None:
+        # The configuration this write will commit, resolved once above.
+        view = effective.EffectiveView("live", view.issue, None, resolution.resolved,
+                                       resolution.versions, resolution.provenance)
+    policy = view.evaluator_policy()
+    autonomy = view.autonomy
     # The justifications are settled before anything prints or is written, so a
     # refusal leaves the manifest, the generations and the documents as they were.
     recorded_reasons = None
@@ -744,23 +737,40 @@ def cmd_route_evaluate(args):
         from compass_pkg import justifications
         recorded_reasons, missing = justifications.merge(
             task, readings, justifications.parse(getattr(args, "justify", None)), view)
-        if missing:
+        # `compass migrate` (#359) writes the assessment the 8.x issue already
+        # holds: no value is new or changed by a person, so none owes a line. An
+        # 8.x manifest written before `evaluated_assessment` would otherwise read
+        # every value as new.
+        if missing and getattr(args, "migration", None) is None:
             raise CompassError(justifications.refusal(missing))
-    # The drift report compares a project's copy of the policy with the
-    # framework's. A configuration resolved over such a copy still gets it.
-    drift_gov = gov
-    if view is not None and view.from_governance_copy():
-        drift_gov = find_governance()
     # The issue's own layer applies before the floors, caps and document rules, as
     # `obligations` applies it for the classifier.
-    # The documents on disk are read now, beside the assessment and never into it.
-    from compass_pkg import documents_present
     for dim in retired.DIMENSIONS:      # a 6.x manifest's role, which a 7.0.0 policy drops
         if dim in readings and dim not in (policy.get("assessment_vocabulary") or {}):
             sys.stderr.write(retired.notice(f"assessment.{dim}") + "\n")
-    result = evaluate_route(documents_present.with_presence(readings, task_dir, policy),
-                            policy, autonomy,
-                            issue=view.evaluator_issue() if view is not None else None)
+    prepared = prepare_policy(policy)
+    result = evaluate_route(readings, prepared, autonomy,
+                            issue=view.evaluator_issue())
+    # The block the write stores, and the stage 2 and 3 reviews listed only
+    # where the strategy applies to the issue (ADR-083).
+    strategy = None
+    if task is not None:
+        strategy = _acceptance_block(
+            task, task_dir, resolution, result, args,
+            bool(task.get("delivery_approach")) or bool(task.get("evaluated_assessment")),
+            resolved=None if args.write else view.resolved)
+        if (strategy or acceptance_strategy.stored(task) or {}).get("applies"):
+            result["checkpoints"] = route_checkpoints(
+                prepared, result["stages"], result["delivery_approach"], autonomy,
+                strategy_applies=True)
+    # A delivery assessment owes evidence, not an approach (ADR-092). A spike
+    # keeps the keys above (`path_writer.evaluate` gives None).
+    from compass_pkg import path_writer
+    resolved = resolution.resolved if resolution is not None else view.resolved
+    path = path_writer.evaluate(readings, prepared.view, autonomy, result,
+                                path_writer.strategy_inputs(
+                                    task, task_dir, resolved,
+                                    getattr(args, "expected_acceptance", None)))
     if result.get("renamed_routes"):
         sys.stderr.write(
             "compass: governance/routing-policy.yml uses old approach names ("
@@ -777,10 +787,12 @@ def cmd_route_evaluate(args):
     # "unconverted verb" envelope.
     mark_handled()
     _mode = resolve_mode(args)
-    if readiness is not None:
-        result["readiness"] = readiness
+    # A spike keeps its stage map but, like a path issue, no subtask ceiling
+    # (ADR-092 decision 11).
+    shown = (path_writer.shown(result, path) if path is not None else
+             {k: v for k, v in result.items() if k not in path_writer.NOT_WRITTEN})
     if _mode == "json":
-        print(json.dumps(result, indent=2))
+        print(json.dumps(shown, indent=2))
     elif _mode != "verbose":
         # The default view. Everything below this branch is what --verbose
         # still prints, unchanged: the provenance line, the raw assessment,
@@ -788,25 +800,12 @@ def cmd_route_evaluate(args):
         # and a person deciding whether the approach looks right does not need
         # all of it on the first screen - they need the approach, the rules
         # that produced it, and where it was written.
-        _fired = [fired_rule_line(f) for f in result["policy_rules_fired"]]
-        _ceiling = result["subtask_ceiling"]
+        _fired = [fired_rule_line(f) for f in shown["policy_rules_fired"]]
         _concerns = []
-        # Policy drift is a CONCERN, not provenance. The plain "which policy
-        # file did I read" line is detail and lives under --verbose, but a
-        # project running a policy that is missing rules the framework ships
-        # gets a lighter approach than it should - and a reader has no way to
-        # tell that from a genuinely light one. It belongs on the first screen.
-        _drift = governance_drift(drift_gov) if drift_gov else None
-        if _drift is not None and _drift.drifted:
-            _fw = _drift.framework_versions.get("routing-policy.yml", "unknown")
-            _concerns.append(
-                "this project's policy is missing %d rule(s) or check(s) that "
-                "framework v%s ships - run `compass policy lint`"
-                % (_drift.count, _fw))
-        if result["blocked_phases"]:
-            _concerns += ["%s is blocked until %s" % (
-                              _display_blocked_phase(b["phase"]), b["until"])
-                          for b in result["blocked_phases"]]
+        # A path issue has no stage to block (`path_writer.shown` leaves the key out).
+        _concerns += ["%s is blocked until %s" % (
+                          _display_blocked_phase(b["phase"]), b["until"])
+                      for b in shown.get("blocked_phases") or []]
         if result["required_artifacts"]:
             _concerns.append("documents required: "
                              + ", ".join(result["required_artifacts"]))
@@ -814,19 +813,14 @@ def cmd_route_evaluate(args):
         _g5_prompt = g5_label_prompt.prompt(view, readings)
         if _g5_prompt:
             _concerns.append(_g5_prompt)
-        if readiness is not None and autonomy == "autonomous":
-            _concerns.append(
-                "evaluate --write would be refused: "
-                + readiness["would_refuse"][len(FLOOR_REFUSED):].splitlines()[0]
-                if readiness["would_refuse"] else "readiness floor met")
         _e = Emitter(mode=_mode,
                      evidence_out=getattr(args, "evidence_out", None))
         _e.hand_off(
-            outcome="%s - %d gate(s), %s"
-                    % (display_shape(result["delivery_approach"]),
-                       len(result["gates"]),
-                       "unbounded parallel subtasks" if _ceiling is None
-                       else "up to %d parallel subtask(s)" % _ceiling),
+            outcome="%s - %d gate(s)%s"
+                    % (display_shape(shown["delivery_approach"]),
+                       len(shown["gates"]),
+                       ", %d kinds of evidence owed" % len(path["evidence_required"])
+                       if path else ""),
             # Only if it is actually there. `delivery-approach.md` is written
             # by the assess command, not the evaluator, so do not point the
             # reader at it before it exists.
@@ -844,26 +838,22 @@ def cmd_route_evaluate(args):
         # but not which policy file produced them, so print the policy
         # first, so a reader can tell a genuinely light route from a
         # stale-governance one.
-        _policy_file = os.path.join(gov, "routing-policy.yml") if gov else None
-        print(f"  policy          : {policy_line(view, _policy_file, policy)}")
-        drift = governance_drift(drift_gov) if drift_gov else None
-        if drift is None:
-            pass
-        elif drift.drifted:
-            fw = drift.framework_versions.get("routing-policy.yml", "unknown")
-            print(f"  POLICY DRIFT    : this policy is missing {drift.count} "
-                  f"rule(s)/check(s) that framework v{fw} ships - "
-                  f"run `compass policy lint` for the list")
-        elif not drift.comparable:
-            print(f"  policy drift    : not compared ({drift.reason})")
+        print(f"  policy          : {policy_line(view)}")
         print(f"  assessment      : {json.dumps(readings)}")
-        print(f"  first approach  : {display_shape(result['candidate_route'])}  "
-              f"<- {result['candidate_via']}")
-        print(f"  FINAL APPROACH  : {display_shape(result['delivery_approach'])}")
-        if result["policy_rules_fired"]:
+        if path:
+            # The path has no candidate approach to raise: the evidence row that
+            # matched the assessment decides what is owed (ADR-092).
+            print(f"  evidence row    : {path_writer.row_of(path)}")
+        else:
+            print(f"  first approach  : {display_shape(result['candidate_route'])}  "
+                  f"<- {result['candidate_via']}")
+        print(f"  FINAL APPROACH  : {display_shape(shown['delivery_approach'])}")
+        if path:
+            print(f"  evidence owed   : {', '.join(path['evidence_required'])}")
+        if shown["policy_rules_fired"]:
             print("  policy rules fired:")
             seen_effects = set()
-            for f in result["policy_rules_fired"]:
+            for f in shown["policy_rules_fired"]:
                 # Meaning first, code in brackets: a bare id must not open
                 # the first screen a new user sees. Keep the kind: it says
                 # whether the rule raised the whole approach or only
@@ -876,23 +866,18 @@ def cmd_route_evaluate(args):
                     print(f"        - {c}")
         else:
             print("  policy rules fired: none")
-        ceiling = result["subtask_ceiling"]
-        permits = ("unbounded by policy" if ceiling is None
-                   else f"up to {ceiling}")
-        print(f"  parallel subtasks: {permits} (a ceiling - breakdown sets "
-              f"the orchestration once the distribution map exists)")
-        print("  per-stage weight:")
-        for p, w in result["stages"].items():
-            print(f"    {display_stage(p):<11}: {w}")
-        print(f"  gate set        : {', '.join(result['gates'])}")
+        if not path:
+            print("  per-stage weight:")
+            for p, w in result["stages"].items():
+                print(f"    {display_stage(p):<11}: {w}")
+        print(f"  gate set        : {', '.join(shown['gates'])}")
         if result["required_artifacts"]:
             print(f"  required artifacts: {', '.join(result['required_artifacts'])}")
         if result["required_skills"]:
             print(f"  required skills : {', '.join(result['required_skills'])}")
-        if result["blocked_phases"]:
-            for b in result["blocked_phases"]:
-                print(f"  BLOCKED phase   : {_display_blocked_phase(b['phase'])} "
-                      f"until {b['until']}")
+        for b in shown.get("blocked_phases") or []:
+            print(f"  BLOCKED phase   : {_display_blocked_phase(b['phase'])} "
+                  f"until {b['until']}")
         if result.get("applicable_strategies"):
             print("  advisory strategies (soft - assessed, never gating):")
             for s in result["applicable_strategies"]:
@@ -915,13 +900,13 @@ def cmd_route_evaluate(args):
         #
         # Without this, a corrected assessment that leaves the approach
         # unchanged would not be logged, and that correction is the cheapest
-        # evidence there is that sizing was wrong, which is exactly what
-        # `compass retro` aggregates.
+        # evidence there is that sizing was wrong.
         prior = {
             "assessment": task.get("evaluated_assessment"),
             "delivery_approach": task.get("delivery_approach"),
             "stages": task.get("stages"),
             "subtask_ceiling": task.get("subtask_ceiling"),
+            "evidence_required": task.get("evidence_required"),
             "gates": sorted(g.get("id") for g in (task.get("gates") or [])
                             if isinstance(g, dict)),
             "policy_rules_fired": sorted(
@@ -930,12 +915,13 @@ def cmd_route_evaluate(args):
         }
         now = {
             "assessment": task.get("assessment"),
-            "delivery_approach": result["delivery_approach"],
-            "stages": result["stages"],
-            "subtask_ceiling": result.get("subtask_ceiling"),
-            "gates": sorted(result.get("gates") or []),
+            "delivery_approach": shown["delivery_approach"],
+            "stages": shown.get("stages"),
+            "subtask_ceiling": shown.get("subtask_ceiling"),
+            "evidence_required": shown.get("evidence_required"),
+            "gates": sorted(shown.get("gates") or []),
             "policy_rules_fired": sorted(
-                f.get("id") for f in (result["policy_rules_fired"] or [])
+                f.get("id") for f in (shown["policy_rules_fired"] or [])
                 if isinstance(f, dict)),
         }
         # Only fields that were ALREADY recorded can have changed. An issue
@@ -951,18 +937,18 @@ def cmd_route_evaluate(args):
         reframed = evaluated_before and bool(changed)
         if reframed:
             reason = args.reason or "(reason not given - fill this in)"
-            # The kind keeps `compass retro` accurate. Logging a
+            # The kind keeps the log accurate. Logging a
             # governance-driven weight-up as a plain re-assessment would read
             # as assessment under-sizing the work - and it is not: the
             # assessment was right, the policy under it moved. Only
-            # `judgment` feeds the re-sizing aggregate.
+            # `judgment` says the work was misread.
             kind = getattr(args, "kind", None) or "judgment"
             if kind == "unchanged":
                 raise CompassError("kind `unchanged` is recorded by the CLI "
                                    "only when nothing changed.")
             task.setdefault("reassessments", []).append({
                 "from_route": prior["delivery_approach"],
-                "to_route": result["delivery_approach"],
+                "to_route": shown["delivery_approach"],
                 "kind": kind,
                 "changed": changed,
                 "reason": reason,
@@ -978,111 +964,65 @@ def cmd_route_evaluate(args):
         task["evaluated_assessment"] = dict(task.get("assessment") or {})
         if recorded_reasons:
             task["justifications"] = recorded_reasons
-        task["delivery_approach"] = result["delivery_approach"]
-        task["policy_rules_fired"] = result["policy_rules_fired"]
-        task["stages"] = result["stages"]
-        task["checkpoints"] = result["checkpoints"]
-        if result["models"]:        # set in place, so the key keeps its position
-            task["models"] = result["models"]
-        else:                        # no tier rules: agents use their frontmatter
-            task.pop("models", None)
+        task["delivery_approach"] = shown["delivery_approach"]
+        task["policy_rules_fired"] = shown["policy_rules_fired"]
+        if path is None:
+            # A spike is not on the four-stage path: it keeps its stage weights.
+            task["stages"] = result["stages"]
+        task["checkpoints"] = shown["checkpoints"]
+        # 9.0.0 computes no model tiers (ADR-090). A `models:` key an older
+        # assessment wrote is left as it is and nothing reads it.
         # An issue's first assessment makes it one whose hand-offs are recorded
         # (checkpoint_outcomes.py). A reassessment never adds the key, so an
         # issue assessed before outcomes existed is never judged by them.
         if not evaluated_before:
             task.setdefault("checkpoint_outcomes", [])
+        # The four-layer acceptance strategy's block follows the same rule: the
+        # first assessment adds it when the configuration it commits declares
+        # the strategy, and a reassessment replaces it but never adds it, so an
+        # issue assessed before the strategy shipped never gains it (ADR-006).
+        block = strategy if path is None else path["acceptance_strategy"]
+        if block is not None:
+            task["acceptance_strategy"] = block
         # seed the gate list (status pending) without clobbering existing state
         existing = {g.get("id"): g for g in task.get("gates", []) if isinstance(g, dict)}
         task["gates"] = [
             existing.get(gid, {"id": gid, "status": "pending", "evidence": []})
-            for gid in result["gates"]
+            for gid in shown["gates"]
         ]
-        # Seed the artifact registry the same way the gate list is seeded:
-        # what routing computed, without clobbering a status or path a stage
-        # has already recorded against an entry.
-        recorded = [a for a in task.get("artifacts", []) if isinstance(a, dict)]
-        # A kind that repeats has one entry per round, so the merge keys by kind and
-        # round: it keeps every round of an earned kind and never collapses them.
-        from compass_pkg import artifact_kinds
-        voluntary = artifact_kinds.voluntary(view)
-        merged = []
-        for a in result["artifacts"]:
-            keep = [r for r in recorded if r.get("kind") == a["kind"]]
-            if keep and not any(isinstance(r.get("round"), int) for r in keep):
-                keep = keep[-1:]
-            for kept in keep:
-                kept = dict(kept)
-                kept["reason"] = a["reason"]      # the rule that earned it
-                # A document registered before the write (an intent drafted so
-                # RP-ART-002 sees it) takes the depth the approach owes it.
-                kept.setdefault("depth", a["depth"])
-                merged.append(kept)
-            if not keep:
-                merged.append(a)
-        # A human-recorded omission of something routing no longer earns is
-        # kept: it is a decision someone took, not stale computed output.
-        # A document that was written (it has a path) stays too, as
-        # `superseded`, so the file keeps a record of why it is no longer owed.
-        # An entry with no path records no document and is dropped. A voluntary
-        # kind (no approach, rule or flag asks for it) is never superseded: a
-        # reassessment cannot unearn what it never earned.
-        earned = {m["kind"] for m in merged}
-        for a in recorded:
-            if a.get("kind") in earned:
-                continue
-            if a.get("status") == "omitted":
-                merged.append(a)
-            elif a.get("path") and a.get("kind") in voluntary:
-                merged.append(a)
-            elif a.get("path") and evaluated_before:
-                from compass_pkg import artifact_status
-                a = dict(a)
-                if a.get("status") != artifact_status.SUPERSEDED:
-                    a["status"] = artifact_status.SUPERSEDED
-                    a["reason"] = ("superseded by the re-assessment of %s, %s to %s" % (
-                        datetime.date.today().isoformat(),
-                        prior["delivery_approach"] or "an earlier approach",
-                        result["delivery_approach"]))
-                artifact_status.clear_approver(a)
-                merged.append(a)
-        task["artifacts"] = merged
+        # 9.0.0 registers no document (ADR-091). An `artifacts:` list an older release
+        # wrote stays as it is: nothing reads it but the path of an older spec.
         # make sure the evidence registry exists at the top level
         task.setdefault("evidence", [])
-        task["subtask_ceiling"] = result["subtask_ceiling"]
-        # The repository's readiness when this issue was assessed. It is not a
-        # generation outcome key, so a new measurement rewrites it here and
-        # never forces a new generation (ADR-060).
-        if readiness is not None:
-            task["readiness"] = {k: v for k, v in readiness.items() if k != "would_refuse"}
-        # Assess never records an orchestration: breakdown owns it, once the
-        # distribution map says whether independent subtasks exist.
-        task.pop("orchestration", None)
+        # Assess never records an orchestration: `path_writer.write` and the
+        # spike branch below each take it out. `compass migrate` (#359) passes a
+        # `migration` that keeps each key taken out under `legacy:`.
+        migration = getattr(args, "migration", None)
+        kept = None if migration is None else migration.kept
+        if path is not None:
+            path_writer.write(task, path, keep=kept)
+        else:
+            # A re-assess that turns a delivery issue into a spike takes it off
+            # the path, so no reader takes the spike for a path issue. A spike
+            # writes no subtask ceiling either (ADR-092 decision 11).
+            task.pop("evidence_required", None)
+            for key in path_writer.NOT_WRITTEN:
+                if kept is not None and key in task:
+                    kept[key] = task[key]
+                task.pop(key, None)
         # The manifest is replaced inside the commit, after the generation's
         # files are whole (ADR-036). A configuration that does not resolve
         # raises here, before any file is written.
         from compass_pkg import effective
 
-        # A reassess that changes only the issue's `config:` layer is logged
-        # with its own kind. `compass retro` ignores it: no one misread the work.
-        configuring = not reframed and plan.config_changed
-        if configuring:
-            task.setdefault("reassessments", []).append({
-                "from_route": prior["delivery_approach"] or result["delivery_approach"],
-                "to_route": result["delivery_approach"],
-                "kind": "configuration",
-                "changed": {"config": {"from": plan.config_digests[0],
-                                       "to": plan.config_digests[1]}},
-                "reason": args.reason or "(reason not given - fill this in)",
-                "date": datetime.date.today().isoformat(),
-            })
         # A reassess that changes nothing but is given a reason keeps the
-        # reason as evidence. `compass retro` and friction capture skip the
-        # `unchanged` kind: no one misread the work. Without a reason there is
+        # reason as evidence, under the `unchanged` kind: no one misread the
+        # work. Without a reason there is
         # nothing to keep, so nothing is written.
-        unchanged = (evaluated_before and not reframed and not configuring
+        unchanged = (evaluated_before and not reframed
                      and bool(getattr(args, "reason", None)))
         if unchanged:
-            route = result["delivery_approach"]
+            route = shown["delivery_approach"]
             task.setdefault("reassessments", []).append({
                 "from_route": prior["delivery_approach"] or route,
                 "to_route": route,
@@ -1094,35 +1034,36 @@ def cmd_route_evaluate(args):
 
         def stamp(mapping, old, new):
             # The entry says which generation the reassess moved from and to;
-            # both are the same number when nothing was committed. A change to
-            # the config: layer always commits, so a configuration entry never
-            # sees the same number twice.
-            if reframed or configuring or unchanged:
+            # both are the same number when nothing was committed.
+            if reframed or unchanged:
                 mapping["reassessments"][-1]["generation"] = {"from": old, "to": new}
+        # `compass migrate` adds the 8.x records it keeps, in the same write. Its
+        # dry run stops here, so nothing is written (#359).
+        if migration is not None:
+            migration.before_commit(task)
+            if not migration.apply:
+                return 0
         # The accepted-type comments are written in the same replace, under the lock.
         committed = effective.commit_generation(
-            task_dir, task, plan.invalidated, annotate_gate_accepts_text,
-            adopt=plan.adopt, proposal=plan.proposal, stamp=stamp,
-            resolution=plan.resolution)
-        print(f"\n  wrote the delivery approach, stages and gates -> {task_path}")
+            task_dir, task, None, annotate_gate_accepts_text, stamp=stamp,
+            resolution=resolution)
+        print(f"\n  wrote the {'evidence owed' if path else 'delivery approach, stages'} "
+              f"and gates -> {task_path}")
         print(f"  {committed.message}")
-        for note in plan.notes:
-            print(f"  {note}")
-        configured = configuring and committed.committed
+        if "acceptance_strategy" in task:
+            from compass_pkg import acceptance_strategy
+            print(f"  {acceptance_strategy.line(task)}")
         if unchanged:
             print(f"  RE-ASSESSMENT recorded (unchanged): the delivery approach "
                   f"stayed {task['reassessments'][-1]['to_route']}; the reason is on record")
-        if configured:
-            print(f"  RE-ASSESSMENT recorded (configuration): the issue's config: layer "
-                  f"changed, generation {committed.number - 1} -> {committed.number}")
         if reframed:
             print(f"  RE-ASSESSMENT recorded ({task['reassessments'][-1]['kind']}): "
-                  f"{prior['delivery_approach']} -> {result['delivery_approach']}"
+                  f"{prior['delivery_approach']} -> {shown['delivery_approach']}"
                   + (f"  [changed: {', '.join(sorted(changed))}]" if changed else ""))
-        if (reframed or configured) and not args.reason:
+        if reframed and not args.reason:
             sys.stderr.write(
                 "compass: re-assessment recorded with no reason. Re-run with "
                 "--reason \"...\" or edit manifest.yml's last `reassessments` "
-                "entry - the reason is the calibration signal.\n"
+                "entry - the reason says why the assessment changed.\n"
             )
     return 0

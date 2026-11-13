@@ -235,6 +235,10 @@ case "${TOOL:-}" in
        # Every word of `compass $'\x65vidence' $'appro\x76e'` can hold an
        # escape, so `evidence` need not show: `$'` then a backslash starts it.
        case "${_text:-} ${_cjoined:-}" in *'$'\'*'\'*) GUARD_RUN=1 ;; esac
+       # An approving review of a pull request: `gh pr review --approve`, a
+       # `gh api` write to `pulls/<n>/reviews` or a review mutation in GraphQL
+       # (#355). Each names `gh` and then `review`, in some letter case.
+       case "${_text:-} ${_bare:-} ${_joined:-}" in *gh*review*) GUARD_RUN=1 ;; esac
        _above=""
        case "${TRANSCRIPT:-}" in /*) _above="${TRANSCRIPT%/*}" ;; esac
        case "${COMMAND:-} ${_cjoined:-}" in *"${_above:-//no transcript//}"*) GUARD_RUN=1 ;; esac
@@ -276,6 +280,8 @@ case "$GUARD_RUN" in
           compass_block delegation-caller-mismatch "${GUARD_PARAMS[@]}" ;;
         transcript-protected)
           compass_block transcript-protected "${GUARD_PARAMS[@]}" ;;
+        pr-review-protected)
+          compass_block pr-review-protected "${GUARD_PARAMS[@]}" ;;
       esac
     fi
     ;;

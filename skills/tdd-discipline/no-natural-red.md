@@ -8,33 +8,33 @@ otherwise is what produces dishonest tests. A compose `mem_limit`, a CI
 refactor in particular, the *whole point* is that behavior does not change, so
 there is no new behavior to be absent.
 
-Authors have satisfied
-the hook with a red like
+Do not fake a red with a test that asserts that a **string appears in a
+file**. That is the "testing implementation, not behavior" anti-pattern in
+`anti-patterns.md`, that only looks compliant.
 
-```
-compass tdd-red --verified-by regression -- '! grep -q "_ = is_unique" solver.py'
-```
+**First look for a guard that can fail.** A regression or end-to-end test
+that fails on the base commit and passes with the change is a red. Put it in
+the change: `finish` proves it as it proves any other test.
 
-which asserts that a **string appears in a file**. That is the "testing
-implementation, not behavior" anti-pattern in `anti-patterns.md`, that only
-looks compliant.
-
-**Declare an acceptance instead.** State what would convince a reviewer, before
-the change:
+**With no such guard, declare an acceptance.** State what would convince a
+reviewer, before the change:
 
 ```
 compass acceptance start --kind validation -- promtool check rules alerts.yml
 compass acceptance start --kind refactor   -- pytest -q
 # ... make the change ...
-compass acceptance record -- <the same command>
+compass quick-fix finish -m "<message>" -- <the same command>
 ```
+
+`finish` records the acceptance on the tree that lands, in place of the red
+and the green. It refuses a validation run with a different command.
 
 - **`validation`** - a validator must pass after the change: `docker compose
   config`, `promtool check rules`, `terraform validate`, a schema parse. There
   may be no meaningful "before" (a new rules file has none), so no baseline is
-  needed. On a quick fix, `acceptance start` refuses a validation when files
-  have already changed since `quick-fix start`, staged or not: the change came
-  first. The scenario's own test files do not count, and neither do commits.
+  needed. On an issue started with `compass quick-fix start`, `acceptance
+  start` refuses a validation when files have already changed since
+  `quick-fix start`, staged or not: the change came first. The scenario's own test files do not count, and neither do commits.
   An output file from an earlier validator run counts as a change: delete it
   or ignore it before declaring. A change to an ignored path, such as `.env`,
   is not seen, so declare before making it.
@@ -43,10 +43,8 @@ compass acceptance record -- <the same command>
   contract, so the baseline is needed, and green-then-green with an unchanged
   tree is refused: that is two runs, not a refactor.
 
-It writes its own `.acceptance` marker, which the hook honors. `.red` keeps
-meaning exactly one thing - a real failure was observed here - and the recorded
-acceptance counts as the issue's run, so there is nothing left to gain by faking
-a red.
+Without a declared acceptance, `finish` refuses a change that holds no test
+file.
 
 This is not an exemption for ordinary code. A change that *does* have a
 natural behavioral red still owes one; reaching for `acceptance` because the

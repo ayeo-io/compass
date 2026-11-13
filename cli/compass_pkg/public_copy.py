@@ -4,7 +4,7 @@ has been measured.
 
 One list, read by `tests/test_public_copy_claims.py` over every tracked
 markdown file and by `manifest.title_problem` when a scenario title is
-recorded, because a title reaches the living spec, which is public copy.
+recorded, because a title reaches the release line and the board, which are public copy.
 """
 # DEPENDENCY: standard library (re) only.
 from __future__ import annotations

@@ -56,11 +56,13 @@ def _evidence_state(task_dir: str, scenarios: list) -> str | None:
         return None
     evidence = os.path.join(task_dir, "evidence")
     for scn in ids:
-        # Named as `compass tdd-red` and `tdd-green` name them.
+        # Named as `compass tdd-red` and `tdd-green` name them, either loop.
         name = scn.replace("/", "_")
-        if os.path.isfile(os.path.join(evidence, f"green-{name}.json")):
+        if any(os.path.isfile(os.path.join(evidence, f"green-{name}{s}.json"))
+               for s in ("", ".outer")):
             continue
-        red = os.path.isfile(os.path.join(evidence, f"red-{name}.json"))
+        red = any(os.path.isfile(os.path.join(evidence, f"red-{name}{s}.json"))
+                  for s in ("", ".outer"))
         return f"{scn} {'red' if red else 'none'}"
     return f"{ids[-1]} green"
 
@@ -86,7 +88,7 @@ def render(cwd: str, width: int = 80) -> str:
     from compass_pkg.core import (artifact_path, display_shape, display_stage,
                                   load_yaml, manifest_path, normalize_spine)
     from compass_pkg import status_words
-    from compass_pkg.next_cmd import _current_phase_from_task, _typed
+    from compass_pkg.next_cmd import _current_phase_from_task, _typed, shown_stage
 
     path = manifest_path(task_dir)
     if not os.path.isfile(path):
@@ -98,15 +100,16 @@ def render(cwd: str, width: int = 80) -> str:
     # Every entry counts towards the total, a malformed one included: the
     # stage treats it as a gate not passed, so the count must too.
     gates = task.get("gates") or []
-    if not os.path.isfile(artifact_path(task_dir, "delivery-approach.md")):
-        # `compass next` reports no stage without the approach record.
+    if not task.get("delivery_approach"):
+        # `compass next` reports no stage until assess records the approach (ADR-091).
         stage = None
     elif status_words.is_closed(task):
         stage = "done"
     else:
         phase = _current_phase_from_task(task, task_dir)
-        # Capitalised as `compass next` prints it, so the two read the same.
-        stage = display_stage(phase).capitalize() if phase else "done"
+        # Capitalised and shown as a path stage as `compass next` prints it, so
+        # the two read the same: a legacy stage shows as the path stage it maps to.
+        stage = display_stage(shown_stage(phase)).capitalize() if phase else "done"
     fields = ["compass", slug]
     approach = task.get("delivery_approach")
     if approach:

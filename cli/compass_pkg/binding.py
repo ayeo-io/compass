@@ -382,7 +382,9 @@ def ids_for(task_dir):
 
 def _newest_bound_record(task, task_dir):
     """The newest test-run record that carries a tree id, as (path, record).
-    Only the newest is judged: it is the run the issue ships on."""
+    Only the newest is judged: it is the run the issue ships on. Timestamps
+    are whole seconds, and records are listed in the order they were written,
+    so of two records from the same second the one listed later wins."""
     root = os.path.realpath(task_dir)
     newest = None
     for entry in task.get("evidence") or []:
@@ -394,7 +396,7 @@ def _newest_bound_record(task, task_dir):
         record = load_record(full)
         if not record.get("tree_id") or not isinstance(record.get("timestamp"), str):
             continue
-        if newest is None or record["timestamp"] > newest[1]["timestamp"]:
+        if newest is None or record["timestamp"] >= newest[1]["timestamp"]:
             newest = (entry.get("path"), record)
     return newest
 

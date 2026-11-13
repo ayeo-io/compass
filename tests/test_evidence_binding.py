@@ -284,3 +284,23 @@ def test_evb_6_a_land_commit_missing_from_the_clone_is_not_judged(repo):
     ok, why = _check(repo)
     assert ok is NOTHING_TO_CHECK, why
 
+
+
+def test_evb_8_of_two_records_from_one_second_the_later_one_is_judged(tmp_path):
+    """Timestamps are whole seconds. A fast run writes an old record and its
+    replacement in the same second, so the check must judge the record listed
+    later, not the first one it reads."""
+    from compass_pkg import binding
+
+    ev = tmp_path / "evidence"
+    ev.mkdir()
+    second = "2026-11-13T10:06:43+00:00"
+    for name, tree in (("acceptance.json", "a" * 40), ("acceptance-TRC-001.json", "b" * 40)):
+        (ev / name).write_text(json.dumps({"exit_code": 0, "passed": True,
+                                           "timestamp": second, "tree_id": tree}))
+    task = {"evidence": [
+        {"id": "EV-1", "type": "test-run", "path": "evidence/acceptance.json"},
+        {"id": "EV-2", "type": "test-run", "path": "evidence/acceptance-TRC-001.json"}]}
+    path, record = binding._newest_bound_record(task, str(tmp_path))
+    assert path == "evidence/acceptance-TRC-001.json"
+    assert record["tree_id"] == "b" * 40

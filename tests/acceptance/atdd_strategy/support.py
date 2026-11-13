@@ -56,8 +56,14 @@ OPT_IN_BY_SIZE = [
 ]
 
 
+#: The PyYAML copy Compass ships. The example's layering test imports yaml,
+#: and the CI test job installs no PyYAML, so the example's pytest finds it here.
+VENDOR = ROOT / "cli" / "vendor"
+
+
 def env(root):
     return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(root),
+            "PYTHONPATH": str(VENDOR),
             "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "200",
             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "COMPASS_RENDER_AFTER": "0",
             "CLAUDE_PROJECT_DIR": str(root),

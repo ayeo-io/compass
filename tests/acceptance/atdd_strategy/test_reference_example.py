@@ -77,6 +77,11 @@ def _pytest(folder: Path, *args: str, env: dict | None = None) -> subprocess.Com
     scratch = folder.parent / "tmp"
     scratch.mkdir(exist_ok=True)
     environment["TMPDIR"] = str(scratch)
+    # The layering test imports yaml. The CI test job installs no PyYAML, so
+    # the example's pytest finds the copy Compass ships, as an adopter's
+    # project finds the one its requirements.txt pins.
+    environment["PYTHONPATH"] = os.pathsep.join(
+        p for p in (str(ROOT / "cli" / "vendor"), environment.get("PYTHONPATH")) if p)
     environment.update(env or {})
     return subprocess.run(
         [sys.executable, "-m", "pytest", "-p", "xdist.plugin", *args],

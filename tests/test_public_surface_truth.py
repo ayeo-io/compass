@@ -878,6 +878,11 @@ def test_d2_repairs_change_only_retired_names():
     fewer, fences 22 -> 14, list_items 67 -> 43, table_rows 18 -> 0): both
     tables and every row now live in `docs/cli.md`.
 
+    The plain-English rewrite of the settings and routing pages re-baselined
+    `docs/routing-deep-dive.md` (fences 14 -> 8, list_items 34 -> 51, the
+    per-case `###` headings gone): three repeated transcripts and the prose
+    around them were cut.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

@@ -80,10 +80,11 @@
     "table_rows": 13
   },
   "docs/quickstart.md": {
-    "fences": 28,
+    "fences": 22,
     "heading_levels": [
       1,
       2,
+      3,
       2,
       2,
       3,
@@ -99,7 +100,7 @@
       2,
       2
     ],
-    "list_items": 26,
+    "list_items": 67,
     "table_rows": 18
   },
   "docs/routing-deep-dive.md": {

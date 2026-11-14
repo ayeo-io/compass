@@ -49,6 +49,7 @@ exclude_docs: |
   !/upgrade-6-0-0.md
   !/upgrade-7-0-0.md
   !/upgrade-8-0-0.md
+  !/upgrade-9-0-0.md
   !/github-links.md
   !/waivers.md
   !/artifact-catalog.md
@@ -66,6 +67,7 @@ nav:
       - Upgrading to 6.0.0: upgrade-6-0-0.md
       - Upgrading to 7.0.0: upgrade-7-0-0.md
       - Upgrading to 8.0.0: upgrade-8-0-0.md
+      - Upgrading to 9.0.0: upgrade-9-0-0.md
   - Guarantees:
       - Safety contract: safety-contract.md
       - Refusal codes: refusal-codes.md

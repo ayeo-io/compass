@@ -475,9 +475,10 @@ def test_trc_e3_guide_names_non_adoptions():
 
 def test_trc_e4_guide_is_linked():
     """Reachable from where a reader looking for writing guidance would start."""
-    readme = _read("README.md")
-    assert "docs/writing-specs-and-plans.md" in readme, (
-        "README.md does not link the writing guide"
+    assert "(docs/README.md)" in _read("README.md"), (
+        "README.md does not link the list of docs")
+    assert "(writing-specs-and-plans.md)" in _read("docs/README.md"), (
+        "docs/README.md does not link the writing guide"
     )
 
 

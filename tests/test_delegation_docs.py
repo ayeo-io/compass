@@ -97,10 +97,10 @@ def test_TRC_083_a_decision_record_amends_adr_069():
 
 def test_TRC_100_the_readme_s_delegation_bullet_says_the_person_sets_the_bounds():
     text = _text("README.md")
-    bullet = _flat(_section(text, "- **You set the bounds", "- **Autonomy"))
+    bullet = _flat(_section(text, "- **You can delegate", "\n\n"))
     assert "at most 24 hours" not in bullet
-    assert "the person sets the bounds" in bullet or "bounded" not in bullet, bullet
-    assert "until `/compass:revoke`" in bullet and "session start" in bullet, bullet
+    assert "bounds you set" in bullet, bullet
+    assert "until `/compass:revoke`" in bullet, bullet
 
 
 def test_TRC_101_governance_guardrails_md_states_what_a_guardrail_5_delegation_covers_now():

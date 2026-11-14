@@ -53,6 +53,21 @@ make ci          # policy lint, issue lint and compass check on recent issues
 Compass needs Python 3.10 or later. `docs/five-minutes.md` walks through a
 small change from start to finish.
 
+## What the repository contains
+
+```
+commands/        the slash commands, under the /compass: namespace
+skills/          procedures a session loads, such as atdd
+hooks/           pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
+                 prompt-approval.sh, approval-summary.sh
+cli/compass      the CLI
+bin/compass      the shim that puts the CLI on your PATH
+governance/      the guardrails and the check set
+approaches/      the path a change takes, and the spike
+architecture/    Compass's own decision records
+.claude-plugin/  the plugin manifest
+```
+
 ## Where to start
 
 Issues labeled

@@ -116,14 +116,16 @@ def test_trc_004_a_planted_wrong_fact_is_reported(truth):
 
 
 def test_trc_002_the_repository_map_names_every_agent_and_hook():
-    """Scenario `TRC-002`: the README's map of the repository lists each
-    agent and each hook script, so a reader does not miss one."""
-    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    """Scenario `TRC-002`: the map of the repository lists each agent and
+    each hook script, so a reader does not miss one. The map is in
+    CONTRIBUTING.md, which the README links."""
+    assert "(CONTRIBUTING.md)" in (ROOT / "README.md").read_text(encoding="utf-8")
+    text = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
     block = text.split("## What the repository contains", 1)[1].split("```", 2)[1]
     flat = " ".join(block.split())
     missing = [p.stem for p in (ROOT / "agents").glob("*.md") if p.stem not in flat]
     missing += [p.name for p in (ROOT / "hooks").glob("*.sh") if p.name not in flat]
-    assert not missing, f"the README's repository map leaves out {missing}"
+    assert not missing, f"the repository map in CONTRIBUTING.md leaves out {missing}"
 
 
 @pytest.mark.parametrize("rel", FRONT_PAGE)

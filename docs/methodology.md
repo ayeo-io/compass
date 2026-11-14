@@ -1,307 +1,195 @@
 # Compass methodology
 
-Compass is an adaptive, spec-driven delivery framework. It applies enough
-process for the work at hand while preserving a small set of non-negotiable
-outcomes.
-
-This document defines the stable model. Commands, templates and policies are
-its executable expression.
+This page states the model behind Compass: one path for every change, the
+evidence a change owes, and the rules that do not move.
 
 ## 1. Why adaptive process
 
-A fixed workflow fails for both small and large work:
-
-- it makes small, familiar changes too expensive; and
-- it gives large, risky or unfamiliar changes too little protection.
-
-A three-level scale of “light, medium, heavy” improves the situation but still collapses
-different questions into one scale. A one-file migration can be small and
-dangerous. A large prototype can be exploratory and disposable.
-
-Compass therefore runs every change on one path and computes the evidence
-the change owes from its assessment and the project's settings, rather than asking the user to
-select a process tier.
+A fixed workflow costs a small change too much and protects a risky change
+too little. Compass runs every change on one path and computes the evidence
+it owes. You do not pick a process tier.
 
 ## 2. Assessment and routing
 
 Every issue begins with an assessment:
 
-| Dimension | Question | Typical values |
-|---|---|---|
-| Risk | How far does a failure reach? | trivial, contained, cross-cutting, critical |
-| Familiarity | How well is the affected system understood? | greenfield, mapped brownfield, unmapped brownfield |
-| Size | How much delivery work is involved? | atomic, small, medium, large, product |
-| Goal | What outcome is wanted? | delivery or exploration |
-| Urgency | Is this a fix to a defect that is live? | none or live-defect |
+| Dimension | Values |
+|---|---|
+| Risk | trivial, contained, cross-cutting, critical |
+| Familiarity | greenfield, mapped brownfield, unmapped brownfield |
+| Size | atomic, small, medium, large, product |
+| Goal | delivery or exploration |
+| Urgency | none or live-defect |
 
-Assessment is judgement. The assessor must explain uncertain or consequential
-choices, and a human can correct them before work proceeds.
+Assessment is judgement. The assessor gives a reason for each value, and a
+person can correct it before work goes on.
 
-Routing is mechanism. Once the assessment exists, the kit selects the
-evidence the change owes from fixed evidence rows, then applies the
-project's policy - the fixed check set, with the tighten-only settings of the
-project's `compass.yml` - including its floors and immovable gates.
+Routing is mechanism. The kit computes the evidence from the assessment and
+the project's policy: the fixed check set, with the tighten-only settings of
+`compass.yml`. The same assessment and policy give the same evidence each
+time
+([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
 
-> Judgement goes into the assessment. Everything after it is deterministic:
-> the same assessment and policy produce the same evidence,
-> every time ([safety contract](safety-contract.md#1-routing-is-deterministic-after-assessment)).
+The kit writes the result to the manifest, and `compass approach show`
+prints it:
 
-The kit writes the result to the manifest, and `compass approach show` prints
-it. It records:
-
-- the recorded assessment, with a reason for each value;
+- the assessment, with a reason for each value;
 - the approach: `delivery` for the path, or `spike`;
-- the evidence the change owes (`evidence_required`) and the gates derived
-  from it;
-- the checkpoints where the session waits for a person; and
-- anything omitted, with the reason it is safe to omit.
-
-De-scoping is therefore a visible decision rather than an accidental gap.
+- the evidence the change owes (`evidence_required`) and its gates;
+- the checkpoints where the session waits for a person;
+- anything omitted, with the reason.
 
 ## 3. One path, adaptive evidence
 
-Every delivery change runs the same four stages, in order. The stages are
-fixed in code and have no modes (ADR-092).
+Every delivery change runs the same four stages, in order. The stages have
+no modes (ADR-092).
 
 | Stage | Purpose |
 |---|---|
-| Assess | Score the dimensions and compute the evidence the change owes. |
-| Specify | State observable behavior as scenarios, each with the test that proves it. |
-| Build | Write the tests and the code. `compass quick-fix finish` then shows that the tests fail without the change and pass with it. |
-| Ship | `finish` passes each gate with typed evidence, a person approves the change, and `finish` commits. |
+| Assess | Score the dimensions and compute the evidence. |
+| Specify | Write the scenarios, each with the test that proves it. |
+| Build | Write the tests and the code. `compass quick-fix finish` shows that the tests fail without the change and pass with it. |
+| Ship | `finish` passes each gate with typed evidence, a person approves, and `finish` commits. |
 
 `/compass:go`, `/compass:quick-fix` and `/compass:assess` run the path in one
-session with two commands: `compass quick-fix start` opens the issue, and
-`compass quick-fix finish` writes the record (ADR-099). Every call that
+session with two commands (ADR-099): `compass quick-fix start` opens the
+issue, and `compass quick-fix finish` writes the record. Each call that
 writes a record prints a `next:` line with the one step that comes next.
-
-What changes from one change to the next is the approvals and the
-project's extra evidence, not which stages run. Assessment always runs for delivery or exploration work
-that will change files.
 
 ## 4. The evidence rows
 
 Every delivery issue owes one evidence row, `RP-EVID-COMMON`
-(`governance/routing-policy.md`, "The evidence rows"). Risk, size,
-familiarity and urgency add no review and no record (ADR-099):
+(`governance/routing-policy.md`, "The evidence rows"):
 
-| Row | When | What it owes |
-|---|---|---|
-| Common | Every delivery assessment | The request link and who asked, scenarios, tests that fail without the change and pass with it, a green suite, the correctness, governance and traceability gates, and a person's approval of the change. |
+- the request link and who asked;
+- scenarios;
+- tests that fail without the change and pass with it;
+- a green suite;
+- the correctness, governance and traceability gates;
+- a person's approval of the change.
 
+Risk, size, familiarity and urgency add no review and no record (ADR-099).
 On top of the row:
 
-- a `G5` label or critical risk adds a person's approval of the scenarios,
-  which every code edit waits for;
-- a `G5` label adds a person's sign-off before the change lands; and
-- a project's `require_evidence` setting adds the evidence it names: a
+- A `G5` label or critical risk adds a person's approval of the scenarios.
+  Every code edit waits for it.
+- A `G5` label adds a person's sign-off before the change lands.
+- A project's `require_evidence` setting adds the evidence it names: a
   review, the Definition of Done, a reproduction first for a live defect, or
   the records of the four-layer acceptance strategy (`S17`).
 
-A spike (`goal: exploration`) is not on the path. It explores, concludes,
+A spike (`goal: exploration`) is not on the path. It explores, concludes
 and ships nothing.
 
-The request link (`request`, ADR-096) comes first on every delivery issue: a
-link to what asked for the change, and who asked, as the session records it.
-Assess records it with `--request` and `--requester`. The check
-`request-recorded` fails until both are on record, and nothing refuses for
-it.
+**The request link** (`request`, ADR-096). Assess records it with
+`--request` and `--requester`. The check `request-recorded` fails until both
+are on record. No edit is refused for it.
 
-A person gives the approval of the change (`ship-approval`, ADR-095) by
-typing `/compass:approve` when `compass quick-fix finish` asks, and `finish`
-commits after it. The approval covers the change the person saw: after a
-later change `finish` asks again (ADR-099). The approval is also read from
-the merged pull request: a review that approves it, by a person who is not
-its author. A `G5` sign-off does not count for it.
+**The approval of the change** (`ship-approval`, ADR-095). A person types
+`/compass:approve` when `compass quick-fix finish` asks, and `finish` then
+commits. After a later change, `finish` asks again. Compass also reads the
+approval from the merged pull request: an approving review by a person who
+is not its author. A `G5` sign-off does not count for it.
 
-The red on a path issue also freezes the scenarios: the manifest
-records the spec's digest and the scenario ids, and `compass check` says when
-the spec changed since.
-
-Risk and size remain independent. A small auth or migration change owes the
-same approvals as a large one.
+**The red freezes the scenarios.** The manifest records the spec's digest
+and the scenario ids, and `compass check` says when the spec changed since.
 
 ## 5. Guardrails and strategies
 
-Compass separates non-negotiable outcomes from context-sensitive practices.
+Five guardrails apply to every change. `compass check` fails on a breach
+under enforced adoption, and the [safety contract](safety-contract.md) lists
+what it cannot see:
 
-### Guardrails
-
-Guardrails are few and checkable. `compass check` fails on a breach under
-enforced adoption, and the [safety contract](safety-contract.md) lists what it
-cannot see:
-
-1. Delivery code is tested before it ships. Stated exactly as
-   the check set (`governance/check-set.yml`) states it, because a reader who finds two
-   wordings has no way to know which is current: **no code reaches main unless
+1. Delivery code is tested before it ships. The check set
+   (`governance/check-set.yml`) states it: **no code reaches main unless
    it traces to a declared test and a green test run is on record.**
 2. Acceptance is defined before implementation.
-3. Code, criteria, intent and public claims remain traceable.
-4. Gates clear with evidence rather than assertion.
-5. A human approves irreversible work: an issue labelled `auth`, `payments`,
+3. Code, criteria, intent and public claims stay traceable.
+4. Gates clear with evidence, not assertion.
+5. A person approves irreversible work: an issue labelled `auth`, `payments`,
    `personal-data` or `migrations`.
 
-Every change owes the same common evidence, and none loses a guardrail.
+A strategy is a strong default, such as BDD, TDD, an ADR, a threat model or
+a C4 or Mermaid diagram in a design. You can depart from one if you record
+why; that is not a breach.
 
-### Strategies
-
-Strategies are strong defaults that improve the work when they fit. You can
-depart from a strategy if you record why; that is not treated as a breach.
-
-Examples include:
-
-- BDD and TDD;
-- ADRs;
-- threat modelling;
-- accessibility review;
-- performance modelling;
-- writing for a cold reader; and
-- visual architecture and design models.
-
-Use a diagram inside an HLD or LLD when it makes the design easier to
-understand:
-
-| Need | Useful strategy |
-|---|---|
-| System scope and ownership | C4 context or container diagram |
-| Runtime interaction | Mermaid sequence diagram |
-| Data relationships | Mermaid ERD |
-| Types and responsibilities | Mermaid class or UML class diagram |
-| Component dependencies | C4 component or focused dependency diagram |
-
-These are strategies, not mandatory sections. A diagram that adds no
-information is process weight; a diagram that makes a difficult relationship clear
-is valuable design work.
-
-The conflict rule is simple: a guardrail beats a strategy. The evidence the
-change owes, or a human, settles a conflict between strategies.
+A guardrail beats a strategy. The evidence the change owes, or a person,
+settles a conflict between strategies.
 
 ## 6. Artifacts are a review pack
 
-Compass stores each issue in two places. The machine state - the manifest, the
-evidence and the markers - is in `.compass/work/<issue>/`. The
-documents are in `docs/compass/<created>-<issue>/`, where `<created>` is the
-manifest's `created:` date.
+Compass stores each issue in two places:
 
-The main file in `.compass/work/<issue>/` is `manifest.yml`: the assessment,
-the evidence the change owes, the gates, the scenarios, the follow-ups, the
-reassessments and the evidence registry. `compass next` names the next
-action. From 9.0.0 Compass writes no `devlog.md`; an archived issue keeps
-its own. An approval an agent records under a delegation copies the
-delegation into the manifest's `delegations_used:`.
+| Place | Holds |
+|---|---|
+| `.compass/work/<issue>/` | `manifest.yml`, the evidence, the markers and `trail.md`. |
+| `docs/compass/<created>-<issue>/` | The documents. `<created>` is the manifest's `created:` date. |
 
-Beside the manifest, `trail.md` states in order who asked, what was agreed,
-the red and green of each scenario, who approved and by what authority, and
-what shipped (ADR-096). Under each statement are `sha256sum` lines for the
-files it rests on, with paths from the repository root, so a reviewer checks
-them with `sha256sum -c` and no Compass. `compass trail` writes it, and
-`compass ship-commit` writes it at the landing.
+- `manifest.yml` holds the assessment, the evidence owed, the gates, the
+  scenarios, the follow-ups, the reassessments, the evidence registry and
+  each delegation an agent approved under (`delegations_used:`).
+  `compass next` names the next action.
+- `trail.md` states who asked, what was agreed, the red and green of each
+  scenario, who approved and what shipped. A reviewer checks it with
+  `sha256sum -c` and no Compass.
+- `acceptance-criteria.md` is the one document Compass needs and checks
+  (ADR-091). A team can keep its own notes beside it; Compass does not read
+  them.
+- Compass writes no `devlog.md`. An archived issue keeps its own.
 
-The record mode decides where the record goes. By default it is committed:
-`compass ship-commit` stages the issue folder and the documents folder with
-the code, and `.compass/work/.gitignore` keeps out the per-checkout files,
-such as generations, lock files and markers. A fresh clone rebuilds a
-missing generation from the manifest's `policy:` block. A project that sets
-`record.commit: false`, or names a `record.remote` and does not set
-`record.commit`, keeps the record out of its commits, and `compass record
-sync` can copy it to another repository (`docs/delivery-record.md`).
-
-The one document Compass needs and checks is `acceptance-criteria.md`, written
-to `docs/compass/<created>-<issue>/` (ADR-091). Its Summary and Intent links
-carry the product intent. A team can keep its own notes beside it, such as a
-design, ADRs or `positioning.md`; Compass does not read them.
-
-An artifact must be understandable to a reader who was not in the conversation:
-context before detail, resolvable references, explicit decisions and no
-pipeline narration.
-
-The terminal points to the decision and the document to review. Full
-policy output and logs remain available as evidence without dominating the
-conversation.
+By default `compass ship-commit` commits the record with the code. A project
+can keep it out with `record.commit: false`. Detail:
+[the delivery record](https://github.com/ayeo-io/compass/blob/main/docs/delivery-record.md).
 
 ## 7. One specification, several roles
 
 Product, design, engineering, marketing and QA share one
-`acceptance-criteria.md`. From 9.0.0 there are no role entry points
-(ADR-093): a brief from any of them opens the Summary and Intent of the
-acceptance criteria, and the session takes a role's perspective when the work
-needs it.
-
-- Product checks intent fidelity.
-- Design contributes interaction behaviors.
-- Engineering derives tests and implementation.
-- QA challenges coverage and evidence.
-- Marketing traces claims to tested behavior.
-
-This prevents parallel specifications from drifting.
-
-The architect perspective is cross-cutting. It checks
-the issue against project architecture and annotates the design without
-creating a second specification.
+`acceptance-criteria.md`. There are no role entry points (ADR-093): a brief
+from any role opens its Summary and Intent, and the session takes a role's
+perspective when the work needs it. The architect perspective checks the
+issue against the project architecture. It does not create a second
+specification.
 
 ## 8. Evidence and gates
 
-Compass distinguishes a claim from evidence. “Tests pass” is a claim. A
-recorded command, exit code and evidence type is evidence the CLI can inspect.
+"Tests pass" is a claim. A recorded command, exit code and evidence type is
+evidence the CLI can inspect. Gate evidence is typed: a written note cannot
+clear a gate that needs a test run.
 
-Gate evidence is typed. A correctness gate can need a test run; a written
-note cannot satisfy it. A high-risk gate can need a structured human
-approval rather than a checkbox.
+Where a project needs the Definition of Done, a record in the manifest
+meets each item: typed evidence, a person's approval, or a follow-up that
+links to the GitHub issue that tracks the work (`compass follow-up add
+FU-<id> --defers <item> --github owner/repo#N`).
 
-Where a project needs the Definition of Done, it is checkable state, not
-narrative status. Each item is met by a record in the
-manifest: typed evidence, a person's approval, or a follow-up that defers the
-item and links to the GitHub issue that tracks the work (`compass follow-up
-add FU-<id> --defers <item> --github owner/repo#N`). From 9.0.0 there is no Definition of
-Ready: the scenarios with their declared tests are the readiness record.
+There is no Definition of Ready. The scenarios with their declared tests
+are the readiness record.
 
-The [safety contract](safety-contract.md) states the exact guarantees and
-limits. In particular, Compass evidence does not replace normal CI or prove
-software correctness.
+Compass evidence does not replace CI and does not prove that software is
+correct.
 
 ## 9. One session
 
-From 9.0.0 Compass starts no worktree and no agent per unit of work
-(ADR-090). One session builds the change, and `finish` proves the red and the green
-for all its scenarios in one run. No runtime
-needs isolated workspaces, and Compass records no orchestration or subtask
-count for a new issue.
+One session builds the change, and `finish` proves the red and the green
+for all its scenarios in one run. Compass starts no worktree and no agent
+per unit of work (ADR-090).
 
 ## 10. Reassessment
 
-An adaptive framework must learn whether it is adapting well.
+When risk, size, familiarity or goal changes, run
+`/compass:assess --reassess --reason "..."`. It computes the evidence again
+and records the change.
 
-Reassess when risk, size, familiarity or goal changes materially, with
-`/compass:assess --reassess --reason "..."`. The re-assessment computes the
-evidence again and records the change. Do not continue as if nothing changed.
-
-Across issues, `compass flow` shows status, blockers and follow-ups. It is
-advisory: it never tunes governance and does not gate delivery. sdd-bench,
-not Compass, measures whether the framework helps.
+`compass flow` shows status, blockers and follow-ups across issues. It is
+advisory and does not gate delivery.
 
 ## 11. The three layers: methodology, kit and adapter
 
-Compass separates what it believes from how a runtime runs it:
-
 | Layer | Contains | Porting rule |
 |---|---|---|
-| Methodology | Documentation, governance prose, reference approaches and templates | Reuse unchanged. |
+| Methodology | Documentation, governance prose, the path, the spike and templates | Reuse unchanged. |
 | Kit | Python CLI, machine-readable policy, schemas and issue manifest | Invoke unchanged. |
-| Adapter | Runtime commands, agents, skills, hooks and installation wiring - `bin/compass` and `.claude-plugin/` in the shipped one | Rebuild for the target runtime. |
+| Adapter | Runtime commands, skills, hooks and installation wiring - `bin/compass` and `.claude-plugin/` in the shipped one | Rebuild for the target runtime. |
 
-The adapter produces the assessment because that needs judgement. It calls
-the kit for routing and checks because those must remain deterministic.
-
-See [Portability](portability.md) for the adapter conformance contract.
-
-## 12. Design principles
-
-1. Compute the process; do not select it from a menu.
-2. Adapt the evidence and the strategies, never the guardrail outcome.
-3. Keep judgement explicit and mechanism deterministic.
-4. Make de-scoping a written decision.
-5. Use one shared specification across roles.
-6. Prefer evidence over assertion and files over conversation.
-7. Parallelise only independent work.
-8. Treat reassessment as a normal event, not a failure.
-9. Generate artifacts for human review, not agent consumption alone.
+The adapter produces the assessment, because that needs judgement. It calls
+the kit for routing and checks, because those must be deterministic.
+[Portability](portability.md) holds the adapter contract.

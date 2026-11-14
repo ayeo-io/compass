@@ -1,8 +1,6 @@
 # Contributing to Compass
 
-This guide says what judges a pull request to Compass, so you know before you
-open one. Compass is built with Compass: a change goes through the same
-pipeline it gives its users.
+This guide says what judges a pull request to Compass.
 
 ## What judges a pull request
 
@@ -10,37 +8,34 @@ A pull request merges when all of these hold:
 
 1. **The `self-check` job passes.** It is the one check the `protected-main`
    ruleset needs. It runs the full test suite, `compass ci` and the
-   repository's own checks. The four `bdd-adapter` jobs also run; a failure
-   there needs fixing too.
-2. **The maintainer has reviewed it.** Review is by a person. Compass also has
-   an automatic Claude review, but it starts only by hand
-   (`governance/decisions/2026-10-03-ci-review-manual-only.md`), so do not
-   wait for one.
-3. **It meets the review rules.** `governance/review-rules.yml` lists the rules
-   a reviewer applies to the files you changed, each with the incident behind
-   it. `compass review-rule list --changed-files <paths>` prints the ones
-   that apply.
+   repository's own checks. The four `bdd-adapter` jobs also run; fix a
+   failure there too.
+2. **The maintainer has reviewed it.** Do not wait for the automatic Claude
+   review: it starts only by hand
+   (`governance/decisions/2026-10-03-ci-review-manual-only.md`).
+3. **It meets the review rules.** `governance/review-rules.yml` lists them.
+   `compass review-rule list --changed-files <paths>` prints the ones that
+   apply to your files.
 
-`.github/CODEOWNERS` names who reviews each path. Today that is the maintainer
-for every path.
+`.github/CODEOWNERS` names who reviews each path. Today that is the
+maintainer for every path.
 
 ## What a reviewer checks first
 
-- **A failing run for every new test.** Show each new test failing before your
-  change, as the `FAILED` lines in the pull request body. `compass quick-fix
-  finish` proves it on a copy of the base commit; a test that has never failed has not been shown to test anything.
+- **A failing run for every new test.** Put the `FAILED` lines in the pull
+  request body. `compass quick-fix finish` proves the failure on a copy of
+  the base commit.
 - **The house rules.** No em dash anywhere: write a plain hyphen. No line
   crediting an AI agent in a commit or pull request. US English.
-  `tests/test_house_style.py` enforces the first two in tracked files; read
-  your commit message and pull request body yourself.
-- **No rival product name.** Another product is named only by its code, R1
-  to R9, in files, paths, branch names, commit messages and pull requests.
-  CI checks all of them. To have your commit messages checked before the
-  push, run `git config core.hooksPath scripts/git-hooks` once.
-- **The frozen vocabulary.** Words Compass has retired fail
-  `tests/test_terminology.py`. `governance/terminology.yml` lists them.
-- **Plain English.** `CLAUDE.md` sets the writing rules. Lead with the point,
-  one point per sentence, no idioms.
+  `tests/test_house_style.py` checks tracked files only, so read your
+  commit message and pull request body yourself.
+- **No rival product name.** Name another product only by its code, R1 to
+  R9, in files, paths, branch names, commit messages and pull requests. CI
+  checks all of them. To check your commit messages before the push, run
+  `git config core.hooksPath scripts/git-hooks` once.
+- **The frozen vocabulary.** `governance/terminology.yml` lists the retired
+  words. `tests/test_terminology.py` fails on one.
+- **Plain English.** `CLAUDE.md` sets the writing rules.
 
 ## Running the checks yourself
 
@@ -51,7 +46,7 @@ make ci          # policy lint, issue lint and compass check on recent issues
 ```
 
 Compass needs Python 3.10 or later. `docs/five-minutes.md` walks through a
-small change from start to finish.
+small change.
 
 ## What the repository contains
 
@@ -72,8 +67,8 @@ architecture/    Compass's own decision records
 
 Issues labeled
 [good first issue](https://github.com/ayeo-io/compass/labels/good%20first%20issue)
-are small, checked against the current code, and each says what to change.
-Comment on one before you start, so two people do not do the same work.
+are small and say what to change. Comment on one before you start, so two
+people do not do the same work.
 
 ## Security and conduct
 
@@ -82,5 +77,5 @@ public issue. Everyone taking part follows `CODE_OF_CONDUCT.md`.
 
 ## License
 
-By contributing, you agree that your contribution is licensed under the
-Apache License 2.0, as the rest of Compass is (`LICENSE`).
+Your contribution is licensed under the Apache License 2.0, as the rest of
+Compass is (`LICENSE`).

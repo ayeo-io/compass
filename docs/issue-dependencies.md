@@ -1,8 +1,10 @@
 # Issue dependencies
 
-An issue can record the issues it waits for. While it is at the implement stage and a dependency has not reached the agreed point, the pre-tool hook refuses production-code edits, and `compass next` and the board say what it waits for. This document owns the `depends_on` shape, the rule that derives the block, the verbs and what each reader shows. The decision behind it is [ADR-062](../architecture/decisions/ADR-062-a-dependency-is-a-manifest-field-and-the-block-is-derived.md).
-
-Nothing stores the block. Every reader derives it from the records each time it reads.
+An issue can record the issues it waits for. While it is at build (the
+implement stage of an older issue) and a dependency has not reached the
+agreed point, the pre-tool hook refuses production-code edits. Nothing
+stores the block: each reader derives it from the records
+([ADR-062](../architecture/decisions/ADR-062-a-dependency-is-a-manifest-field-and-the-block-is-derived.md)).
 
 ## The shape
 
@@ -10,20 +12,23 @@ An issue's manifest holds an optional list:
 
 `depends_on: [{issue, reason, until}]`
 
-- Each entry has exactly the three keys `issue`, `reason` and `until`, and no other.
-- `issue` is the slug of the issue waited for: one path segment, not the issue's own slug. It is required and not empty.
-- `reason` says why the issue waits. It is required and not empty.
-- `until` is required in the stored entry. `compass issue depends add` writes it on every entry and writes `done` when `--until` is not given. A hand-written entry without it reads as `done`.
-- An issue has one entry for each dependency. Adding a slug that is already listed replaces that entry's reason and `until` and keeps its place.
-- `schema_version` stays `3.0`. A manifest without the key reads, renders and behaves as it did.
+| Key | Rule |
+|---|---|
+| `issue` | The slug of the issue waited for: one path segment, not the issue's own slug. Required, not empty. |
+| `reason` | Why the issue waits. Required, not empty. |
+| `until` | One of the eleven values below. `compass issue depends add` writes `done` when `--until` is not given. A hand-written entry without it reads as `done`. |
 
-`schemas/manifest.schema.json` (with `additionalProperties: false` on an entry) and `schemas/manifest.reference.yml` state the same shape. A test compares the key names in the schema, the reference manifest and this document, so a change of shape fails until all three agree.
-
-A reader calls `lifecycle.entries` and `lifecycle.judge` rather than reading the key itself, so `compass next`, the board and `ship-commit` show the same words.
+- An entry holds these three keys and no other.
+- An issue has one entry for each dependency. Adding a listed slug replaces
+  that entry's reason and `until` and keeps its place.
+- `schema_version` stays `3.0`. A manifest without the key is unchanged.
+- `schemas/manifest.schema.json` and `schemas/manifest.reference.yml` state
+  the same shape. A test fails until the schema, the reference manifest and
+  this page agree.
 
 ## The `until` values
 
-`until` takes exactly one of eleven lower-case words. The other issue is read in this checkout.
+The other issue is read in this checkout.
 
 | Value | Met when the depended-on issue ... |
 |---|---|
@@ -32,81 +37,107 @@ A reader calls `lifecycle.entries` and `lifecycle.judge` rather than reading the
 | `specify`, `build`, `ship` | is at that path stage or a later one, or is `done` with close reason `completed`. |
 | `define`, `refine`, `plan`, `breakdown`, `implement`, `verify` | is at that stage or a later one in the legacy order, or is `done` with close reason `completed`. |
 
-"At a stage" means the stage the resolver of `compass next` gives for the issue. An issue assessed before the four-stage path (ADR-092) is at a legacy stage, and `compass next` shows it as the path stage it maps to: `define`, `refine` and `plan` show as `specify`; `breakdown` and `implement` as `build`; `verify` and `ship` as `ship`.
+The stage of an issue is the stage `compass next` gives it.
 
-- When both the `until` value and the issue's stage are legacy names, they are compared in the legacy order, so an entry written before the path keeps its verdict.
-- When either one is a path stage, both are compared as the path stages they map to. A path issue that waits for an old one, and the reverse, are both judged.
-- A dependency closed as `not-planned` or `duplicate` meets none of the eleven values. The lint finding says so and names `compass issue depends remove`.
-- A dependency on hold (state `backlog`) is judged by the same rules: its stage comes from its records.
+- A legacy `until` and a legacy stage are compared in the legacy order.
+- When either one is a path stage, both are compared as path stages:
+  `define`, `refine` and `plan` map to `specify`; `breakdown` and
+  `implement` to `build`; `verify` and `ship` to `ship`.
+- A dependency closed as `not-planned` or `duplicate` meets no value. The
+  lint finding names `compass issue depends remove`.
+- A dependency on hold (state `backlog`) is judged by the same rules.
 - `assess`, `backlog`, `ready` and `in-progress` are not values.
 
 ## When the block counts
 
-The block counts only while the waiting issue is at the implement stage (at build, for an issue on the four-stage path), as the resolver of `compass next` gives it, and is not on hold and not done. An issue at an earlier stage is not blocked, but its `compass flow --json` row still lists each dependency under `depends_on`. The stored `blocked` flag keeps its own rule (in-progress or in-review only, ADR-045) and is not changed. Where both apply, the board shows the stored reason first.
+The block counts only while the waiting issue is at build (the implement
+stage), is not on hold and is not done. An issue at an earlier stage is not
+blocked. The stored `blocked` flag keeps its own rule (ADR-045). Where both
+apply, the board shows the stored reason first.
 
 ## What the hook reads
 
-On a production-code edit at implement, the pre-tool hook judges the issue's dependencies only when its own `depends_on` is present and not an empty list.
+On a production-code edit at build, the pre-tool hook judges the
+dependencies only when `depends_on` is present and not empty.
 
-- It reads this checkout's `.compass/work/<slug>/` for each dependency, once, uncached, with `load_manifest`. It never reads through the parse cache (ADR-052).
-- It runs no git command and lists no other worktree. This checkout's record decides (ADR-048).
-- A spike is never refused, and a declared acceptance does not clear a wait.
-- It refuses only on a positive read of an unmet dependency, with the code `waits-for-issue`.
+- It reads this checkout's `.compass/work/<slug>/` for each dependency,
+  once, uncached. It never reads through the parse cache (ADR-052).
+- It runs no git command and lists no other worktree (ADR-048).
+- It refuses only on a positive read of an unmet dependency, with the code
+  `waits-for-issue`.
+- It never refuses a spike. A declared acceptance does not clear a wait.
 
-### Cost budget
+Cost:
 
-- With no `depends_on`, or an empty list, the hook opens no other issue's manifest and starts no more python3 processes than before.
-- With any dependencies it starts at most one extra python3 process and opens each dependency's manifest once.
-- The median hook time with 5 dependencies is at most twice the median with 0.
+- With no `depends_on`, the hook opens no other manifest and starts no more
+  python3 processes.
+- With dependencies, it starts at most one more python3 process and opens
+  each dependency's manifest once.
+- The median hook time with 5 dependencies is at most twice the median
+  with 0.
 
 ### Fail-safe cases
 
-A fault never stops work. Each case below allows the edit with one warning line on standard error, and `compass issue lint` reports the same fault and exits non-zero:
+A fault never stops work. Each case below allows the edit with one warning
+line on standard error. `compass issue lint` reports the same fault and
+exits non-zero.
 
-- a dependency with no manifest in this checkout;
-- a manifest that does not parse;
-- an `until` that is not one of the eleven values;
-- an entry that is not the shape above, or a `depends_on` that is not a list;
-- a direct cycle between two issues, which no reader counts as an unmet wait.
+- A dependency with no manifest in this checkout.
+- A manifest that does not parse.
+- An `until` that is not one of the eleven values.
+- An entry that is not the shape above, or a `depends_on` that is not a
+  list.
+- A direct cycle between two issues. No reader counts it as an unmet wait.
 
-A reader that cannot run at all (no python3, a broken install) still refuses, as every reader in the hook does. A longer cycle blocks each member at implement; lint reports a cycle that passes through the linted issue.
+Two cases still block:
+
+- A reader that cannot run at all (no python3, a broken install) refuses.
+- A longer cycle blocks each member at build. Lint reports a cycle that
+  passes through the linted issue.
 
 ### The worktree rule
 
-A dependency finished only in another worktree still blocks here, because this checkout decides. The refusal names the state this checkout reads and gives two ways out:
+A dependency finished only in another worktree still blocks here. The
+refusal names the state this checkout reads. There is no override flag. To
+clear the block:
 
-- bring that issue's folder (`.compass/work/<slug>/`) into this checkout;
+- bring that issue's folder (`.compass/work/<slug>/`) into this checkout; or
 - run `compass issue depends remove <slug>`.
-
-There is no override flag.
 
 ## The verbs
 
 | Verb | What it does | Refuses with exit 2, writing nothing |
 |---|---|---|
-| `compass issue depends add <slug> --reason "..." [--until <value>]` | Writes the entry. Exit 0, and a lint finding on standard error for a slug with no manifest in this checkout. | a cycle; the issue's own slug; a slug that is not one path segment; an unknown `until`; an empty reason |
+| `compass issue depends add <slug> --reason "..." [--until <value>]` | Writes the entry. Exit 0, with a lint finding on standard error for a slug with no manifest in this checkout. | a cycle; the issue's own slug; a slug that is not one path segment; an unknown `until`; an empty reason |
 | `compass issue depends remove <slug>` | Removes the entry, and the key with the last entry. The other issue needs no manifest here. | a slug that is not a dependency of the issue |
 
-Both re-render the waiting issue's page and the pages of the issues its manifest links to (`RENDER_TRIGGERS`). `remove` also re-renders the removed dependency's page, when it has a manifest in this checkout, so that page no longer lists the waiting issue.
+Both render again the waiting issue's page and the pages of the issues its
+manifest links to (`RENDER_TRIGGERS`). `remove` also renders the removed
+dependency's page again.
 
 ## What each reader shows
 
 | Reader | Shows |
 |---|---|
-| `compass next` | At implement (build on the path), ` \| blocked: waits for b to reach done` after the usual parts. Only the dependency block, never a fault; lint is where faults show. |
-| `compass flow` | `BLOCKED: <reason>` on an in-progress or in-review row, with the wait while the issue is at implement. |
-| `compass flow --json` | Every row holds `depends_on`: a list of objects with the keys `issue`, `reason`, `until`, `state`, `stage` and `met`. The list is empty for an issue with none. A dependency that was not read has `state` and `stage` null and `met` false. |
+| `compass next` | At build, ` \| blocked: waits for b to reach done` after the usual parts. It never shows a fault; lint does. |
+| `compass flow` | `BLOCKED: <reason>` on an in-progress or in-review row, with the wait while the issue is at build. |
+| `compass flow --json` | Every row holds `depends_on`: a list of objects with the keys `issue`, `reason`, `until`, `state`, `stage` and `met`, at every stage. A dependency that was not read has `state` and `stage` null and `met` false. |
 | `ship-commit` | After a landing, "these issues were waiting for b:" and a line for each open issue that names it. |
 
 ## Code
 
-The dependency functions are in `cli/compass_pkg/lifecycle.py`:
+The dependency functions are in `cli/compass_pkg/lifecycle.py`. Every reader
+calls them, so `compass next`, the board and `ship-commit` show the same
+words.
 
-- `lifecycle.reached` is the one comparison of an `until` value with a state and stage;
-- `lifecycle.judge` judges every well-formed entry of an issue and returns `Dependency` records;
-- `lifecycle.entries` returns the well-formed entries and a text for each shape fault;
-- `lifecycle.dependency_block` and `lifecycle.blocked_text` build the derived reason and join it with the stored one;
-- `lifecycle.checkout_reader` and `lifecycle.mapping_reader` are the readers: this checkout uncached, or manifests a caller already parsed;
+- `lifecycle.reached` compares an `until` value with a state and stage.
+- `lifecycle.judge` judges each well-formed entry; `lifecycle.entries` lists
+  them, with a text for each shape fault.
+- `lifecycle.dependency_block` and `lifecycle.blocked_text` build the
+  derived reason and join it with the stored one.
 - `lifecycle.hook_lines` is what the hook's dependency reader prints.
 
-The verbs, the cycle walk, the lint lines and the `ship-commit` lines are in `cli/compass_pkg/issue_depends.py`. The board rows of `compass flow` come from `flow.board`. The board reads the copies it already parsed, so a planted parse-cache entry can mislead it but never the hook or `compass next`.
+The verbs, the cycle walk and the lint lines are in
+`cli/compass_pkg/issue_depends.py`. The board (`flow.board`) reads copies it
+already parsed, so a planted parse-cache entry can mislead the board, never
+the hook or `compass next`.

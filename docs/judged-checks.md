@@ -1,17 +1,9 @@
 # Judged checks
 
-This page is the owning doc for judged checks: a check of kind `judged`, the
-review record that clears it, and `compass evidence review`, the command that
-writes the record. A judged check records a judgement. The CLI checks that the
-record exists, that it says `pass`, that a listed reviewer wrote it and that
-the things it judged have not changed. It does not check the reasoning.
-
-The code is `cli/compass_pkg/review_records.py` (reading a record and judging
-it) and `cli/compass_pkg/review_cmd.py` (the command).
-`cli/compass_pkg/stage_lists.py` calls the first for each judged check in a
-stage's entry or exit list (see `docs/entry-exit-evaluation.md`). The
-decisions behind it are ADR-033 (checks are data) and ADR-037 (what a
-configuration change owes).
+A check of kind `judged` records a judgment. `compass evidence review`
+writes the review record that clears it. The CLI checks that the record
+exists, says `pass`, was written by a listed reviewer and covers inputs that
+have not changed. It does not check the reasoning.
 
 ## Declaring a judged check
 
@@ -28,21 +20,23 @@ checks:
 
 | Field | Meaning |
 |---|---|
-| `statement` | What is judged. The digest of the check's definition covers every field of the check (`statement`, `inputs`, `reviewers`, `severity`, `on_skipped` and the rest), so changing any of them re-owes the review |
-| `inputs` | The artifact ids or evidence ids the reviewer read. A check with no `inputs` cannot be reviewed and fails in a list |
-| `reviewers` | Who may review. `agent` is any agent session, `agent:<id>` is one session, and any other entry is read as a person's id. A role is therefore matched as a person id; resolving roles is later work. The default is `[agent]` |
+| `statement` | What is judged. |
+| `inputs` | The artifact ids or evidence ids the reviewer read. A check with no `inputs` cannot be reviewed and fails in a list. |
+| `reviewers` | Who can review: `agent` (any agent session), `agent:<id>` (one session), or a person's id. The default is `[agent]`. |
 
-An input that is an evidence id names the file of that evidence entry. Any
-other input is a document of the issue, found as every document is. The digest
-of an input is the SHA-256 of its file with the lines inside rendered blocks
-removed (`docs/rendered-blocks.md`), so a render of a block in an input does not
-re-owe the review.
+- An evidence id names the file of that evidence entry. Any other input is
+  a document of the issue.
+- The digest of an input is the SHA-256 of its file without the lines
+  inside [rendered blocks](rendered-blocks.md). A render of a block does not
+  re-owe the review.
+- The digest of the check's definition covers every field of the check. A
+  change to any field re-owes the review.
 
 ## The review record
 
 `compass evidence review` writes `evidence/review-<check>-<n>.yml` in the
-issue's directory and registers it in the manifest as `manual-review` evidence
-with `check: <check id>`:
+issue's directory. It registers the file in the manifest as `manual-review`
+evidence with `check: <check id>`:
 
 ```yaml
 schema: 1
@@ -61,54 +55,38 @@ at: 2026-10-08T10:00:00Z
 content_digest: sha256:...
 ```
 
-`content_digest` is the stamp that other evidence carries. A record edited
-after it was written, one with no stamp, one with no file and one for another
-check is not a record.
-
-A record is never overwritten. A second review of the same check is a new
-record, and the newest registered record by a listed reviewer decides. A
-record by a reviewer the check does not list is set aside: it can neither
-clear the check nor block it. A later `fail` by a listed reviewer therefore
-overrides an earlier `pass`, and a new `pass` clears a `fail`.
-
-A record is bound to its issue and its generation. `issue` is the slug of the
-issue it was written in, so a record copied into another issue is not a record
-there. A different generation than the one in force re-owes the review, as a
-changed input does.
+- **Not a record:** one edited after it was written, one with no
+  `content_digest` stamp, one with no file, one for another check, and one
+  copied from another issue (`issue` holds the slug it was written in).
+- **Never overwritten.** A second review is a new record. The newest
+  registered record by a listed reviewer decides: a later `fail` overrides a
+  `pass`, and a new `pass` clears a `fail`.
+- **A reviewer the check does not list:** the record is set aside. It can
+  neither clear the check nor block it.
+- **Another generation** than the one in force re-owes the review.
 
 ## When a judged check passes
 
-It passes only when the deciding record (the newest by a listed reviewer)
-meets all four conditions:
+The deciding record must meet all four conditions. The first one that fails
+starts the detail of the row:
 
-1. the record is a record, as above;
-2. its `verdict` is `pass`;
-3. its reviewer is in the check's `reviewers`;
-4. its `inputs` digests equal the digests of the inputs now, and its
-   `definition_digest` equals the digest of the check's definition now.
+| Condition | Cause when it fails | When |
+|---|---|---|
+| It is a record | `no review record` | No registered record, or the newest is not usable. The detail names the command to run, or why the record is not usable. |
+| Its `verdict` is `pass` | `verdict is fail` | The detail gives the reviewer and the reason. |
+| Its reviewer is in `reviewers` | `reviewer not listed` | Every usable record is by a reviewer not listed. The detail names who reviewed the newest and who the check lists. |
+| Its `inputs` digests and `definition_digest` equal the digests now | `input changed since review` | An input has other bytes, is missing, or is not in the set the review covered, or the definition or the generation changed. The detail names each. |
 
-The first condition that fails names the cause. The detail of the row starts
-with it:
+A changed input or definition re-owes the review: the check fails until
+someone reviews the inputs as they are now.
 
-| Cause | When |
-|---|---|
-| `no review record` | The check has no registered record, or its newest record is not usable. The detail names the command to run, or says why the record is unusable |
-| `verdict is fail` | The newest record says `fail`. The detail gives the reviewer and the reason |
-| `reviewer not listed` | Every usable record is by a reviewer not in `reviewers`. The detail names who reviewed the newest and who the check lists |
-| `input changed since review` | An input has other bytes, is missing, or is not the set the review covered, or the definition of the check or the generation changed. The detail names each |
+A judged check follows the rules of each check in a list
+([entry and exit evaluation](entry-exit-evaluation.md)):
 
-A changed input or definition re-owes the review: the same check fails
-again until someone reviews the current inputs. The change of the definition
-is reported under the fourth cause with its own phrase, because it re-owes the
-review for the same reason an input does.
-
-A judged check follows the rules of every check in a list. It is `pending`
-until its list is due, it gives its `on_skipped` verdict when its stage is
-skipped or collapsed, and an advisory one reports a failure with the
-`advisory` status, which does not fail the run.
-
-Reviewer identity is not authenticated. This is the same limit as
-`human-approval`: a name in a field is a claim, not a proof.
+- It is `pending` until its list is due.
+- It gives its `on_skipped` verdict when its stage is skipped or collapsed.
+- An advisory one reports a failure with the `advisory` status, which does
+  not fail the run.
 
 ## `compass evidence review`
 
@@ -121,13 +99,13 @@ compass evidence review CHECK --verdict pass|fail --reason TEXT --reviewer ID
 |---|---|
 | `CHECK` | The id of a judged check in the issue's stored configuration |
 | `--verdict` | `pass` or `fail` |
-| `--reason` | What was read and why the verdict holds. It must not be empty |
+| `--reason` | What was read and why the verdict holds. Not empty. |
 | `--reviewer` | `agent`, `agent:<session id>` or a person's id |
-| `--scope` | What the judgement covers (optional) |
+| `--scope` | What the judgment covers (optional) |
 
-The command digests the check's inputs as they are now, writes the record and
-registers it. It exits 0 when it wrote the record and 2 when it did not. In
-the second case it writes nothing. It exits 2 for:
+The command digests the inputs as they are now, writes the record and
+registers it. It exits 0 when it wrote the record. It exits 2 and writes
+nothing for:
 
 - a check that does not exist, or is not of kind `judged`;
 - a check that declares no `inputs`;
@@ -138,9 +116,10 @@ the second case it writes nothing. It exits 2 for:
 
 ### `--json`
 
-The `--json` document is a public contract, like the exit codes. A change to
-a key or its order is a breaking change. This is the real output for the
-example above; `at` and `definition_digest` vary and are shown as `...`.
+The `--json` document is a public contract, like the exit codes. A change
+to a key or its order is a breaking change. This is real output; `at` and
+`definition_digest` vary and are shown as `...`. `scope` and `generation`
+are absent when the record has none.
 
 ```json
 {
@@ -169,46 +148,50 @@ example above; `at` and `definition_digest` vary and are shown as `...`.
 }
 ```
 
-`scope` and `generation` are absent when the record has none.
-
 ## An agent review
 
-Before 9.0.0 a reviewer agent reviewed every change at verify. 9.0.0 runs each
-issue in one session (ADR-090), so no agent review is required. A project that
-wants one turns it on as advisory evidence with one tighten-only setting in its
-own `compass.yml` (ADR-094):
+No agent review is required (ADR-090). A project turns one on as advisory
+evidence with one setting in `compass.yml` (ADR-094):
 
 ```yaml
 agent_review: on
 ```
 
-The setting adds the check set's optional entry: the judged check
-`agent-review`, whose statement is "An agent that did not write the change
-reviewed it against the acceptance criteria.", with `reviewers: [agent]`, `inputs:
-[acceptance-criteria]`, `severity: advisory` and `on_skipped: not-applicable`,
-listed at the `ship` entry. Since 9.0.0 a `checks:` or `stages:` block in
-`compass.yml` is a removed setting and is not read.
+The setting adds the judged check `agent-review` at the `ship` entry:
 
-The reviewing agent records its verdict with `compass evidence review
-agent-review --verdict pass|fail --reason TEXT --reviewer agent`, which writes a
-`manual-review` record. Then:
+| Field | Value |
+|---|---|
+| Statement | "An agent that did not write the change reviewed it against the acceptance criteria." |
+| Reviewers | `reviewers: [agent]` |
+| Inputs | `inputs: [acceptance-criteria]` |
+| Severity | `severity: advisory` |
+| On a skipped stage | `on_skipped: not-applicable` |
 
-- With no record, a `fail` or a changed input, the check shows as ADVISORY and
+The reviewing agent runs `compass evidence review agent-review --verdict
+pass|fail --reason TEXT --reviewer agent`.
+
+- With no record, a `fail` or a changed input, the check shows as ADVISORY.
   `compass check` does not fail on it.
 - A record by a person is set aside, because the check lists only `agent`.
-- The check sits at the `ship` entry and not in the Definition of Done, so
-  `dod-evidence-typed` does not read it.
-
-## A project with no judged check
-
-Nothing changes. No record is read, the manifest is not touched and the output
-of `compass check` and `compass next` is the same. The shipped
-default names no judged check in any list.
+- The check is not in the Definition of Done, so `dod-evidence-typed` does
+  not read it.
+- A `checks:` or `stages:` block in `compass.yml` is a removed setting and
+  is not read.
 
 ## Limits
 
-- Roles in `reviewers` are not resolved.
-- Reviewer identity is not authenticated.
-- A `human` check still reads a tick. `approvers:` and the human-approval
-  lookup are a later increment.
+- The shipped default names no judged check. A project with none is
+  unchanged.
+- A role in `reviewers` is not resolved. It is matched as a person's id.
+- Reviewer identity is not authenticated, as with `human-approval`. A name
+  in a field is a claim.
+- A `human` check still reads a tick.
 - A check of kind `evidence` is not evaluated, and a blocking one fails.
+
+## Code
+
+`cli/compass_pkg/review_records.py` reads a record and judges it.
+`cli/compass_pkg/review_cmd.py` is the command. `stage_lists.py` calls the
+first for each judged check in a stage's entry or exit list. The decisions
+are ADR-033 (checks are data) and ADR-037 (what a configuration change
+owes).

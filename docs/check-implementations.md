@@ -1,73 +1,74 @@
 # Check implementations and their fixture corpus
 
-This page lists, for each built-in check implementation, its version and the
-cases of its fixture corpus. The decision behind it is ADR-038. The code is
-`cli/compass_pkg/check_registry.py` (versions), `cli/compass_pkg/impl_versions.py`
-(the refusal and `compass issue migrate --config`) and `tests/test_impl_versions.py`
-(the build rule).
+This page lists each built-in check implementation, its version and the
+cases of its fixture corpus (ADR-038).
 
 ## What the corpus shows
 
-- Across a major version, Compass refuses. When an issue's generation records a
-  different major of an implementation from the installed one, `compass check`
-  refuses that check only, as a failure, and names `compass issue migrate --config`.
-  Every other check runs.
-- Within a major version, compatibility is shown on the corpus cases and nowhere
-  else. A change of behaviour that no case exercises is not detected.
-- Each implementation starts with two cases: the input its mutation proof breaks
-  and the same input put right. The claim is weak until cases are added, usually
-  when a defect is found.
+- **Across a major version, Compass refuses.** When an issue's generation
+  records another major of an implementation than the installed one,
+  `compass check` fails that check only and names `compass issue migrate
+  --config`. Every other check runs.
+- **Within a major version**, only the corpus cases show compatibility. A
+  change of behavior that no case exercises is not detected.
+- Each implementation starts with two cases: the input its mutation proof
+  breaks, and the same input put right.
 
 ## The build rule
 
-`tests/fixtures/impls/versions.lock.yml` holds, per implementation, its `version`
-and a `verdict_digest` of the verdicts its cases compute. The build fails when:
+`tests/fixtures/impls/versions.lock.yml` holds, for each implementation, its
+`version` and a `verdict_digest` of the verdicts its cases compute. The
+build fails when:
 
 - the verdict digest changed and the major version did not: bump the major;
-- the installed major is higher than the locked one and the lock file was not
-  updated in the same change.
+- the installed major is higher than the locked one and the lock file was
+  not updated in the same change.
 
-A case holds a verdict (`pass`, `fail` or `nothing-to-check`) and a line saying
-what the input is. It never holds the detail text, so rewording a message is not
-a change of behaviour. `tests/check_corpus_runner.py` builds each input, runs the
-implementation and computes the verdict; a test fails when a label differs from it.
+A case holds a verdict (`pass`, `fail` or `nothing-to-check`) and a line
+that says what the input is. It holds no detail text, so a reworded message
+is not a change of behavior. `tests/check_corpus_runner.py` builds each
+input and computes the verdict. A test fails when a label differs from it.
+
+| File | Role |
+|---|---|
+| `cli/compass_pkg/check_registry.py` | The versions |
+| `cli/compass_pkg/impl_versions.py` | The refusal and `compass issue migrate --config` |
+| `tests/test_impl_versions.py` | The build rule |
 
 ## The section check
 
-`nfr-rows-resolved` (`cli/compass_pkg/section_checks.py`, version 1.0.0) is blocking,
-`on_skipped: not-applicable` and in no gate. `cli/compass_pkg/outside_gate.py` runs it after the gate loop.
-9.0.0 removed its sibling `contracts-declared`, `artifacts-approved` and the design-size check with the
-documents they read (ADR-091). `governance/guardrails.md` holds the rules; this page holds what the corpus pins.
+`nfr-rows-resolved` (`cli/compass_pkg/section_checks.py`, version 1.0.0) is
+blocking, `on_skipped: not-applicable` and in no gate.
+`cli/compass_pkg/outside_gate.py` runs it after the gate loop.
+`governance/guardrails.md` holds its rules.
 
-The check declines, with the verdict `nothing-to-check`, when the first of four conditions holds. The order
-decides which detail an archived issue shows, and the corpus has one case for each:
+The check gives `nothing-to-check` on the first condition that holds:
 
 | Order | Condition | Corpus case |
 |---|---|---|
 | 1 | The manifest has no `generation` key | `no-generation` |
 | 2 | The issue is closed | `closed` |
-| 3 | No spec is registered with a path, and the issue was created before 2026-11-04; a newer issue is read at `docs/compass/<created>-<slug>/acceptance-criteria.md` and declines while that file is not written | `not-registered` |
-| 4 | For a registered spec, the catalogue of the issue's generation does not list the section at the spec's depth; an entry with no `depth` lists nothing | `no-section` and `no-depth` |
+| 3 | No spec is registered with a path, and the issue was created before 2026-11-04. A newer issue is read at `docs/compass/<created>-<slug>/acceptance-criteria.md` and declines while that file is not written | `not-registered` |
+| 4 | For a registered spec, the catalog of the issue's generation does not list the section at the spec's depth. An entry with no `depth` lists nothing | `no-section` and `no-depth` |
 
-- A spike runs the check and reads `nothing to check`, because it registers no spec.
-- `nfr-rows-resolved` reads a Then as numbered when a digit sits on the Then line or on a Then, And or But line
-  after it. Its lookahead stops `TRC-1` matching `TRC-10`.
+- A spike registers no spec, so the check reads `nothing to check`.
+- The check reads a Then as numbered when a digit is on the Then line, or on
+  a Then, And or But line after it. `TRC-1` does not match `TRC-10`.
 
-## The red for each scenario
+## Checks with no corpus case for a newer rule
 
-`suite-passed` 1.1.0 needs a red for each scenario on an issue created on or after 2026-11-03 (ADR-088). No
-corpus case exercises it: a new case changes the verdict digest, which needs a new major, and archived issues
-pin major 1. `tests/test_red_per_scenario.py` holds the cases.
+A new corpus case changes the verdict digest, which needs a new major, and
+archived issues pin major 1. So these two rules have their cases in a test
+file:
 
-## The SHA-256 of each file
-
-`evidence-matches-tree` 1.1.0 judges a landed issue by the SHA-256 and the mode of each file a record holds in
-`file_sha256` and `file_modes`, read from the commit as a checkout writes it, and a record written before that by its `changes_id` (ADR-089). No corpus case holds a
-record with `file_sha256`, for the same reason. `tests/test_evidence_sha256sums.py` holds the cases.
+| Check | Rule | Cases |
+|---|---|---|
+| `suite-passed` 1.1.0 | Needs a red for each scenario on an issue created on or after 2026-11-03 (ADR-088) | `tests/test_red_per_scenario.py` |
+| `evidence-matches-tree` 1.1.0 | Judges a landed issue by the SHA-256 and the mode of each file a record holds in `file_sha256` and `file_modes`, read from the commit. It judges an older record by its `changes_id` (ADR-089) | `tests/test_evidence_sha256sums.py` |
 
 ## The cases
 
-The list below is generated by `scripts/impl-coverage.py --write`. Do not edit it
+`scripts/impl-coverage.py --write` generates the list below. Do not edit it
 by hand. `tests/test_impl_versions.py` fails when it is out of date.
 
 <!-- generated by `scripts/impl-coverage.py` -->

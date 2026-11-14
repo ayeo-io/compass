@@ -1,8 +1,7 @@
 # Compass - Quickstart
 
-This page takes you from an empty machine to a finished first issue. It also
-says what `compass next`, the rail and the status line show. For one change
-with its real output, read [Five minutes](five-minutes.md).
+This page takes you from an empty machine to a finished first issue. For one
+change with its real output, read [Five minutes](five-minutes.md).
 
 ## 1. Install
 
@@ -283,198 +282,14 @@ spike is not on the path:
 
 See `approaches/spike.md`.
 
-## See the issue's state in the status line
+## See where the issue stands
 
-Compass can show the current issue in Claude Code's status line:
-
-```text
-compass · fix-login-redirect · delivery · Build · gates 1/3 · TRC-002 red
-```
-
-The last field says the second traced criterion has a failing test on
-record. The line names the same stage as `compass next`. Only you see it,
-not the model, so it costs no tokens.
-
-Add it to your Claude Code settings file, your own or the project's. A
-plugin cannot add it for you:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "~/.claude/plugins/data/compass-compass/compass-statusline"
-  }
-}
-```
-
-- That file is a launcher in the plugin's data folder, which Claude Code
-  keeps across plugin updates. Each session start points it at the installed
-  version, so the setting does not need a change.
-- A plugin loaded with `--plugin-dir` keeps its launcher under
-  `~/.claude/plugins/data/compass-inline/`.
-- `/compass:init` offers to add the entry. It shows the change and writes it
-  only when you say yes.
-- Outside a Compass project, the line is empty.
-- The line fits the terminal width that Claude Code passes in `COLUMNS`, and
-  assumes 80 columns when it is not set.
-
-## What `compass next` prints
-
-`compass next` prints one line: the issue's stage, the first gate not yet
-passed, and the one command to run next.
-
-```text
-Build [gate: verify.correctness] | next: write the tests and the code, then compass quick-fix finish -m "<commit message>" -- <test command>
-```
-
-The stage is a stage of the path (ADR-092). An issue assessed before the
-path keeps its legacy stages, and each rule reads them as before. `compass
-next`, the rail and the status line show each one as the path stage it maps
-to:
-
-| Legacy stage | Shown as |
-|---|---|
-| `assess` | Assess |
-| `define`, `refine`, `plan` | Specify |
-| `breakdown`, `implement` | Build |
-| `verify`, `ship` | Ship |
-
-The `next:` command comes from the issue's records, the first row that
-matches (`cli/compass_pkg/next_step.py`):
-
-| The records show | `next:` |
-|---|---|
-| `request` owed, the link or the requester not recorded | `compass issue link set --issue <slug> --request <url> --requester <name>` |
-| `scenario-approval` owed, no outcome and no request | write the scenarios in acceptance-criteria.md, then `compass evidence request --checkpoint specify`, then stop for `/compass:approve` |
-| `scenario-approval` owed, a request pending | stop: the scenarios wait for the person's approval. Ask them to type `/compass:approve <n>` |
-| a gate not passed, or no green | write the tests and the code, then `compass quick-fix finish -m "<commit message>" -- <test command>` |
-| a request for the ship approval or the `G5` sign-off pending | stop and ask the person to type `/compass:approve <n>`. After the approval, run the same `finish` again: it commits |
-| the same, after a change that differs from the one approved | stop and ask the person to type `/compass:approve <n>`. Nothing else to run now |
-| `human-approval` owed, none on record and no request | `compass quick-fix finish -m "<commit message>" -- <test command>`, which asks for the `G5` sign-off |
-| every approval on record, the issue open | `compass quick-fix finish -m "<commit message>" -- <test command>` (it commits), or `compass ship-commit` on the branch the person names |
-| landed, `ship-approval` owed, none on record | `compass issue link set --pr <n> --issue <slug>` after the merge, or `compass evidence request --ship`, then stop for `/compass:approve`; only the second once the merge is recorded |
-| landed with its record committed with the code, and the issue folder holds a change git has not committed (the merge fields `compass issue link set --pr` wrote) | `compass record commit --issue <slug>` |
-
-What a path issue owes comes from its `evidence_required` list:
-
-- The request comes first. It is not a stop: the check `request-recorded`
-  fails until the link and the requester are recorded, and a waiver a person
-  approves excuses it and ends the row.
-- A spike first names `compass evidence add EV-SPIKE --type
-  spike-conclusion`, then `compass gate pass spike.conclude`.
-- A landed issue that owes the ship approval prints `all phases complete |
-  next: <command>`.
-- `compass next --json` gives the same command in a `next` field, and `null`
-  on a closed issue that owes nothing more.
-
-An issue assessed before 9.0.0 keeps the rows of its older record: a
-scenario with no test, `compass tdd-red` and `compass tdd-green` for each
-scenario, the `S17` records its `acceptance_strategy` block names, each open
-Definition of Done item (when its verify stage is `thorough`) and each gate
-not passed.
-
-On a path issue, each verb that writes a record of the issue ends its text
-output with the same `next: <command>` line: `compass scenario add`,
-`scenario tests set`, `scenario descope`, `tdd-red`, `tdd-green`, `gate
-pass`, `evidence add`, `changed-file add`, `isolation record`, `layering
-record`, `evidence approve` and `quick-fix start` and `finish`. `--json` and
-`--quiet` output do not change. An issue assessed before the path prints no
-such line. Each new assessment is a path issue
-(`governance/routing-policy.md`, "The path writer").
-
-## See the path in your terminal
-
-In a terminal, `compass next` shows the issue's stages as a rail, with the
-current stage marked:
-
-```text
-delivery · fix-retry-header
-Assess ✓ → Specify ✓ → Build ● → Ship ○
-
-Build [gate: verify.correctness] | next: write the tests and the code, then
-compass quick-fix finish -m "<commit message>" -- <test command>
-```
-
-Piped output, and any run inside Claude Code, keeps the one-line form. Two
-environment variables change the rail:
-
-- `NO_COLOR` removes the color.
-- `COMPASS_COLOR=never` uses the ASCII markers `[x] [>] [ ] [-]` and no
-  color. `COMPASS_COLOR=always` shows the rail even when the output is piped.
-  `NO_COLOR` still removes the color.
-
-The current stage is the first stage that the records do not show as done.
-A stage is done:
-
-- Assess, when `delivery_approach` and `evidence_required` are set.
-- Specify, when each scenario has an id, an intent and a declared test, and
-  the `specify` checkpoint has an outcome where it is listed.
-- Build, when each scenario that is not `verifiable: narrative` has a red,
-  then a green.
-- Ship, when the issue is closed.
-
-On an issue assessed before the path, a path stage shows as skipped only
-when every legacy stage it maps to is skipped.
-
-If a project turns on the capability `entry-exit-evaluation`, the line also
-names the entry and exit checks of the current stage that are not met, after
-`entry not met:` (`docs/entry-exit-evaluation.md`). A path issue owes no
-Definition of Ready, so no `dor-*` check is named for it.
-
-An issue at build can wait for another issue that has not reached the point
-its `depends_on` entry names (`docs/issue-dependencies.md`):
-
-- The line ends with what it waits for, for example
-  `Build [gate: verify.correctness] | next: ... | blocked: waits for b to reach done`.
-  Earlier stages show no wait.
-- The pre-tool hook refuses production-code edits while it can read, in this
-  checkout, that the wait is not met. A fault in reading it allows the edit
-  with a warning
-  ([safety contract](safety-contract.md#a-dependency-between-issues-is-read-from-this-checkout-and-a-fault-never-blocks)).
-- A dependency `compass next` cannot judge, such as one on an issue with no
-  manifest in this checkout, is left out of the line; `compass issue lint`
-  names it.
-
-## Decisions an agent took for you
-
-When an agent resolves a requirement question itself, it records the
-decision (`compass issue decision add`, or `--from-ledger` for the
-requirements review). What happens next depends on the `autonomy` setting:
-
-- On `balanced` and `controlled`, `compass next` stops at a listed
-  checkpoint that holds unconfirmed decisions: assess and specify under
-  `controlled`, and specify under `balanced` when the scenarios owe a
-  person's approval. Its first line reads `Waiting at the specify
-  checkpoint: 2 decision(s) to confirm`, and the lines below list each
-  decision with its resolution.
-- Confirm them all with `compass evidence approve --decisions --approver
-  <you> --role <role>`. Reopen one with `compass issue decision set <id>
-  --status reopened --reason "<why>"`; a reopened decision keeps the
-  checkpoint waiting.
-- On `autonomous`, `compass next` lists the decisions below its usual line
-  and does not wait. They stay open.
-
-## The stage 2 and 3 reviews
-
-On an issue the four-layer acceptance strategy applies to, `build` and
-`ship` each end with a review from the `atdd` skill. When the records show
-one of those stages done and its review has no outcome, `compass next` says
-so:
-
-- On `controlled`, where the checkpoint is listed, its first line reads
-  `Waiting at the build checkpoint: the stage 2 review has no outcome`,
-  with the `compass evidence request --checkpoint build` command that asks
-  you for it.
-- Elsewhere it shows its usual line and adds the `compass issue checkpoint
-  add` command that records the review as skipped.
-- When you reject a review with `/compass:reject <n> <reason>`, `compass
-  next` names that stage again, with your reason, until a new outcome is
-  recorded.
-
-Ship is done only once the issue is closed. Its review is due once every
-gate has passed, and the `next:` command then names `compass evidence
-request --checkpoint ship`. An issue assessed before the path has these
-reviews at its legacy `implement` and `verify` hand-offs.
+`compass next` prints the issue's stage, the first gate not yet passed and
+the one command to run next. In a terminal it also draws the four stages as
+a rail, and Claude Code's status line can show the same stage. The
+[CLI reference](cli.md#compass-next) holds the detail: the table of `next:`
+commands, [the rail](cli.md#the-rail) and
+[the status line](cli.md#the-status-line) with its settings entry.
 
 ## Where to go next
 

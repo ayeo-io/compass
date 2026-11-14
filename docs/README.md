@@ -8,9 +8,9 @@ the table does not exist, and when a doc in this folder is not listed.
 
 - [index.md](index.md) - the home page of https://docs.ayeo.io/compass/.
 - [five-minutes.md](five-minutes.md) - one small change, from the request to a commit that holds the code and its record.
-- [quickstart.md](quickstart.md) - install, the first issue, `compass next`, the rail and the status line.
+- [quickstart.md](quickstart.md) - install and the first issue.
 - [glossary.md](glossary.md) - each word and id prefix Compass uses.
-- [cli.md](cli.md) - the CLI reference: one line for each verb.
+- [cli.md](cli.md) - the CLI reference: one line for each verb, `compass next`, the rail and the status line.
 
 ## How Compass works
 
@@ -113,8 +113,8 @@ same commit.
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
 | `cli/compass_pkg/flow.py` | `docs/cli.md` |
-| `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |
-| `cli/compass_pkg/next_step.py`, `cli/compass_pkg/next_line.py`, `tests/test_next_step.py` | `docs/quickstart.md` (the table of next commands) |
+| `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/cli.md` |
+| `cli/compass_pkg/next_step.py`, `cli/compass_pkg/next_line.py`, `tests/test_next_step.py` | `docs/cli.md` (the table of next commands) |
 | `cli/compass`, `cli/compass_pkg/verb_help.py`, `cli/compass_pkg/lineage.py` | `README.md` |
 | `scripts/release.sh`, `scripts/build-plugin-copy.py`, `scripts/plugin-files.txt`, `.claude-plugin/marketplace.json`, `Makefile`, `VERSION` | `docs/releasing.md` |
 | `.github/workflows/`, `scripts/ci-*.py` | `docs/releasing.md` |

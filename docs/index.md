@@ -29,7 +29,7 @@ where it stops.
 ## Start here
 
 - [Five minutes](five-minutes.md) - one small change, from the request to a commit that holds the code and its record.
-- [Quickstart](quickstart.md) - install, the first issue, and what `compass next` prints.
+- [Quickstart](quickstart.md) - install and the first issue.
 - [Install check](install-smoke-test.md) - check that an install works.
 - [Configuration](configuration.md) - the project settings in `compass.yml`.
 - Upgrading: [to 9.0.0](upgrade-9-0-0.md), [to 8.0.0](upgrade-8-0-0.md), [to 7.0.0](upgrade-7-0-0.md), [to 6.0.0](upgrade-6-0-0.md).

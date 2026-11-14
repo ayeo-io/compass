@@ -205,14 +205,17 @@ def test_the_launcher_already_set_is_left_alone(tmp_path):
 
 # --- the documents ------------------------------------------------------------
 
-def test_init_and_quickstart_name_the_launcher():
-    """SL-H."""
+def test_init_and_the_cli_page_name_the_launcher():
+    """SL-H. `docs/cli.md` owns the status line; the quickstart links to it."""
     init = (ROOT / "commands" / "init.md").read_text(encoding="utf-8")
     assert "scripts/statusline-setup.py" in init
     assert "even when step 1 stops" in init
     assert "--apply" in init and "yes" in init
+    page = (ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
+    assert "plugins/data/compass-compass/compass-statusline" in page
+    assert "after each upgrade" not in page and "after every upgrade" not in page
     quick = (ROOT / "docs" / "quickstart.md").read_text(encoding="utf-8")
-    assert "compass-statusline" in quick and "plugins/data" in quick
+    assert "(cli.md#the-status-line)" in quick
     assert "after each upgrade" not in quick and "after every upgrade" not in quick
 
 
@@ -307,5 +310,6 @@ def test_init_names_the_helper_by_the_plugin_root():
 
 
 def test_the_quickstart_drops_the_old_upgrade_advice():
-    quick = (ROOT / "docs" / "quickstart.md").read_text(encoding="utf-8")
-    assert "when you upgrade" not in quick
+    for name in ("quickstart.md", "cli.md"):
+        text = (ROOT / "docs" / name).read_text(encoding="utf-8")
+        assert "when you upgrade" not in text, name

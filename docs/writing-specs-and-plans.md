@@ -1,31 +1,18 @@
 # Writing specs and plans
 
-This is a worked example, not a new rule. Compass already has the rule:
-**the cold-reader strategy** (`S7`) in `governance/strategies.md` says write for a cold reader -
-someone who was not in the conversation, has not read the review, and cannot ask
-you a follow-up question. This page shows what that looks like in the four
-places it matters most.
+This page shows the cold-reader strategy (`S7`, `governance/strategies.md`)
+applied to a spec and a plan, with a weak and a better version of each
+passage. A cold reader was not in the conversation and cannot ask you a
+question. The test of a passage is whether that reader can act on it.
 
 Compass needs and checks one document, `acceptance-criteria.md` (ADR-091). A
-plan is a design note a team keeps beside it, written during specify and
-read during build; Compass does not read it. The same rule applies to both.
-
-It is aimed at whoever is writing or reviewing an artifact, human or agent. Read
-it once; come back to the examples when something you wrote gets a puzzled
-response.
-
-The pattern in all four examples is the same. The weak version is not *wrong* -
-it is usually accurate, and it was perfectly clear to the person who wrote it.
-That is the trap. Clarity to the author is not the test. The test is whether the
-next person can act on it without asking you a question.
-
----
+plan is a design note a team keeps beside it. Compass does not read the
+plan.
 
 ## Example 1 - a spec Summary
 
-Every `acceptance-criteria.md` opens with a Summary: **Goal**, **Approach**, and **Why
-now / what changes**. It is the first thing a reviewer reads and often the only
-thing they read closely.
+Every `acceptance-criteria.md` opens with a Summary: **Goal**, **Approach**,
+and **Why now / what changes**. A reviewer reads it first.
 
 **Weak**
 
@@ -49,17 +36,13 @@ thing they read closely.
 > the one they file, and the three columns they paste in by hand arrive
 > populated.
 
-**What changed:** the weak version could describe a hundred different changes;
-the better one could only describe this change.
-
----
+**What changed:** the weak version fits a hundred changes. The better one
+fits only this change.
 
 ## Example 2 - a design decision
 
-Design decisions live in the plan's Design decisions, ADR-style, or in an ADR
-when they bind later issues. A
-decision with no alternative considered is usually not a decision yet - it is a
-preference that has not been tested.
+A design decision goes in the plan, or in an ADR when it binds later
+issues. A decision that names no real alternative is a preference.
 
 **Weak**
 
@@ -87,16 +70,12 @@ preference that has not been tested.
 >   must handle a two-step flow, so the API is no longer a single call.
 > - **Governance tie:** the tested-before-ship guardrail (`G1`) - the job path needs its own test surface.
 
-**What changed:** the weak version records that a choice was made; the better one
-records enough for a future reader to reopen the choice when the constraints
-change.
-
----
+**What changed:** the better version gives a later reader enough to reopen
+the choice when the constraints change.
 
 ## Example 3 - a scenario name
 
-Scenario names are read far more often than scenario bodies. A product owner
-scanning a spec reads twenty names and three bodies.
+A reader reads many more scenario names than scenario bodies.
 
 **Weak**
 
@@ -114,17 +93,13 @@ scanning a spec reads twenty names and three bodies.
 >
 > `Scenario: an export for an account with no entries should return an empty file, not an error`
 
-**What changed:** the names now state an outcome rather than a call path, so the
-spec can be scanned without opening a single scenario body.
-
----
+**What changed:** each name states an outcome, not a call path. A reader can
+scan the spec and open no scenario body.
 
 ## Example 4 - a plan work unit
 
-The plan's work units are what the build stage runs, one after another in the
-same session. A unit that reads
-clearly to the planner and vaguely to the builder is the most expensive kind of
-plan defect, because the ambiguity is discovered after the work starts.
+The build stage runs the plan's work units, one after another. A vague
+unit is found only after the work starts.
 
 **Weak**
 
@@ -145,40 +120,29 @@ plan defect, because the ambiguity is discovered after the work starts.
 > Tests: `tests/test_ledger_export.py::test_excludes_drafts`,
 > `tests/test_jobs.py::test_returns_job_id`.
 
-**What changed:** every cell that a builder would have had to ask about is
-filled in, and the independence claim now says *why* rather than asserting it.
+**What changed:** each cell a builder would ask about is filled in, and the
+independence claim gives its reason.
 
-The most mechanical version of this is a placeholder - `TBD`, `TODO`,
-"implement later", "add appropriate error handling" - or a work unit that
-promises tests without naming any. "Similar to U1" needs a reader to catch.
-
----
+Do not leave a placeholder (`TBD`, `TODO`, "implement later", "add
+appropriate error handling"), or a work unit that promises tests and names
+none.
 
 ## A worked plan - every optional section rendered
 
-<!-- Deliberately not "## Example 5". The numbered examples above are
-     weak-then-strong pairs of a single passage; this is one complete artifact
-     rendered end to end, which is a different kind of thing. Keeping it out of
-     that series leaves the pairing convention intact. -->
+<!-- Not "## Example 5": the numbered examples are weak-and-better pairs. -->
 
-A plan can use five optional sections beyond Approach, design
-decisions, the governance check, and work units: a **Summary**, an
-**interaction** diagram, a **structure** diagram, **named design patterns**,
-and **the shape of the change** in code. They exist so a reviewer can see a
-design before it is built, which is the cheapest moment to disagree with it.
+A plan can use five optional sections: a **Summary**, an **interaction**
+diagram, a **structure** diagram, **named design patterns** and **the shape
+of the change** in code. They let a reviewer see a design before it is
+built. `skills/governance-check/SKILL.md`, "Writing the design down", has
+the rule for each.
 
-They are optional individually. `skills/governance-check/SKILL.md`,
-"Writing the design down", carries the rule for each; the short version is
-that a small change writes no design at all, a larger one uses the one or
-two that add clarity, and a change that owes `architecture` can use all of
-them. **Delete the ones you do not use** - an empty optional heading
-reads as an omission rather than a decision.
+- A small change writes no design.
+- A larger change uses the one or two sections that add clarity.
+- A change that owes `architecture` can use all five.
+- Delete the headings you do not use.
 
-Below is a complete worked example for an imaginary issue: adding support for a
-second JWT signing algorithm. Note what it does *not* do - it names two
-patterns, not five, and it shows an interface rather than an implementation.
-
----
+The example below adds a second JWT signing algorithm.
 
 ### 0. Summary
 
@@ -211,8 +175,8 @@ sequenceDiagram
     Note over A: no partial session is created
 ```
 
-The failure path is the reason this diagram is here: the 401 must be returned
-before any session row is written, and that ordering is not visible in prose.
+The diagram shows the failure path: the 401 returns before any session row
+is written.
 
 ### 3. Structure - what talks to what
 
@@ -233,9 +197,8 @@ classDiagram
     AuthService --> TokenValidator : depends on
 ```
 
-This commits us to algorithm selection happening in one place. It deliberately
-leaves open how a validator is configured; that stays in the existing config
-loader.
+Algorithm selection happens in one place. How a validator is configured
+stays in the existing config loader.
 
 ### 4. Design patterns invoked
 
@@ -248,9 +211,8 @@ loader.
 >   owns, and putting it in a registry keeps `AuthService` free of a lookup
 >   table that would need a test per entry.
 
-Two patterns, both with a reason. There is no Factory here and no Ports and
-Adapters: naming them would make this plan sound more considered without
-making it clearer, and a reviewer cannot disagree with a bare name.
+Name a pattern only with its reason. A reviewer cannot disagree with a bare
+name.
 
 ### 5. The shape of the change
 
@@ -266,73 +228,29 @@ class AuthService:
     def authenticate(self, request) -> Claims: ...
 ```
 
-Push back here if you think `validate` should return claims directly rather
-than a `Result` - that choice decides whether an expired token is an exception
-or a value, and it is easier to change now than after four call sites exist.
+The code shows an interface, not an implementation. It lets a reviewer
+question the `Result` return type before four call sites exist.
 
----
-
-**On PlantUML.** Both diagrams above are Mermaid, which renders natively in
-GitHub and in every modern IDE viewer. PlantUML is the documented fallback for
-the shapes Mermaid cannot express - component diagrams with lifelines, state
-charts with guards, deployment orchestration. Reach for it only then: it needs a
-rendering path the reader may not have, so some readers will see source
-instead of a picture.
-
----
+**PlantUML.** Both diagrams are Mermaid, which GitHub renders. Use PlantUML
+only as the fallback for a shape Mermaid cannot express: some readers will
+see its source and no picture.
 
 ## What Compass deliberately does not adopt
 
-These are decisions, not omissions. They are written down because an unstated
-boundary gets re-litigated every few months, whereas a stated one gives the next
-person something specific to argue with.
-
-**No subagent review loop between spec and plan.** The obvious way to improve a
-spec is to have a second agent critique it. The evidence against it is not
-Compass's own: the R1 project shipped such a loop, then removed it in
-their [v5.0.6 release](R1/releases/tag/v5.0.6)
-after regression testing across five versions and five
-trials found identical quality scores whether the loop ran or not, at roughly 25
-minutes of overhead per run. Compass has not repeated that measurement, and
-takes their published result at face value. Compass already has two
-review moments that earn their cost: **the self-review at specify**, which
-checks the scenarios for placeholders, untestable outcomes and missing failure
-modes, and **the review at ship**, which passes the gates with evidence.
-The four-scan self-review in the `atdd` skill gets the ergonomic
-benefit without the process weight, because the author fixes their own cheap mistakes
-rather than routing them through a critic.
-
-**No user-story format as the spec.** "As a [role], I want [feature], so that
-[outcome]" - **ADR-004** rejects it as a spec format. The reason is that a user
-story embeds one role's perspective into the artifact, so each role ends up
-wanting their own version and the versions drift. Compass has one
-`acceptance-criteria.md` that every reader of the change reads. User stories are
-fine *upstream* of Compass, in a brief or a ticket; they are not the spec.
-
-**No single-audience declaration.** A common convention is to write "assume the
-reader is a junior engineer with no context". Compass does not, because its
-five-role model is a stronger reader model than any single persona: the same
-spec is read for intent fidelity, for claims, for tests, for coverage, and for UI
-behaviour. The cold-reader strategy (`S7`) already assumes zero prior context
-without having to name someone to imagine.
-
-**No plan made of small steps, each with the exact commands to run.** Some frameworks make
-the plan a sequence of small steps each with the literal command to run. Compass
-does not, because the work between `compass quick-fix start` and `compass quick-fix finish`
-is tests and code, and `finish` proves the red and the green. Duplicating that in the plan inflates it
-while it goes out of date as soon as the code changes. The useful part of that idea -
-that a plan should contain no unfinished promises - is kept as the author's
-self-review in the `governance-check` skill.
-
----
+| Not adopted | Why |
+|---|---|
+| A subagent review loop between the spec and the plan | The R1 project shipped such a loop and removed it in its [v5.0.6 release](R1/releases/tag/v5.0.6): tests across five versions and five trials found the same quality scores with and without it, at about 25 minutes of overhead for each run. Compass has not repeated that measurement. Compass keeps two reviews: the self-review at specify (the four scans in the `atdd` skill) and the review at ship, which passes the gates with evidence. |
+| The user-story format as the spec | ADR-004 rejects it. A user story holds one role's view, so each role wants its own version and the versions drift. Compass has one `acceptance-criteria.md` for every reader. User stories are fine in a brief or a ticket. |
+| A single-audience declaration, such as "assume the reader is a junior engineer" | The five roles read the same spec for intent, claims, tests, coverage and UI behavior. `S7` already assumes a reader with no context. |
+| A plan made of small steps, each with the exact commands to run | The work between `compass quick-fix start` and `compass quick-fix finish` is tests and code, and `finish` proves the red and the green. A copy in the plan goes out of date when the code changes. The `governance-check` skill keeps the useful part as the author's self-review: a plan holds no unfinished promise. |
 
 ## Related
 
 - `governance/strategies.md` - the cold-reader strategy (`S7`) and the
-  persistence-over-conversation strategy (`S4`), which `S7` extends.
-- `skills/atdd/SKILL.md` - the Summary section, the four-scan
-  self-review, and what makes a scenario runnable.
+  persistence-over-conversation strategy (`S4`).
+- `skills/atdd/SKILL.md` - the Summary section, the four-scan self-review,
+  and what makes a scenario runnable.
 - `skills/governance-check/SKILL.md` - the strategies walk, where a reviewer
   judges an unfinished plan.
 - `architecture/decisions/ADR-004-one-spec-many-lenses.md` - why the spec is one <!-- vocabulary-scan: allow - the record's own filename; ADR-004 keeps the word its decision was about, so a citation must name the real file -->
-  artifact rather than one per role.
+  artifact, not one for each role.

@@ -2,8 +2,9 @@
 
 A comment-only Edit, the path classes, the messages and the budget are part of
 what Compass guarantees and what it does not: a reader must find each rule and
-each limit in `docs/safety-contract.md`, and the figures must be the ones the
-hook sets.
+each limit in `docs/safety-contract.md`. The cost table, the measured shapes
+and the messages are in `docs/hook-reference.md`, and the figures must be the
+ones the hook sets.
 
 Scenario ids: see hooks-comment-only-edits-and-prose/acceptance-criteria.md.
 """
@@ -15,6 +16,7 @@ from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACT = ROOT / "docs" / "safety-contract.md"
+REFERENCE = ROOT / "docs" / "hook-reference.md"
 HOOK = ROOT / "hooks" / "pre-tool.sh"
 
 
@@ -28,6 +30,16 @@ def _section(heading_words: str) -> str:
     return " ".join(found[0].split())
 
 
+def _reference_section(heading_words: str) -> str:
+    """The text of the `##` section of the hook reference whose heading holds
+    `heading_words`, with whitespace made single."""
+    text = REFERENCE.read_text(encoding="utf-8")
+    parts = re.split(r"(?m)^## ", text)
+    found = [p for p in parts if p.split("\n", 1)[0].startswith(heading_words)]
+    assert found, f"docs/hook-reference.md has no section '## {heading_words}'"
+    return " ".join(found[0].split())
+
+
 def _hook_number(name: str) -> int:
     found = re.search(rf"^{name}=(\d+)$", hook_text(HOOK), re.M)
     assert found, f"hooks/pre-tool.sh does not set {name}"
@@ -37,6 +49,7 @@ def _hook_number(name: str) -> int:
 def test_contract_states_comment_only_rule_messages_and_path_classes():
     """Scenario id: `TRC-025` in hooks-comment-only-edits-and-prose/acceptance-criteria.md"""
     section = _section("An Edit that changes only comments")
+    reference = _reference_section("The comment-only check")
     page = " ".join(CONTRACT.read_text(encoding="utf-8").split())
 
     # The covered and uncovered languages.
@@ -55,20 +68,20 @@ def test_contract_states_comment_only_rule_messages_and_path_classes():
     # the measured worst cases of the shape table.
     for name in ("COST_EDIT_START", "COST_EDIT_PARSE_PY", "COST_EDIT_PARSE_YAML",
                  "COST_EDIT_KB_PY", "COST_EDIT_KB_YAML", "EDIT_ALARM_SECONDS"):
-        assert f"{name} {_hook_number(name)}" in section, name
-    assert "signal.alarm" in section
-    assert "| Python, statements of two bytes" in section
-    assert "| YAML, flow sequences of one-digit numbers" in section
+        assert f"{name} {_hook_number(name)}" in reference, name
+    assert "signal.alarm" in reference
+    assert "| Python, statements of two bytes" in reference
+    assert "| YAML, flow sequences of one-digit numbers" in reference
     # The path classes.
     for path in ("evals/*/seed/", "examples/", "cli/vendor/", ".github/scripts/",
                  "src/examples/", "db/seed/"):
         assert path in section, path
     assert "only ratchets up" in section
     # The messages.
-    assert "the issue that changed most recently" in section
-    assert "names an issue with no folder under" in section
-    assert "bad-session-issue-restart" in section
-    assert "compass acceptance start" in section
+    assert "the issue that changed most recently" in reference
+    assert "names an issue with no folder under" in reference
+    assert "bad-session-issue-restart" in reference
+    assert "compass acceptance start" in reference
     # The limit the reader cannot lock.
     assert "between the read and the Edit" in section
     # The line that said declared shell files are not guarded is gone.

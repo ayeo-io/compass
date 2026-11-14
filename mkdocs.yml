@@ -38,6 +38,7 @@ exclude_docs: |
   !/five-minutes.md
   !/quickstart.md
   !/safety-contract.md
+  !/hook-reference.md
   !/refusal-codes.md
   !/methodology.md
   !/security.md
@@ -70,6 +71,7 @@ nav:
       - Upgrading to 9.0.0: upgrade-9-0-0.md
   - Guarantees:
       - Safety contract: safety-contract.md
+      - Hook reference: hook-reference.md
       - Refusal codes: refusal-codes.md
       - Security: security.md
   - How it works:

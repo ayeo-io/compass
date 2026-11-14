@@ -851,14 +851,14 @@ def test_the_hook_explains_each_number_of_the_work_budget():
 
 def test_the_hook_and_the_safety_contract_give_the_same_slowest_time():
     """Supports `TRC-025` in pre-tool-hook-time-bounded/acceptance-criteria.md:
-    the hook's comment and docs/safety-contract.md each state the slowest
+    the hook's comment and docs/hook-reference.md each state the slowest
     accepted command, and the two must agree."""
     hook = re.search(r"worst command accepted took ([0-9.]+) s",
                      hook_text(HOOK))
     assert hook, "the comment in hooks/pre-tool.sh does not give the worst time"
-    page = " ".join((ROOT / "docs" / "safety-contract.md").read_text().split())
+    page = " ".join((ROOT / "docs" / "hook-reference.md").read_text().split())
     contract = re.search(r"in seconds: ([0-9.]+) for 260 write targets", page)
-    assert contract, "docs/safety-contract.md does not give the slowest time first"
+    assert contract, "docs/hook-reference.md does not give the slowest time first"
     assert hook.group(1) == contract.group(1), (hook.group(1), contract.group(1))
 
 

@@ -156,6 +156,15 @@
       3,
       3,
       3,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
       3,
       3,
       2,
@@ -177,8 +186,8 @@
       2,
       2
     ],
-    "list_items": 134,
-    "table_rows": 35
+    "list_items": 235,
+    "table_rows": 26
   },
   "examples/README.md": {
     "fences": 2,

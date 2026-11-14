@@ -2,9 +2,8 @@
 
 `compass quick-fix finish` must show that the tests of a change fail without
 the change. It does this on the base copy: a copy of the commit the issue
-started from, with the test files of the change laid over it. This page says
-what the copy holds, what its result shows, and where it has limits. The
-code is `prove_red` and `_build_base_copy` in `cli/compass_pkg/lean.py`.
+started from, with the test files of the change laid over it. The code is
+`prove_red` and `_build_base_copy` in `cli/compass_pkg/lean.py`.
 
 ## What `finish` does
 

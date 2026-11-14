@@ -17,6 +17,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [methodology.md](methodology.md) - the method and why it is built this way.
 - [routing-deep-dive.md](routing-deep-dive.md) - how the assessment becomes a delivery approach.
 - [safety-contract.md](safety-contract.md) - what Compass enforces, and what it does not claim.
+- [hook-reference.md](hook-reference.md) - how the pre-tool hook reads a tool call: the approval guard, the comment-only check, shell-write detection, the time limits, worktrees and the test-run record.
 - [refusal-codes.md](refusal-codes.md) - each reason the pre-tool hook can refuse with. Generated.
 - [artifact-catalog.md](artifact-catalog.md) - the document kinds: fields, skeleton and word limits.
 - `artifact-catalogue.md` - the old name of the artifact catalog page. It opens the new page.
@@ -67,6 +68,7 @@ same commit.
 | `cli/compass_pkg/ship_commit_reason.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/manifest_store.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/comment_only_edit.py` | `docs/safety-contract.md` |
+| `hooks/lib/pre-tool-guards.sh`, `hooks/lib/pre-tool-bash-writes.sh`, `hooks/lib/pre-tool-targets.sh`, `hooks/lib/pre-tool-issue.sh`, `hooks/py/pre_tool_approval_guard.py`, `hooks/py/pre_tool_comment_only_edit.py` | `docs/hook-reference.md` |
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
 | `cli/compass_pkg/release_notes.py`, `cli/compass_pkg/shipped_issues.py` | `docs/release-notes.md` |

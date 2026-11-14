@@ -867,6 +867,12 @@ def test_d2_repairs_change_only_retired_names():
     moved into its sentence, and the `PATH` line became a block. The two
     tables kept every row.
 
+    One more was re-baselined when the docs were rewritten in plain, short
+    English: `docs/safety-contract.md` (list_items 134 -> 235, table_rows
+    35 -> 26, nine `####` headings added under guarantee 5). Its paragraphs
+    became lists and tables, and the rules by which the hook reads a call
+    moved to `docs/hook-reference.md`; every `##` and `###` heading stayed.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

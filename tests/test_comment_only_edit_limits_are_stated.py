@@ -2,7 +2,9 @@
 
 The check is a comparison plus two lists of words. A reader who relies on it
 must find, in `docs/safety-contract.md` and in the decision record, the cases
-that it lets through and the unit that was dropped, and must not find a claim
+that it lets through and the unit that was dropped. The words on the deny list
+and the encoding cookie rule are in `docs/hook-reference.md`. A reader must
+not find a claim
 about a shell-reading rule that this change does not contain.
 
 Scenario ids: see hooks-comment-only-edits-and-prose/acceptance-criteria.md.
@@ -15,6 +17,7 @@ from hook_text import hook_text  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACT = ROOT / "docs" / "safety-contract.md"
+REFERENCE = ROOT / "docs" / "hook-reference.md"
 RECORD = (ROOT / "governance" / "decisions"
           / "2026-10-19-a-comment-only-edit-of-code-needs-no-failing-test.md")
 HOOK = ROOT / "hooks" / "pre-tool.sh"
@@ -40,9 +43,18 @@ def _section() -> str:
     return " ".join(found[0].split())
 
 
+def _reference_section() -> str:
+    text = REFERENCE.read_text(encoding="utf-8")
+    parts = re.split(r"(?m)^## ", text)
+    found = [p for p in parts if p.startswith("The comment-only check")]
+    assert found, "docs/hook-reference.md has no section on the comment-only check"
+    return " ".join(found[0].split())
+
+
 def test_contract_states_the_limits_of_the_comment_only_check():
     """Scenario id: `TRC-064` in hooks-comment-only-edits-and-prose/acceptance-criteria.md"""
     section = _section()
+    reference = _reference_section()
 
     # The docstring rule is a word list, and what it misses.
     assert "docstring rule is a word list" in section
@@ -52,22 +64,22 @@ def test_contract_states_the_limits_of_the_comment_only_check():
     assert "deny list" in section
     for word in ("nosemgrep", "gitleaks", "checkov", "lgtm", "NOSONAR", "codeql",
                  "yapf", "tfsec", "## template:"):
-        assert word in section, word
+        assert word in reference, word
     # A first line that a tool reads as a file type, which is not on the list.
     assert "`#cloud-config`" in section and "`#include`" in section
     # The encoding cookie.
-    assert "encoding cookie" in section and "utf-7" in section
+    assert "encoding cookie" in reference and "utf-7" in reference
     # Template text, a symbolic link in a fixture folder, python3 and awk.
     assert "Helm" in section and "enforcement.code_globs" in section
     assert "symbolic link under `evals/*/seed/`" in section
-    assert "judges the Edit as before" in section and "python3" in section
+    assert "judges the Edit as before" in reference and "python3" in section
     assert "The hook uses awk" in section
     assert "tested on the awk of macOS only" in section and "Linux awk" in section
 
 
 def test_contract_and_record_make_no_claim_of_the_dropped_unit():
     """Scenario id: `TRC-064` in hooks-comment-only-edits-and-prose/acceptance-criteria.md"""
-    for path in (CONTRACT, RECORD):
+    for path in (CONTRACT, REFERENCE, RECORD):
         text = _normal(path)
         for claim in NOT_IN_THIS_CHANGE:
             assert claim not in text, f"{path.name} still says: {claim}"

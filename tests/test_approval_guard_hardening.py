@@ -793,15 +793,19 @@ def test_trc_013_glob_before_deleg_still_starts_the_guard(delegated):
 def test_trc_014_docs_state_refusals_accepted_forms_and_limits():
     """Scenario id: `TRC-014` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
     contract = (ROOT / "docs" / "safety-contract.md").read_text(encoding="utf-8").lower()
+    reference = (ROOT / "docs" / "hook-reference.md").read_text(encoding="utf-8").lower()
     module = (ROOT / "cli" / "compass_pkg" / "approval_guard.py").read_text(
         encoding="utf-8").split('"""')[1].lower()
-    facts = ["--as${ifs}", "--asmain", "--assume-yes", "--as-main",
+    # The reading rules are in the hook reference; the limits are in the contract.
+    rules = ["--as${ifs}", "--asmain", "--assume-yes", "--as-main",
              "**/*", "*.yml", ".compass/*", "d*/*", "**/confirm-*", "deleg?tions",
-             "variable", "command substitution", "environment", "xargs", "printf",
-             "brace expansion", "its own glob", "neither .compass nor deleg", "cd",
-             "extglob", "rg -g", "find -name", "--include"]
-    for name, text in (("docs/safety-contract.md", contract),
-                       ("approval_guard.py docstring", module)):
+             "brace expansion"]
+    limits = ["variable", "command substitution", "environment", "xargs", "printf",
+              "brace expansion", "its own glob", "neither .compass nor deleg", "cd",
+              "extglob", "rg -g", "find -name", "--include"]
+    for name, text, facts in (("docs/hook-reference.md", reference, rules),
+                              ("docs/safety-contract.md", contract, limits),
+                              ("approval_guard.py docstring", module, rules + limits)):
         missing = [f for f in facts if f not in text]
         assert not missing, (name, missing)
 
@@ -809,13 +813,17 @@ def test_trc_014_docs_state_refusals_accepted_forms_and_limits():
 def test_trc_014_docs_state_second_review_refusals_and_limits():
     """Scenario id: `TRC-014` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
     contract = (ROOT / "docs" / "safety-contract.md").read_text(encoding="utf-8").lower()
+    reference = (ROOT / "docs" / "hook-reference.md").read_text(encoding="utf-8").lower()
     module = (ROOT / "cli" / "compass_pkg" / "approval_guard.py").read_text(
         encoding="utf-8").split('"""')[1].lower()
-    facts = ["ansi-c quoting", "$'appro\\x76e'", "--{delegated,x}", "appr{ove,x}",
-             "grep glob", "**/{dl-*,x}.yml", "only zsh reads", "(deleg\\|x)ations",
-             "<->", "[a-z]", "grep -r x", "find .compass -type f -exec cat {} +"]
-    for name, text in (("docs/safety-contract.md", contract),
-                       ("approval_guard.py docstring", module)):
+    # The reading rules are in the hook reference; the limits are in the contract.
+    rules = ["ansi-c quoting", "$'appro\\x76e'", "--{delegated,x}", "appr{ove,x}",
+             "grep glob"]
+    limits = ["grep glob", "**/{dl-*,x}.yml", "only zsh reads", "(deleg\\|x)ations",
+              "<->", "[a-z]", "grep -r x", "find .compass -type f -exec cat {} +"]
+    for name, text, facts in (("docs/hook-reference.md", reference, rules),
+                              ("docs/safety-contract.md", contract, limits),
+                              ("approval_guard.py docstring", module, rules + limits)):
         missing = [f for f in facts if f not in text]
         assert not missing, (name, missing)
 
@@ -899,12 +907,17 @@ def test_trc_001_refusal_says_the_word_may_be_built_by_the_shell(guarded):
 def test_trc_014_docs_state_third_review_refusal_and_limit():
     """Scenario id: `TRC-014` in approval-guard-ifs-as-and-delegation-globs/acceptance-criteria.md"""
     contract = (ROOT / "docs" / "safety-contract.md").read_text(encoding="utf-8").lower()
+    reference = (ROOT / "docs" / "hook-reference.md").read_text(encoding="utf-8").lower()
     module = (ROOT / "cli" / "compass_pkg" / "approval_guard.py").read_text(
         encoding="utf-8").split('"""')[1].lower()
-    facts = ["$'\\x65vidence'", "appro?e", "--a?", "a glob that expands against a file",
-             "python3 -c", "ayeo-io/compass#599", "any `compass evidence` command"]
-    for name, text in (("docs/safety-contract.md", " ".join(contract.split())),
-                       ("approval_guard.py docstring", " ".join(module.split()))):
+    # The refusal is in the hook reference; the limit is in the contract.
+    rules = ["$'\\x65vidence'", "any `compass evidence` command"]
+    limits = ["appro?e", "--a?", "a glob that expands against a file",
+              "python3 -c", "ayeo-io/compass#599"]
+    for name, text, facts in (
+            ("docs/hook-reference.md", " ".join(reference.split()), rules),
+            ("docs/safety-contract.md", " ".join(contract.split()), limits),
+            ("approval_guard.py docstring", " ".join(module.split()), rules + limits)):
         missing = [f for f in facts if f not in text]
         assert not missing, (name, missing)
 

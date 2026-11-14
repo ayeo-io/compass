@@ -26,9 +26,11 @@ def _read(rel):
 # ---------------------------------------------------------------------------
 
 def test_trc_a1_readme_source_install_has_path_note():
-    """README's source-install paragraph tells the reader how to invoke the
-    compass CLI - by adding bin/ to PATH or via `python3 cli/compass`."""
-    readme = _read("README.md")
+    """The source-install paragraph tells the reader how to invoke the
+    compass CLI - by adding bin/ to PATH or via `python3 cli/compass`. The
+    README links docs/install-smoke-test.md, which holds the paragraph."""
+    assert "docs/install-smoke-test.md" in _read("README.md")
+    readme = _read("docs/install-smoke-test.md")
 
     # The source-install code block (clone -> bash install.sh). The block
     # ends at the install-script invocation.
@@ -38,7 +40,7 @@ def test_trc_a1_readme_source_install_has_path_note():
         readme,
         re.DOTALL,
     )
-    assert m, "Source-install code block not found in README.md"
+    assert m, "Source-install code block not found in docs/install-smoke-test.md"
 
     # Within 800 chars after the block, expect a CLI-invocation instruction.
     after = readme[m.end():m.end() + 800]
@@ -48,7 +50,7 @@ def test_trc_a1_readme_source_install_has_path_note():
         or re.search(r"python3\s+\S*cli/compass", after)
     )
     assert has_path_note, (
-        "README's source-install paragraph does not tell the reader how to "
+        "The source-install paragraph does not tell the reader how to "
         "make `compass` invokable. Expected a phrase about adding `bin/` to "
         "PATH or invoking as `python3 cli/compass`. Looked in 800 chars "
         "following the source-install code block; got:\n"
@@ -119,15 +121,15 @@ def test_trc_a2_quickstart_drops_install_sh_path_claim():
 # ---------------------------------------------------------------------------
 
 def test_trc_b1_readme_tree_lists_bin_and_plugin_manifest():
-    """README's 'What the repository contains' tree contains entries for
-    bin/ and .claude-plugin/."""
-    readme = _read("README.md")
+    """The 'What the repository contains' tree contains entries for bin/
+    and .claude-plugin/. The tree is in CONTRIBUTING.md."""
+    readme = _read("CONTRIBUTING.md")
     m = re.search(
         r"##\s+What the repository contains.*?(?=^##\s+|\Z)",
         readme,
         re.DOTALL | re.MULTILINE,
     )
-    assert m, "'What the repository contains' section not found in README.md"
+    assert m, "'What the repository contains' section not found in CONTRIBUTING.md"
     block = m.group(0)
 
     # The tree is the code block inside that section.
@@ -135,9 +137,9 @@ def test_trc_b1_readme_tree_lists_bin_and_plugin_manifest():
     assert code, "No fenced code block found in 'What's in the box'"
     tree = code.group(1)
 
-    assert "bin/" in tree, "README's tree is missing the `bin/` entry"
+    assert "bin/" in tree, "The tree is missing the `bin/` entry"
     assert ".claude-plugin/" in tree, (
-        "README's tree is missing the `.claude-plugin/` entry"
+        "The tree is missing the `.claude-plugin/` entry"
     )
 
 

@@ -485,11 +485,14 @@ S4_VERBS = ("approach show", "approach render",
 
 def s4_findings(readme, cli, index, docs_readme, upgrade):
     found = []
-    start = readme[:readme.index("## What Compass changes")]
-    for needle in ("compass.yml", "docs/configuration.md", "docs/upgrade-6-0-0.md",
-                   "docs/github-links.md"):
-        if needle not in start:
-            found.append(f"README 'Start here' does not name {needle}")
+    # The README names the settings file and links the list of docs, which
+    # links the upgrade guide and the GitHub links page.
+    for needle in ("compass.yml", "docs/configuration.md", "(docs/README.md)"):
+        if needle not in readme:
+            found.append(f"README does not name {needle}")
+    for needle in ("(upgrade-6-0-0.md)", "(github-links.md)"):
+        if needle not in docs_readme:
+            found.append(f"docs/README.md does not link {needle}")
     for verb in S4_VERBS:
         if not re.search(rf"^compass {re.escape(verb)}\s", cli, re.M):
             found.append(f"docs/cli.md command list lacks compass {verb}")

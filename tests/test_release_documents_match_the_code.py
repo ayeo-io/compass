@@ -76,10 +76,13 @@ def test_the_source_scan_finds_the_modules_that_fetch_a_git_parent():
 
 
 def test_the_documents_say_no_command_fetches_a_git_parent():
-    readme = _paragraph(_text("README.md"), "**Fetches nothing for a configuration.**")
+    # The README states the fact in one line and links docs/security.md, which
+    # names the refusal and each command.
+    readme = _text("README.md")
+    assert "**Fetches** nothing" in readme and "docs/security.md" in readme
     security = _paragraph(_text("docs", "security.md"),
                           "**Fetches nothing for a configuration.**")
-    for name, text in (("README.md", readme), ("docs/security.md", security)):
+    for name, text in (("docs/security.md", security),):
         assert "L-PARENT-REMOVED" in text and "no command runs git" in text, (name, text)
         for command in FETCHING:
             assert command in text, f"{name} does not list `compass {command}`: {text}"

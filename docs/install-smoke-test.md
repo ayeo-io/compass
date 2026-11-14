@@ -69,6 +69,9 @@ cd compass
 bash scripts/install.sh --global
 ```
 
+Add `bin/` to your `PATH` to make `compass` invokable, or call it as
+`python3 cli/compass`.
+
 Use `--project <directory>` for a project-scoped install or `--copy` when
 symlinks are unsuitable.
 

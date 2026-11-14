@@ -1,27 +1,20 @@
 # Install smoke test
 
-Use this checklist after installing Compass or changing its installation.
-Run it in a scratch Git repository so the test issue does not enter a real
+Use this checklist after you install Compass or change its installation.
+Run it in a scratch Git repository, so the test issue does not enter a real
 project.
 
-Compass supports Claude Code only; the Codex adapter stays on 8.x. Keep the
-host version, framework revision, OS, installation method, hook trust state,
-raw output and expected versus observed result. Use `passed`, `failed`,
-`unsupported` or `unmeasured` for each case. The [adapter behavior guide](adapter-conformance.md) explains
-why local subprocess results cannot count as native or independent acceptance.
+Compass supports Claude Code only; the Codex adapter stays on 8.x.
 
-| Step | Claude Code |
-|---|---|
-| Install | Marketplace or source commands below. |
-| Start an issue | Run `/compass:assess` below. |
-| Inspect records | Check the manifest, documents and CLI verdict below. |
-| Check hooks | Try the edit in the actual host. |
-| Uninstall/reinstall | Use the source commands below. |
-| Resume | Reopen the host and continue from recorded state; record cold start and compaction separately. |
+For each case, record the host version, the Compass revision, the OS, the
+installation method, the hook trust state, the raw output, and the expected
+and observed result. Mark each case `passed`, `failed`, `unsupported` or
+`unmeasured`.
 
-For independent acceptance, another person must install Compass and complete a
-scratch issue. Record the tester's identity. An author's temporary configuration
-is a local installation check, not an independent or clean-machine result.
+An independent acceptance needs another person to install Compass and
+complete a scratch issue; record who tested. A run by the author is a local
+installation check only. The [adapter behavior guide](adapter-conformance.md)
+says why.
 
 ## 1. Check the prerequisites
 
@@ -30,36 +23,40 @@ python3 --version
 git --version
 ```
 
-Compass needs Python 3.10 or later. Its CI tests Python 3.11. The CLI bundles
-its YAML parser; `jsonschema` is optional. Without Python 3.10 or later,
-`scripts/install.sh` warns and installs anyway, and the first session in a
-Compass project says so in place of the operating contract;
-`docs/safety-contract.md` says what each hook does then.
+Compass needs Python 3.10 or later. Its CI tests Python 3.11. The CLI
+bundles its YAML parser; `jsonschema` is optional.
+
+Without Python 3.10 or later, `scripts/install.sh` warns and installs
+anyway. The first session in a Compass project then says so in place of the
+operating contract. `docs/safety-contract.md` says what each hook does then.
 
 ## 2. Install Compass
 
 ### Plugin marketplace
 
-From a shell, in one line:
+From a shell:
 
 ```bash
 claude plugin install compass --marketplace ayeo-io/compass
 ```
 
-Or inside Claude Code, in two commands:
+Or inside Claude Code:
 
 ```text
 /plugin marketplace add ayeo-io/compass
 /plugin install compass@compass
 ```
 
-Restart Claude Code if the new commands are not immediately visible.
+Restart Claude Code if the new commands do not show.
 
 The marketplace installs the copy on the `plugin` branch, not the whole
-repository. Check that the install folder holds the copy: it has no
-`tests/` or `docs/` folder, and its `.claude-plugin/plugin.json` names the
-release's version. On a profile that has an earlier version, run `claude
-plugin update compass@compass` and check that the version rises.
+repository. Check the install folder:
+
+- it has no `tests/` or `docs/` folder;
+- its `.claude-plugin/plugin.json` names the release's version.
+
+On a profile that has an earlier version, run `claude plugin update
+compass@compass` and check that the version rises.
 
 ### From source
 
@@ -72,11 +69,10 @@ bash scripts/install.sh --global
 Add `bin/` to your `PATH` to make `compass` invokable, or call it as
 `python3 cli/compass`.
 
-Use `--project <directory>` for a project-scoped install or `--copy` when
-symlinks are unsuitable.
-
-For an organisational install, pin the checkout to a reviewed commit rather
-than following a branch. See [Security](security.md).
+- `--project <directory>` installs for one project.
+- `--copy` installs copies, not symlinks.
+- For an organization, pin the checkout to a reviewed commit, not a branch.
+  See [Security](security.md).
 
 ## 3. Check the CLI
 
@@ -94,17 +90,17 @@ compass 9.0.0 (issue schema 3.0)
 PyYAML 6.0.2 at .../cli/vendor/yaml/__init__.py
 ```
 
-Check the PyYAML path: it must be the bundled copy, not one from your
-environment. Policy lint must end in `PASS`.
+The PyYAML path must be the bundled copy, not one from your environment.
+Policy lint must end in `PASS`.
 
-To check that the CLI does not use packages from your Python environment:
+To check that the CLI uses no package from your Python environment:
 
 ```bash
 python3 -m venv --without-pip /tmp/compass-bare-check
 /tmp/compass-bare-check/bin/python3 cli/compass --version
 ```
 
-Install `jsonschema` separately only if you want full JSON Schema validation:
+For full JSON Schema validation only, install `jsonschema`:
 
 ```bash
 python3 -m pip install jsonschema
@@ -118,65 +114,66 @@ In a scratch Git repository, open Claude Code and run:
 /compass:assess "Test the Compass installation"
 ```
 
-Confirm that Compass created:
+Compass must create:
 
 ```text
 .compass/current-task
 .compass/work/<issue-slug>/manifest.yml
 ```
 
-The exact slug can vary. The manifest, evidence and markers are in
-`.compass/work/<issue-slug>/`. The manifest holds the delivery approach. The
-one issue document, the acceptance criteria, goes in
+The slug can vary. `.compass/work/<issue-slug>/` holds the manifest, the
+evidence and the markers. The manifest holds the delivery approach. The
+acceptance criteria go in
 `docs/compass/<date>-<issue-slug>/acceptance-criteria.md`, where `<date>` is
 the manifest's `created:` date.
 
 Run `compass approach show --issue <issue-slug>`. It must show the approach,
-the gates and where the issue's files go. `compass next` names the next action.
+the gates and where the issue's files go. `compass next` names the next
+action.
 
 If `/compass:assess` is unknown, the adapter is not loaded. Restart Claude
-Code, then check the plugin installation or the source installation.
+Code, then check the installation.
 
 ## 5. Confirm an incomplete issue fails honestly
-
-From the scratch repository, run the CLI against the issue:
 
 ```bash
 compass check --issue <issue-slug>
 ```
 
-For a newly assessed issue, failure is expected: acceptance, implementation
-and verification evidence do not exist yet. A correct result:
+A newly assessed issue must fail: its evidence does not exist yet. A correct
+result:
 
 - names the failed check;
 - gives a fix; and
 - exits non-zero without a Python traceback.
 
-A traceback or “governance not found” error shows an installation or path
-problem rather than an uncleared gate.
+A traceback or a "governance not found" error shows an installation or path
+problem.
 
 ## 6. Check the hooks
 
-Assess a small delivery issue with `/compass:assess`, then try to edit
-production code before adding a scenario. The pre-tool hook must block the
+Assess a small delivery issue with `/compass:assess`. Then try to edit
+production code before you add a scenario. The pre-tool hook must block the
 edit and name `compass scenario add`.
 
 Do not run this check on a spike: the hook never refuses a spike's edits.
 
-For a source install, confirm the Claude Code settings contain Compass entries
+For a source install, the Claude Code settings must contain Compass entries
 for:
 
 - `hooks/pre-tool.sh`;
 - `hooks/post-tool.sh`;
-- `hooks/stop.sh`; and
-- `hooks/session-start.sh`.
+- `hooks/stop.sh`;
+- `hooks/session-start.sh`;
+- `hooks/prompt-approval.sh`; and
+- `hooks/approval-summary.sh`.
 
-These hooks run with your user permissions. Review them before using Compass
-in a sensitive environment.
+These hooks run with your user permissions. Review them before you use
+Compass in a sensitive environment.
 
 ## 7. Test source uninstall and reinstall
 
-This step applies only to source installs:
+Source installs only:
 
 ```bash
 bash scripts/install.sh --global --uninstall
@@ -184,20 +181,21 @@ bash scripts/install.sh --global
 bash scripts/install.sh --global
 ```
 
-`--uninstall` removes the install that the same scope flag made. Without
-`--global` it looks in the current directory's `.claude` and, after a global
-install, removes nothing. Uninstall must remove only what the installer added for the Claude Code adapter. Both reinstall
-runs must succeed without duplicate hook entries.
+- `--uninstall` removes the install that the same scope flag made. Without
+  `--global` it looks in the current directory's `.claude` and, after a
+  global install, removes nothing.
+- Uninstall must remove only what the installer added.
+- Both reinstall runs must succeed without duplicate hook entries.
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---|---|
 | Command is unknown | Restart Claude Code; check the plugin or source adapter path. |
-| `policy lint` cannot find governance | Run from the project or use the CLI from a complete Compass checkout. |
-| Edit is blocked | Read the refusal. Add a scenario, get the scenario approval it names, or confirm the issue is correctly assessed as a spike. |
+| `policy lint` cannot find governance | Run from the project, or use the CLI from a complete Compass checkout. |
+| Edit is blocked | Read the refusal. Add a scenario, get the scenario approval it names, or confirm the issue is a spike. |
 | Hooks were not registered | Install `jq` and rerun the source installer, or follow its manual instructions. |
-| Existing Compass directory is not overwritten | Move the unrelated directory aside; the installer stops with an error and does not overwrite it. |
+| Existing Compass directory is not overwritten | Move the unrelated directory aside; the installer stops with an error. |
 
 If a failure is not covered here, report the exact command, exit code and
-output. Remove secrets before attaching logs.
+output. Remove secrets before you attach logs.

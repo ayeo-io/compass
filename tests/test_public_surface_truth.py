@@ -860,6 +860,13 @@ def test_d2_repairs_change_only_retired_names():
     (list_items 49 -> 47) and `skills/evidence-gates/traceability.md`
     (list_items 19 -> 17).
 
+    The plain-English rewrite of the docs re-baselined `docs/quickstart.md`
+    (one more `###` heading, fences 28 -> 22, list_items 26 -> 67): its
+    paragraphs became lists, three blocks of output that
+    `docs/five-minutes.md` shows went, the one-line `/compass:init` block
+    moved into its sentence, and the `PATH` line became a block. The two
+    tables kept every row.
+
     A NEW structural change to any of the 26 still fails.
     """
     import json

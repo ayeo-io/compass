@@ -1,52 +1,52 @@
 # Compass docs
 
-Every doc in this folder, by what you came to do, and which doc owns the
+Each doc in this folder, by what you came to do, then the doc that owns the
 facts about each code area. `tests/test_doc_router.py` fails when a path in
 the table does not exist, and when a doc in this folder is not listed.
 
 ## Start here
 
-- [index.md](index.md) - the documentation site's home page, at https://docs.ayeo.io/compass/.
-- [five-minutes.md](five-minutes.md) - one small change from the request to a commit that holds the code and its record, in two commands.
-- [quickstart.md](quickstart.md) - from an empty machine to a finished first issue, and the status line and the rail.
-- [glossary.md](glossary.md) - every word and id prefix Compass uses.
-- [cli.md](cli.md) - the CLI reference: one line per verb, and how the slash commands call them.
+- [index.md](index.md) - the home page of https://docs.ayeo.io/compass/.
+- [five-minutes.md](five-minutes.md) - one small change, from the request to a commit that holds the code and its record.
+- [quickstart.md](quickstart.md) - install, the first issue, `compass next`, the rail and the status line.
+- [glossary.md](glossary.md) - each word and id prefix Compass uses.
+- [cli.md](cli.md) - the CLI reference: one line for each verb.
 
 ## How Compass works
 
-- [methodology.md](methodology.md) - the adaptive, spec-driven method and why it is built this way.
+- [methodology.md](methodology.md) - the method and why it is built this way.
 - [routing-deep-dive.md](routing-deep-dive.md) - how the assessment becomes a delivery approach.
 - [safety-contract.md](safety-contract.md) - what Compass enforces, and what it does not claim.
-- [refusal-codes.md](refusal-codes.md) - every reason the pre-tool hook can refuse with, generated.
-- [artifact-catalog.md](artifact-catalog.md) - the artifact catalog: the fields of a kind, the skeleton, the word limits, the documents that repeat, the documents per work unit and the table of shipped kinds.
-- `artifact-catalogue.md` - the old name of the artifact catalog page, kept so a link to it opens the new page.
-- [delivery-record.md](delivery-record.md) - the record mode, `trail.md` and `compass trail`, and `compass record`: the delivery record kept in its own repository.
-- [checkpoints.md](checkpoints.md) - checkpoint outcomes and the `checkpoint-approval` record: their shapes, the two commands that write them, the landing refusal, and where `compass issue diagnose` and the delivery record show them.
-- [base-copy.md](base-copy.md) - the copy of the base commit on which `compass quick-fix finish` shows that the tests fail without the change: what `proved_on: base-copy` means, the limits, and the setting `project.base_copy_links`.
-- [release-line.md](release-line.md) - the release line each shipping issue records: the `release_note` key, the three commands that write it, the texts they refuse, when a landing refuses an issue with none, and where the line is shown.
-- [release-notes.md](release-notes.md) - `compass release notes --since <ref>`: which completed issues it lists against a git reference, the order, the two closing count lines, and what it never writes.
-- [github-links.md](github-links.md) - `compass issue link set`: an issue's link to its GitHub issue and its pull request, how `land_commit` follows the merge, how `gh` is run, and the limits.
+- [refusal-codes.md](refusal-codes.md) - each reason the pre-tool hook can refuse with. Generated.
+- [artifact-catalog.md](artifact-catalog.md) - the document kinds: fields, skeleton and word limits.
+- `artifact-catalogue.md` - the old name of the artifact catalog page. It opens the new page.
+- [delivery-record.md](delivery-record.md) - the record mode, `trail.md`, `compass trail` and `compass record`.
+- [checkpoints.md](checkpoints.md) - checkpoint outcomes and the `checkpoint-approval` record.
+- [base-copy.md](base-copy.md) - what `proved_on: base-copy` means, its limits, and `project.base_copy_links`.
+- [release-line.md](release-line.md) - the `release_note` key each shipping issue records.
+- [release-notes.md](release-notes.md) - `compass release notes --since <ref>`.
+- [github-links.md](github-links.md) - `compass issue link set`: the GitHub issue and pull request of an issue.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
 
 ## Running and maintaining Compass
 
-- [install-smoke-test.md](install-smoke-test.md) - the checklist after an install or an install change.
-- [adapter-conformance.md](adapter-conformance.md) - local behaviour checks and the separate native and independent acceptance runs.
+- [install-smoke-test.md](install-smoke-test.md) - the checklist after an install.
+- [adapter-conformance.md](adapter-conformance.md) - local behavior checks, and the native and independent acceptance runs.
 - [releasing.md](releasing.md) - how to cut a release.
-- [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 9.0.0, and why there is no supported rollback.
-- [upgrade-7-0-0.md](upgrade-7-0-0.md) - what 7.0.0 changes and what to do about it, one section per change.
-- [upgrade-8-0-0.md](upgrade-8-0-0.md) - what 8.0.0 changes about delegation, and what breaks: the flag form, `--issue` on a delegated approval and the common store.
-- [upgrade-9-0-0.md](upgrade-9-0-0.md) - how to move an 8.x project to 9.0.0 and keep its evidence: `compass migrate`, the removed settings, slash commands, verbs and checks, the readers that stay, and the 8.x support period.
-- [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it, and the five tighten-only settings that add to the check set.
-- [waivers.md](waivers.md) - a waiver of one check on one issue: how to ask for one, how a person approves it and what `compass check` then shows.
-- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show`: the settings lint of `compass.yml`, the refusal of a governance copy, the finding codes and both JSON shapes.
-- [check-implementations.md](check-implementations.md) - the version and fixture corpus of each check implementation, the build rule and what a major difference does.
-- [generation-store.md](generation-store.md) - the stored generation of an issue's policy: its files, the manifest's `policy:` block, the commit order, the states and what reads it.
-- [entry-exit-evaluation.md](entry-exit-evaluation.md) - the capability that evaluates each stage's entry and exit lists: when a list is due, how each kind of check is judged, what `on_skipped` does and where results show.
-- [judged-checks.md](judged-checks.md) - a check of kind `judged`, its review record and `compass evidence review`: what a judged check needs to pass, the four failure causes, how a changed input re-owes the review and the JSON shape.
-- [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`: the entry shape, the eleven `until` values, when the block counts at implement, what the hook reads and what it costs, the fail-safe cases, the worktree rule and what each reader shows.
+- [upgrade-6-0-0.md](upgrade-6-0-0.md) - what 6.0.0 renames. There is no supported rollback.
+- [upgrade-7-0-0.md](upgrade-7-0-0.md) - what 7.0.0 changes and what to do.
+- [upgrade-8-0-0.md](upgrade-8-0-0.md) - what 8.0.0 changes about delegation.
+- [upgrade-9-0-0.md](upgrade-9-0-0.md) - how to move an 8.x project to 9.0.0 with `compass migrate`.
+- [configuration.md](configuration.md) - each project setting: values, default and file.
+- [waivers.md](waivers.md) - a waiver of one check on one issue.
+- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show`.
+- [check-implementations.md](check-implementations.md) - the version and fixtures of each check implementation.
+- [generation-store.md](generation-store.md) - the stored generation of an issue's policy.
+- [entry-exit-evaluation.md](entry-exit-evaluation.md) - the capability that evaluates the entry and exit lists of each stage.
+- [judged-checks.md](judged-checks.md) - a check of kind `judged`, its review record and `compass evidence review`.
+- [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
-- [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
+- [portability.md](portability.md) - the adapter boundary, for a runtime other than Claude Code.
 
 ## Background
 

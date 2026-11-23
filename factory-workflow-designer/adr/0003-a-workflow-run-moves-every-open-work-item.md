@@ -1,0 +1,3 @@
+# A Workflow Run moves every open Work Item, and progress belongs to the Work Item
+
+A Workflow Run does not follow one Work Item from start to finish. Each Run moves every open Work Item forward until each is waiting at a Gate, stuck or done, then ends. Loop passes and Step Keys belong to the Work Item, for example `#12/review-loop/2/fix`, and live in the State Store. This lets a Gate wait for days without a Coordinator session staying open, and lets any later Run continue where an earlier one stopped. The cost is that each Run must first rebuild every Work Item's position from the State Store.

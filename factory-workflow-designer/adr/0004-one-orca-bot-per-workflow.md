@@ -1,0 +1,3 @@
+# One Orca Bot per Workflow
+
+Each Workflow is deployed as its own Orca Bot. The Bot's automations are the Workflow's Triggers, and each automation run is one Workflow Run. Orca starts automations on events only for bots, and a bot can also run on a schedule, so one mechanism covers every Trigger. A Bot per Workflow, not one shared factory Bot, gives each Workflow its own memory, connectors and run history, and makes a sub-workflow a bot-to-bot handoff (`orca orchestration send --to bot:<name> --type handoff`). The cost is that the Bot acts on GitHub as the Owner: the Owner's own GitHub actions never start its automations, and a label it applies cannot be told apart from one the Owner applied.

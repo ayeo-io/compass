@@ -1,0 +1,3 @@
+# GitHub labels and comments are the first State Store, behind an interface
+
+A Workflow Run records each Work Item's progress in GitHub labels and comments, as an existing hand-written Coordinator prompt does. Every factory so far works on GitHub issues and pull requests. GitHub state survives a lost Coordinator session and the Owner can see it. Orca's own Run and Task records cannot tell a new session which Loop pass a Work Item reached. The generator writes State Store instructions through one interface, so a second store, such as a state file committed in the repository, can be added without changing the structure of the Bundle.
